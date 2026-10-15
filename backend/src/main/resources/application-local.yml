@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/aquaflow}
+    username: ${DB_USERNAME:aquaflow}
+    password: ${DB_PASSWORD:aquaflow}
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+  jpa:
+    show-sql: false
