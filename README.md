@@ -87,3 +87,7 @@ APP_JWT_SECRET=change-me-in-production
 - Mỗi pull request cần có test phù hợp và mô tả rõ phạm vi thay đổi.
 
 Xem thêm [docs/architecture.md](docs/architecture.md), [docs/team-plan.md](docs/team-plan.md), [CONTRIBUTING.md](CONTRIBUTING.md) và [docs/team-rules.md](docs/team-rules.md).
+
+Xem hướng dẫn CI/CD tại [docs/CICD.md](docs/CICD.md).
+
+Compose production mẫu: `docker-compose.prod.yml` (dùng `.env.prod` bên ngoài Git).
