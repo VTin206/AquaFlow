@@ -86,4 +86,4 @@ APP_JWT_SECRET=change-me-in-production
 - Database schema được thay đổi bằng Flyway migration, không sửa schema thủ công.
 - Mỗi pull request cần có test phù hợp và mô tả rõ phạm vi thay đổi.
 
-Xem thêm [docs/architecture.md](docs/architecture.md) và [docs/team-plan.md](docs/team-plan.md).
+Xem thêm [docs/architecture.md](docs/architecture.md), [docs/team-plan.md](docs/team-plan.md), [CONTRIBUTING.md](CONTRIBUTING.md) và [docs/team-rules.md](docs/team-rules.md).
