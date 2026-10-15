@@ -1,0 +1,28 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "AquaFlow: Vite dev server",
+      "type": "shell",
+      "command": "npm.cmd",
+      "args": ["run", "dev", "--", "--host", "127.0.0.1"],
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "isBackground": true,
+      "problemMatcher": [
+        {
+          "pattern": { "regexp": ".*" },
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": "> aquaflow-frontend@.* dev",
+            "endsPattern": "Local:\\s+http://127\\.0\\.0\\.1:5173/"
+          }
+        }
+      ],
+      "runOptions": {
+        "instanceLimit": 1
+      }
+    }
+  ]
+}
