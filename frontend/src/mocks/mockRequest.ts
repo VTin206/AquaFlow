@@ -1,4 +1,4 @@
-import { ApiError } from '../services/api'
+import { ApiError } from '../shared/api/client'
 
 // Giả lập độ trễ mạng để trạng thái Loading hiển thị như khi gọi API thật.
 const MOCK_DELAY_MS = 350

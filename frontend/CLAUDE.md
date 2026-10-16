@@ -37,6 +37,15 @@ Không gộp nhiều việc không liên quan vào một commit. Không commit c
 
 ## Dự án
 
-- React + TypeScript + Vite. Chạy dev: `npm run dev` (http://localhost:5173, `/api` proxy sang `http://localhost:8080`).
-- Cấu trúc `src/`: `pages/` (mỗi trang một file), `components/` (dùng chung), `types/`, `mocks/`, `config/`, `utils/`. Gọi API tập trung trong `services/`, không gọi `fetch` rải rác trong component.
+- React + TypeScript + Vite + **Ant Design 6** (UI) + **React Query** (dữ liệu). Chạy dev: `npm run dev` (http://localhost:5173, `/api` proxy sang `http://localhost:8080`).
+- Cấu trúc `src/` theo tính năng:
+  - `app/`: `App.tsx` (routes), `providers.tsx`, `theme.ts` (màu, font, token Ant Design), `navigation.ts` (menu).
+  - `layouts/`: khung app (sidebar, drawer trên điện thoại).
+  - `features/<tên>/`: mỗi tính năng tự chứa trang, `components/`, `types.ts`, service (`*Service.ts`) và hook React Query (`use*.ts`). Hiện có `orders`, `inventory` (kho + sản phẩm), `customers`, `delivery`, `dashboard`, `reports`.
+  - `shared/`: dùng chung giữa các tính năng — `api/client.ts` (gọi API), `components/` (`Page`, `QueryError`, `BarChart`), `utils/format.ts`.
+  - `mocks/`: dữ liệu mẫu trong bộ nhớ; service gọi `mockRequest()` cho tới khi backend có API.
+  - `styles/global.css`: chỉ bố cục mà Ant Design không có; class tự đặt dùng tiền tố `af-`.
+- Dùng component Ant Design trước khi tự viết. Đổi màu/font ở `app/theme.ts`, không ghi đè style component bằng CSS.
+- Mọi lệnh gọi backend nằm trong `features/*/…Service.ts` qua `shared/api/client.ts`; component chỉ dùng hook. Không gọi `fetch` trực tiếp.
+- Thông báo dùng `App.useApp().message`; form dùng `Form` với `rules` để kiểm tra ngay khi nhập.
 - Component `PascalCase`, biến/hàm `camelCase`. Không hardcode địa chỉ API. UI có trạng thái Loading/Error/Empty khi phù hợp.
