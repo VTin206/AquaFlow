@@ -2121,11 +2121,24 @@ a {
     width: 34px;
   }
   .heading-area {
-    align-items: flex-start;
+    align-items: center;
     display: flex;
+    flex: 1;
+    flex-wrap: wrap;
   }
   .heading-area > div {
     min-width: 0;
+  }
+  .heading-area .breadcrumb {
+    margin-bottom: 0;
+  }
+  .heading-area .page-heading {
+    flex-basis: 100%;
+    margin-top: 10px;
+  }
+  .topbar-actions {
+    align-self: flex-start;
+    flex-shrink: 0;
   }
   .topbar {
     min-height: 96px;
