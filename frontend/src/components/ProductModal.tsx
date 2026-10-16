@@ -2,10 +2,11 @@ import { type ChangeEvent, type FormEvent, useState } from 'react'
 import { ImagePlus, Plus } from 'lucide-react'
 import type { ProductDraft } from '../types'
 import { Modal } from './Modal'
+import type { ToastTone } from './Toast'
 
 const emptyProduct: ProductDraft = { name: '', brand: '', sku: '', unit: 'Bình', price: 0, stock: 0, image: '' }
 
-type ProductModalProps = { onSubmit: (draft: ProductDraft) => void; onClose: () => void; onNotice: (message: string) => void }
+type ProductModalProps = { onSubmit: (draft: ProductDraft) => void; onClose: () => void; onNotice: (message: string, tone?: ToastTone) => void }
 
 export function ProductModal({ onSubmit, onClose, onNotice }: ProductModalProps) {
   const [form, setForm] = useState(emptyProduct)
@@ -14,12 +15,12 @@ export function ProductModal({ onSubmit, onClose, onNotice }: ProductModalProps)
     const file = event.currentTarget.files?.[0]
     if (!file) return
     if (!file.type.startsWith('image/')) {
-      onNotice('Vui lòng chọn một tệp hình ảnh.')
+      onNotice('Vui lòng chọn một tệp hình ảnh.', 'error')
       event.currentTarget.value = ''
       return
     }
     if (file.size > 5 * 1024 * 1024) {
-      onNotice('Ảnh cần có dung lượng dưới 5 MB.')
+      onNotice('Ảnh cần có dung lượng dưới 5 MB.', 'error')
       event.currentTarget.value = ''
       return
     }

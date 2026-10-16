@@ -1885,6 +1885,23 @@ a {
   color: #597477;
   font-size: 13px;
 }
+.empty-state > span {
+  max-width: 320px;
+  text-align: center;
+}
+.empty-state .button {
+  margin-top: 6px;
+}
+.error-state svg,
+.error-state strong {
+  color: #d26a5c;
+}
+.error-state .button svg {
+  color: inherit;
+}
+.spin {
+  animation: spin 0.9s linear infinite;
+}
 .modal-backdrop {
   align-items: center;
   background: rgba(16, 47, 50, 0.32);
@@ -1990,6 +2007,12 @@ a {
   justify-content: center;
   width: 21px;
 }
+.toast-error {
+  background: #5a2a26;
+}
+.toast-error .toast-icon {
+  background: #d26a5c;
+}
 .toast > button {
   background: none;
   border: 0;
@@ -2000,6 +2023,11 @@ a {
 }
 .mobile-scrim {
   display: none;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 @keyframes pulse {
   50% {

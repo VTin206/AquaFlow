@@ -1,5 +1,6 @@
-import { ChevronDown, Ellipsis, Filter, Waves } from 'lucide-react'
+import { ChevronDown, Ellipsis, Filter, Search, Waves } from 'lucide-react'
 import { SearchField } from '../components/SearchField'
+import { EmptyState } from '../components/StateViews'
 import type { Product } from '../types'
 import { currency } from '../utils/format'
 
@@ -55,7 +56,7 @@ export function ProductsPage({ products, query, setQuery }: ProductsPageProps) {
             </article>
           ))}
         </div>
-        {visible.length === 0 && <div className="empty-state">Không có sản phẩm phù hợp.</div>}
+        {visible.length === 0 && <EmptyState icon={Search} title="Không có sản phẩm phù hợp" description="Thử tìm theo tên, mã hàng hoặc thương hiệu." />}
       </div>
     </div>
   )

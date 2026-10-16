@@ -1,5 +1,6 @@
-import { ArrowUpRight, Boxes, Ellipsis, Filter, MapPin, Users } from 'lucide-react'
+import { ArrowUpRight, Boxes, Ellipsis, Filter, MapPin, Search, Users } from 'lucide-react'
 import { SearchField } from '../components/SearchField'
+import { EmptyState } from '../components/StateViews'
 import { customers } from '../mocks/data'
 
 type CustomersPageProps = { query: string; setQuery: (value: string) => void }
@@ -95,7 +96,7 @@ export function CustomersPage({ query, setQuery }: CustomersPageProps) {
               ))}
             </tbody>
           </table>
-          {visible.length === 0 && <div className="empty-state">Không tìm thấy khách hàng.</div>}
+          {visible.length === 0 && <EmptyState icon={Search} title="Không tìm thấy khách hàng" description="Thử tìm theo tên, số điện thoại hoặc khu vực." />}
         </div>
       </div>
     </div>
