@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button, Card, Input, Segmented } from 'antd'
 import { Plus, Search } from 'lucide-react'
+import { CountLabel } from '../../shared/components/CountLabel'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
 import { CreateOrderModal } from './components/CreateOrderModal'
@@ -44,7 +45,10 @@ export function OrdersPage() {
               <Segmented
                 value={status}
                 onChange={(value) => setStatus(String(value))}
-                options={[ALL, ...orderStatuses].map((value) => ({ value, label: `${value} (${countOf(value)})` }))}
+                options={[ALL, ...orderStatuses].map((value) => ({
+                  value,
+                  label: <CountLabel label={value} count={countOf(value)} urgent={value === 'Chờ xác nhận'} />,
+                }))}
               />
               <Input
                 allowClear

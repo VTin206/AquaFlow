@@ -14,7 +14,17 @@ type OrdersTableProps = {
 
 export function OrdersTable({ orders, loading, compact = false, emptyText = 'Chưa có đơn hàng nào.' }: OrdersTableProps) {
   const columns: TableColumnsType<Order> = [
-    { title: 'Mã đơn', dataIndex: 'id', width: 110, render: (id: string) => <Typography.Text strong>{id}</Typography.Text> },
+    {
+      title: 'Mã đơn',
+      dataIndex: 'id',
+      width: 150,
+      render: (id: string, order) => (
+        <span className="af-order-id">
+          <Typography.Text strong>{id}</Typography.Text>
+          {order.status === 'Chờ xác nhận' && <span className="af-new-tag">Mới</span>}
+        </span>
+      ),
+    },
     {
       title: 'Khách hàng',
       dataIndex: 'customer',

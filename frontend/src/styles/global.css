@@ -16,6 +16,11 @@
   --af-bg: #f5f7f9;
   --af-warning: #d9480f;
   --af-danger: #c92a2a;
+  /* Màu nhấn cho những thứ cần chú ý: đơn mới, số đếm khẩn. */
+  --af-accent: #e03131;
+  /* Nền thanh trên cùng: đậm hơn màu chính để chữ trắng đạt tương phản. */
+  --af-brand: #0a6b73;
+  --af-topbar-height: 56px;
 }
 
 * {
@@ -34,11 +39,115 @@ body {
 .af-shell {
   min-height: 100vh;
 }
+/* Thanh trên cùng mang màu thương hiệu */
+.af-topbar {
+  align-items: center;
+  background: var(--af-brand);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+  color: #fff;
+  display: flex;
+  gap: 16px;
+  height: var(--af-topbar-height);
+  justify-content: space-between;
+  padding: 0 20px;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+.af-topbar-left,
+.af-topbar-right {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+}
+.af-topbar-brand {
+  align-items: center;
+  color: #fff !important;
+  display: flex;
+  gap: 10px;
+}
+.af-topbar-brand strong {
+  font-size: 17px;
+  font-weight: 700;
+}
+.af-brand-mark {
+  align-items: center;
+  background: #fff;
+  border-radius: 8px;
+  color: var(--af-brand);
+  display: flex;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+.af-topbar-divider {
+  background: rgba(255, 255, 255, 0.3);
+  height: 20px;
+  width: 1px;
+}
+.af-topbar-store {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  white-space: nowrap;
+}
+.af-topbar-icon.ant-btn {
+  color: #fff !important;
+}
+.af-topbar-icon.ant-btn:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+}
+.af-nav-toggle {
+  display: none !important;
+}
+.af-api-pill {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 12px;
+  gap: 6px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+.af-api-pill i {
+  background: #ffa94d;
+  border-radius: 50%;
+  height: 7px;
+  width: 7px;
+}
+.af-api-pill.online i {
+  background: #69db7c;
+}
+.af-topbar-user {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+.af-topbar-user-text strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.af-topbar-user-text small {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+}
+.af-avatar {
+  background: var(--af-primary-soft) !important;
+  color: var(--af-primary) !important;
+  flex: none;
+  font-weight: 600;
+}
+
+/* Menu bên trái */
 .af-sider {
   border-right: 1px solid var(--af-border);
-  height: 100vh;
+  height: calc(100vh - var(--af-topbar-height));
   position: sticky !important;
-  top: 0;
+  top: var(--af-topbar-height);
   z-index: 20;
 }
 .af-nav {
@@ -46,37 +155,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
-}
-.af-nav-toggle {
-  display: none !important;
-}
-.af-brand {
-  align-items: center;
-  display: flex;
-  gap: 10px;
-  padding: 20px 20px 12px;
-}
-.af-brand-mark {
-  align-items: center;
-  background: var(--af-primary);
-  border-radius: 8px;
-  color: #fff;
-  display: flex;
-  height: 34px;
-  justify-content: center;
-  width: 34px;
-}
-.af-brand strong {
-  color: var(--af-text-strong);
-  display: block;
-  font-size: 16px;
-  font-weight: 700;
-}
-.af-brand small,
-.af-user small {
-  color: var(--af-text-tertiary);
-  display: block;
-  font-size: 12px;
+  padding-top: 8px;
 }
 .af-menu {
   border-inline-end: 0 !important;
@@ -98,24 +177,7 @@ body {
 }
 .af-sider-footer {
   border-top: 1px solid var(--af-border);
-  padding: 12px;
-}
-.af-api-status {
-  align-items: center;
-  color: var(--af-text-secondary);
-  display: flex;
-  font-size: 12px;
-  gap: 8px;
-  padding: 4px 8px 8px;
-}
-.af-api-status i {
-  background: var(--af-warning);
-  border-radius: 50%;
-  height: 7px;
-  width: 7px;
-}
-.af-api-status.online i {
-  background: #2b8a3e;
+  padding: 8px;
 }
 .af-sider-link {
   align-items: center;
@@ -127,29 +189,57 @@ body {
   display: flex;
   font: inherit;
   gap: 10px;
-  padding: 8px;
+  padding: 8px 12px;
   width: 100%;
 }
 .af-sider-link:hover {
   background: #f2f4f7;
 }
-.af-user {
+
+/* Nhãn đếm dạng viên thuốc và nhãn "Mới" */
+.af-count-label {
   align-items: center;
-  display: flex;
-  gap: 10px;
-  margin-top: 8px;
-  padding: 8px;
+  display: inline-flex;
+  gap: 6px;
 }
-.af-user strong {
-  color: var(--af-text-strong);
-  font-size: 14px;
+.af-count {
+  background: #eaecf0;
+  border-radius: 999px;
+  color: var(--af-text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
   font-weight: 600;
+  line-height: 18px;
+  min-width: 20px;
+  padding: 0 6px;
+  text-align: center;
 }
-.af-avatar {
-  background: var(--af-primary-soft) !important;
-  color: var(--af-primary) !important;
-  flex: none;
-  font-weight: 600;
+.ant-segmented-item-selected .af-count {
+  background: var(--af-primary);
+  color: #fff;
+}
+.af-count.is-urgent {
+  background: #ffe3e3;
+  color: var(--af-accent);
+}
+.ant-segmented-item-selected .af-count.is-urgent {
+  background: var(--af-accent);
+  color: #fff;
+}
+.af-order-id {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+.af-new-tag {
+  background: #fff0f0;
+  border-radius: 4px;
+  color: var(--af-accent);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 5px;
+  text-transform: uppercase;
 }
 
 /* ---------- Trang ---------- */
@@ -433,18 +523,27 @@ body {
   }
   .af-nav-toggle {
     display: inline-flex !important;
-    left: 12px;
-    position: fixed !important;
-    top: 18px;
-    z-index: 30;
-  }
-  .af-page-header {
-    padding-left: 60px;
   }
 }
 @media (max-width: 768px) {
+  .af-topbar {
+    padding: 0 8px 0 4px;
+  }
+  .af-topbar-divider,
+  .af-topbar-store,
+  .af-topbar-user-text {
+    display: none;
+  }
+  .af-topbar-right {
+    gap: 4px;
+  }
+  .af-api-pill {
+    font-size: 0;
+    gap: 0;
+    padding: 6px;
+  }
   .af-page-header {
-    padding: 14px 16px 14px 60px;
+    padding: 14px 16px;
   }
   .af-toolbar .ant-segmented {
     max-width: 100%;
