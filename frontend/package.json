@@ -7,6 +7,7 @@
     "dev": "vite",
     "lint": "eslint .",
     "typecheck": "tsc -b",
+    "test:orders": "node scripts/test-orders.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview"
   },

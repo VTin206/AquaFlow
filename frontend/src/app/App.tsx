@@ -11,6 +11,7 @@ const ProductsPage = lazy(() => import('../features/inventory/ProductsPage').the
 const CustomersPage = lazy(() => import('../features/customers/CustomersPage').then((m) => ({ default: m.CustomersPage })))
 const DeliveryPage = lazy(() => import('../features/delivery/DeliveryPage').then((m) => ({ default: m.DeliveryPage })))
 const ReportsPage = lazy(() => import('../features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })))
+const LoginPage = lazy(() => import('../features/auth/LoginPage').then((m) => ({ default: m.LoginPage })))
 
 const pageFallback = (
   <div className="af-page-loading">
@@ -22,6 +23,7 @@ export function App() {
   return (
     <Suspense fallback={pageFallback}>
       <Routes>
+        <Route path="login" element={<LoginPage />} />
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="orders" element={<OrdersPage />} />

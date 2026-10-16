@@ -4,13 +4,14 @@ import { BarChart } from '../../shared/components/BarChart'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
 import { compactCurrency, currency, shortDate } from '../../shared/utils/format'
+import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
 import { isLowStock, type Product } from '../inventory/types'
 import { useProducts } from '../inventory/useProducts'
 import { useDailyRevenue } from './reportService'
 
 const stockColumns: TableColumnsType<Product> = [
-  { title: 'Sản phẩm', dataIndex: 'name' },
-  { title: 'Tồn kho', dataIndex: 'stock', align: 'right', width: 110, render: (stock: number, product) => `${stock} ${product.unit.toLowerCase()}` },
+  { title: 'Sản phẩm', dataIndex: 'name', ellipsis: true },
+  { title: 'Có thể bán', dataIndex: 'stock', align: 'right', width: 110, render: (stock: number, product) => `${stock} ${product.unit.toLowerCase()}` },
   {
     title: 'Giá trị (giá bán)',
     key: 'value',
@@ -77,15 +78,16 @@ export function ReportsPage() {
               </Card>
             </Col>
             <Col xs={24} xl={10}>
-              <Card title="Giá trị tồn kho" className="af-card af-fill" styles={{ body: { padding: 0 } }}>
+              <Card title="Giá trị hàng khả dụng" className="af-card af-fill" styles={{ body: { padding: 0 } }}>
                 <Table<Product>
+                  className="af-data-table"
                   rowKey="id"
                   size="middle"
                   columns={stockColumns}
                   dataSource={productsQuery.data}
                   loading={productsQuery.isPending}
-                  pagination={false}
-                  scroll={{ x: 480 }}
+                  pagination={tablePagination}
+                  scroll={{ x: 600, y: tableScrollHeight }}
                 />
               </Card>
             </Col>

@@ -12,7 +12,7 @@ export function AppLayout() {
       <Topbar onOpenNav={() => setNavOpen(true)} />
       <Layout>
         {/* Máy tính: menu cố định bên trái. Điện thoại/tablet (< 992px): ẩn, mở bằng nút ☰ trên thanh trên cùng. */}
-        <Layout.Sider width={232} className="af-sider">
+        <Layout.Sider width={224} className="af-sider">
           <Sidebar />
         </Layout.Sider>
         <Drawer open={navOpen} onClose={() => setNavOpen(false)} placement="left" size={260} title="AquaFlow" styles={{ body: { padding: 0 } }}>
