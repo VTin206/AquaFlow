@@ -22,7 +22,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       label: (
         <span className="af-menu-label">
           {label}
-          {path === '/orders' && pendingCount > 0 && <Badge count={pendingCount} size="small" color="#e03131" title={`${pendingCount} đơn chờ xác nhận`} />}
+          {path === '/orders' && pendingCount > 0 && <Badge count={pendingCount} size="small" color="#c92a2a" title={`${pendingCount} đơn chờ xác nhận`} />}
         </span>
       ),
     })),

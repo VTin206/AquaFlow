@@ -27,7 +27,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
           {apiOnline === undefined ? 'Đang kiểm tra' : apiOnline ? 'Đã kết nối' : 'Dữ liệu mẫu'}
         </span>
         <Tooltip title="Thông báo">
-          <Badge dot offset={[-8, 8]} color="#e03131">
+          <Badge dot offset={[-8, 8]} color="#c92a2a">
             <Button type="text" shape="circle" className="af-topbar-icon" aria-label="Thông báo" icon={<Bell size={18} />} onClick={() => message.info('Bạn đã xem hết thông báo mới.')} />
           </Badge>
         </Tooltip>
