@@ -1,7 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Badge, Button, Empty, Popover, Spin } from 'antd'
-import { Bell, ChevronRight, ClipboardList, Truck, X } from 'lucide-react'
+import { Bell, ChevronRight, ClipboardList, Clock3, Truck, X } from 'lucide-react'
 import { Link } from 'react-router'
+import { isOverdue } from '../features/orders/types'
 import { useOrders } from '../features/orders/useOrders'
 import { OrderDetailsModal } from '../features/orders/components/OrderDetailsModal'
 
@@ -13,7 +14,8 @@ export function NotificationPopover() {
   const panelRef = useRef<HTMLElement>(null)
   const panelId = useId()
   const { data: orders = [], isPending, isError, refetch } = useOrders()
-  const notifications = orders.filter((order) => ['Chờ xác nhận', 'Giao thất bại'].includes(order.status))
+  // Đơn chờ xác nhận, giao thất bại, hoặc đã quá giờ hẹn mà chưa giao.
+  const notifications = orders.filter((order) => ['Chờ xác nhận', 'Giao thất bại'].includes(order.status) || isOverdue(order))
 
   function close() {
     setOpen(false)
@@ -61,11 +63,11 @@ export function NotificationPopover() {
                   {notifications.map((order) => (
                     <li key={order.id}>
                       <button type="button" className="af-notification-item" onClick={() => { setOpen(false); setOrderId(order.id) }}>
-                        <span className={`af-notification-icon${order.status === 'Giao thất bại' ? ' af-notification-icon-danger' : ''}`}>
-                          {order.status === 'Giao thất bại' ? <Truck size={18} /> : <ClipboardList size={18} />}
+                        <span className={`af-notification-icon${order.status === 'Giao thất bại' || isOverdue(order) ? ' af-notification-icon-danger' : ''}`}>
+                          {order.status === 'Chờ xác nhận' ? <ClipboardList size={18} /> : isOverdue(order) && order.status !== 'Giao thất bại' ? <Clock3 size={18} /> : <Truck size={18} />}
                         </span>
                         <span className="af-notification-copy">
-                          <strong>{order.status === 'Giao thất bại' ? 'Đơn giao thất bại' : 'Đơn hàng chờ xác nhận'}</strong>
+                          <strong>{order.status === 'Giao thất bại' ? 'Đơn giao thất bại' : order.status === 'Chờ xác nhận' ? 'Đơn hàng chờ xác nhận' : 'Đơn đã quá giờ hẹn'}</strong>
                           <span>{order.id} · {order.customer}</span>
                           <small>{order.time}</small>
                         </span>

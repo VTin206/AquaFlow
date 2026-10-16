@@ -8,6 +8,7 @@ import { daysUntilExpiry } from '../../inventory/expiry'
 import { useProducts } from '../../inventory/useProducts'
 import type { Order, OrderDraft } from '../types'
 import { useCreateOrder } from '../useOrders'
+import { useConfirmDiscard } from '../../../shared/hooks/useConfirmDiscard'
 
 type CreateOrderModalProps = { open: boolean; onClose: () => void; onCreated?: (order: Order) => void; defaultCustomer?: string; defaultPhone?: string; defaultAddress?: string }
 
@@ -18,6 +19,7 @@ export function CreateOrderModal(props: CreateOrderModalProps) {
 function CreateOrderDialog({ open, onClose, onCreated, defaultCustomer, defaultPhone, defaultAddress }: CreateOrderModalProps) {
   const { message } = App.useApp()
   const [form] = Form.useForm<OrderDraft>()
+  const cancel = useConfirmDiscard(form, onClose)
   const { data: products = [], isPending: loadingProducts } = useProducts()
   const createOrder = useCreateOrder()
   const { data: customers = [] } = useCustomers()
@@ -45,7 +47,7 @@ function CreateOrderDialog({ open, onClose, onCreated, defaultCustomer, defaultP
       cancelText="Hủy"
       confirmLoading={createOrder.isPending}
       onOk={() => form.submit()}
-      onCancel={onClose}
+      onCancel={cancel}
       destroyOnHidden
     >
       <Form<OrderDraft>

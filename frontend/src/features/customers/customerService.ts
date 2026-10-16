@@ -1,5 +1,6 @@
 import { db } from '../../mocks/db'
 import { mockError, mockRequest } from '../../mocks/mockRequest'
+import { logActivity, mockActor, requireRole } from '../../mocks/session'
 import { PICKUP_FEE, PICKUP_FEE_BELOW } from '../../shared/policy'
 import { amountDue } from '../orders/types'
 import {
@@ -32,8 +33,9 @@ export const refundableDeposit = (customerId: string) => {
 
 export function addBottleEntry(entry: Omit<BottleEntry, 'id' | 'at'>) {
   const next = Math.max(0, ...db.bottleLedger.map((item) => Number(item.id.replace('SV-', '')) || 0)) + 1
-  const saved: BottleEntry = { ...entry, id: `SV-${String(next).padStart(4, '0')}`, at: new Date().toISOString() }
+  const saved: BottleEntry = { ...entry, id: `SV-${String(next).padStart(4, '0')}`, at: new Date().toISOString(), by: mockActor() }
   db.bottleLedger.push(saved)
+  if (!entry.orderId) logActivity('Khách hàng', entry.customerId, `Sổ vỏ: ${entry.kind}${entry.bottles ? ` ${entry.bottles > 0 ? '+' : ''}${entry.bottles} vỏ` : ''}${entry.deposit ? ` · cọc ${entry.deposit.toLocaleString('vi-VN')} ₫` : ''}`, saved.at)
   return saved
 }
 
@@ -95,8 +97,10 @@ export const customerService = {
 
   create: (draft: CustomerDraft) =>
     mockRequest(() => {
+      requireRole(['ADMIN', 'SALES_STAFF'], 'thêm khách hàng')
       const record: CustomerRecord = { id: nextCustomerId(), legacyOrders: 0, ...validateDraft(draft) }
       db.customers.unshift(record)
+      logActivity('Khách hàng', record.id, `Thêm hồ sơ ${record.name}`)
       return toView(record)
     }),
 
@@ -104,7 +108,9 @@ export const customerService = {
     mockRequest(() => {
       const record = db.customers.find((customer) => customer.id === id)
       if (!record) throw mockError(404, 'Không tìm thấy khách hàng.')
+      requireRole(['ADMIN', 'SALES_STAFF'], 'sửa hồ sơ khách')
       Object.assign(record, validateDraft(draft, id))
+      logActivity('Khách hàng', record.id, `Cập nhật hồ sơ ${record.name}`)
       return toView(record)
     }),
 
@@ -115,6 +121,8 @@ export const customerService = {
     mockRequest(() => {
       const record = db.customers.find((customer) => customer.id === customerId)
       if (!record) throw mockError(404, 'Không tìm thấy khách hàng.')
+      // Báo mất/vỡ và hoàn cọc làm đổi tiền cọc nên cần chủ cửa hàng.
+      requireRole(['Báo mất/vỡ', 'Hoàn cọc'].includes(action.kind) ? ['ADMIN'] : ['ADMIN', 'SALES_STAFF'], `ghi "${action.kind}"`)
       const balance = bottleBalance(customerId)
       const bottles = action.bottles ?? 0
       const deposit = action.deposit ?? 0

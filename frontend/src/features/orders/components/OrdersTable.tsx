@@ -6,6 +6,7 @@ import { tablePagination, tableScrollHeight } from '../../../shared/utils/table'
 import { useColumnSort } from '../../../shared/components/sortableColumn'
 import { amountDue, paymentLabel, type Order } from '../types'
 import { AdvanceStatusButton } from './AdvanceStatusButton'
+import { LateTag } from './LateTag'
 import { OrderStatusTag } from './OrderStatusTag'
 import { OrderDetailsModal } from './OrderDetailsModal'
 
@@ -57,7 +58,17 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
       sorter: compact ? undefined : (a, b) => a.total - b.total,
       render: (total: number) => <span className="af-money">{currency(total)}</span>,
     },
-    { title: 'Xử lý đơn', dataIndex: 'status', width: 170, render: (_, order) => <OrderStatusTag status={order.status} method={order.method} /> },
+    {
+      title: 'Xử lý đơn',
+      dataIndex: 'status',
+      width: 170,
+      render: (_, order) => (
+        <Space size={4} wrap>
+          <OrderStatusTag status={order.status} method={order.method} />
+          <LateTag order={order} />
+        </Space>
+      ),
+    },
     ...(compact
       ? []
       : [

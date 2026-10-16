@@ -1,13 +1,35 @@
-import { Avatar, Button, Dropdown } from 'antd'
-import { ChevronDown, LogOut, Menu as MenuIcon, Store, Waves } from 'lucide-react'
+import { Avatar, Button, Dropdown, Tooltip, type MenuProps } from 'antd'
+import { Check, ChevronDown, LogOut, Menu as MenuIcon, ShoppingCart, Store, Waves } from 'lucide-react'
 import { Link, useNavigate } from 'react-router'
+import { roleNames, type RoleCode } from '../features/auth/permissions'
 import { useAuth } from '../features/auth/useAuth'
+import { setDemoRole, useStaff } from '../features/auth/useStaff'
 import { NotificationPopover } from './NotificationPopover'
 
 /** Thanh ứng dụng và các thao tác nhanh. */
 export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
-  const { user, logout } = useAuth()
+  const { logout } = useAuth()
+  const staff = useStaff()
   const navigate = useNavigate()
+  const logoutItem = { key: 'logout', danger: true, icon: <LogOut size={16} />, label: 'Đăng xuất', onClick: () => { logout(); navigate('/login', { replace: true }) } }
+  // Bản dùng thử: đổi vai trò để xem menu và quyền của từng nhân viên.
+  const menuItems: MenuProps['items'] = staff?.isDemo
+    ? [
+        {
+          type: 'group',
+          key: 'role',
+          label: 'Xem với vai trò',
+          children: (Object.keys(roleNames) as RoleCode[]).map((role) => ({
+            key: role,
+            label: roleNames[role],
+            icon: <Check size={16} style={{ visibility: staff.role === role ? 'visible' : 'hidden' }} />,
+            onClick: () => setDemoRole(role),
+          })),
+        },
+        { type: 'divider' },
+        logoutItem,
+      ]
+    : [logoutItem]
 
   return (
     <header className="af-topbar">
@@ -26,16 +48,21 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
       </div>
       <div className="af-topbar-right">
         <span className="af-demo-label">Dữ liệu mẫu</span>
+        <Tooltip title="Trang khách đặt hàng (dùng chung dữ liệu mẫu trong tab này)">
+          <Link to="/shop" className="af-notification-link" aria-label="Mở trang khách đặt hàng">
+            <ShoppingCart size={19} color="#e0edf9" aria-hidden />
+          </Link>
+        </Tooltip>
         <NotificationPopover />
         <Dropdown
           trigger={['click']}
-          menu={{ items: [{ key: 'logout', danger: true, icon: <LogOut size={16} />, label: 'Đăng xuất', onClick: () => { logout(); navigate('/login', { replace: true }) } }] }}
+          menu={{ items: menuItems }}
         >
           <button type="button" className="af-topbar-user af-account-menu" aria-label="Menu tài khoản">
-            <Avatar className="af-avatar">{(user?.name ?? 'A').split(/\s+/).map((part) => part[0]).slice(-2).join('').toUpperCase()}</Avatar>
+            <Avatar className="af-avatar">{(staff?.name ?? 'A').split(/\s+/).map((part) => part[0]).slice(-2).join('').toUpperCase()}</Avatar>
             <div className="af-topbar-user-text">
-              <strong>{user?.name ?? 'Quản trị viên'}</strong>
-              <small>{user?.role ?? 'Quản trị viên'}</small>
+              <strong>{staff?.name ?? 'Quản trị viên'}</strong>
+              <small>{staff ? `${staff.roleName}${staff.isDemo ? ' · dùng thử' : ''}` : 'Quản trị viên'}</small>
             </div>
             <ChevronDown size={14} aria-hidden />
           </button>

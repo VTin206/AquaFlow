@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Avatar, Button, Descriptions, Drawer, Empty, Space, Table, Tabs, Tag, Typography } from 'antd'
 import { Pencil, Phone, ShoppingBag } from 'lucide-react'
 import { currency } from '../../../shared/utils/format'
+import { can } from '../../auth/permissions'
+import { useStaff } from '../../auth/useStaff'
 import { OrderDetailsModal } from '../../orders/components/OrderDetailsModal'
 import { OrderStatusTag } from '../../orders/components/OrderStatusTag'
 import { amountDue, paymentLabel, type Order } from '../../orders/types'
@@ -16,6 +18,9 @@ const signed = (value: number, render: (value: number) => string = String) => (v
 
 /** Hồ sơ khách: liên hệ, đơn hàng, công nợ và sổ vỏ/cọc trong một ngăn kéo. */
 export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: CustomerDrawerProps) {
+  const staff = useStaff()
+  // Hoàn cọc, báo mất/vỡ làm đổi tiền cọc nên chỉ chủ cửa hàng thấy.
+  const canAdjust = !staff || can(staff.role, 'adjustBottles')
   const { data: customers = [] } = useCustomers()
   const { data: orders = [] } = useOrders()
   const ledgerQuery = useBottleLedger(customerId)
@@ -166,12 +171,16 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
                       Thu vỏ
                     </Button>
                     <Button onClick={() => setBottleAction('Thu cọc')}>Thu cọc</Button>
-                    <Button onClick={() => setBottleAction('Hoàn cọc')} disabled={refundable === 0} title={refundable === 0 ? 'Khách chưa trả đủ vỏ để hoàn cọc' : undefined}>
-                      Hoàn cọc
-                    </Button>
-                    <Button danger onClick={() => setBottleAction('Báo mất/vỡ')} disabled={customer.bottlesHeld === 0}>
-                      Báo mất/vỡ
-                    </Button>
+                    {canAdjust && (
+                      <>
+                        <Button onClick={() => setBottleAction('Hoàn cọc')} disabled={refundable === 0} title={refundable === 0 ? 'Khách chưa trả đủ vỏ để hoàn cọc' : undefined}>
+                          Hoàn cọc
+                        </Button>
+                        <Button danger onClick={() => setBottleAction('Báo mất/vỡ')} disabled={customer.bottlesHeld === 0}>
+                          Báo mất/vỡ
+                        </Button>
+                      </>
+                    )}
                   </Space>
                   <Table<BottleEntry>
                     rowKey="id"

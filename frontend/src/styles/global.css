@@ -450,7 +450,7 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.af-customer-cell > .af-cell-stack { flex: 1; }
+.af-data-table .af-link-button { font-weight: 500; }
 .af-stock-summary { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .af-data-table .ant-pagination { padding-inline: 16px; }
 
@@ -482,12 +482,6 @@ body {
   color: var(--af-text-tertiary);
   font-size: 12px;
 }
-.af-customer-cell {
-  align-items: center;
-  display: flex;
-  gap: 10px;
-}
-
 /* ---------- Tổng quan ---------- */
 .af-metric {
   height: 100%;
@@ -1057,3 +1051,107 @@ body {
   .af-drawer-actions .ant-btn { padding-inline: 10px; }
 }
 .af-fee-hint { margin-top: -12px; margin-bottom: 16px; }
+
+/* ---------- Cài đặt ---------- */
+.af-settings-card { margin-bottom: 16px; }
+.af-settings-card .ant-form-item:last-child { margin-bottom: 0; }
+.af-settings-actions { position: sticky; bottom: 0; z-index: 2; display: flex; justify-content: flex-end; padding: 12px 0; background: var(--af-bg); border-top: 1px solid var(--af-border); }
+.af-invoice-preview { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border: 1px dashed var(--af-border); border-radius: 8px; background: #fff; text-align: center; font-size: 13px; color: var(--af-text-secondary); }
+.af-invoice-preview strong { font-size: 16px; color: var(--af-text-strong); text-transform: uppercase; }
+.af-invoice-preview em { margin-top: 6px; font-size: 12px; }
+.af-sider-link.is-active { color: var(--af-primary); background: var(--af-primary-soft); }
+
+/* ---------- Màn hình tài xế (ưu tiên điện thoại) ---------- */
+.af-driver { max-width: 640px; }
+.af-driver-picker { display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--af-text-strong); }
+.af-driver-picker .ant-select { flex: 1; max-width: 280px; }
+.af-driver-trip { margin-top: 16px; }
+.af-driver-summary .ant-card-body { display: flex; flex-direction: column; gap: 10px; }
+.af-driver-totals { display: flex; flex-wrap: wrap; gap: 8px 20px; color: var(--af-text-secondary); }
+.af-driver-totals span, .af-driver-facts li { display: inline-flex; align-items: center; gap: 6px; }
+.af-driver-totals strong { color: var(--af-text-strong); }
+.af-driver-done { margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--af-primary-soft); color: var(--af-primary); font-weight: 600; }
+.af-driver-stops { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.af-driver-stop { padding: 14px; border: 1px solid var(--af-border); border-radius: 12px; background: #fff; }
+.af-driver-stop .af-trip-stop-top { justify-content: flex-start; }
+.af-driver-customer { flex: 1; min-width: 0; font-size: 16px; color: var(--af-text-strong); }
+.af-driver-address { margin: 8px 0; font-size: 15px; color: var(--af-text); }
+.af-driver-facts { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 4px; color: var(--af-text-secondary); }
+.af-driver-note { color: var(--af-warning); }
+.af-driver-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.af-driver-actions .ant-btn { height: 48px; }
+.af-driver-result .ant-btn { width: 100%; height: 48px; font-weight: 600; }
+.af-driver-finished { margin-top: 12px; padding: 10px 14px; border: 1px solid var(--af-border); border-radius: 12px; background: #fff; }
+.af-driver-finished summary { cursor: pointer; font-weight: 600; color: var(--af-text-strong); min-height: 32px; display: flex; align-items: center; }
+.af-driver-finished ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.af-driver-finished li { display: flex; justify-content: space-between; gap: 8px; }
+
+/* Mã QR chuyển khoản */
+.af-transfer-qr { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.af-transfer-qr dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0; min-width: 0; font-size: 13px; }
+.af-transfer-qr dt { color: var(--af-text-secondary); }
+.af-transfer-qr dd { margin: 0; overflow-wrap: anywhere; }
+.af-transfer-qr.is-compact { gap: 8px 12px; flex-wrap: nowrap; }
+.af-transfer-qr.is-compact dl { font-size: 9pt; gap: 0 8px; }
+.af-transfer-qr.is-compact dt { color: #333; }
+
+/* Chi tiết đơn: trả hàng */
+.af-detail-alert { margin-bottom: 12px; }
+.af-return-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.af-return-list li { display: flex; flex-direction: column; padding: 8px 12px; border-radius: 8px; background: var(--af-primary-soft); }
+.af-return-list small { color: var(--af-text-secondary); }
+
+/* Báo cáo */
+.af-report-delivery { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+@media (max-width: 640px) {
+  .af-report-delivery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.af-driver-me { margin: 0; font-size: 15px; color: var(--af-text-secondary); }
+.af-driver-me strong { color: var(--af-text-strong); }
+
+/* Trang khách đặt hàng */
+.af-shop { min-height: 100dvh; display: flex; flex-direction: column; background: var(--af-bg); }
+.af-shop-header { position: sticky; top: 0; z-index: 10; background: #fff; border-bottom: 1px solid var(--af-border); }
+.af-shop-header-inner { max-width: 1180px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 16px; }
+.af-shop-brand { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--af-text-strong); }
+.af-shop-brand strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
+.af-shop-brand .af-brand-mark { flex: none; width: 34px; height: 34px; }
+.af-shop-nav { display: flex; gap: 4px; margin-left: auto; }
+.af-shop-nav a { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; color: var(--af-text-secondary); font-weight: 500; white-space: nowrap; }
+.af-shop-nav a:hover, .af-shop-nav a.active { color: var(--af-primary); background: var(--af-primary-soft); }
+.af-shop-main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 20px 16px 32px; }
+.af-shop-footer { display: flex; flex-wrap: wrap; gap: 4px 16px; justify-content: center; padding: 16px; border-top: 1px solid var(--af-border); background: #fff; color: var(--af-text-secondary); font-size: 13px; text-align: center; }
+.af-shop-footer a { display: inline-flex; align-items: center; gap: 4px; }
+.af-shop-footer small { flex-basis: 100%; color: var(--af-text-tertiary); }
+.af-shop-hero { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; align-items: flex-end; margin-bottom: 16px; }
+.af-shop-hero h2.ant-typography { margin: 0 0 4px; }
+.af-shop-hero p { margin: 0; color: var(--af-text-secondary); }
+.af-shop-hero ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; color: var(--af-text-secondary); font-size: 13px; }
+.af-shop-hero li { display: flex; align-items: center; gap: 6px; }
+.af-shop-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.af-shop-toolbar .ant-segmented { max-width: 100%; overflow-x: auto; }
+.af-shop-card-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.af-shop-card-footer small { color: var(--af-text-secondary); }
+.af-shop-cart { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.af-shop-cart li { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--af-border); }
+.af-shop-cart li > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.af-shop-cart small { color: var(--af-text-secondary); }
+.af-shop-cart-footer { display: flex; flex-direction: column; gap: 4px; }
+.af-shop-cart-footer .ant-btn { margin-top: 8px; }
+.af-shop-narrow { max-width: 640px; margin: 0 auto; }
+.af-shop-track { display: flex; flex-direction: column; gap: 16px; }
+.af-shop-track-card .ant-steps { margin-bottom: 16px; }
+.af-shop-track-info { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0 0 8px; }
+.af-shop-track-info dt { color: var(--af-text-secondary); }
+.af-shop-track-info dd { margin: 0; overflow-wrap: anywhere; }
+.af-shop-track-lines li > span { white-space: nowrap; }
+.af-shop-track-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.af-shop-track-privacy.ant-typography { font-size: 12px; margin: 0; }
+@media (max-width: 640px) {
+  .af-shop-header-inner { gap: 8px; }
+  .af-shop-cart-label { display: none; }
+  .af-shop-nav a { padding: 6px; }
+  .af-shop-nav a:first-child { display: none; }
+  .af-shop-nav-text { display: none; }
+  .af-shop-hero ul { display: none; }
+}

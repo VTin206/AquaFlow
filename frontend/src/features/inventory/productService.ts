@@ -1,5 +1,6 @@
 import { db } from '../../mocks/db'
 import { mockError, mockRequest } from '../../mocks/mockRequest'
+import { logActivity, requireRole } from '../../mocks/session'
 import { isoToVnDate, localToday } from './expiry'
 import { tracksExpiry, type Lot, type Product, type ProductDraft, type Receipt, type ReceiptDraft } from './types'
 
@@ -19,6 +20,7 @@ export const productService = {
 
   create: (draft: ProductDraft) =>
     mockRequest(() => {
+      requireRole(['ADMIN', 'SALES_STAFF'], 'thêm sản phẩm')
       const sku = draft.sku.trim()
       if (db.products.some((product) => product.sku.toLowerCase() === sku.toLowerCase())) {
         throw mockError(400, `Mã sản phẩm ${sku} đã tồn tại.`)
@@ -31,11 +33,12 @@ export const productService = {
         unit: draft.unit,
         price: draft.price,
         stock: draft.stock,
-        threshold: 10,
+        threshold: db.settings.defaultLowStock,
         expiry: '—',
         image: draft.image || undefined,
       }
       db.products.unshift(product)
+      logActivity('Kho hàng', product.id, `Thêm sản phẩm ${product.name}`)
       return product
     }),
 
@@ -49,6 +52,7 @@ export const productService = {
 
   createReceipt: (draft: ReceiptDraft) =>
     mockRequest(() => {
+      requireRole(['ADMIN', 'SALES_STAFF'], 'nhập kho')
       const supplier = db.suppliers.find((item) => item.id === draft.supplierId)
       if (!supplier) throw mockError(400, 'Chọn nhà cung cấp.')
       const today = localToday()
@@ -96,6 +100,7 @@ export const productService = {
         total: lines.reduce((sum, line) => sum + (line.received - line.damaged) * line.costPrice, 0),
       }
       db.receipts.push(receipt)
+      logActivity('Kho hàng', id, `Nhập kho từ ${supplier.name}: ${receipt.lines.length} dòng, ${receipt.total.toLocaleString('vi-VN')} ₫`)
       syncExpiry()
       return receipt
     }),

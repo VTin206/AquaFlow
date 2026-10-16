@@ -145,21 +145,3 @@ export const initialOrders: Order[] = allOrders.map((order) => ({
   ...order,
   customerId: customers.find((customer) => normalizePhone(customer.phone) === normalizePhone(order.phone))?.id,
 }))
-
-/** Doanh thu mẫu theo ngày (đồng), dùng cho biểu đồ khi chưa có API báo cáo. */
-export const dailyRevenue: { date: string; revenue: number }[] = [
-  { date: '2026-10-03', revenue: 2_420_000 },
-  { date: '2026-10-04', revenue: 3_180_000 },
-  { date: '2026-10-05', revenue: 2_140_000 },
-  { date: '2026-10-06', revenue: 2_860_000 },
-  { date: '2026-10-07', revenue: 2_420_000 },
-  { date: '2026-10-08', revenue: 3_310_000 },
-  { date: '2026-10-09', revenue: 2_750_000 },
-  { date: '2026-10-10', revenue: 3_920_000 },
-  { date: '2026-10-11', revenue: 3_180_000 },
-  { date: '2026-10-12', revenue: 2_560_000 },
-  { date: '2026-10-13', revenue: 2_980_000 },
-  { date: '2026-10-14', revenue: 3_440_000 },
-  { date: '2026-10-15', revenue: 2_610_000 },
-  { date: '2026-10-16', revenue: initialOrders.filter((order) => order.status === 'Đã hoàn tất').reduce((sum, order) => sum + order.total, 0) },
-]

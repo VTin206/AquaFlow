@@ -5,7 +5,8 @@ import { CountLabel } from '../../../shared/components/CountLabel'
 import { QueryError } from '../../../shared/components/QueryError'
 import { currency } from '../../../shared/utils/format'
 import { tablePagination, tableScrollHeight } from '../../../shared/utils/table'
-import { daysUntilExpiry, EXPIRY_WARNING_DAYS, isoToVnDate } from '../expiry'
+import { useExpiryWarningDays } from '../../settings/settingsService'
+import { daysUntilExpiry, isoToVnDate } from '../expiry'
 import type { Lot } from '../types'
 import { useLots, useProducts } from '../useProducts'
 
@@ -16,12 +17,13 @@ const daysLeft = (lot: Lot) => (lot.expiryDate ? daysUntilExpiry(isoToVnDate(lot
 /** Tồn theo lô, sắp theo hạn dùng; lô hết hạn sớm được xuất trước (FEFO). */
 export function LotsPanel() {
   const lotsQuery = useLots()
+  const warningDays = useExpiryWarningDays()
   const { data: products = [] } = useProducts()
   const [filter, setFilter] = useState<LotFilter>('stock')
   const [query, setQuery] = useState('')
   const lots = lotsQuery.data ?? []
   const inStock = lots.filter((lot) => lot.remaining > 0)
-  const expiring = inStock.filter((lot) => (daysLeft(lot) ?? Infinity) <= EXPIRY_WARNING_DAYS)
+  const expiring = inStock.filter((lot) => (daysLeft(lot) ?? Infinity) <= warningDays)
   const productOf = (id: string) => products.find((product) => product.id === id)
   const keyword = query.trim().toLowerCase()
   const visible = (filter === 'stock' ? inStock : filter === 'expiring' ? expiring : lots).filter((lot) =>
@@ -75,7 +77,7 @@ export function LotsPanel() {
               return (
                 <div className="af-cell-stack">
                   <span>{isoToVnDate(lot.expiryDate!)}</span>
-                  <small className={days <= EXPIRY_WARNING_DAYS ? 'af-text-warning' : undefined}>{days < 0 ? 'Đã hết hạn' : `Còn ${days} ngày`}</small>
+                  <small className={days <= warningDays ? 'af-text-warning' : undefined}>{days < 0 ? 'Đã hết hạn' : `Còn ${days} ngày`}</small>
                 </div>
               )
             },

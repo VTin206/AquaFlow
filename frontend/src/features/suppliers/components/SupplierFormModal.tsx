@@ -1,10 +1,12 @@
 import { App, Col, Form, Input, Modal, Row } from 'antd'
 import type { SupplierDraft } from '../types'
 import { useCreateSupplier } from '../useSuppliers'
+import { useConfirmDiscard } from '../../../shared/hooks/useConfirmDiscard'
 
 export function SupplierFormModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const { message } = App.useApp()
   const [form] = Form.useForm<SupplierDraft>()
+  const cancel = useConfirmDiscard(form, onClose)
   const createSupplier = useCreateSupplier()
 
   const submit = (draft: SupplierDraft) => {
@@ -27,7 +29,7 @@ export function SupplierFormModal({ onClose, onCreated }: { onClose: () => void;
       okText="Lưu nhà cung cấp"
       cancelText="Hủy"
       onOk={() => form.submit()}
-      onCancel={() => { if (!createSupplier.isPending) onClose() }}
+      onCancel={() => { if (!createSupplier.isPending) cancel() }}
       confirmLoading={createSupplier.isPending}
       cancelButtonProps={{ disabled: createSupplier.isPending }}
       closable={!createSupplier.isPending}

@@ -1,5 +1,6 @@
 import { db } from '../../mocks/db'
 import { mockError, mockRequest } from '../../mocks/mockRequest'
+import { logActivity, mockActor, requireRole } from '../../mocks/session'
 import { beginDelivery, canDispatch } from '../orders/orderService'
 import type { Order } from '../orders/types'
 import { drivers, type SettlementDraft, type Trip, type TripDraft, type TripRecord } from './types'
@@ -30,7 +31,7 @@ export function expectedHandover(trip: TripRecord) {
   return {
     cash: orders
       .flatMap((order) => order.payments)
-      .filter((payment) => payment.method === 'Tiền mặt' && payment.recordedAt >= since)
+      .filter((payment) => payment.method === 'Tiền mặt' && !payment.refund && payment.recordedAt >= since)
       .reduce((sum, payment) => sum + payment.amount, 0),
     bottles: orders.filter((order) => ['Đã giao', 'Đã hoàn tất'].includes(order.status)).reduce((sum, order) => sum + (order.bottles?.returned ?? 0), 0),
   }
@@ -41,6 +42,7 @@ export const tripService = {
 
   create: (draft: TripDraft) =>
     mockRequest(() => {
+      requireRole(['ADMIN', 'SALES_STAFF'], 'tạo chuyến giao')
       if (!draft.driver?.trim() || !drivers.includes(draft.driver)) throw mockError(400, 'Chọn tài xế giao hàng.')
       const orderIds = [...new Set(draft.orderIds ?? [])]
       if (!orderIds.length) throw mockError(400, 'Chọn ít nhất một đơn cho chuyến.')
@@ -59,12 +61,14 @@ export const tripService = {
         createdAt: new Date().toISOString(),
       }
       db.trips.push(trip)
+      logActivity('Giao hàng', trip.id, `Tạo chuyến cho ${trip.driver}: ${orderIds.join(', ')}`)
       return toView(trip)
     }),
 
   depart: (id: string) =>
     mockRequest(() => {
       const trip = findTrip(id)
+      requireRole(['ADMIN', 'SALES_STAFF', 'DELIVERY_STAFF'], 'cho chuyến xuất phát')
       if (statusOf(trip) !== 'Chờ xuất phát') throw mockError(400, 'Chuyến đã xuất phát.')
       // Kiểm tra mọi đơn trước khi chuyển trạng thái để không xuất phát dở dang.
       const orders = ordersOf(trip)
@@ -72,14 +76,17 @@ export const tripService = {
       if (blocked.length) throw mockError(400, `Bỏ các đơn không còn chờ giao trước khi xuất phát: ${blocked.map((order) => order.id).join(', ')}.`)
       orders.filter(canDispatch).forEach((order) => beginDelivery(order, `chuyến ${trip.id}, tài xế ${trip.driver}`))
       trip.departedAt = new Date().toISOString()
+      logActivity('Giao hàng', trip.id, `Xuất phát (${mockActor()})`, trip.departedAt)
       return toView(trip)
     }),
 
   removeOrder: (id: string, orderId: string) =>
     mockRequest(() => {
       const trip = findTrip(id)
+      requireRole(['ADMIN', 'SALES_STAFF'], 'sửa chuyến giao')
       if (trip.departedAt) throw mockError(400, 'Chỉ bỏ đơn khi chuyến chưa xuất phát.')
       trip.orderIds = trip.orderIds.filter((item) => item !== orderId)
+      logActivity('Giao hàng', trip.id, `Bỏ đơn ${orderId} khỏi chuyến`)
       if (!trip.orderIds.length) db.trips = db.trips.filter((item) => item.id !== id)
       return trip.orderIds.length ? toView(trip) : null
     }),
@@ -87,14 +94,17 @@ export const tripService = {
   cancel: (id: string) =>
     mockRequest(() => {
       const trip = findTrip(id)
+      requireRole(['ADMIN', 'SALES_STAFF'], 'hủy chuyến giao')
       if (trip.departedAt) throw mockError(400, 'Chuyến đã xuất phát, không hủy được. Ghi kết quả từng đơn rồi đối soát.')
       db.trips = db.trips.filter((item) => item.id !== id)
+      logActivity('Giao hàng', trip.id, 'Hủy chuyến chưa xuất phát')
       return null
     }),
 
   settle: (id: string, draft: SettlementDraft) =>
     mockRequest(() => {
       const trip = findTrip(id)
+      requireRole(['ADMIN', 'SALES_STAFF'], 'đối soát chuyến')
       if (statusOf(trip) !== 'Chờ đối soát') throw mockError(400, 'Chỉ đối soát khi mọi đơn trong chuyến đã có kết quả giao.')
       const { cashHandedOver, bottlesHandedOver } = draft
       if (!Number.isSafeInteger(cashHandedOver) || cashHandedOver < 0) throw mockError(400, 'Tiền mặt bàn giao phải là số nguyên không âm.')
@@ -109,7 +119,14 @@ export const tripService = {
         bottlesHandedOver,
         note: draft.note?.trim() || undefined,
         settledAt: new Date().toISOString(),
+        settledBy: mockActor(),
       }
+      logActivity(
+        'Giao hàng',
+        trip.id,
+        `Đối soát: tiền ${cashHandedOver.toLocaleString('vi-VN')}/${expected.cash.toLocaleString('vi-VN')} ₫, vỏ ${bottlesHandedOver}/${expected.bottles}${mismatch ? ` · Lệch: ${draft.note?.trim()}` : ''}`,
+        trip.settlement.settledAt,
+      )
       return toView(trip)
     }),
 }
