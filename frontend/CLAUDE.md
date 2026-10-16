@@ -1,14 +1,15 @@
-# AquaFlow – hướng dẫn cho Claude Code
+# AquaFlow Frontend – hướng dẫn cho Claude Code
 
-Quy tắc đầy đủ của nhóm: [docs/team-rules.md](docs/team-rules.md). File này tóm tắt cách Claude làm việc với Git trong repo.
+Áp dụng cho code trong `frontend/`. Quy tắc đầy đủ của nhóm: [../docs/team-rules.md](../docs/team-rules.md).
 
 ## Branch
 
 - Không bao giờ commit/push trực tiếp lên `main` hoặc `develop`.
 - Trước khi sửa code, kiểm tra branch hiện tại. Nếu đang ở `main`/`develop`, tạo branch mới từ `develop` mới nhất:
-  `git switch develop && git pull origin develop && git switch -c <type>/<fe|be>-<ten-viec>`
+  `git switch develop && git pull origin develop && git switch -c <type>/fe-<ten-viec>`
 - Mỗi task (một Issue) một branch. Không làm task khác trên branch đang có thay đổi chưa liên quan.
-- Tên branch: `feat/fe-...`, `fix/fe-...`, `refactor/...`, `docs/...`, `chore/...`, `test/...`, `build/...`.
+- Tên branch: `feat/fe-...`, `fix/fe-...`, `refactor/fe-...`, `docs/fe-...`, `chore/fe-...`, `build/fe-...`.
+- Chỉ sửa file trong `frontend/`. Cần đổi backend, database hoặc API contract thì báo người dùng thay vì tự sửa.
 
 ## Khi nào commit
 
@@ -31,10 +32,11 @@ Không gộp nhiều việc không liên quan vào một commit. Không commit c
 ## Pull Request
 
 - Khi task đạt tiêu chí của Issue: hỏi người dùng trước, rồi mới tạo PR vào `develop` (không phải `main`).
-- PR cần: liên kết Issue, mô tả thay đổi, file/module ảnh hưởng, có thay đổi API/DB không, cách kiểm tra, ảnh chụp giao diện (frontend).
-- Không tự merge PR. Merge do maintainer thực hiện sau review (Squash and merge).
+- PR cần: liên kết Issue, mô tả thay đổi, file ảnh hưởng, cách kiểm tra, ảnh chụp giao diện.
+- Reviewer là Frontend Developer còn lại. Không tự merge PR; merge do maintainer thực hiện (Squash and merge).
 
-## Frontend
+## Dự án
 
-- React + TypeScript + Vite trong `frontend/`. Chạy dev: `npm run dev` (http://localhost:5173, `/api` proxy sang `http://localhost:8080`).
-- Cấu trúc: `pages/` (mỗi trang một file), `components/` (dùng chung), `types/`, `mocks/`, `config/`, `utils/`. Gọi API tập trung trong `services/`, không gọi `fetch` rải rác trong component.
+- React + TypeScript + Vite. Chạy dev: `npm run dev` (http://localhost:5173, `/api` proxy sang `http://localhost:8080`).
+- Cấu trúc `src/`: `pages/` (mỗi trang một file), `components/` (dùng chung), `types/`, `mocks/`, `config/`, `utils/`. Gọi API tập trung trong `services/`, không gọi `fetch` rải rác trong component.
+- Component `PascalCase`, biến/hàm `camelCase`. Không hardcode địa chỉ API. UI có trạng thái Loading/Error/Empty khi phù hợp.
