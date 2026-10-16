@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { App, Button, Card, Col, Empty, Input, Row, Segmented, Skeleton, Tag, Typography } from 'antd'
+import { App, Button, Card, Col, Empty, Input, Row, Select, Skeleton, Tag, Typography } from 'antd'
 import { Droplets, Search, ShoppingCart, Truck } from 'lucide-react'
 import { useOutletContext } from 'react-router'
 import { QueryError } from '../../shared/components/QueryError'
@@ -8,6 +8,7 @@ import { currency } from '../../shared/utils/format'
 import { normalizeSearch } from '../inventory/catalog'
 import { useSettings } from '../settings/settingsService'
 import { cartActions, useCart } from './cart'
+import { shopGroups } from './shopGroups'
 import { useShopProducts, type ShopProduct } from './shopService'
 
 const ALL = 'Tất cả'
@@ -29,6 +30,7 @@ export function ShopPage() {
   const productsQuery = useShopProducts()
   const { data: settings } = useSettings()
   const cart = useCart()
+  const [group, setGroup] = useState<string>(ALL)
   const [category, setCategory] = useState(ALL)
   const [query, setQuery] = useState('')
 
@@ -37,10 +39,23 @@ export function ShopPage() {
   }, [settings?.storeName])
 
   const products = productsQuery.data ?? []
-  const categories = [ALL, ...new Set(products.map((product) => product.catalog?.category ?? 'Khác'))]
+  const categories = [...new Set(products.map((product) => product.catalog?.category ?? 'Khác'))]
+  const inGroup = (product: ShopProduct, key: string) => key === ALL || shopGroups.find((item) => item.key === key)?.match(product)
+  const groupOptions = [
+    { value: ALL, label: `Tất cả (${products.length})` },
+    ...shopGroups
+      .map((item) => ({ value: item.key, label: item.label, count: products.filter(item.match).length }))
+      .filter((item) => item.count > 0)
+      .map((item) => ({ value: item.value, label: `${item.label} (${item.count})` })),
+  ]
   const keyword = normalizeSearch(query.trim())
   const visible = products
-    .filter((product) => (category === ALL || (product.catalog?.category ?? 'Khác') === category) && normalizeSearch(`${product.name} ${product.brand}`).includes(keyword))
+    .filter(
+      (product) =>
+        inGroup(product, group) &&
+        (category === ALL || (product.catalog?.category ?? 'Khác') === category) &&
+        normalizeSearch(`${product.name} ${product.brand}`).includes(keyword),
+    )
     .sort((a, b) => Number(b.available) - Number(a.available))
 
   return (
@@ -61,7 +76,22 @@ export function ShopPage() {
       </section>
 
       <div className="af-shop-toolbar">
-        <Segmented value={category} onChange={(value) => setCategory(String(value))} options={categories} />
+        <div className="af-shop-groups" role="group" aria-label="Loại bình, chai">
+          {groupOptions.map((option) => (
+            <Tag.CheckableTag key={option.value} checked={group === option.value} onChange={() => setGroup(option.value)}>
+              {option.label}
+            </Tag.CheckableTag>
+          ))}
+        </div>
+      </div>
+      <div className="af-shop-toolbar">
+        <Select
+          aria-label="Dòng nước"
+          value={category}
+          onChange={setCategory}
+          style={{ minWidth: 200 }}
+          options={[{ value: ALL, label: 'Mọi dòng nước' }, ...categories.map((value) => ({ value, label: value }))]}
+        />
         <Input allowClear prefix={<Search size={16} className="af-input-icon" />} placeholder="Tìm sản phẩm, thương hiệu..." value={query} onChange={(event) => setQuery(event.target.value)} className="af-search" />
       </div>
 
