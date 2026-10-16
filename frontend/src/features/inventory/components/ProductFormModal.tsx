@@ -59,7 +59,7 @@ export function ProductFormModal({ open, onClose }: ProductFormModalProps) {
       onCancel={close}
       destroyOnHidden
     >
-      <Form<ProductDraft> form={form} layout="vertical" requiredMark="optional" initialValues={{ unit: 'Bình', price: 0, stock: 0 }} onFinish={submit} preserve={false}>
+      <Form<ProductDraft> form={form} layout="vertical" initialValues={{ unit: 'Bình', price: 0, stock: 0 }} onFinish={submit} preserve={false}>
         <Form.Item label="Ảnh sản phẩm" extra={`PNG, JPG hoặc WEBP, tối đa ${MAX_IMAGE_MB} MB.`}>
           <Upload accept="image/*" listType="picture-card" maxCount={1} showUploadList={false} beforeUpload={readImage}>
             {image ? (

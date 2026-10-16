@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Badge, Button, Card, Col, Empty, Row, Skeleton, Typography } from 'antd'
+import { Badge, Button, Card, Col, Empty, Row, Segmented, Skeleton, Typography } from 'antd'
 import { Clock3, Eye, MapPin, Package, Phone } from 'lucide-react'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
@@ -8,6 +8,7 @@ import { AdvanceStatusButton } from '../orders/components/AdvanceStatusButton'
 import { amountDue, type Order, type OrderStatus } from '../orders/types'
 import { useOrders } from '../orders/useOrders'
 import { OrderDetailsModal } from '../orders/components/OrderDetailsModal'
+import { TripsPanel } from './components/TripsPanel'
 
 // Bảng giao hàng: mỗi cột là một bước, đơn đi từ trái sang phải.
 const columns: { status: OrderStatus; title: string; hint: string; color: string }[] = [
@@ -59,11 +60,27 @@ function DeliveryCard({ order, onDetails }: { order: Order; onDetails: () => voi
 export function DeliveryPage() {
   const ordersQuery = useOrders()
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [view, setView] = useState<'trips' | 'board'>('trips')
   const deliveries = (ordersQuery.data ?? []).filter((order) => order.method === 'Giao tận nơi')
 
   return (
-    <Page title="Giao hàng" description="Theo dõi địa chỉ, tiền cần thu và kết quả từng lần giao tận nơi.">
-      {ordersQuery.isError ? (
+    <Page
+      title="Giao hàng"
+      description="Xếp đơn vào chuyến, ghi kết quả từng điểm giao và đối soát tiền, vỏ khi tài xế về."
+      actions={
+        <Segmented
+          value={view}
+          onChange={setView}
+          options={[
+            { value: 'trips', label: 'Chuyến giao' },
+            { value: 'board', label: 'Bảng theo dõi đơn' },
+          ]}
+        />
+      }
+    >
+      {view === 'trips' ? (
+        <TripsPanel />
+      ) : ordersQuery.isError ? (
         <Card>
           <QueryError error={ordersQuery.error} onRetry={ordersQuery.refetch} />
         </Card>

@@ -7,7 +7,7 @@ Cập nhật: 16/10/2026. Phạm vi: frontend và dữ liệu mẫu AquaFlow.
 - 61 sản phẩm nước có ảnh, thuộc 12 nhóm thương hiệu đang có sản phẩm tại các trang đã kiểm tra; cộng 1 mã vỏ bình luân chuyển.
 - Xóa 3 sản phẩm mang thương hiệu AquaFlow (`P-001`, `P-003`, `P-005`), bỏ bộ lọc thương hiệu AquaFlow. Tên và logo ứng dụng vẫn giữ nguyên.
 - Đơn mẫu tham chiếu Vihawa 20L và Aquafina 500ml thay cho các mã đã xóa. Giá lịch sử của đơn giữ nguyên.
-- LaVie 19L và vỏ bình giữ tồn kho cũ. Các sản phẩm bổ sung có tồn kho 0; giá chỉ là dữ liệu minh họa, không đồng bộ trực tuyến.
+- `data.ts` bổ sung tồn khả dụng và hạn dùng minh họa cho danh mục: có hàng, tồn thấp, hết hàng và gần hết hạn. Vỏ bình giữ tồn kho cũ. Giá, tồn và hạn dùng đều là dữ liệu demo, không phải số liệu từ iWater và không đồng bộ trực tuyến.
 - Form thêm sản phẩm không tự gán thương hiệu AquaFlow khi để trống.
 
 ## Thương hiệu và mức độ đầy đủ

@@ -58,7 +58,6 @@ export function LoginPage() {
               <Form
                 name="login"
                 layout="vertical"
-                requiredMark={false}
                 onFinish={() => message.info('Đăng nhập chưa được kết nối. Bạn có thể chọn “Xem bản dùng thử” để khám phá AquaFlow.')}
               >
                 <Form.Item label="Tên đăng nhập" name="username" rules={[{ required: true, whitespace: true, message: 'Vui lòng nhập tên đăng nhập.' }]}>

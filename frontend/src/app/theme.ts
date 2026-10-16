@@ -42,7 +42,7 @@ export const appTheme: ThemeConfig = {
       iconSize: 18,
       iconMarginInlineEnd: 12,
     },
-    Card: { headerFontSize: 15, headerHeight: 62, bodyPadding: 22 },
+    Card: { headerFontSize: 15, headerHeight: 50, bodyPadding: 18 },
     Statistic: { titleFontSize: 13, contentFontSize: 'clamp(18px, 2vw, 28px)' },
     Button: { fontWeight: 500, primaryShadow: '0 3px 8px rgba(8, 127, 173, 0.16)', defaultShadow: 'none' },
     Table: {

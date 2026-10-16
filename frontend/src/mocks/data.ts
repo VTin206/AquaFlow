@@ -1,9 +1,10 @@
-import type { Customer } from '../features/customers/types'
+import { DEPOSIT_PER_BOTTLE, guessCustomerType, normalizePhone, type BottleEntry, type CustomerRecord } from '../features/customers/types'
 import type { Order } from '../features/orders/types'
 import type { Product } from '../features/inventory/types'
 import { waterProducts } from './waterCatalog'
+import { additionalCustomers, additionalOrders, type SeedCustomer } from './demoScenarios'
 
-export const initialOrders: Order[] = [
+const originalOrders: Order[] = [
   {
     id: 'AF-1048',
     customer: 'Nguyễn Văn An',
@@ -89,20 +90,66 @@ export const initialOrders: Order[] = [
 })
 
 export const initialProducts: Product[] = [
-  ...waterProducts,
+  // Tồn khả dụng và hạn dùng minh họa, không phải số liệu từ iWater.
+  // Các mã dùng trong đơn có hàng để thử tiếp nhận/xác nhận đơn.
+  ...waterProducts.map((product, index) => ({
+    ...product,
+    stock: ['P-004', 'P-009', 'P-010', 'P-012', 'P-016'].includes(product.id)
+      ? 48 + index * 2
+      : index % 11 === 0 ? 0 : index % 5 === 0 ? 4 : 20 + index * 3 % 65,
+    expiry: index % 9 === 0 ? '30/11/2026' : index % 7 === 0 ? '31/01/2027' : '30/09/2027',
+  })),
   { id: 'P-002', name: 'Vỏ bình 20L', brand: 'Dùng luân chuyển', unit: 'Vỏ', stock: 28, threshold: 35, price: 50000, expiry: '—', sku: 'VO-20L' },
 ]
 
-export const customers: Customer[] = [
-  { name: 'Nguyễn Văn An', phone: '0903 456 128', area: 'Thảo Điền, TP. Thủ Đức', orders: 28, bottlesHeld: 2, initials: 'NA' },
-  { name: 'Cửa hàng Minh Tâm', phone: '0918 220 467', area: 'Quận 7', orders: 64, bottlesHeld: 0, initials: 'MT' },
-  { name: 'Trần Thị Hương', phone: '0938 113 602', area: 'Quận 3', orders: 12, bottlesHeld: 1, initials: 'TH' },
-  { name: 'Văn phòng Green Hub', phone: '028 3822 8855', area: 'Bình Thạnh', orders: 19, bottlesHeld: 5, initials: 'GH' },
-  { name: 'Lê Hoàng Phúc', phone: '0908 772 351', area: 'Phú Nhuận', orders: 8, bottlesHeld: 0, initials: 'LP' },
+const seedCustomers: SeedCustomer[] = [
+  ...additionalCustomers,
+  { name: 'Nguyễn Văn An', phone: '0903 456 128', area: 'Thảo Điền, TP. Thủ Đức', orders: 28, bottlesHeld: 2 },
+  { name: 'Cửa hàng Minh Tâm', phone: '0918 220 467', area: 'Quận 7', orders: 64, bottlesHeld: 0 },
+  { name: 'Trần Thị Hương', phone: '0938 113 602', area: 'Quận 3', orders: 12, bottlesHeld: 1 },
+  { name: 'Văn phòng Green Hub', phone: '028 3822 8855', area: 'Bình Thạnh', orders: 19, bottlesHeld: 5 },
+  { name: 'Lê Hoàng Phúc', phone: '0908 772 351', area: 'Phú Nhuận', orders: 8, bottlesHeld: 0 },
 ]
+const allOrders = [...additionalOrders, ...originalOrders]
+
+export const customers: CustomerRecord[] = seedCustomers.map((seed, index) => {
+  const addresses = [...new Set(allOrders.filter((order) => normalizePhone(order.phone) === normalizePhone(seed.phone) && order.method === 'Giao tận nơi').map((order) => order.address))]
+  const ordersInSystem = allOrders.filter((order) => normalizePhone(order.phone) === normalizePhone(seed.phone)).length
+  return {
+    id: `KH-${String(index + 1).padStart(3, '0')}`,
+    name: seed.name,
+    phone: seed.phone,
+    type: guessCustomerType(seed.name),
+    area: seed.area,
+    addresses: addresses.length ? addresses : [seed.area],
+    legacyOrders: Math.max(0, seed.orders - ordersInSystem),
+  }
+})
+
+/** Số vỏ khách đang giữ khi bắt đầu dùng hệ thống, kèm tiền cọc tương ứng. */
+export const bottleLedger: BottleEntry[] = seedCustomers.flatMap((seed, index) =>
+  seed.bottlesHeld > 0
+    ? [{
+        id: `SV-${String(index + 1).padStart(4, '0')}`,
+        customerId: customers[index].id,
+        at: '2026-10-01T08:00:00+07:00',
+        kind: 'Số dư đầu kỳ' as const,
+        bottles: seed.bottlesHeld,
+        deposit: seed.bottlesHeld * DEPOSIT_PER_BOTTLE,
+        note: 'Chuyển số dư từ sổ tay.',
+      }]
+    : [],
+)
+
+export const initialOrders: Order[] = allOrders.map((order) => ({
+  ...order,
+  customerId: customers.find((customer) => normalizePhone(customer.phone) === normalizePhone(order.phone))?.id,
+}))
 
 /** Doanh thu mẫu theo ngày (đồng), dùng cho biểu đồ khi chưa có API báo cáo. */
 export const dailyRevenue: { date: string; revenue: number }[] = [
+  { date: '2026-10-03', revenue: 2_420_000 },
+  { date: '2026-10-04', revenue: 3_180_000 },
   { date: '2026-10-05', revenue: 2_140_000 },
   { date: '2026-10-06', revenue: 2_860_000 },
   { date: '2026-10-07', revenue: 2_420_000 },
@@ -114,5 +161,5 @@ export const dailyRevenue: { date: string; revenue: number }[] = [
   { date: '2026-10-13', revenue: 2_980_000 },
   { date: '2026-10-14', revenue: 3_440_000 },
   { date: '2026-10-15', revenue: 2_610_000 },
-  { date: '2026-10-16', revenue: 1_395_000 },
+  { date: '2026-10-16', revenue: initialOrders.filter((order) => order.status === 'Đã hoàn tất').reduce((sum, order) => sum + order.total, 0) },
 ]

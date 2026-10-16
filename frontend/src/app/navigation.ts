@@ -1,4 +1,4 @@
-import { Boxes, FileBarChart, LayoutDashboard, type LucideIcon, Package, ShoppingBag, Truck, Users } from 'lucide-react'
+import { Boxes, Building2, FileBarChart, LayoutDashboard, type LucideIcon, Package, ShoppingBag, Truck, Users } from 'lucide-react'
 
 export type NavItem = { path: string; label: string; icon: LucideIcon }
 
@@ -16,6 +16,7 @@ export const navGroups: { label: string; items: NavItem[] }[] = [
     label: 'Quản lý',
     items: [
       { path: '/products', label: 'Sản phẩm', icon: Package },
+      { path: '/suppliers', label: 'Nhà cung cấp', icon: Building2 },
       { path: '/customers', label: 'Khách hàng', icon: Users },
       { path: '/reports', label: 'Báo cáo', icon: FileBarChart },
     ],

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { App, Button, Descriptions, Divider, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Timeline, Typography } from 'antd'
+import { App, Button, Descriptions, Divider, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Timeline, Typography, theme } from 'antd'
 import { currency } from '../../../shared/utils/format'
 import { amountDue, paidAmount, paymentLabel, type OrderLine, type PaymentDraft } from '../types'
 import { useOrderAction, useOrders } from '../useOrders'
@@ -8,6 +8,7 @@ import { OrderStatusTag } from './OrderStatusTag'
 
 export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClose: () => void }) {
   const { message } = App.useApp()
+  const { token } = theme.useToken()
   const { data: orders = [] } = useOrders()
   const action = useOrderAction()
   const [mode, setMode] = useState<'pay' | 'cancel' | null>(null)
@@ -17,6 +18,10 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
   const order = orders.find((item) => item.id === orderId)
   if (!order) return null
   const due = amountDue(order)
+  const paid = paidAmount(order)
+  const cancelled = order.status === 'Đã hủy'
+  const dueColor = cancelled ? undefined : due > 0 ? token.colorWarningText : token.colorSuccessText
+  const dueBackground = cancelled ? undefined : due > 0 ? token.colorWarningBg : token.colorSuccessBg
   const canPay = !['Chờ xác nhận', 'Đã hủy', 'Đã hoàn tất'].includes(order.status) && due > 0
   const canCancel = ['Chờ xác nhận', 'Đang chuẩn bị'].includes(order.status) && order.payments.length === 0
   const callbacks = {
@@ -32,11 +37,12 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
       <Modal
         open
         centered
+        className="af-order-details"
         onCancel={onClose}
         width={900}
         footer={null}
         title={`Chi tiết đơn ${order.id}`}
-        styles={{ body: { maxHeight: 'calc(100dvh - 180px)', overflowY: 'auto', paddingTop: 16, paddingRight: 8 } }}
+        styles={{ body: { maxHeight: 'calc(100dvh - 180px)', overflowY: 'auto', paddingTop: 12, paddingRight: 8 } }}
       >
         <Space wrap className="af-detail-actions">
           <OrderStatusTag status={order.status} method={order.method} />
@@ -54,6 +60,7 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
           )}
         </Space>
         <Descriptions
+          size="small"
           title="Thông tin giao nhận"
           column={{ xs: 1, sm: 2 }}
           items={[
@@ -61,7 +68,7 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
             { key: 'phone', label: 'Điện thoại', children: order.phone || 'Không cung cấp' },
             { key: 'method', label: 'Nhận hàng', children: order.method },
             { key: 'channel', label: 'Kênh tiếp nhận', children: order.channel },
-            { key: 'address', label: 'Địa chỉ đã lưu', children: order.address, span: 2 },
+            { key: 'address', label: 'Địa chỉ đã lưu', children: order.floor ? `${order.address} · lầu ${order.floor} (thang bộ)` : order.address, span: 2 },
             {
               key: 'time',
               label: 'Giờ hẹn',
@@ -69,9 +76,19 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
               span: 2,
             },
             { key: 'note', label: 'Ghi chú', children: order.note || '—', span: 2 },
+            ...(order.bottles
+              ? [
+                  {
+                    key: 'bottles',
+                    label: 'Vỏ bình',
+                    span: 2,
+                    children: `Giao ${order.bottles.delivered} · Thu về ${order.bottles.returned}${order.bottles.deposit ? ` · Thu cọc ${currency(order.bottles.deposit)} (sổ cọc, ngoài tiền hàng)` : ''}`,
+                  },
+                ]
+              : []),
           ]}
         />
-        <Divider />
+        <Divider style={{ marginBlock: 16 }} />
         <Typography.Title level={5}>{order.status === 'Chờ xác nhận' ? 'Sản phẩm & giá dự kiến' : 'Sản phẩm & giá đã chốt'}</Typography.Title>
         <Table<OrderLine>
           rowKey="productId"
@@ -90,19 +107,19 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
           <span>Phí giao hàng</span>
           <span>{currency(order.deliveryFee)}</span>
         </div>
-        <div className="af-order-summary">
+        <div className="af-order-summary af-order-summary-highlight">
           <span>Tổng tiền hàng & giao hàng</span>
-          <strong>{currency(order.total)}</strong>
+          <strong style={{ color: token.colorPrimaryText }}>{currency(order.total)}</strong>
         </div>
         <div className="af-order-summary">
           <span>Đã thu</span>
-          <span>{currency(paidAmount(order))}</span>
+          <span style={{ color: paid > 0 ? token.colorSuccessText : undefined, fontWeight: paid > 0 ? 600 : undefined }}>{currency(paid)}</span>
         </div>
-        <div className="af-order-summary">
+        <div className="af-order-summary" style={{ background: dueBackground }}>
           <span>Còn phải thu</span>
-          <strong>{order.status === 'Đã hủy' ? '—' : currency(due)}</strong>
+          <strong style={{ color: dueColor }}>{cancelled ? '—' : currency(due)}</strong>
         </div>
-        <Divider />
+        <Divider style={{ marginBlock: 16 }} />
         <Typography.Title level={5}>Lịch sử thanh toán</Typography.Title>
         {order.payments.length ? (
           <Table
@@ -130,7 +147,7 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
         ) : (
           <Typography.Paragraph type="secondary">Chưa ghi nhận khoản thanh toán.</Typography.Paragraph>
         )}
-        <Divider />
+        <Divider style={{ marginBlock: 16 }} />
         <Typography.Title level={5}>Lịch sử xử lý đơn</Typography.Title>
         <Timeline
           items={[...order.history].reverse().map((event, index) => ({

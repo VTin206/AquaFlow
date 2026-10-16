@@ -3,22 +3,23 @@ import { Download } from 'lucide-react'
 import { BarChart } from '../../shared/components/BarChart'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
+import { useColumnSort } from '../../shared/components/sortableColumn'
 import { compactCurrency, currency, shortDate } from '../../shared/utils/format'
 import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
 import { isLowStock, type Product } from '../inventory/types'
 import { useProducts } from '../inventory/useProducts'
 import { useDailyRevenue } from './reportService'
 
-const stockColumns: TableColumnsType<Product> = [
+type SortColumn = ReturnType<typeof useColumnSort<Product>>['column']
+
+const stockColumns = (sortColumn: SortColumn): TableColumnsType<Product> => [
   { title: 'Sản phẩm', dataIndex: 'name', ellipsis: true },
   { title: 'Có thể bán', dataIndex: 'stock', align: 'right', width: 110, render: (stock: number, product) => `${stock} ${product.unit.toLowerCase()}` },
   {
-    title: 'Giá trị (giá bán)',
-    key: 'value',
+    ...sortColumn('Giá trị (giá bán)', 'value', 'number'),
     align: 'right',
     width: 160,
     sorter: (a, b) => a.stock * a.price - b.stock * b.price,
-    defaultSortOrder: 'descend',
     render: (_, product) => <span className="af-money">{currency(product.stock * product.price)}</span>,
   },
   { title: '', key: 'state', width: 100, render: (_, product) => isLowStock(product) && <Tag color="red">Sắp hết</Tag> },
@@ -28,6 +29,7 @@ export function ReportsPage() {
   const { message } = App.useApp()
   const revenueQuery = useDailyRevenue()
   const productsQuery = useProducts()
+  const sort = useColumnSort<Product>({ key: 'value', order: 'descend' })
 
   const days = revenueQuery.data ?? []
   const total = days.reduce((sum, day) => sum + day.revenue, 0)
@@ -83,7 +85,7 @@ export function ReportsPage() {
                   className="af-data-table"
                   rowKey="id"
                   size="middle"
-                  columns={stockColumns}
+                  columns={stockColumns(sort.column)}
                   dataSource={productsQuery.data}
                   loading={productsQuery.isPending}
                   pagination={tablePagination}
