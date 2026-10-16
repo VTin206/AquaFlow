@@ -3,9 +3,9 @@ import { Check, PackagePlus } from 'lucide-react'
 import type { Product, StockDraft } from '../types'
 import { Modal } from './Modal'
 
-type StockModalProps = { products: Product[]; onSubmit: (draft: StockDraft) => void; onClose: () => void }
+type StockModalProps = { products: Product[]; submitting?: boolean; onSubmit: (draft: StockDraft) => void; onClose: () => void }
 
-export function StockModal({ products, onSubmit, onClose }: StockModalProps) {
+export function StockModal({ products, submitting = false, onSubmit, onClose }: StockModalProps) {
   const [form, setForm] = useState<StockDraft>({ productId: 'P-001', quantity: 1 })
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -37,8 +37,8 @@ export function StockModal({ products, onSubmit, onClose }: StockModalProps) {
           <button type="button" className="button button-secondary" onClick={onClose}>
             Hủy
           </button>
-          <button type="submit" className="button button-primary">
-            <Check size={16} /> Xác nhận nhập
+          <button type="submit" className="button button-primary" disabled={submitting}>
+            <Check size={16} /> {submitting ? 'Đang lưu...' : 'Xác nhận nhập'}
           </button>
         </div>
       </form>

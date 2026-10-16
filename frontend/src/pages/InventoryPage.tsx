@@ -1,12 +1,17 @@
 import { Activity, Boxes, CircleDollarSign, Clock3, Droplets, Filter, Plus, Search } from 'lucide-react'
+import { useState } from 'react'
 import { SearchField } from '../components/SearchField'
-import { EmptyState } from '../components/StateViews'
-import type { Product } from '../types'
+import { EmptyState, QueryFallback } from '../components/StateViews'
+import { useProducts } from '../hooks/useProducts'
 import { currency } from '../utils/format'
 
-type InventoryPageProps = { products: Product[]; query: string; setQuery: (value: string) => void; onReceiveStock: () => void }
+export function InventoryPage({ onReceiveStock }: { onReceiveStock: () => void }) {
+  const productsQuery = useProducts()
+  const [query, setQuery] = useState('')
 
-export function InventoryPage({ products, query, setQuery, onReceiveStock }: InventoryPageProps) {
+  if (productsQuery.isPending || productsQuery.isError) return <QueryFallback query={productsQuery} />
+
+  const products = productsQuery.data
   const visible = products.filter((product) => `${product.name} ${product.sku} ${product.brand}`.toLowerCase().includes(query.toLowerCase()))
   const lowCount = products.filter((item) => item.stock <= item.threshold).length
   const stockValue = products.reduce((sum, item) => sum + item.stock * item.price, 0)

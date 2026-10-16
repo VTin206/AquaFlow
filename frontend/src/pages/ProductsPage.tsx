@@ -1,12 +1,17 @@
 import { ChevronDown, Ellipsis, Filter, Search, Waves } from 'lucide-react'
+import { useState } from 'react'
 import { SearchField } from '../components/SearchField'
-import { EmptyState } from '../components/StateViews'
-import type { Product } from '../types'
+import { EmptyState, QueryFallback } from '../components/StateViews'
+import { useProducts } from '../hooks/useProducts'
 import { currency } from '../utils/format'
 
-type ProductsPageProps = { products: Product[]; query: string; setQuery: (value: string) => void }
+export function ProductsPage() {
+  const productsQuery = useProducts()
+  const [query, setQuery] = useState('')
 
-export function ProductsPage({ products, query, setQuery }: ProductsPageProps) {
+  if (productsQuery.isPending || productsQuery.isError) return <QueryFallback query={productsQuery} />
+
+  const products = productsQuery.data
   const visible = products.filter((product) => `${product.name} ${product.sku} ${product.brand}`.toLowerCase().includes(query.toLowerCase()))
 
   return (

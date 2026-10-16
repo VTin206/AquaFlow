@@ -894,6 +894,11 @@ a {
 .button:active {
   transform: translateY(1px);
 }
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
 .button-primary {
   background: #098985;
   color: #fff;

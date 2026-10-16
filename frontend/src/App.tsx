@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import { ArrowDownRight, PackagePlus, Plus } from 'lucide-react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { Sidebar } from './components/layout/Sidebar'
@@ -9,7 +9,8 @@ import { ProductModal } from './components/ProductModal'
 import { StockModal } from './components/StockModal'
 import { Toast } from './components/Toast'
 import { sectionCopy, sectionFromPath, sectionPaths } from './config/navigation'
-import { initialOrders, initialProducts } from './mocks/data'
+import { useAdvanceOrderStatus, useCreateOrder, useOrders } from './hooks/useOrders'
+import { useCreateProduct, useProducts, useReceiveStock } from './hooks/useProducts'
 import { CustomersPage } from './pages/CustomersPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { DeliveryPage } from './pages/DeliveryPage'
@@ -18,7 +19,7 @@ import { OrdersPage } from './pages/OrdersPage'
 import { ProductsPage } from './pages/ProductsPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { getHealth } from './services/health'
-import type { Order, OrderDraft, Product, ProductDraft, Section, StockDraft } from './types'
+import type { OrderDraft, ProductDraft, Section, StockDraft } from './types'
 
 type ModalKind = 'order' | 'stock' | 'product' | null
 
@@ -26,10 +27,12 @@ function App() {
   const location = useLocation()
   const navigateTo = useNavigate()
   const section = sectionFromPath(location.pathname)
-  const [orders, setOrders] = useState(initialOrders)
-  const [products, setProducts] = useState(initialProducts)
-  const [query, setQuery] = useState('')
-  const [orderFilter, setOrderFilter] = useState('Tất cả trạng thái')
+  const { data: orders = [] } = useOrders()
+  const { data: products = [] } = useProducts()
+  const createOrderMutation = useCreateOrder()
+  const advanceStatusMutation = useAdvanceOrderStatus()
+  const createProductMutation = useCreateProduct()
+  const receiveStockMutation = useReceiveStock()
   const [modal, setModal] = useState<ModalKind>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [notice, setToast] = useState<{ message: string; tone: ToastTone } | null>(null)
@@ -50,11 +53,7 @@ function App() {
   }, [notice])
 
   const setNotice = (message: string, tone: ToastTone = 'success') => setToast(message ? { message, tone } : null)
-
-  const filteredOrders = useMemo(() => orders.filter((order) => {
-    const matchesQuery = `${order.id} ${order.customer} ${order.phone} ${order.items}`.toLowerCase().includes(query.toLowerCase())
-    return matchesQuery && (orderFilter === 'Tất cả trạng thái' || order.status === orderFilter)
-  }), [orders, orderFilter, query])
+  const showError = (error: Error) => setNotice(error.message, 'error')
 
   const pendingCount = orders.filter((order) => order.status === 'Chờ xác nhận').length
   const closeModal = () => setModal(null)
@@ -64,59 +63,39 @@ function App() {
     setMenuOpen(false)
   }
 
-  const changeStatus = (id: string) => {
-    setOrders((current) => current.map((order) => order.id !== id ? order : { ...order, status: order.status === 'Chờ xác nhận' ? 'Đang chuẩn bị' : order.status === 'Đang chuẩn bị' ? 'Đang giao' : 'Đã hoàn tất' }))
-    setNotice(`Đã cập nhật trạng thái đơn ${id}.`)
-  }
+  const changeStatus = (id: string) =>
+    advanceStatusMutation.mutate(id, {
+      onSuccess: (order) => setNotice(`Đơn ${order.id} chuyển sang "${order.status}".`),
+      onError: showError,
+    })
 
-  const createOrder = (draft: OrderDraft) => {
-    const product = products.find((item) => item.name === draft.product)
-    if (!product || product.stock < draft.quantity) {
-      setNotice('Tồn kho không đủ để tạo đơn hàng này.', 'error')
-      return
-    }
-    const newOrder: Order = {
-      id: `AF-${1050 + orders.length}`,
-      customer: draft.customer.trim(),
-      phone: 'Chưa cập nhật',
-      address: 'Chưa có địa chỉ giao hàng',
-      items: `${draft.quantity} ${product.unit.toLowerCase()} ${product.name}`,
-      total: product.price * draft.quantity,
-      time: new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' }).format(new Date()),
-      status: 'Chờ xác nhận',
-      method: 'Giao tận nơi',
-    }
-    setOrders((current) => [newOrder, ...current])
-    setProducts((current) => current.map((item) => item.id === product.id ? { ...item, stock: item.stock - draft.quantity } : item))
-    navigate('orders')
-    closeModal()
-    setNotice(`Đã tạo đơn ${newOrder.id}.`)
-  }
+  const createOrder = (draft: OrderDraft) =>
+    createOrderMutation.mutate(draft, {
+      onSuccess: (order) => {
+        navigate('orders')
+        closeModal()
+        setNotice(`Đã tạo đơn ${order.id}.`)
+      },
+      onError: showError,
+    })
 
-  const receiveStock = (draft: StockDraft) => {
-    const product = products.find((item) => item.id === draft.productId)
-    setProducts((current) => current.map((item) => item.id === draft.productId ? { ...item, stock: item.stock + draft.quantity } : item))
-    closeModal()
-    setNotice(`Đã nhập thêm ${draft.quantity} ${product?.unit.toLowerCase()} ${product?.name}.`)
-  }
+  const receiveStock = (draft: StockDraft) =>
+    receiveStockMutation.mutate(draft, {
+      onSuccess: (product) => {
+        closeModal()
+        setNotice(`Đã nhập thêm ${draft.quantity} ${product.unit.toLowerCase()} ${product.name}.`)
+      },
+      onError: showError,
+    })
 
-  const createProduct = (draft: ProductDraft) => {
-    const product: Product = {
-      id: `P-${String(products.length + 1).padStart(3, '0')}`,
-      name: draft.name.trim(),
-      brand: draft.brand.trim() || 'AquaFlow',
-      sku: draft.sku.trim(),
-      unit: draft.unit,
-      price: draft.price,
-      stock: draft.stock,
-      threshold: 10,
-      expiry: '—',
-      image: draft.image || undefined,
-    }
-    setProducts((current) => [product, ...current])
-    closeModal()
-    setNotice(`Đã thêm sản phẩm ${product.name}.`)
-  }
+  const createProduct = (draft: ProductDraft) =>
+    createProductMutation.mutate(draft, {
+      onSuccess: (product) => {
+        closeModal()
+        setNotice(`Đã thêm sản phẩm ${product.name}.`)
+      },
+      onError: showError,
+    })
 
   const pageActions: Partial<Record<Section, ReactNode>> = {
     orders: <button className="button button-primary" onClick={() => setModal('order')}><Plus size={17} /> Tạo đơn hàng</button>,
@@ -136,11 +115,11 @@ function App() {
 
         <Routes>
           <Route path={sectionPaths.overview} element={<DashboardPage orders={orders} products={products} onNavigate={navigate} onCreateOrder={() => setModal('order')} onReceiveStock={() => setModal('stock')} onChangeStatus={changeStatus} />} />
-          <Route path={sectionPaths.orders} element={<OrdersPage orders={filteredOrders} query={query} setQuery={setQuery} orderFilter={orderFilter} setOrderFilter={setOrderFilter} onChangeStatus={changeStatus} />} />
-          <Route path={sectionPaths.inventory} element={<InventoryPage products={products} query={query} setQuery={setQuery} onReceiveStock={() => setModal('stock')} />} />
-          <Route path={sectionPaths.products} element={<ProductsPage products={products} query={query} setQuery={setQuery} />} />
-          <Route path={sectionPaths.customers} element={<CustomersPage query={query} setQuery={setQuery} />} />
-          <Route path={sectionPaths.delivery} element={<DeliveryPage orders={orders} onChangeStatus={changeStatus} />} />
+          <Route path={sectionPaths.orders} element={<OrdersPage onChangeStatus={changeStatus} />} />
+          <Route path={sectionPaths.inventory} element={<InventoryPage onReceiveStock={() => setModal('stock')} />} />
+          <Route path={sectionPaths.products} element={<ProductsPage />} />
+          <Route path={sectionPaths.customers} element={<CustomersPage />} />
+          <Route path={sectionPaths.delivery} element={<DeliveryPage onChangeStatus={changeStatus} />} />
           <Route path={sectionPaths.reports} element={<ReportsPage orders={orders} products={products} />} />
           <Route path="*" element={<Navigate to={sectionPaths.overview} replace />} />
         </Routes>
@@ -152,9 +131,9 @@ function App() {
         </footer>
       </main>
 
-      {modal === 'order' && <OrderModal products={products} onSubmit={createOrder} onClose={closeModal} />}
-      {modal === 'stock' && <StockModal products={products} onSubmit={receiveStock} onClose={closeModal} />}
-      {modal === 'product' && <ProductModal onSubmit={createProduct} onClose={closeModal} onNotice={setNotice} />}
+      {modal === 'order' && <OrderModal products={products} submitting={createOrderMutation.isPending} onSubmit={createOrder} onClose={closeModal} />}
+      {modal === 'stock' && <StockModal products={products} submitting={receiveStockMutation.isPending} onSubmit={receiveStock} onClose={closeModal} />}
+      {modal === 'product' && <ProductModal submitting={createProductMutation.isPending} onSubmit={createProduct} onClose={closeModal} onNotice={setNotice} />}
       {notice && <Toast message={notice.message} tone={notice.tone} onClose={() => setToast(null)} />}
     </div>
   )

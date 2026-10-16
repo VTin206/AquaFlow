@@ -29,6 +29,19 @@ export function ErrorState({ title = 'Không tải được dữ liệu', messag
   )
 }
 
+type QueryStatus = { isPending: boolean; error: Error | null; refetch: () => unknown }
+
+/** Thay nội dung trang khi dữ liệu đang tải hoặc tải lỗi. Dùng với kết quả của useQuery. */
+export function QueryFallback({ query }: { query: QueryStatus }) {
+  return (
+    <div className="page-content subpage-content">
+      <div className="surface">
+        {query.isPending ? <LoadingState /> : <ErrorState message={query.error?.message ?? 'Đã xảy ra lỗi.'} onRetry={() => query.refetch()} />}
+      </div>
+    </div>
+  )
+}
+
 type EmptyStateProps = { icon?: LucideIcon; title: string; description?: string; action?: ReactNode }
 
 export function EmptyState({ icon: Icon = Inbox, title, description, action }: EmptyStateProps) {

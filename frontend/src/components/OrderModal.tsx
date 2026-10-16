@@ -6,9 +6,9 @@ import { Modal } from './Modal'
 
 const emptyOrder: OrderDraft = { customer: '', product: 'Nước tinh khiết bình 20L', quantity: 1 }
 
-type OrderModalProps = { products: Product[]; onSubmit: (draft: OrderDraft) => void; onClose: () => void }
+type OrderModalProps = { products: Product[]; submitting?: boolean; onSubmit: (draft: OrderDraft) => void; onClose: () => void }
 
-export function OrderModal({ products, onSubmit, onClose }: OrderModalProps) {
+export function OrderModal({ products, submitting = false, onSubmit, onClose }: OrderModalProps) {
   const [form, setForm] = useState(emptyOrder)
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -46,8 +46,8 @@ export function OrderModal({ products, onSubmit, onClose }: OrderModalProps) {
           <button type="button" className="button button-secondary" onClick={onClose}>
             Hủy
           </button>
-          <button type="submit" className="button button-primary">
-            <Plus size={16} /> Tạo đơn
+          <button type="submit" className="button button-primary" disabled={submitting}>
+            <Plus size={16} /> {submitting ? 'Đang tạo...' : 'Tạo đơn'}
           </button>
         </div>
       </form>
