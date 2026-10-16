@@ -1,11 +1,13 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import { ArrowDownRight, PackagePlus, Plus } from 'lucide-react'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { Sidebar } from './components/layout/Sidebar'
 import { Topbar } from './components/layout/Topbar'
 import { OrderModal } from './components/OrderModal'
 import { ProductModal } from './components/ProductModal'
 import { StockModal } from './components/StockModal'
 import { Toast } from './components/Toast'
+import { sectionCopy, sectionFromPath, sectionPaths } from './config/navigation'
 import { initialOrders, initialProducts } from './mocks/data'
 import { CustomersPage } from './pages/CustomersPage'
 import { DashboardPage } from './pages/DashboardPage'
@@ -19,7 +21,9 @@ import type { Order, OrderDraft, Product, ProductDraft, Section, StockDraft } fr
 type ModalKind = 'order' | 'stock' | 'product' | null
 
 function App() {
-  const [section, setSection] = useState<Section>('overview')
+  const location = useLocation()
+  const navigateTo = useNavigate()
+  const section = sectionFromPath(location.pathname)
   const [orders, setOrders] = useState(initialOrders)
   const [products, setProducts] = useState(initialProducts)
   const [query, setQuery] = useState('')
@@ -32,6 +36,10 @@ function App() {
   useEffect(() => {
     fetch('/api/v1/health').then((response) => setApiOnline(response.ok)).catch(() => setApiOnline(false))
   }, [])
+
+  useEffect(() => {
+    document.title = `${sectionCopy[section].title} | AquaFlow`
+  }, [section])
 
   useEffect(() => {
     if (!notice) return
@@ -48,7 +56,7 @@ function App() {
   const closeModal = () => setModal(null)
 
   const navigate = (next: Section) => {
-    setSection(next)
+    navigateTo(sectionPaths[next])
     setMenuOpen(false)
   }
 
@@ -76,7 +84,7 @@ function App() {
     }
     setOrders((current) => [newOrder, ...current])
     setProducts((current) => current.map((item) => item.id === product.id ? { ...item, stock: item.stock - draft.quantity } : item))
-    setSection('orders')
+    navigate('orders')
     closeModal()
     setNotice(`Đã tạo đơn ${newOrder.id}.`)
   }
@@ -117,18 +125,21 @@ function App() {
   return (
     <div className="app-shell">
       {menuOpen && <button className="mobile-scrim" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} />}
-      <Sidebar section={section} open={menuOpen} pendingCount={pendingCount} apiOnline={apiOnline} onNavigate={navigate} onClose={() => setMenuOpen(false)} onNotice={setNotice} />
+      <Sidebar open={menuOpen} pendingCount={pendingCount} apiOnline={apiOnline} onClose={() => setMenuOpen(false)} onNotice={setNotice} />
 
       <main className="main-content">
         <Topbar section={section} action={pageActions[section] ?? null} onOpenMenu={() => setMenuOpen(true)} onNotice={setNotice} />
 
-        {section === 'overview' && <DashboardPage orders={orders} products={products} onNavigate={setSection} onCreateOrder={() => setModal('order')} onReceiveStock={() => setModal('stock')} onChangeStatus={changeStatus} />}
-        {section === 'orders' && <OrdersPage orders={filteredOrders} query={query} setQuery={setQuery} orderFilter={orderFilter} setOrderFilter={setOrderFilter} onChangeStatus={changeStatus} />}
-        {section === 'inventory' && <InventoryPage products={products} query={query} setQuery={setQuery} onReceiveStock={() => setModal('stock')} />}
-        {section === 'products' && <ProductsPage products={products} query={query} setQuery={setQuery} />}
-        {section === 'customers' && <CustomersPage query={query} setQuery={setQuery} />}
-        {section === 'delivery' && <DeliveryPage orders={orders} onChangeStatus={changeStatus} />}
-        {section === 'reports' && <ReportsPage orders={orders} products={products} />}
+        <Routes>
+          <Route path={sectionPaths.overview} element={<DashboardPage orders={orders} products={products} onNavigate={navigate} onCreateOrder={() => setModal('order')} onReceiveStock={() => setModal('stock')} onChangeStatus={changeStatus} />} />
+          <Route path={sectionPaths.orders} element={<OrdersPage orders={filteredOrders} query={query} setQuery={setQuery} orderFilter={orderFilter} setOrderFilter={setOrderFilter} onChangeStatus={changeStatus} />} />
+          <Route path={sectionPaths.inventory} element={<InventoryPage products={products} query={query} setQuery={setQuery} onReceiveStock={() => setModal('stock')} />} />
+          <Route path={sectionPaths.products} element={<ProductsPage products={products} query={query} setQuery={setQuery} />} />
+          <Route path={sectionPaths.customers} element={<CustomersPage query={query} setQuery={setQuery} />} />
+          <Route path={sectionPaths.delivery} element={<DeliveryPage orders={orders} onChangeStatus={changeStatus} />} />
+          <Route path={sectionPaths.reports} element={<ReportsPage orders={orders} products={products} />} />
+          <Route path="*" element={<Navigate to={sectionPaths.overview} replace />} />
+        </Routes>
 
         <footer className="page-footer">
           <span>© 2026 AquaFlow</span>

@@ -16,6 +16,19 @@ export const navGroups: { label: string; items: { id: Section; label: string; ic
   { label: 'PHÂN TÍCH', items: [{ id: 'reports', label: 'Báo cáo', icon: FileBarChart }] },
 ]
 
+export const sectionPaths: Record<Section, string> = {
+  overview: '/',
+  orders: '/orders',
+  inventory: '/inventory',
+  products: '/products',
+  customers: '/customers',
+  delivery: '/delivery',
+  reports: '/reports',
+}
+
+export const sectionFromPath = (pathname: string): Section =>
+  (Object.keys(sectionPaths) as Section[]).find((section) => sectionPaths[section] === pathname) ?? 'overview'
+
 export const sectionCopy: Record<Section, { title: string; description: string }> = {
   overview: { title: 'Tổng quan', description: 'Theo dõi nhanh tình hình hoạt động của cửa hàng.' },
   orders: { title: 'Đơn hàng', description: 'Tiếp nhận, chuẩn bị và theo dõi đơn hàng.' },
