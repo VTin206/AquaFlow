@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { App, Button, Descriptions, Drawer, Form, Input, InputNumber, Popconfirm, Space, Tag, Typography } from 'antd'
 import { MapPin, Phone, Printer, Truck } from 'lucide-react'
 import { usePrinter } from '../../../shared/print/usePrinter'
+import { Money } from '../../../shared/components/Money'
+import { dueTone } from '../../../shared/utils/money'
 import { currency } from '../../../shared/utils/format'
 import { useSettings } from '../../settings/settingsService'
 import { AdvanceStatusButton } from '../../orders/components/AdvanceStatusButton'
@@ -119,7 +121,7 @@ export function TripDrawer({ tripId, onClose }: { tripId: string; onClose: () =>
                 )}
                 <div className="af-trip-stop-foot">
                   <small>
-                    {jugCount(order) ? `${jugCount(order)} bình · ` : ''}thu {currency(amountDue(order))}
+                    {jugCount(order) ? `${jugCount(order)} bình · ` : ''}thu <Money value={amountDue(order)} tone={dueTone(amountDue(order))} />
                     {order.bottles ? ` · vỏ về ${order.bottles.returned}` : ''}
                   </small>
                   {trip.status === 'Chờ xuất phát' ? (
@@ -191,7 +193,7 @@ export function TripDrawer({ tripId, onClose }: { tripId: string; onClose: () =>
                 label: 'Tiền mặt',
                 children: (
                   <>
-                    {currency(trip.settlement.cashHandedOver)} / sổ {currency(trip.settlement.cashExpected)}{' '}
+                    <Money value={trip.settlement.cashHandedOver} tone={trip.settlement.cashHandedOver < trip.settlement.cashExpected ? 'refund' : 'paid'} /> / sổ {currency(trip.settlement.cashExpected)}{' '}
                     {trip.settlement.cashHandedOver !== trip.settlement.cashExpected && <Tag color="red">Lệch</Tag>}
                   </>
                 ),

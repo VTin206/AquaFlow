@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Avatar, Button, Descriptions, Drawer, Empty, Space, Table, Tabs, Tag, Typography } from 'antd'
 import { Pencil, Phone, ShoppingBag } from 'lucide-react'
+import { Money } from '../../../shared/components/Money'
 import { currency } from '../../../shared/utils/format'
 import { can } from '../../auth/permissions'
 import { useStaff } from '../../auth/useStaff'
@@ -34,9 +35,9 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
 
   const summary = [
     { label: 'Đơn đã mua', value: String(customer.orders) },
-    { label: 'Còn phải thu', value: currency(customer.debt), tone: customer.debt > 0 ? 'warning' : undefined },
+    { label: 'Còn phải thu', value: currency(customer.debt), tone: customer.debt > 0 ? 'due' : 'paid' },
     { label: 'Vỏ đang giữ', value: `${customer.bottlesHeld} vỏ`, tone: customer.bottlesHeld > 0 ? 'warning' : undefined },
-    { label: 'Cọc đang giữ', value: currency(customer.depositHeld) },
+    { label: 'Cọc đang giữ', value: currency(customer.depositHeld), tone: 'deposit' },
   ]
 
   return (
@@ -147,7 +148,9 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
                           <span>
                             <OrderStatusTag status={order.status} method={order.method} />
                           </span>
-                          <small>{order.status === 'Đã hủy' ? '' : amountDue(order) > 0 ? `Còn ${currency(amountDue(order))}` : paymentLabel(order)}</small>
+                          <small>
+                            {order.status === 'Đã hủy' ? '' : amountDue(order) > 0 ? <Money value={amountDue(order)} tone="due" prefix="Còn " /> : <span className="af-money is-paid">{paymentLabel(order)}</span>}
+                          </small>
                         </div>
                       ),
                     },
@@ -162,7 +165,7 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
                 <>
                   <div className="af-bottle-balance">
                     <span>
-                      Đang giữ <strong>{customer.bottlesHeld} vỏ</strong> · cọc <strong>{currency(customer.depositHeld)}</strong>
+                      Đang giữ <strong>{customer.bottlesHeld} vỏ</strong> · cọc <Money value={customer.depositHeld} tone="deposit" />
                     </span>
                     {refundable > 0 && <Tag color="green">Có thể hoàn {currency(refundable)}</Tag>}
                   </div>

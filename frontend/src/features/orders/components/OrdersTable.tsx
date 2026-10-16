@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Button, Space, Table, Tooltip, type TableColumnsType } from 'antd'
 import { Eye } from 'lucide-react'
-import { currency } from '../../../shared/utils/format'
+import { Money } from '../../../shared/components/Money'
 import { tablePagination, tableScrollHeight } from '../../../shared/utils/table'
 import { useColumnSort } from '../../../shared/components/sortableColumn'
-import { amountDue, paymentLabel, type Order } from '../types'
+import { amountDue, paidAmount, paymentLabel, type Order } from '../types'
 import { AdvanceStatusButton } from './AdvanceStatusButton'
 import { LateTag } from './LateTag'
 import { OrderStatusTag } from './OrderStatusTag'
@@ -56,7 +56,14 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
       align: 'right',
       width: 140,
       sorter: compact ? undefined : (a, b) => a.total - b.total,
-      render: (total: number) => <span className="af-money">{currency(total)}</span>,
+      render: (total: number, order) => (
+        <div className="af-cell-stack af-money-stack">
+          <Money value={total} />
+          {!compact && order.status !== 'Đã hủy' && (
+            <small>{amountDue(order) > 0 ? <Money value={amountDue(order)} tone="due" prefix="Còn " /> : <span className="af-money is-paid">Đã thu đủ</span>}</small>
+          )}
+        </div>
+      ),
     },
     {
       title: 'Xử lý đơn',
@@ -79,7 +86,7 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
             render: (_: unknown, order: Order) => (
               <div className="af-cell-stack">
                 <span>{paymentLabel(order)}</span>
-                {order.status !== 'Đã hủy' && <small>Còn {currency(amountDue(order))}</small>}
+                {order.payments.length > 0 && <small>Đã thu <Money value={paidAmount(order)} tone="paid" /></small>}
               </div>
             ),
           },

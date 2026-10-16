@@ -16,6 +16,11 @@
   --af-bg: #f4f7fb;
   --af-warning: #b86b0a;
   --af-danger: #c34444;
+  /* Màu tiền: xem shared/components/Money.tsx. */
+  --af-money-due: #a65f08;
+  --af-money-paid: #1f7a60;
+  --af-money-refund: #c34444;
+  --af-money-deposit: #087fad;
   /* Màu nhấn cho những thứ cần chú ý: đơn mới, số đếm khẩn. */
   --af-accent: #b86b0a;
   --af-topbar-height: 72px;
@@ -475,6 +480,11 @@ body {
 .af-text-warning {
   color: var(--af-warning) !important;
 }
+.af-money-stack > small { font-size: 12px; }
+.af-money.is-due, .af-stat-due .ant-statistic-content { color: var(--af-money-due); }
+.af-money.is-paid, .af-stat-paid .ant-statistic-content { color: var(--af-money-paid); }
+.af-money.is-refund, .af-stat-refund .ant-statistic-content { color: var(--af-money-refund); }
+.af-money.is-deposit, .af-stat-deposit .ant-statistic-content { color: var(--af-money-deposit); }
 .af-stock-cell .ant-progress {
   margin: 2px 0 0;
 }
@@ -1129,7 +1139,9 @@ body {
 .af-shop-hero ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; color: var(--af-text-secondary); font-size: 13px; }
 .af-shop-hero li { display: flex; align-items: center; gap: 6px; }
 .af-shop-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-.af-shop-toolbar .ant-segmented { max-width: 100%; overflow-x: auto; }
+.af-shop-groups { display: flex; flex-wrap: wrap; gap: 8px; }
+.af-shop-groups .ant-tag-checkable { margin: 0; padding: 5px 12px; border: 1px solid var(--af-border); border-radius: 999px; background: #fff; font-size: 14px; }
+.af-shop-groups .ant-tag-checkable-checked { border-color: var(--af-primary); background: var(--af-primary); }
 .af-shop-card-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
 .af-shop-card-footer small { color: var(--af-text-secondary); }
 .af-shop-cart { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }

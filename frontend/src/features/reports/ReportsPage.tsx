@@ -3,6 +3,7 @@ import { App, Button, Card, Col, DatePicker, Descriptions, Empty, Progress, Row,
 import dayjs, { type Dayjs } from 'dayjs'
 import { Download } from 'lucide-react'
 import { BarChart } from '../../shared/components/BarChart'
+import { Money } from '../../shared/components/Money'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
 import { downloadCsv } from '../../shared/utils/csv'
@@ -35,7 +36,7 @@ const productColumns: TableColumnsType<ProductReportRow> = [
     align: 'right',
     width: 130,
     sorter: (a, b) => a.revenue - a.cost - (b.revenue - b.cost),
-    render: (_, row) => <span className="af-money">{currency(row.revenue - row.cost)}</span>,
+    render: (_, row) => <Money value={Math.abs(row.revenue - row.cost)} tone={row.revenue >= row.cost ? 'paid' : 'refund'} />,
   },
 ]
 
@@ -140,13 +141,13 @@ export function ReportsPage() {
             </Col>
             <Col xs={12} xl={6}>
               <Card loading={loading}>
-                <Statistic title="Tiền thực thu" value={currency(report?.cash.collected ?? 0)} />
+                <Statistic className="af-stat-paid" title="Tiền thực thu" value={currency(report?.cash.collected ?? 0)} />
                 <Typography.Text type="secondary">Đã trừ hoàn {currency(report?.cash.refunds ?? 0)}</Typography.Text>
               </Card>
             </Col>
             <Col xs={12} xl={6}>
               <Card loading={loading}>
-                <Statistic title="Lãi gộp ước tính" value={currency(report?.profit.gross ?? 0)} />
+                <Statistic className={(report?.profit.gross ?? 0) < 0 ? 'af-stat-refund' : 'af-stat-paid'} title="Lãi gộp ước tính" value={currency(report?.profit.gross ?? 0)} />
                 <Typography.Text type="secondary">Biên {margin}% · giá vốn bình quân lô</Typography.Text>
               </Card>
             </Col>
@@ -179,12 +180,17 @@ export function ReportsPage() {
                     size="small"
                     column={1}
                     items={[
-                      { key: 'cash', label: 'Thu tiền mặt', children: currency(report.cash.cash) },
-                      { key: 'transfer', label: 'Thu chuyển khoản', children: currency(report.cash.transfer) },
-                      { key: 'refunds', label: 'Hoàn tiền cho khách', children: currency(report.cash.refunds) },
-                      { key: 'returns', label: 'Hàng khách trả lại', children: currency(report.sales.returnsValue) },
+                      { key: 'cash', label: 'Thu tiền mặt', children: <Money value={report.cash.cash} tone="paid" /> },
+                      { key: 'transfer', label: 'Thu chuyển khoản', children: <Money value={report.cash.transfer} tone="paid" /> },
+                      { key: 'refunds', label: 'Hoàn tiền cho khách', children: <Money value={report.cash.refunds} tone="refund" /> },
+                      { key: 'returns', label: 'Hàng khách trả lại', children: <Money value={report.sales.returnsValue} tone="refund" /> },
                       { key: 'fees', label: 'Phí giao đã tính', children: currency(report.sales.deliveryFees) },
-                      { key: 'deposit', label: 'Cọc vỏ thu / hoàn', children: `${currency(report.deposits.collected)} / ${currency(report.deposits.refunded)}` },
+                      { key: 'deposit', label: 'Cọc vỏ thu / hoàn', children: (
+                          <>
+                            <Money value={report.deposits.collected} tone="deposit" /> / <Money value={report.deposits.refunded} tone="refund" />
+                          </>
+                        ),
+                      },
                       { key: 'bottles', label: 'Vỏ giao / thu / mất', children: `${report.deposits.bottlesOut} / ${report.deposits.bottlesBack} / ${report.deposits.bottlesLost}` },
                       { key: 'receipts', label: 'Nhập hàng', children: `${report.receipts.count} phiếu · ${currency(report.receipts.value)}` },
                     ]}
