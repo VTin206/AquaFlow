@@ -1,6 +1,7 @@
 import type { Customer } from '../features/customers/types'
 import type { Order } from '../features/orders/types'
 import type { Product } from '../features/inventory/types'
+import { waterProducts } from './waterCatalog'
 
 export const initialOrders: Order[] = [
   {
@@ -63,8 +64,8 @@ export const initialOrders: Order[] = [
   const bottled = fixture.id === 'AF-1045'
   const lines = [
     {
-      productId: bottled ? 'P-003' : 'P-001',
-      name: bottled ? 'Nước chai 500ml (24 chai)' : 'Nước tinh khiết bình 20L',
+      productId: bottled ? 'P-016' : 'P-009',
+      name: bottled ? 'Nước tinh khiết Aquafina 500ml' : 'Nước tinh khiết Vihawa 20 Lít (Vòi)',
       unit: bottled ? 'Thùng' : 'Bình',
       quantity,
       unitPrice: fixture.total / quantity,
@@ -88,51 +89,8 @@ export const initialOrders: Order[] = [
 })
 
 export const initialProducts: Product[] = [
-  {
-    id: 'P-001',
-    name: 'Nước tinh khiết bình 20L',
-    brand: 'AquaFlow',
-    unit: 'Bình',
-    stock: 12,
-    threshold: 20,
-    price: 70000,
-    expiry: '12/08/2027',
-    sku: 'AQUA-20L',
-  },
+  ...waterProducts,
   { id: 'P-002', name: 'Vỏ bình 20L', brand: 'Dùng luân chuyển', unit: 'Vỏ', stock: 28, threshold: 35, price: 50000, expiry: '—', sku: 'VO-20L' },
-  {
-    id: 'P-003',
-    name: 'Nước chai 500ml (24 chai)',
-    brand: 'AquaFlow',
-    unit: 'Thùng',
-    stock: 64,
-    threshold: 24,
-    price: 90000,
-    expiry: '02/03/2027',
-    sku: 'AQUA-500',
-  },
-  {
-    id: 'P-004',
-    name: 'Nước tinh khiết bình 19L',
-    brand: 'Lavie',
-    unit: 'Bình',
-    stock: 36,
-    threshold: 18,
-    price: 65000,
-    expiry: '18/05/2027',
-    sku: 'LAVIE-19L',
-  },
-  {
-    id: 'P-005',
-    name: 'Nước chai 1.5L (12 chai)',
-    brand: 'AquaFlow',
-    unit: 'Thùng',
-    stock: 18,
-    threshold: 20,
-    price: 108000,
-    expiry: '21/01/2027',
-    sku: 'AQUA-15L',
-  },
 ]
 
 export const customers: Customer[] = [

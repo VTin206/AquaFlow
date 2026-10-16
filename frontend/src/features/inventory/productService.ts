@@ -21,7 +21,7 @@ export const productService = {
       const product: Product = {
         id: nextProductId(),
         name: draft.name.trim(),
-        brand: draft.brand?.trim() || 'AquaFlow',
+        brand: draft.brand?.trim() || 'Chưa có thương hiệu',
         sku,
         unit: draft.unit,
         price: draft.price,

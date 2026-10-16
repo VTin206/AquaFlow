@@ -9,6 +9,7 @@ export type Product = {
   expiry: string
   sku: string
   image?: string
+  catalog?: { category: string; packaging: string; capacity: string; volumeMl: number }
 }
 
 export type ProductDraft = {

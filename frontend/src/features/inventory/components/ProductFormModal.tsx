@@ -87,12 +87,12 @@ export function ProductFormModal({ open, onClose }: ProductFormModalProps) {
                 { pattern: /^[A-Za-z0-9-]+$/, message: 'Chỉ dùng chữ, số và dấu gạch ngang.' },
               ]}
             >
-              <Input placeholder="Ví dụ: AQUA-20L" />
+              <Input placeholder="Ví dụ: LAVIE-19L" />
             </Form.Item>
           </Col>
           <Col xs={24} sm={14}>
             <Form.Item name="brand" label="Thương hiệu">
-              <Input placeholder="Mặc định: AquaFlow" />
+              <Input placeholder="Ví dụ: LaVie, Aquafina..." />
             </Form.Item>
           </Col>
           <Col xs={24} sm={10}>

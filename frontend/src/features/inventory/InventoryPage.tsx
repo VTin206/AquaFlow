@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Button, Card, Col, Input, Progress, Row, Segmented, Statistic, Table, Tag, Typography, type TableColumnsType } from 'antd'
-import { PackagePlus, Search } from 'lucide-react'
+import { Button, Card, Col, ConfigProvider, Input, Progress, Row, Segmented, Statistic, Table, Tag, Typography, type TableColumnsType } from 'antd'
+import { FilePlus2, PackagePlus, Search } from 'lucide-react'
 import { CountLabel } from '../../shared/components/CountLabel'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
@@ -91,9 +91,9 @@ export function InventoryPage() {
     {
       title: 'Thao tác',
       key: 'action',
-      width: 120,
+      width: 145,
       render: (_, product) => (
-        <Button size="small" type={isLowStock(product) ? 'primary' : 'default'} onClick={() => setReceiving({ productId: product.id })}>
+        <Button size="small" icon={<PackagePlus size={15} />} type={isLowStock(product) ? 'primary' : 'default'} onClick={() => setReceiving({ productId: product.id })}>
           Nhập thêm
         </Button>
       ),
@@ -105,7 +105,7 @@ export function InventoryPage() {
       title="Kho hàng"
       description="Theo dõi lượng hàng có thể bán sau khi trừ hàng đã giữ cho đơn, cùng hạn sử dụng."
       actions={
-        <Button type="primary" icon={<PackagePlus size={16} />} onClick={() => setReceiving({})}>
+        <Button type="primary" icon={<FilePlus2 size={16} />} onClick={() => setReceiving({})}>
           Tạo phiếu nhập
         </Button>
       }
@@ -116,28 +116,30 @@ export function InventoryPage() {
         </Card>
       ) : (
         <>
-          <Row gutter={[16, 16]} className="af-stat-row">
-            <Col xs={12} lg={6}>
-              <Card loading={productsQuery.isPending}>
-                <Statistic title="Mã hàng đang kinh doanh" value={products.length} />
-              </Card>
-            </Col>
-            <Col xs={12} lg={6}>
-              <Card loading={productsQuery.isPending}>
-                <Statistic title="Tồn kho thấp" value={lowStock.length} className={lowStock.length ? 'af-stat-danger' : undefined} />
-              </Card>
-            </Col>
-            <Col xs={12} lg={6}>
-              <Card loading={productsQuery.isPending}>
-                <Statistic title={`Hết hạn trong ${EXPIRY_WARNING_DAYS} ngày`} value={expiring.length} className={expiring.length ? 'af-stat-warning' : undefined} />
-              </Card>
-            </Col>
-            <Col xs={12} lg={6}>
-              <Card loading={productsQuery.isPending}>
-                <Statistic title="Giá trị khả dụng (giá bán)" value={currency(products.reduce((sum, item) => sum + item.stock * item.price, 0))} />
-              </Card>
-            </Col>
-          </Row>
+          <ConfigProvider theme={{ components: { Card: { bodyPadding: 12 }, Statistic: { titleFontSize: 12, contentFontSize: 20, lineHeight: 1.4 } } }}>
+            <Row gutter={[12, 12]} className="af-stat-row af-inventory-stats">
+              <Col xs={12} lg={6}>
+                <Card loading={productsQuery.isPending}>
+                  <Statistic title="Mã hàng đang kinh doanh" value={products.length} />
+                </Card>
+              </Col>
+              <Col xs={12} lg={6}>
+                <Card loading={productsQuery.isPending}>
+                  <Statistic title="Tồn kho thấp" value={lowStock.length} className={lowStock.length ? 'af-stat-danger' : undefined} />
+                </Card>
+              </Col>
+              <Col xs={12} lg={6}>
+                <Card loading={productsQuery.isPending}>
+                  <Statistic title={`Hết hạn trong ${EXPIRY_WARNING_DAYS} ngày`} value={expiring.length} className={expiring.length ? 'af-stat-warning' : undefined} />
+                </Card>
+              </Col>
+              <Col xs={12} lg={6}>
+                <Card loading={productsQuery.isPending}>
+                  <Statistic title="Giá trị khả dụng (giá bán)" value={currency(products.reduce((sum, item) => sum + item.stock * item.price, 0))} />
+                </Card>
+              </Col>
+            </Row>
+          </ConfigProvider>
 
           <Card className="af-card" styles={{ body: { padding: 0 } }}>
             <div className="af-toolbar">

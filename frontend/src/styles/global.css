@@ -356,6 +356,9 @@ body {
 .af-stat-row {
   margin-bottom: 24px;
 }
+.af-inventory-stats {
+  margin-bottom: 16px;
+}
 .af-metric-link {
   display: block;
   height: 100%;
@@ -628,13 +631,36 @@ body {
 }
 
 /* ---------- Sản phẩm ---------- */
+.af-catalog-heading, .af-catalog-results { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.af-catalog-heading { margin-bottom: 14px; }
+.af-brand-select { width: 220px; max-width: 65%; }
+.af-catalog-results { margin: 16px 0; min-height: 24px; }
+.af-brand-filters { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 10px; margin-bottom: 12px; }
+.af-brand-filter { flex: 0 0 118px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 90px; padding: 10px; border: 1px solid var(--af-border); border-radius: 10px; background: white; color: var(--af-text); font: inherit; cursor: pointer; }
+.af-brand-filter:hover { border-color: var(--af-primary); }
+.af-brand-filter.is-active { border-color: var(--af-primary); background: var(--af-primary-soft); color: var(--af-primary); }
+.af-brand-filter:focus-visible { outline: 2px solid var(--af-primary); outline-offset: 2px; }
+.af-brand-filter img { width: 76px; height: 34px; object-fit: contain; }
+.af-brand-filter > span { font-size: 12px; font-weight: 500; white-space: nowrap; }
+.af-brand-filter small { color: var(--af-text-secondary); margin-left: 3px; }
+.af-catalog-filters { display: grid; grid-template-columns: minmax(220px, 1.5fr) repeat(3, minmax(140px, 1fr)); gap: 12px; }
+.af-product-card { height: 100%; }
+.af-product-brand-line { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 12px; color: var(--af-text-secondary); }
+.af-product-spec { font-size: 12px; color: var(--af-text-secondary); margin: 0 0 4px; }
+.af-product-card .af-product-footer { margin-top: 12px; }
+.af-catalog-pagination { margin-top: 24px; justify-content: flex-end; }
+@media (max-width: 1100px) { .af-catalog-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 575px) {
+  .af-catalog-filters { grid-template-columns: minmax(0, 1fr); }
+  .af-brand-filter { flex-basis: 105px; }
+}
 .af-product-card .ant-card-body {
   padding: 14px;
 }
 .af-product-image,
 .af-product-placeholder {
   aspect-ratio: 4 / 3;
-  object-fit: cover;
+  object-fit: contain;
   width: 100%;
 }
 .ant-card-cover > .af-product-placeholder {
@@ -643,7 +669,11 @@ body {
   color: var(--af-primary);
   display: flex;
   justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12px;
 }
+.af-product-image { padding: 16px; background: #fff; }
 .af-product-sku {
   font-size: 12px;
 }

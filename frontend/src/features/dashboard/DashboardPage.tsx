@@ -206,7 +206,7 @@ export function DashboardPage() {
                         · tối thiểu {product.threshold}
                       </small>
                     </div>
-                    <Button size="small" onClick={() => setReceiving({ productId: product.id })}>
+                    <Button size="small" icon={<PackagePlus size={15} />} onClick={() => setReceiving({ productId: product.id })}>
                       Nhập thêm
                     </Button>
                   </div>
