@@ -1,18 +1,16 @@
 import { ChevronDown, Droplets, Ellipsis, Settings2, Waves, X } from 'lucide-react'
-import { navGroups } from '../../config/navigation'
-import type { Section } from '../../types'
+import { NavLink } from 'react-router'
+import { navGroups, sectionPaths } from '../../config/navigation'
 
 type SidebarProps = {
-  section: Section
   open: boolean
   pendingCount: number
   apiOnline: boolean | null
-  onNavigate: (section: Section) => void
   onClose: () => void
   onNotice: (message: string) => void
 }
 
-export function Sidebar({ section, open, pendingCount, apiOnline, onNavigate, onClose, onNotice }: SidebarProps) {
+export function Sidebar({ open, pendingCount, apiOnline, onClose, onNotice }: SidebarProps) {
   return (
     <aside className={`sidebar ${open ? 'sidebar-open' : ''}`}>
       <div className="brand">
@@ -42,11 +40,11 @@ export function Sidebar({ section, open, pendingCount, apiOnline, onNavigate, on
           <div className="nav-group" key={group.label}>
             <p className="nav-label">{group.label}</p>
             {group.items.map(({ id, label, icon: Icon }) => (
-              <button key={id} className={`nav-item ${section === id ? 'active' : ''}`} onClick={() => onNavigate(id)}>
+              <NavLink key={id} to={sectionPaths[id]} end className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={onClose}>
                 <Icon size={18} strokeWidth={1.9} />
                 <span>{label}</span>
                 {id === 'orders' && <span className="nav-count">{pendingCount.toString().padStart(2, '0')}</span>}
-              </button>
+              </NavLink>
             ))}
           </div>
         ))}
