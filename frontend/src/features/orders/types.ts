@@ -1,9 +1,38 @@
 export type OrderStatus = 'Chờ xác nhận' | 'Đang chuẩn bị' | 'Đang giao' | 'Đã giao' | 'Giao thất bại' | 'Đã hoàn tất' | 'Đã hủy'
 
 export type OrderLine = { productId: string; name: string; unit: string; quantity: number; unitPrice: number }
-export type Payment = { id: string; amount: number; method: 'Tiền mặt' | 'Chuyển khoản'; reference?: string; recordedAt: string }
+export type Payment = {
+  id: string
+  /** Luôn dương; phiếu hoàn tiền có `refund` và được trừ khi tính số đã thu. */
+  amount: number
+  method: 'Tiền mặt' | 'Chuyển khoản'
+  reference?: string
+  recordedAt: string
+  refund?: boolean
+  /** Nhân viên ghi phiếu. */
+  by?: string
+}
 export type PaymentDraft = Pick<Payment, 'amount' | 'method' | 'reference'>
-export type OrderEvent = { at: string; message: string }
+export type RefundDraft = Pick<Payment, 'method' | 'reference'>
+export type OrderEvent = { at: string; message: string; by?: string }
+/** Hàng khách trả lại sau khi đã nhận. */
+export type OrderReturn = {
+  id: string
+  at: string
+  by?: string
+  lines: OrderLine[]
+  reason: string
+  /** true: hàng còn tốt, nhập lại tồn bán được; false: hỏng, loại bỏ. */
+  restocked: boolean
+  refunded: number
+}
+export type ReturnDraft = {
+  lines: { productId: string; quantity: number }[]
+  reason: string
+  restock: boolean
+  refundMethod?: Payment['method']
+  refundReference?: string
+}
 export type DeliveryResult = {
   success: boolean
   receiver?: string
@@ -39,6 +68,11 @@ export type Order = {
   history: OrderEvent[]
   stockReserved: boolean
   bottles?: OrderBottles
+  /** Thời điểm khách nhận hàng (giao thành công hoặc nhận tại quầy). */
+  deliveredAt?: string
+  returns?: OrderReturn[]
+  /** Mã bí mật trong liên kết tra cứu gửi cho khách. */
+  trackingToken?: string
 }
 
 export type OrderDraft = {
@@ -54,10 +88,38 @@ export type OrderDraft = {
   note?: string
 }
 
-export const paidAmount = (order: Order) => order.payments.reduce((sum, payment) => sum + payment.amount, 0)
+export const paidAmount = (order: Order) => order.payments.reduce((sum, payment) => sum + (payment.refund ? -payment.amount : payment.amount), 0)
 export const amountDue = (order: Order) => Math.max(0, order.total - paidAmount(order))
 export const paymentLabel = (order: Order) =>
   order.status === 'Đã hủy' ? 'Đã hủy' : amountDue(order) === 0 ? 'Đã thanh toán' : paidAmount(order) > 0 ? 'Thanh toán một phần' : 'Chưa thanh toán'
 
 /** Số bình (có vỏ luân chuyển) trong đơn. */
 export const jugCount = (order: Pick<Order, 'lines'>) => order.lines.filter((line) => line.unit === 'Bình').reduce((sum, line) => sum + line.quantity, 0)
+
+export const createdAtOf = (order: Pick<Order, 'history'>) => order.history[0]?.at
+
+/** Giá trị hàng đã nhận trả lại. */
+export const returnedValue = (order: Pick<Order, 'returns'>) =>
+  (order.returns ?? []).flatMap((item) => item.lines).reduce((sum, line) => sum + line.quantity * line.unitPrice, 0)
+
+const OPEN_DELIVERY: OrderStatus[] = ['Chờ xác nhận', 'Đang chuẩn bị', 'Đang giao', 'Giao thất bại']
+
+/** Số phút trễ so với giờ hẹn: đơn chưa giao tính tới hiện tại, đơn đã giao tính tới lúc nhận. 0 nếu đúng hẹn. */
+export function minutesLate(order: Order, now = Date.now()) {
+  if (order.method !== 'Giao tận nơi' || !order.appointment || order.status === 'Đã hủy') return 0
+  const due = Date.parse(order.appointment)
+  const end = OPEN_DELIVERY.includes(order.status) ? now : order.deliveredAt ? Date.parse(order.deliveredAt) : due
+  return Math.max(0, Math.floor((end - due) / 60_000))
+}
+
+/** Đơn giao chưa xong đã quá giờ hẹn, cần ưu tiên hoặc báo khách. */
+export const isOverdue = (order: Order, now = Date.now()) => OPEN_DELIVERY.includes(order.status) && minutesLate(order, now) > 0
+
+export const lateLabel = (minutes: number) => (minutes >= 60 ? `${Math.floor(minutes / 60)} giờ ${minutes % 60 ? `${minutes % 60} phút` : ''}`.trim() : `${minutes} phút`)
+
+/** Thông tin đơn khách xem được trên trang tra cứu. */
+export type PublicOrder = Pick<Order, 'id' | 'customer' | 'address' | 'status' | 'method' | 'lines' | 'deliveryFee' | 'total' | 'appointment' | 'deliveredAt' | 'trackingToken'> & {
+  paid: number
+  due: number
+  createdAt?: string
+}

@@ -2,9 +2,14 @@ import type { ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { App as AntApp, ConfigProvider } from 'antd'
 import viVN from 'antd/locale/vi_VN'
+import dayjs from 'dayjs'
+import 'dayjs/locale/vi'
 import { BrowserRouter } from 'react-router'
 import { AuthProvider } from '../features/auth/AuthProvider'
 import { appTheme } from './theme'
+
+// Tên thứ/tháng tiếng Việt trong bộ chọn ngày.
+dayjs.locale('vi')
 
 const queryClient = new QueryClient({
   defaultOptions: {

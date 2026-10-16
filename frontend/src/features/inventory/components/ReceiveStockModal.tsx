@@ -5,6 +5,7 @@ import { useSuppliers } from '../../suppliers/useSuppliers'
 import { localToday } from '../expiry'
 import { tracksExpiry, type ReceiptDraft } from '../types'
 import { useCreateReceipt, useProducts } from '../useProducts'
+import { useConfirmDiscard } from '../../../shared/hooks/useConfirmDiscard'
 
 type ReceiveStockModalProps = { open: boolean; onClose: () => void; defaultProductId?: string }
 
@@ -16,6 +17,7 @@ export function ReceiveStockModal(props: ReceiveStockModalProps) {
 function ReceiptDialog({ open, onClose, defaultProductId }: ReceiveStockModalProps) {
   const { message } = App.useApp()
   const [form] = Form.useForm<ReceiptDraft>()
+  const cancel = useConfirmDiscard(form, onClose)
   const { data: products = [], isPending: loadingProducts } = useProducts()
   const { data: suppliers = [], isPending: loadingSuppliers } = useSuppliers()
   const createReceipt = useCreateReceipt()
@@ -37,7 +39,7 @@ function ReceiptDialog({ open, onClose, defaultProductId }: ReceiveStockModalPro
       cancelText="Hủy"
       confirmLoading={createReceipt.isPending}
       onOk={() => form.submit()}
-      onCancel={onClose}
+      onCancel={cancel}
       destroyOnHidden
     >
       <Form<ReceiptDraft>

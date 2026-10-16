@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Avatar, Button, Card, Col, Input, Row, Statistic, Table, Tag, type TableColumnsType } from 'antd'
+import { Button, Card, Col, Input, Row, Statistic, Table, Tag, type TableColumnsType } from 'antd'
 import { Plus, Search } from 'lucide-react'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
@@ -33,18 +33,17 @@ export function CustomersPage() {
       ...sort.column('Khách hàng', 'name', 'text'),
       dataIndex: 'name',
       width: 260,
+      onHeaderCell: () => ({ style: { paddingInlineStart: 20 } }),
+      onCell: () => ({ style: { paddingInlineStart: 20 } }),
       sorter: (a, b) => a.name.localeCompare(b.name, 'vi'),
       render: (_, customer) => (
-        <div className="af-customer-cell">
-          <Avatar className="af-avatar">{customer.initials}</Avatar>
-          <div className="af-cell-stack">
-            <button type="button" className="af-link-button af-cell-truncate" title={`Xem hồ sơ ${customer.name}`} onClick={() => setProfileId(customer.id)}>
-              {customer.name}
-            </button>
-            <small>
-              <a href={`tel:${customer.phone.replace(/\s/g, '')}`}>{customer.phone}</a>
-            </small>
-          </div>
+        <div className="af-cell-stack">
+          <button type="button" className="af-link-button af-cell-truncate" title={`Xem hồ sơ ${customer.name}`} onClick={() => setProfileId(customer.id)}>
+            {customer.name}
+          </button>
+          <small>
+            <a href={`tel:${customer.phone.replace(/\s/g, '')}`}>{customer.phone}</a>
+          </small>
         </div>
       ),
     },

@@ -2,12 +2,14 @@ import { App, Button, Col, Form, Input, Modal, Row, Segmented } from 'antd'
 import { Plus, Trash2 } from 'lucide-react'
 import type { Customer, CustomerDraft } from '../types'
 import { useSaveCustomer } from '../useCustomers'
+import { useConfirmDiscard } from '../../../shared/hooks/useConfirmDiscard'
 
 type CustomerFormModalProps = { open: boolean; customer?: Customer; onClose: () => void; onSaved?: (customer: Customer) => void }
 
 export function CustomerFormModal({ open, customer, onClose, onSaved }: CustomerFormModalProps) {
   const { message } = App.useApp()
   const [form] = Form.useForm<CustomerDraft>()
+  const cancel = useConfirmDiscard(form, onClose)
   const save = useSaveCustomer()
 
   return (
@@ -19,7 +21,7 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
       width={620}
       confirmLoading={save.isPending}
       onOk={() => form.submit()}
-      onCancel={onClose}
+      onCancel={cancel}
       destroyOnHidden
     >
       <Form<CustomerDraft>

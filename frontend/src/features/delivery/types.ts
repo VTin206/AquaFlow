@@ -10,6 +10,7 @@ export type TripSettlement = {
   bottlesHandedOver: number
   note?: string
   settledAt: string
+  settledBy?: string
 }
 
 export type TripRecord = {

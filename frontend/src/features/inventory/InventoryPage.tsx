@@ -10,20 +10,22 @@ import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
 import { LotsPanel } from './components/LotsPanel'
 import { ReceiptsPanel } from './components/ReceiptsPanel'
 import { ReceiveStockModal } from './components/ReceiveStockModal'
-import { daysUntilExpiry, EXPIRY_WARNING_DAYS } from './expiry'
+import { useExpiryWarningDays } from '../settings/settingsService'
+import { daysUntilExpiry } from './expiry'
 import { isLowStock, type Product } from './types'
 import { useProducts } from './useProducts'
 
 type Filter = 'all' | 'low' | 'expiring'
 type View = 'stock' | 'lots' | 'receipts'
 
-const isExpiringSoon = (product: Product) => {
+const isExpiringSoon = (product: Product, warningDays: number) => {
   const days = daysUntilExpiry(product.expiry)
-  return days !== null && days <= EXPIRY_WARNING_DAYS
+  return days !== null && days <= warningDays
 }
 
 export function InventoryPage() {
   const productsQuery = useProducts()
+  const warningDays = useExpiryWarningDays()
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const [view, setView] = useState<View>('stock')
@@ -31,10 +33,10 @@ export function InventoryPage() {
 
   const products = productsQuery.data ?? []
   const lowStock = products.filter(isLowStock)
-  const expiring = products.filter(isExpiringSoon)
+  const expiring = products.filter((product) => isExpiringSoon(product, warningDays))
   const keyword = query.trim().toLowerCase()
   const visible = products
-    .filter((product) => (filter === 'low' ? isLowStock(product) : filter === 'expiring' ? isExpiringSoon(product) : true))
+    .filter((product) => (filter === 'low' ? isLowStock(product) : filter === 'expiring' ? isExpiringSoon(product, warningDays) : true))
     .filter((product) => `${product.name} ${product.sku} ${product.brand}`.toLowerCase().includes(keyword))
 
   const sort = useColumnSort<Product>()
@@ -83,7 +85,7 @@ export function InventoryPage() {
         return (
           <div className="af-cell-stack">
             <span>{expiry}</span>
-            <small className={days <= EXPIRY_WARNING_DAYS ? 'af-text-warning' : undefined}>{days < 0 ? 'Đã hết hạn' : `Còn ${days} ngày`}</small>
+            <small className={days <= warningDays ? 'af-text-warning' : undefined}>{days < 0 ? 'Đã hết hạn' : `Còn ${days} ngày`}</small>
           </div>
         )
       },
@@ -136,7 +138,7 @@ export function InventoryPage() {
               </Col>
               <Col xs={12} lg={6}>
                 <Card loading={productsQuery.isPending}>
-                  <Statistic title={`Hết hạn trong ${EXPIRY_WARNING_DAYS} ngày`} value={expiring.length} className={expiring.length ? 'af-stat-warning' : undefined} />
+                  <Statistic title={`Hết hạn trong ${warningDays} ngày`} value={expiring.length} className={expiring.length ? 'af-stat-warning' : undefined} />
                 </Card>
               </Col>
               <Col xs={12} lg={6}>

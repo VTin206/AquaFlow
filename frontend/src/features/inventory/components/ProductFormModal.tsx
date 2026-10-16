@@ -3,6 +3,7 @@ import { App, Col, Form, Input, InputNumber, Modal, Row, Select, Upload } from '
 import { ImagePlus } from 'lucide-react'
 import type { ProductDraft } from '../types'
 import { useCreateProduct } from '../useProducts'
+import { useConfirmDiscard } from '../../../shared/hooks/useConfirmDiscard'
 
 const MAX_IMAGE_MB = 5
 
@@ -18,6 +19,7 @@ export function ProductFormModal({ open, onClose }: ProductFormModalProps) {
     setImage(undefined)
     onClose()
   }
+  const cancel = useConfirmDiscard(form, close)
 
   // Đọc ảnh thành data URL để xem trước; trả về false để Upload không tự gửi lên server.
   const readImage = (file: File) => {
@@ -56,7 +58,7 @@ export function ProductFormModal({ open, onClose }: ProductFormModalProps) {
       width={560}
       confirmLoading={createProduct.isPending}
       onOk={() => form.submit()}
-      onCancel={close}
+      onCancel={cancel}
       destroyOnHidden
     >
       <Form<ProductDraft> form={form} layout="vertical" initialValues={{ unit: 'Bình', price: 0, stock: 0 }} onFinish={submit} preserve={false}>

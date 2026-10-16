@@ -42,6 +42,8 @@ export type BottleEntry = {
   deposit: number
   orderId?: string
   note?: string
+  /** Nhân viên ghi sổ. */
+  by?: string
 }
 
 export type BottleAction = {

@@ -29,12 +29,14 @@ type Scenario = {
   counter?: boolean
   fee?: number
   note?: string
+  /** Giờ hẹn giao, tính bằng phút sau lúc tạo đơn. */
+  appointmentAfter?: number
 }
 
 const scenarios: Scenario[] = [
-  { status: 'Đã giao', customer: 0, lines: [['P-004', 3]], payment: 'partial', fee: 15000, note: 'Khách đã chuyển một phần, thu phần còn lại sau khi đối soát.' },
+  { status: 'Đã giao', customer: 0, lines: [['P-004', 3]], payment: 'partial', fee: 15000, appointmentAfter: 10, note: 'Khách đã chuyển một phần, thu phần còn lại sau khi đối soát.' },
   { status: 'Đã hoàn tất', customer: 1, lines: [['P-009', 8], ['P-016', 4]], payment: 'split', fee: 20000, note: 'Giao hàng tại quầy lễ tân.' },
-  { status: 'Đang giao', customer: 2, lines: [['P-012', 2]], payment: 'full', fee: 10000 },
+  { status: 'Đang giao', customer: 2, lines: [['P-012', 2]], payment: 'full', fee: 10000, appointmentAfter: 30 },
   { status: 'Giao thất bại', customer: 3, lines: [['P-010', 4]], fee: 15000 },
   { status: 'Đã hủy', customer: 4, lines: [['P-004', 2]], fee: 10000, note: 'Khách đổi kế hoạch, chưa thu tiền.' },
   { status: 'Đang chuẩn bị', customer: 5, lines: [['P-009', 6], ['P-012', 3]], payment: 'partial', fee: 20000 },
@@ -88,6 +90,7 @@ export const additionalOrders: Order[] = scenarios.map((scenario, index): Order 
     method: scenario.counter ? 'Tại quầy' : 'Giao tận nơi',
     channel: scenario.counter ? 'Tại quầy' : (['Điện thoại', 'Tin nhắn', 'Website'] as const)[index % 3],
     status: scenario.status, lines, deliveryFee, total, payments, history, note: scenario.note,
+    appointment: scenario.appointmentAfter && !scenario.counter ? at(scenario.appointmentAfter) : undefined,
     items: lines.map((line) => `${line.quantity} ${line.unit.toLowerCase()} ${line.name}`).join(', '),
     stockReserved: ['Đang chuẩn bị', 'Đang giao', 'Giao thất bại'].includes(scenario.status),
   }

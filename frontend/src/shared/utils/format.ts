@@ -12,3 +12,7 @@ export const shortDate = (isoDate: string) => {
   const weekday = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][date.getDay()]
   return `${weekday} ${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`
 }
+
+/** Ngày giờ in trên chứng từ: "16/10/2026 20:30". */
+export const printDate = (value = new Date()) =>
+  value.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
