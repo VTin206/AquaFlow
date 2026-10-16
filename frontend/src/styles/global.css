@@ -17,7 +17,7 @@
   --af-warning: #d9480f;
   --af-danger: #c92a2a;
   /* Màu nhấn cho những thứ cần chú ý: đơn mới, số đếm khẩn. */
-  --af-accent: #e03131;
+  --af-accent: #c92a2a;
   /* Nền thanh trên cùng: đậm hơn màu chính để chữ trắng đạt tương phản. */
   --af-brand: #0a6b73;
   --af-topbar-height: 56px;
