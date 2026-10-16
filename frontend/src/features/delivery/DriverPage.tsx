@@ -4,7 +4,8 @@ import { Clock3, Map, Package, Phone, Recycle, Wallet } from 'lucide-react'
 import { Page } from '../../shared/components/Page'
 import { useStaff } from '../auth/useStaff'
 import { QueryError } from '../../shared/components/QueryError'
-import { currency } from '../../shared/utils/format'
+import { Money } from '../../shared/components/Money'
+import { dueTone } from '../../shared/utils/money'
 import { AdvanceStatusButton } from '../orders/components/AdvanceStatusButton'
 import { OrderDetailsModal } from '../orders/components/OrderDetailsModal'
 import { LateTag } from '../orders/components/LateTag'
@@ -105,7 +106,7 @@ function DriverTrip({ trip, stops, onDetails }: { trip: Trip; stops: Order[]; on
         <Progress percent={Math.round((finished.length / Math.max(1, stops.length)) * 100)} format={() => `${finished.length}/${stops.length} điểm`} />
         <div className="af-driver-totals">
           <span>
-            <Wallet size={16} /> Cần thu <strong>{currency(due)}</strong>
+            <Wallet size={16} /> Cần thu <Money value={due} tone={dueTone(due)} />
           </span>
           <span>
             <Recycle size={16} /> Vỏ cần đổi <strong>{jugs}</strong>
@@ -151,7 +152,7 @@ function DriverTrip({ trip, stops, onDetails }: { trip: Trip; stops: Order[]; on
                 </li>
               )}
               <li>
-                <Wallet size={15} /> Thu <strong>{currency(amountDue(order))}</strong>
+                <Wallet size={15} /> Thu <Money value={amountDue(order)} tone={dueTone(amountDue(order))} />
                 {jugCount(order) ? ` · đổi ${jugCount(order)} vỏ` : ''}
               </li>
               {order.note && <li className="af-driver-note">{order.note}</li>}

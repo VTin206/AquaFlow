@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { Alert, App, Button, Card, Form, Input, Result, Skeleton, Steps, Typography } from 'antd'
 import { Copy, Phone, RefreshCw } from 'lucide-react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
+import { Money } from '../../shared/components/Money'
 import { TransferQr } from '../../shared/payment/TransferQr'
+import { dueTone } from '../../shared/utils/money'
 import { currency } from '../../shared/utils/format'
 import type { PublicOrder } from '../orders/types'
 import { useSettings } from '../settings/settingsService'
@@ -154,13 +156,13 @@ function TrackedOrder({ token }: { token: string }) {
         {order.paid > 0 && (
           <div className="af-order-summary">
             <span>Đã thanh toán</span>
-            <span>{currency(order.paid)}</span>
+            <Money value={order.paid} tone="paid" />
           </div>
         )}
         {!cancelled && (
           <div className="af-order-summary">
             <span>Còn phải trả</span>
-            <strong>{currency(order.due)}</strong>
+            <Money value={order.due} tone={dueTone(order.due)} />
           </div>
         )}
       </Card>

@@ -3,7 +3,8 @@ import { Badge, Button, Card, Col, Empty, Row, Segmented, Skeleton, Typography }
 import { Clock3, Eye, MapPin, Package, Phone } from 'lucide-react'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
-import { currency } from '../../shared/utils/format'
+import { Money } from '../../shared/components/Money'
+import { dueTone } from '../../shared/utils/money'
 import { AdvanceStatusButton } from '../orders/components/AdvanceStatusButton'
 import { amountDue, type Order, type OrderStatus } from '../orders/types'
 import { useOrders } from '../orders/useOrders'
@@ -25,7 +26,7 @@ function DeliveryCard({ order, onDetails }: { order: Order; onDetails: () => voi
         <Button type="link" size="small" onClick={onDetails}>
           {order.id}
         </Button>
-        <span className="af-money">Thu {currency(amountDue(order))}</span>
+        <Money value={amountDue(order)} tone={dueTone(amountDue(order))} prefix="Thu " />
       </div>
       <div className="af-delivery-customer">{order.customer}</div>
       <div className="af-delivery-line">

@@ -4,6 +4,7 @@ import { Plus, Search } from 'lucide-react'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
 import { useColumnSort } from '../../shared/components/sortableColumn'
+import { Money } from '../../shared/components/Money'
 import { currency } from '../../shared/utils/format'
 import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
 import { CreateOrderModal } from '../orders/components/CreateOrderModal'
@@ -55,7 +56,7 @@ export function CustomersPage() {
       align: 'right',
       width: 140,
       sorter: (a, b) => a.debt - b.debt,
-      render: (debt: number) => (debt > 0 ? <span className="af-money af-text-warning">{currency(debt)}</span> : <span className="af-text-muted">—</span>),
+      render: (debt: number) => (debt > 0 ? <Money value={debt} tone="due" /> : <span className="af-text-muted">—</span>),
     },
     {
       ...sort.column('Vỏ đang giữ', 'bottlesHeld', 'number'),
@@ -105,7 +106,7 @@ export function CustomersPage() {
             </Col>
             <Col xs={12} lg={6}>
               <Card loading={customersQuery.isPending}>
-                <Statistic title="Còn phải thu" value={totalDebt} formatter={(value) => currency(Number(value))} />
+                <Statistic className={totalDebt > 0 ? 'af-stat-due' : 'af-stat-paid'} title="Còn phải thu" value={totalDebt} formatter={(value) => currency(Number(value))} />
               </Card>
             </Col>
             <Col xs={12} lg={6}>
@@ -115,7 +116,7 @@ export function CustomersPage() {
             </Col>
             <Col xs={12} lg={6}>
               <Card loading={customersQuery.isPending}>
-                <Statistic title="Tiền cọc đang giữ" value={totalDeposit} formatter={(value) => currency(Number(value))} />
+                <Statistic className="af-stat-deposit" title="Tiền cọc đang giữ" value={totalDeposit} formatter={(value) => currency(Number(value))} />
               </Card>
             </Col>
           </Row>

@@ -16,6 +16,11 @@
   --af-bg: #f4f7fb;
   --af-warning: #b86b0a;
   --af-danger: #c34444;
+  /* Màu tiền: xem shared/components/Money.tsx. */
+  --af-money-due: #a65f08;
+  --af-money-paid: #1f7a60;
+  --af-money-refund: #c34444;
+  --af-money-deposit: #087fad;
   /* Màu nhấn cho những thứ cần chú ý: đơn mới, số đếm khẩn. */
   --af-accent: #b86b0a;
   --af-topbar-height: 72px;
@@ -475,6 +480,11 @@ body {
 .af-text-warning {
   color: var(--af-warning) !important;
 }
+.af-money-stack > small { font-size: 12px; }
+.af-money.is-due, .af-stat-due .ant-statistic-content { color: var(--af-money-due); }
+.af-money.is-paid, .af-stat-paid .ant-statistic-content { color: var(--af-money-paid); }
+.af-money.is-refund, .af-stat-refund .ant-statistic-content { color: var(--af-money-refund); }
+.af-money.is-deposit, .af-stat-deposit .ant-statistic-content { color: var(--af-money-deposit); }
 .af-stock-cell .ant-progress {
   margin: 2px 0 0;
 }
