@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Button, Card, Col, Empty, Progress, Row, Skeleton, Table, Tag } from 'antd'
 import { Truck } from 'lucide-react'
 import { QueryError } from '../../../shared/components/QueryError'
+import { Money } from '../../../shared/components/Money'
+import { dueTone } from '../../../shared/utils/money'
 import { currency } from '../../../shared/utils/format'
 import { amountDue, jugCount, type Order } from '../../orders/types'
 import { useOrders } from '../../orders/useOrders'
@@ -83,7 +85,7 @@ export function TripsPanel() {
               render: (value?: string) => (value ? new Date(value).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '—'),
             },
             { title: 'Bình', key: 'jugs', width: 70, align: 'right', render: (_, order) => jugCount(order) || '—' },
-            { title: 'Cần thu', key: 'due', width: 130, align: 'right', render: (_, order) => <span className="af-money">{currency(amountDue(order))}</span> },
+            { title: 'Cần thu', key: 'due', width: 130, align: 'right', render: (_, order) => <Money value={amountDue(order)} tone={dueTone(amountDue(order))} /> },
           ]}
         />
       </Card>
