@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useState } from 'react'
+import { Button, Layout } from 'antd'
 import { ArrowDownRight, PackagePlus, Plus } from 'lucide-react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { Sidebar } from './components/layout/Sidebar'
@@ -34,7 +35,6 @@ function App() {
   const createProductMutation = useCreateProduct()
   const receiveStockMutation = useReceiveStock()
   const [modal, setModal] = useState<ModalKind>(null)
-  const [menuOpen, setMenuOpen] = useState(false)
   const [notice, setToast] = useState<{ message: string; tone: ToastTone } | null>(null)
   const [apiOnline, setApiOnline] = useState<boolean | null>(null)
 
@@ -58,10 +58,7 @@ function App() {
   const pendingCount = orders.filter((order) => order.status === 'Chờ xác nhận').length
   const closeModal = () => setModal(null)
 
-  const navigate = (next: Section) => {
-    navigateTo(sectionPaths[next])
-    setMenuOpen(false)
-  }
+  const navigate = (next: Section) => navigateTo(sectionPaths[next])
 
   const changeStatus = (id: string) =>
     advanceStatusMutation.mutate(id, {
@@ -98,21 +95,21 @@ function App() {
     })
 
   const pageActions: Partial<Record<Section, ReactNode>> = {
-    orders: <button className="button button-primary" onClick={() => setModal('order')}><Plus size={17} /> Tạo đơn hàng</button>,
-    inventory: <button className="button button-primary" onClick={() => setModal('stock')}><PackagePlus size={17} /> Tạo phiếu nhập</button>,
-    products: <button className="button button-primary" onClick={() => setModal('product')}><Plus size={17} /> Thêm sản phẩm</button>,
-    customers: <button className="button button-primary" onClick={() => setNotice('Biểu mẫu khách hàng sẽ được kết nối với API trong bước tiếp theo.')}><Plus size={17} /> Thêm khách hàng</button>,
-    reports: <button className="button button-secondary" onClick={() => setNotice('Báo cáo đã sẵn sàng để xuất.')}><ArrowDownRight size={16} /> Xuất báo cáo</button>,
+    orders: <Button type="primary" icon={<Plus size={16} />} onClick={() => setModal('order')}>Tạo đơn hàng</Button>,
+    inventory: <Button type="primary" icon={<PackagePlus size={16} />} onClick={() => setModal('stock')}>Tạo phiếu nhập</Button>,
+    products: <Button type="primary" icon={<Plus size={16} />} onClick={() => setModal('product')}>Thêm sản phẩm</Button>,
+    customers: <Button type="primary" icon={<Plus size={16} />} onClick={() => setNotice('Biểu mẫu khách hàng sẽ được kết nối với API trong bước tiếp theo.')}>Thêm khách hàng</Button>,
+    reports: <Button icon={<ArrowDownRight size={16} />} onClick={() => setNotice('Báo cáo đã sẵn sàng để xuất.')}>Xuất báo cáo</Button>,
   }
 
   return (
-    <div className="app-shell">
-      {menuOpen && <button className="mobile-scrim" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} />}
-      <Sidebar open={menuOpen} pendingCount={pendingCount} apiOnline={apiOnline} onClose={() => setMenuOpen(false)} onNotice={setNotice} />
+    <Layout className="af-shell">
+      <Sidebar pendingCount={pendingCount} apiOnline={apiOnline} onNotice={setNotice} />
 
-      <main className="main-content">
-        <Topbar section={section} action={pageActions[section] ?? null} onOpenMenu={() => setMenuOpen(true)} onNotice={setNotice} />
+      <Layout>
+        <Topbar section={section} action={pageActions[section] ?? null} onNotice={setNotice} />
 
+        <Layout.Content className="af-content">
         <Routes>
           <Route path={sectionPaths.overview} element={<DashboardPage orders={orders} products={products} onNavigate={navigate} onCreateOrder={() => setModal('order')} onReceiveStock={() => setModal('stock')} onChangeStatus={changeStatus} />} />
           <Route path={sectionPaths.orders} element={<OrdersPage onChangeStatus={changeStatus} />} />
@@ -124,18 +121,14 @@ function App() {
           <Route path="*" element={<Navigate to={sectionPaths.overview} replace />} />
         </Routes>
 
-        <footer className="page-footer">
-          <span>© 2026 AquaFlow</span>
-          <span><i className={`tiny-dot ${apiOnline ? 'green' : ''}`} /> Dữ liệu được cập nhật theo thời gian thực</span>
-          <button onClick={() => setNotice('Trung tâm trợ giúp AquaFlow')}>Trợ giúp</button>
-        </footer>
-      </main>
+        </Layout.Content>
+      </Layout>
 
       {modal === 'order' && <OrderModal products={products} submitting={createOrderMutation.isPending} onSubmit={createOrder} onClose={closeModal} />}
       {modal === 'stock' && <StockModal products={products} submitting={receiveStockMutation.isPending} onSubmit={receiveStock} onClose={closeModal} />}
       {modal === 'product' && <ProductModal submitting={createProductMutation.isPending} onSubmit={createProduct} onClose={closeModal} onNotice={setNotice} />}
       {notice && <Toast message={notice.message} tone={notice.tone} onClose={() => setToast(null)} />}
-    </div>
+    </Layout>
   )
 }
 
