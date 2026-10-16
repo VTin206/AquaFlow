@@ -3,6 +3,7 @@ import { App, Avatar, Button, Card, Col, Input, Row, Statistic, Table, Tag, type
 import { Plus, Search } from 'lucide-react'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
+import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
 import { CreateOrderModal } from '../orders/components/CreateOrderModal'
 import type { Customer } from './types'
 import { useCustomers } from './useCustomers'
@@ -22,12 +23,13 @@ export function CustomersPage() {
     {
       title: 'Khách hàng',
       dataIndex: 'name',
+      width: 260,
       sorter: (a, b) => a.name.localeCompare(b.name, 'vi'),
       render: (_, customer) => (
         <div className="af-customer-cell">
           <Avatar className="af-avatar">{customer.initials}</Avatar>
           <div className="af-cell-stack">
-            <span>{customer.name}</span>
+            <span className="af-cell-truncate" title={customer.name}>{customer.name}</span>
             <small>
               <a href={`tel:${customer.phone.replace(/\s/g, '')}`}>{customer.phone}</a>
             </small>
@@ -35,7 +37,7 @@ export function CustomersPage() {
         </div>
       ),
     },
-    { title: 'Khu vực', dataIndex: 'area' },
+    { title: 'Khu vực', dataIndex: 'area', ellipsis: true },
     { title: 'Số đơn đã mua', dataIndex: 'orders', align: 'right', width: 140, sorter: (a, b) => a.orders - b.orders, defaultSortOrder: 'descend' },
     {
       title: 'Vỏ đang giữ',
@@ -102,18 +104,25 @@ export function CustomersPage() {
               />
             </div>
             <Table<Customer>
+              className="af-data-table"
+              size="middle"
               rowKey="phone"
               columns={columns}
               dataSource={visible}
               loading={customersQuery.isPending}
-              pagination={{ pageSize: 10, hideOnSinglePage: true }}
+              pagination={tablePagination}
               locale={{ emptyText: keyword ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.' }}
-              scroll={{ x: 760 }}
+              scroll={{ x: 850, y: tableScrollHeight }}
             />
           </Card>
         </>
       )}
-      <CreateOrderModal open={orderFor !== null} defaultCustomer={orderFor ?? undefined} onClose={() => setOrderFor(null)} />
+      <CreateOrderModal
+        open={orderFor !== null}
+        defaultCustomer={orderFor ?? undefined}
+        defaultPhone={customers.find((customer) => customer.name === orderFor)?.phone}
+        onClose={() => setOrderFor(null)}
+      />
     </Page>
   )
 }

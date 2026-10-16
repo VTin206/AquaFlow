@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { productKeys } from '../inventory/useProducts'
 import { orderService } from './orderService'
-import type { Order } from './types'
+import type { DeliveryResult, Order, PaymentDraft } from './types'
 
 export const orderKeys = { all: ['orders'] as const }
 
@@ -27,6 +27,28 @@ export function useAdvanceOrderStatus() {
     onSuccess: (updated) => {
       queryClient.setQueryData<Order[]>(orderKeys.all, (orders) => orders?.map((order) => (order.id === updated.id ? updated : order)))
       queryClient.invalidateQueries({ queryKey: orderKeys.all })
+      queryClient.invalidateQueries({ queryKey: productKeys.all })
+    },
+  })
+}
+
+type OrderAction =
+  | { kind: 'receive'; id: string; result: DeliveryResult }
+  | { kind: 'pay'; id: string; payment: PaymentDraft }
+  | { kind: 'cancel'; id: string; reason: string }
+
+export function useOrderAction() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (action: OrderAction) => {
+      if (action.kind === 'receive') return orderService.receive(action.id, action.result)
+      if (action.kind === 'pay') return orderService.pay(action.id, action.payment)
+      return orderService.cancel(action.id, action.reason)
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData<Order[]>(orderKeys.all, (orders) => orders?.map((order) => (order.id === updated.id ? updated : order)))
+      queryClient.invalidateQueries({ queryKey: orderKeys.all })
+      queryClient.invalidateQueries({ queryKey: productKeys.all })
     },
   })
 }

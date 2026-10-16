@@ -5,6 +5,7 @@ import { CountLabel } from '../../shared/components/CountLabel'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
 import { currency } from '../../shared/utils/format'
+import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
 import { ReceiveStockModal } from './components/ReceiveStockModal'
 import { daysUntilExpiry, EXPIRY_WARNING_DAYS } from './expiry'
 import { isLowStock, type Product } from './types'
@@ -37,30 +38,32 @@ export function InventoryPage() {
       dataIndex: 'name',
       render: (_, product) => (
         <div className="af-cell-stack">
-          <span>{product.name}</span>
-          <small>
+          <span className="af-cell-truncate" title={product.name}>{product.name}</span>
+          <small className="af-cell-truncate" title={`${product.sku} · ${product.brand}`}>
             {product.sku} · {product.brand}
           </small>
         </div>
       ),
     },
     {
-      title: 'Tồn kho',
+      title: 'Có thể bán',
       dataIndex: 'stock',
       width: 240,
       sorter: (a, b) => a.stock / a.threshold - b.stock / b.threshold,
       render: (_, product) => (
         <div className="af-stock-cell">
-          <span className="af-money">
-            {product.stock} <Typography.Text type="secondary">{product.unit.toLowerCase()}</Typography.Text>
-          </span>
+          <div className="af-stock-summary">
+            <span className="af-money">
+              {product.stock} <Typography.Text type="secondary">{product.unit.toLowerCase()}</Typography.Text>
+            </span>
+            <small>Tối thiểu {product.threshold}</small>
+          </div>
           <Progress
             percent={Math.min(100, (product.stock / (product.threshold * 2)) * 100)}
             showInfo={false}
             size="small"
             status={isLowStock(product) ? 'exception' : 'normal'}
           />
-          <small>Tối thiểu {product.threshold}</small>
         </div>
       ),
     },
@@ -100,7 +103,7 @@ export function InventoryPage() {
   return (
     <Page
       title="Kho hàng"
-      description="Theo dõi số lượng tồn và hạn sử dụng."
+      description="Theo dõi lượng hàng có thể bán sau khi trừ hàng đã giữ cho đơn, cùng hạn sử dụng."
       actions={
         <Button type="primary" icon={<PackagePlus size={16} />} onClick={() => setReceiving({})}>
           Tạo phiếu nhập
@@ -131,7 +134,7 @@ export function InventoryPage() {
             </Col>
             <Col xs={12} lg={6}>
               <Card loading={productsQuery.isPending}>
-                <Statistic title="Giá trị tồn kho (giá bán)" value={currency(products.reduce((sum, item) => sum + item.stock * item.price, 0))} />
+                <Statistic title="Giá trị khả dụng (giá bán)" value={currency(products.reduce((sum, item) => sum + item.stock * item.price, 0))} />
               </Card>
             </Col>
           </Row>
@@ -157,13 +160,15 @@ export function InventoryPage() {
               />
             </div>
             <Table<Product>
+              className="af-data-table"
+              size="middle"
               rowKey="id"
               columns={columns}
               dataSource={visible}
               loading={productsQuery.isPending}
-              pagination={{ pageSize: 10, hideOnSinglePage: true }}
+              pagination={tablePagination}
               locale={{ emptyText: 'Không có sản phẩm phù hợp.' }}
-              scroll={{ x: 900 }}
+              scroll={{ x: 1000, y: tableScrollHeight }}
             />
           </Card>
         </>

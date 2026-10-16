@@ -3,19 +3,136 @@ import type { Order } from '../features/orders/types'
 import type { Product } from '../features/inventory/types'
 
 export const initialOrders: Order[] = [
-  { id: 'AF-1048', customer: 'Nguyễn Văn An', phone: '0903 456 128', address: 'Phường Thảo Điền, TP. Thủ Đức', items: '2 bình 20L, 1 thùng 500ml', total: 185000, time: '09:42', status: 'Đang giao', method: 'Giao tận nơi' },
-  { id: 'AF-1047', customer: 'Cửa hàng Minh Tâm', phone: '0918 220 467', address: 'Đường Nguyễn Văn Linh, Quận 7', items: '10 bình 20L', total: 1200000, time: '09:28', status: 'Đã hoàn tất', method: 'Giao tận nơi' },
-  { id: 'AF-1046', customer: 'Trần Thị Hương', phone: '0938 113 602', address: 'Phường 6, Quận 3', items: '1 bình 20L + vỏ bình', total: 95000, time: '09:16', status: 'Chờ xác nhận', method: 'Giao tận nơi' },
-  { id: 'AF-1045', customer: 'Văn phòng Green Hub', phone: '028 3822 8855', address: 'Đường Điện Biên Phủ, Bình Thạnh', items: '5 thùng chai 500ml', total: 450000, time: '08:54', status: 'Đang chuẩn bị', method: 'Giao tận nơi' },
-  { id: 'AF-1044', customer: 'Lê Hoàng Phúc', phone: '0908 772 351', address: 'Khách nhận tại cửa hàng', items: '3 bình 20L', total: 210000, time: '08:31', status: 'Đã hoàn tất', method: 'Tại quầy' },
-]
+  {
+    id: 'AF-1048',
+    customer: 'Nguyễn Văn An',
+    phone: '0903 456 128',
+    address: 'Phường Thảo Điền, TP. Thủ Đức',
+    items: '2 bình 20L, 1 thùng 500ml',
+    total: 185000,
+    time: '09:42',
+    status: 'Đang giao',
+    method: 'Giao tận nơi',
+  },
+  {
+    id: 'AF-1047',
+    customer: 'Cửa hàng Minh Tâm',
+    phone: '0918 220 467',
+    address: 'Đường Nguyễn Văn Linh, Quận 7',
+    items: '10 bình 20L',
+    total: 1200000,
+    time: '09:28',
+    status: 'Đã hoàn tất',
+    method: 'Giao tận nơi',
+  },
+  {
+    id: 'AF-1046',
+    customer: 'Trần Thị Hương',
+    phone: '0938 113 602',
+    address: 'Phường 6, Quận 3',
+    items: '1 bình 20L + vỏ bình',
+    total: 95000,
+    time: '09:16',
+    status: 'Chờ xác nhận',
+    method: 'Giao tận nơi',
+  },
+  {
+    id: 'AF-1045',
+    customer: 'Văn phòng Green Hub',
+    phone: '028 3822 8855',
+    address: 'Đường Điện Biên Phủ, Bình Thạnh',
+    items: '5 thùng chai 500ml',
+    total: 450000,
+    time: '08:54',
+    status: 'Đang chuẩn bị',
+    method: 'Giao tận nơi',
+  },
+  {
+    id: 'AF-1044',
+    customer: 'Lê Hoàng Phúc',
+    phone: '0908 772 351',
+    address: 'Khách nhận tại cửa hàng',
+    items: '3 bình 20L',
+    total: 210000,
+    time: '08:31',
+    status: 'Đã hoàn tất',
+    method: 'Tại quầy',
+  },
+].map((fixture) => {
+  const quantity = fixture.id === 'AF-1047' ? 10 : fixture.id === 'AF-1044' ? 3 : fixture.id === 'AF-1045' ? 5 : fixture.id === 'AF-1048' ? 2 : 1
+  const bottled = fixture.id === 'AF-1045'
+  const lines = [
+    {
+      productId: bottled ? 'P-003' : 'P-001',
+      name: bottled ? 'Nước chai 500ml (24 chai)' : 'Nước tinh khiết bình 20L',
+      unit: bottled ? 'Thùng' : 'Bình',
+      quantity,
+      unitPrice: fixture.total / quantity,
+    },
+  ]
+  return {
+    ...fixture,
+    status: fixture.status as Order['status'],
+    method: fixture.method as Order['method'],
+    channel: 'Điện thoại' as const,
+    lines,
+    items: lines.map((line) => `${line.quantity} ${line.unit.toLowerCase()} ${line.name}`).join(', '),
+    deliveryFee: 0,
+    stockReserved: ['Đang chuẩn bị', 'Đang giao'].includes(fixture.status),
+    payments:
+      fixture.status === 'Đã hoàn tất'
+        ? [{ id: `PT-${fixture.id}-1`, amount: fixture.total, method: 'Tiền mặt' as const, recordedAt: '2026-10-16T02:00:00+07:00' }]
+        : [],
+    history: [{ at: '2026-10-16T01:00:00+07:00', message: 'Đơn minh họa với giá tại thời điểm giao dịch.' }],
+  }
+})
 
 export const initialProducts: Product[] = [
-  { id: 'P-001', name: 'Nước tinh khiết bình 20L', brand: 'AquaFlow', unit: 'Bình', stock: 12, threshold: 20, price: 70000, expiry: '12/08/2027', sku: 'AQUA-20L' },
+  {
+    id: 'P-001',
+    name: 'Nước tinh khiết bình 20L',
+    brand: 'AquaFlow',
+    unit: 'Bình',
+    stock: 12,
+    threshold: 20,
+    price: 70000,
+    expiry: '12/08/2027',
+    sku: 'AQUA-20L',
+  },
   { id: 'P-002', name: 'Vỏ bình 20L', brand: 'Dùng luân chuyển', unit: 'Vỏ', stock: 28, threshold: 35, price: 50000, expiry: '—', sku: 'VO-20L' },
-  { id: 'P-003', name: 'Nước chai 500ml (24 chai)', brand: 'AquaFlow', unit: 'Thùng', stock: 64, threshold: 24, price: 90000, expiry: '02/03/2027', sku: 'AQUA-500' },
-  { id: 'P-004', name: 'Nước tinh khiết bình 19L', brand: 'Lavie', unit: 'Bình', stock: 36, threshold: 18, price: 65000, expiry: '18/05/2027', sku: 'LAVIE-19L' },
-  { id: 'P-005', name: 'Nước chai 1.5L (12 chai)', brand: 'AquaFlow', unit: 'Thùng', stock: 18, threshold: 20, price: 108000, expiry: '21/01/2027', sku: 'AQUA-15L' },
+  {
+    id: 'P-003',
+    name: 'Nước chai 500ml (24 chai)',
+    brand: 'AquaFlow',
+    unit: 'Thùng',
+    stock: 64,
+    threshold: 24,
+    price: 90000,
+    expiry: '02/03/2027',
+    sku: 'AQUA-500',
+  },
+  {
+    id: 'P-004',
+    name: 'Nước tinh khiết bình 19L',
+    brand: 'Lavie',
+    unit: 'Bình',
+    stock: 36,
+    threshold: 18,
+    price: 65000,
+    expiry: '18/05/2027',
+    sku: 'LAVIE-19L',
+  },
+  {
+    id: 'P-005',
+    name: 'Nước chai 1.5L (12 chai)',
+    brand: 'AquaFlow',
+    unit: 'Thùng',
+    stock: 18,
+    threshold: 20,
+    price: 108000,
+    expiry: '21/01/2027',
+    sku: 'AQUA-15L',
+  },
 ]
 
 export const customers: Customer[] = [

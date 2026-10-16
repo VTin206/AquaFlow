@@ -1,5 +1,5 @@
 import { App, Badge, Menu, type MenuProps } from 'antd'
-import { LifeBuoy, Settings2 } from 'lucide-react'
+import { Droplets, LifeBuoy, Settings2 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router'
 import { navGroups } from '../app/navigation'
 import { useOrders } from '../features/orders/useOrders'
@@ -22,7 +22,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       label: (
         <span className="af-menu-label">
           {label}
-          {path === '/orders' && pendingCount > 0 && <Badge count={pendingCount} size="small" color="#c92a2a" title={`${pendingCount} đơn chờ xác nhận`} />}
+          {path === '/orders' && pendingCount > 0 && <Badge count={pendingCount} size="small" color="#087fad" title={`${pendingCount} đơn chờ xác nhận`} />}
         </span>
       ),
     })),
@@ -30,6 +30,15 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="af-nav">
+      <div className="af-workspace">
+        <span className="af-workspace-icon">
+          <Droplets size={20} />
+        </span>
+        <div>
+          <strong>Cửa hàng của bạn</strong>
+          <small>Quản lý đại lý nước</small>
+        </div>
+      </div>
       <Menu
         mode="inline"
         items={items}

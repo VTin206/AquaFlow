@@ -1,12 +1,12 @@
-import { App, Avatar, Badge, Button, Tooltip } from 'antd'
-import { Bell, Menu as MenuIcon, Waves } from 'lucide-react'
+import { Avatar, Badge, Button, Dropdown, Tooltip } from 'antd'
+import { Bell, ChevronDown, LogOut, Menu as MenuIcon, Store, Waves } from 'lucide-react'
 import { Link } from 'react-router'
-import { useApiOnline } from '../shared/api/health'
+import { useOrders } from '../features/orders/useOrders'
 
-/** Thanh trên cùng mang màu thương hiệu: logo, chi nhánh, trạng thái kết nối, thông báo, tài khoản. */
+/** Thanh ứng dụng; thông báo dẫn tới danh sách đơn cần xử lý. */
 export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
-  const { message } = App.useApp()
-  const apiOnline = useApiOnline()
+  const { data: orders = [] } = useOrders()
+  const pendingCount = orders.filter((order) => order.status === 'Chờ xác nhận').length
 
   return (
     <header className="af-topbar">
@@ -14,30 +14,34 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
         <Button type="text" className="af-topbar-icon af-nav-toggle" aria-label="Mở menu" icon={<MenuIcon size={20} />} onClick={onOpenNav} />
         <Link to="/" className="af-topbar-brand">
           <span className="af-brand-mark">
-            <Waves size={18} strokeWidth={2.2} />
+            <Waves size={22} strokeWidth={2.2} />
           </span>
           <strong>AquaFlow</strong>
         </Link>
         <span className="af-topbar-divider" aria-hidden />
-        <span className="af-topbar-store">Chi nhánh chính</span>
+        <span className="af-topbar-store">
+          <Store size={16} /> Một cửa hàng · Một kho
+        </span>
       </div>
       <div className="af-topbar-right">
-        <span className={`af-api-pill ${apiOnline ? 'online' : 'offline'}`} title={apiOnline ? 'Đã kết nối máy chủ' : 'Đang dùng dữ liệu mẫu'}>
-          <i />
-          {apiOnline === undefined ? 'Đang kiểm tra' : apiOnline ? 'Đã kết nối' : 'Dữ liệu mẫu'}
-        </span>
-        <Tooltip title="Thông báo">
-          <Badge dot offset={[-8, 8]} color="#c92a2a">
-            <Button type="text" shape="circle" className="af-topbar-icon" aria-label="Thông báo" icon={<Bell size={18} />} onClick={() => message.info('Bạn đã xem hết thông báo mới.')} />
-          </Badge>
+        <span className="af-demo-label">Dữ liệu mẫu</span>
+        <Tooltip title={`${pendingCount} đơn chờ xác nhận`}>
+          <Link to="/orders" className="af-notification-link" aria-label={`Xem đơn hàng, ${pendingCount} đơn chờ xác nhận`}>
+            <Badge dot={pendingCount > 0} offset={[-3, 3]} color="#ffc56d">
+              <Bell size={19} color="#e0edf9" />
+            </Badge>
+          </Link>
         </Tooltip>
-        <div className="af-topbar-user">
-          <Avatar className="af-avatar">NA</Avatar>
-          <div className="af-topbar-user-text">
-            <strong>Nguyễn An</strong>
-            <small>Quản trị viên</small>
-          </div>
-        </div>
+        <Dropdown trigger={['click']} menu={{ items: [{ key: 'logout', danger: true, icon: <LogOut size={16} />, label: <Link to="/login">Đăng xuất</Link> }] }}>
+          <button type="button" className="af-topbar-user af-account-menu" aria-label="Menu tài khoản">
+            <Avatar className="af-avatar">NA</Avatar>
+            <div className="af-topbar-user-text">
+              <strong>Nguyễn An</strong>
+              <small>Quản trị viên</small>
+            </div>
+            <ChevronDown size={14} aria-hidden />
+          </button>
+        </Dropdown>
       </div>
     </header>
   )
