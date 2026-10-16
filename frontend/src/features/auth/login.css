@@ -107,7 +107,7 @@
 .af-login-welcome { color: var(--af-text-tertiary); font-size: 10px; font-weight: 600; letter-spacing: 1.6px; margin: 0 0 10px; }
 .af-login-form-heading h1 { color: var(--af-text-strong); font-size: 26px; line-height: 1.4; letter-spacing: -0.8px; margin: 0 0 10px; }
 .af-login-form-heading > p:last-child { font-size: 13px; color: var(--af-text-secondary); line-height: 1.7; margin: 0 0 30px; }
-.af-login-form-options { display: flex; justify-content: flex-end; margin: -12px 0 20px; }
+.af-login-form-options { align-items: center; display: flex; justify-content: space-between; margin: -12px 0 20px; }
 .af-login-divider-text { color: var(--af-text-tertiary); font-size: 11px; }
 .af-login-preview-note { margin-top: 24px; }
 .af-login-footer { display: flex; justify-content: space-between; gap: 16px; padding: 0 max(32px, calc((100vw - 1200px) / 2)) 24px; color: var(--af-text-tertiary); font-size: 11px; line-height: 1.6; }

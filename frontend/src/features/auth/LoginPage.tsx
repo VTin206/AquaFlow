@@ -1,13 +1,47 @@
-import { useState } from 'react'
-import { Alert, App, Button, ConfigProvider, Divider, Form, Input, Modal } from 'antd'
+import { useEffect, useState } from 'react'
+import { Alert, App, Button, Checkbox, ConfigProvider, Divider, Form, Input, Modal } from 'antd'
 import { ArrowRight, CircleCheck, Headphones, LockKeyhole, Package, Store, Truck, UserRound, Waves } from 'lucide-react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
+import { useAuth } from './useAuth'
+import type { LoginCredentials } from './authService'
 import './login.css'
+
+const REMEMBERED_EMAIL_KEY = 'aquaflow.auth.remembered-email'
+type LoginFormValues = LoginCredentials & { rememberMe?: boolean }
 
 export function LoginPage() {
   const { message } = App.useApp()
+  const { login, enterDemo, isAuthenticated } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [helpOpen, setHelpOpen] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const rememberedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? ''
+  const returnTo = (location.state as { from?: string } | null)?.from ?? '/'
+
+  const submitLogin = async ({ email, password, rememberMe }: LoginFormValues) => {
+    setSubmitting(true)
+    try {
+      await login({ email, password })
+      if (rememberMe) localStorage.setItem(REMEMBERED_EMAIL_KEY, email.trim())
+      else localStorage.removeItem(REMEMBERED_EMAIL_KEY)
+      message.success('Đăng nhập thành công.')
+      navigate(returnTo, { replace: true })
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : 'Đăng nhập thất bại.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const openDemo = () => {
+    enterDemo()
+    navigate(returnTo, { replace: true })
+  }
+
+  useEffect(() => {
+    if (isAuthenticated) navigate(returnTo, { replace: true })
+  }, [isAuthenticated, navigate, returnTo])
 
   return (
     <div className="af-login-page">
@@ -56,24 +90,32 @@ export function LoginPage() {
 
             <ConfigProvider theme={{ components: { Input: { controlHeightLG: 48, fontSizeLG: 14 }, Button: { controlHeightLG: 48, fontSizeLG: 14 } } }}>
               <Form
+                initialValues={{ email: rememberedEmail, rememberMe: Boolean(rememberedEmail) }}
                 name="login"
+                autoComplete="on"
                 layout="vertical"
-                onFinish={() => message.info('Đăng nhập chưa được kết nối. Bạn có thể chọn “Xem bản dùng thử” để khám phá AquaFlow.')}
+                requiredMark={false}
+                onFinish={submitLogin}
               >
-                <Form.Item label="Tên đăng nhập" name="username" rules={[{ required: true, whitespace: true, message: 'Vui lòng nhập tên đăng nhập.' }]}>
-                  <Input size="large" prefix={<UserRound size={17} aria-hidden />} placeholder="Nhập tên đăng nhập" autoComplete="username" autoCapitalize="none" spellCheck={false} />
+                <Form.Item label="Email" name="email" rules={[{ required: true, type: 'email', whitespace: true, message: 'Nhập email hợp lệ.' }]}>
+                  <Input type="email" size="large" prefix={<UserRound size={17} aria-hidden />} placeholder="name@example.com" autoComplete="email" autoCapitalize="none" spellCheck={false} />
                 </Form.Item>
                 <Form.Item label="Mật khẩu" name="password" rules={[{ required: true, message: 'Vui lòng nhập mật khẩu.' }]}>
                   <Input.Password size="large" prefix={<LockKeyhole size={17} aria-hidden />} placeholder="Nhập mật khẩu" autoComplete="current-password" />
                 </Form.Item>
-                <div className="af-login-form-options"><Button type="link" size="small" onClick={() => setHelpOpen(true)}>Quên mật khẩu?</Button></div>
-                <Button type="primary" size="large" htmlType="submit" block icon={<ArrowRight size={18} />} iconPlacement="end">Đăng nhập</Button>
+                <div className="af-login-form-options">
+                  <Form.Item name="rememberMe" valuePropName="checked" noStyle>
+                    <Checkbox>Ghi nhớ tôi</Checkbox>
+                  </Form.Item>
+                  <Button type="link" size="small" onClick={() => setHelpOpen(true)}>Quên mật khẩu?</Button>
+                </div>
+                <Button type="primary" size="large" htmlType="submit" loading={submitting} block icon={<ArrowRight size={18} />} iconPlacement="end">Đăng nhập</Button>
               </Form>
               <Divider plain><span className="af-login-divider-text">Khám phá AquaFlow</span></Divider>
-              <Button block size="large" onClick={() => navigate('/')}>Xem bản dùng thử</Button>
+              <Button block size="large" onClick={openDemo}>Xem bản dùng thử</Button>
             </ConfigProvider>
             <div className="af-login-preview-note">
-              <Alert type="info" showIcon title="Giao diện mẫu · Chưa kết nối đăng nhập" />
+              <Alert type="info" showIcon title="Đăng nhập cần Auth API đang hoạt động. Có thể vào bản dùng thử để khám phá giao diện." />
             </div>
           </section>
         </div>
@@ -82,7 +124,7 @@ export function LoginPage() {
       <footer className="af-login-footer"><span>AquaFlow · Hệ thống quản lý cửa hàng nước</span><span>Một cửa hàng. Một không gian quản lý.</span></footer>
       <Modal title="Hỗ trợ đăng nhập" open={helpOpen} centered onCancel={() => setHelpOpen(false)} footer={<Button type="primary" onClick={() => setHelpOpen(false)}>Đã hiểu</Button>}>
         <p>Nếu bạn chưa có tài khoản hoặc quên mật khẩu, hãy liên hệ người quản trị cửa hàng để được hỗ trợ.</p>
-        <Alert type="info" showIcon title="Đây là bản xem trước giao diện" description="Chức năng đăng nhập và khôi phục mật khẩu chưa khả dụng. Bạn có thể xem bản dùng thử mà không cần nhập tài khoản." />
+        <Alert type="info" showIcon title="Auth API" description="Đăng nhập gửi tên đăng nhập và mật khẩu tới /api/v1/auth/login. Nếu backend chưa triển khai endpoint này, hãy dùng bản xem thử." />
       </Modal>
     </div>
   )

@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { App as AntApp, ConfigProvider } from 'antd'
 import viVN from 'antd/locale/vi_VN'
 import { BrowserRouter } from 'react-router'
+import { AuthProvider } from '../features/auth/AuthProvider'
 import { appTheme } from './theme'
 
 const queryClient = new QueryClient({
@@ -17,7 +18,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <ConfigProvider locale={viVN} theme={appTheme} form={{ requiredMark: true }}>
         <AntApp message={{ maxCount: 3 }}>
-          <BrowserRouter>{children}</BrowserRouter>
+          <AuthProvider>
+            <BrowserRouter>{children}</BrowserRouter>
+          </AuthProvider>
         </AntApp>
       </ConfigProvider>
     </QueryClientProvider>

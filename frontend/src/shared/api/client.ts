@@ -1,8 +1,9 @@
-// Client gọi API dùng chung: mọi request tới backend đi qua đây, không gọi fetch trực tiếp trong component.
+import axios, { AxiosError, type AxiosRequestConfig } from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
+const TOKEN_KEY = 'aquaflow.auth.token'
 
-/** Định dạng lỗi backend trả về (com.aquaflow.shared.api.ApiError). */
+/** Error shape shared with the Spring API and the local mock services. */
 export type ApiErrorBody = {
   timestamp?: string
   status: number
@@ -23,54 +24,17 @@ export class ApiError extends Error {
   }
 }
 
-let authToken: string | null = null
+export const httpClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+})
 
-/** Gắn JWT vào mọi request sau khi đăng nhập; truyền null khi đăng xuất. */
-export const setAuthToken = (token: string | null) => {
-  authToken = token
-}
-
-type RequestOptions = Omit<RequestInit, 'body' | 'method'> & { body?: unknown }
-
-async function request<T>(method: string, path: string, { body, headers, ...init }: RequestOptions = {}): Promise<T> {
-  let response: Response
-  try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
-      ...init,
-      method,
-      headers: {
-        Accept: 'application/json',
-        ...(body !== undefined && { 'Content-Type': 'application/json' }),
-        ...(authToken && { Authorization: `Bearer ${authToken}` }),
-        ...headers,
-      },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    })
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') throw error
-    throw new ApiError(0, 'Không thể kết nối tới máy chủ.')
-  }
-
-  const text = await response.text()
-  const data = text ? safeParse(text) : undefined
-
-  if (!response.ok) {
-    const errorBody = isApiErrorBody(data) ? data : undefined
-    throw new ApiError(response.status, errorBody?.message || defaultMessage(response.status), errorBody)
-  }
-  return data as T
-}
-
-const safeParse = (text: string): unknown => {
-  try {
-    return JSON.parse(text)
-  } catch {
-    return text
-  }
-}
-
-const isApiErrorBody = (value: unknown): value is ApiErrorBody =>
-  typeof value === 'object' && value !== null && 'status' in value && 'message' in value
+httpClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem(TOKEN_KEY)
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  else delete config.headers.Authorization
+  return config
+})
 
 const defaultMessage = (status: number) => {
   if (status === 400) return 'Dữ liệu gửi lên không hợp lệ.'
@@ -81,10 +45,36 @@ const defaultMessage = (status: number) => {
   return `Yêu cầu thất bại (mã ${status}).`
 }
 
+const normalizeError = (error: unknown): ApiError => {
+  if (error instanceof ApiError) return error
+  if (axios.isCancel(error)) return new ApiError(0, 'Yêu cầu đã bị hủy.')
+  if (!axios.isAxiosError(error)) return new ApiError(0, 'Đã xảy ra lỗi không xác định.')
+
+  const axiosError = error as AxiosError<ApiErrorBody | string>
+  if (!axiosError.response) return new ApiError(0, 'Không thể kết nối tới máy chủ.')
+  const body = typeof axiosError.response.data === 'object' ? axiosError.response.data : undefined
+  return new ApiError(axiosError.response.status, body?.message || defaultMessage(axiosError.response.status), body)
+}
+
+async function request<T>(config: AxiosRequestConfig): Promise<T> {
+  try {
+    const response = await httpClient.request<T>(config)
+    return response.data
+  } catch (error) {
+    throw normalizeError(error)
+  }
+}
+
 export const api = {
-  get: <T>(path: string, options?: RequestOptions) => request<T>('GET', path, options),
-  post: <T>(path: string, body?: unknown, options?: RequestOptions) => request<T>('POST', path, { ...options, body }),
-  put: <T>(path: string, body?: unknown, options?: RequestOptions) => request<T>('PUT', path, { ...options, body }),
-  patch: <T>(path: string, body?: unknown, options?: RequestOptions) => request<T>('PATCH', path, { ...options, body }),
-  delete: <T>(path: string, options?: RequestOptions) => request<T>('DELETE', path, options),
+  get: <T>(path: string, options?: AxiosRequestConfig) => request<T>({ ...options, method: 'GET', url: path }),
+  post: <T>(path: string, body?: unknown, options?: AxiosRequestConfig) => request<T>({ ...options, method: 'POST', url: path, data: body }),
+  put: <T>(path: string, body?: unknown, options?: AxiosRequestConfig) => request<T>({ ...options, method: 'PUT', url: path, data: body }),
+  patch: <T>(path: string, body?: unknown, options?: AxiosRequestConfig) => request<T>({ ...options, method: 'PATCH', url: path, data: body }),
+  delete: <T>(path: string, options?: AxiosRequestConfig) => request<T>({ ...options, method: 'DELETE', url: path }),
+}
+
+export const getStoredAuthToken = () => localStorage.getItem(TOKEN_KEY)
+export const storeAuthToken = (token: string | null) => {
+  if (token) localStorage.setItem(TOKEN_KEY, token)
+  else localStorage.removeItem(TOKEN_KEY)
 }

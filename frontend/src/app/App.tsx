@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Spin } from 'antd'
 import { Navigate, Route, Routes } from 'react-router'
 import { AppLayout } from '../layouts/AppLayout'
+import { RequireAuth } from './RequireAuth'
 
 // Mỗi trang được tải khi người dùng mở tới, giúp lần tải đầu nhẹ hơn.
 const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })))
@@ -17,6 +18,7 @@ const LoginPage = lazy(() => import('../features/auth/LoginPage').then((m) => ({
 const pageFallback = (
   <div className="af-page-loading">
     <Spin size="large" />
+
   </div>
 )
 
@@ -25,16 +27,18 @@ export function App() {
     <Suspense fallback={pageFallback}>
       <Routes>
         <Route path="login" element={<LoginPage />} />
-        <Route element={<AppLayout />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="orders" element={<OrdersPage />} />
-          <Route path="inventory" element={<InventoryPage />} />
-          <Route path="products" element={<ProductsPage />} />
-          <Route path="customers" element={<CustomersPage />} />
-          <Route path="suppliers" element={<SuppliersPage />} />
-          <Route path="delivery" element={<DeliveryPage />} />
-          <Route path="reports" element={<ReportsPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+        <Route element={<RequireAuth />}>
+          <Route element={<AppLayout />}>
+            <Route index element={<DashboardPage />} />
+            <Route path="orders" element={<OrdersPage />} />
+            <Route path="inventory" element={<InventoryPage />} />
+            <Route path="products" element={<ProductsPage />} />
+            <Route path="customers" element={<CustomersPage />} />
+            <Route path="suppliers" element={<SuppliersPage />} />
+            <Route path="delivery" element={<DeliveryPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
         </Route>
       </Routes>
     </Suspense>
