@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button, Card, Col, Input, Progress, Row, Segmented, Statistic, Table, Tag, Typography, type TableColumnsType } from 'antd'
 import { PackagePlus, Search } from 'lucide-react'
+import { CountLabel } from '../../shared/components/CountLabel'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
 import { currency } from '../../shared/utils/format'
@@ -141,9 +142,9 @@ export function InventoryPage() {
                 value={filter}
                 onChange={setFilter}
                 options={[
-                  { value: 'all', label: `Tất cả (${products.length})` },
-                  { value: 'low', label: `Sắp hết (${lowStock.length})` },
-                  { value: 'expiring', label: `Sắp hết hạn (${expiring.length})` },
+                  { value: 'all', label: <CountLabel label="Tất cả" count={products.length} /> },
+                  { value: 'low', label: <CountLabel label="Sắp hết" count={lowStock.length} urgent /> },
+                  { value: 'expiring', label: <CountLabel label="Sắp hết hạn" count={expiring.length} urgent /> },
                 ]}
               />
               <Input
