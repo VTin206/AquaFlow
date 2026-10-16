@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { customerKeys } from '../customers/useCustomers'
 import { productKeys } from '../inventory/useProducts'
 import { orderService } from './orderService'
 import type { DeliveryResult, Order, PaymentDraft } from './types'
@@ -16,6 +17,9 @@ export function useCreateOrder() {
       queryClient.setQueryData<Order[]>(orderKeys.all, (orders) => (orders ? [order, ...orders] : orders))
       queryClient.invalidateQueries({ queryKey: orderKeys.all })
       queryClient.invalidateQueries({ queryKey: productKeys.all })
+      queryClient.invalidateQueries({ queryKey: customerKeys.all })
+      // Kết quả giao từng đơn làm đổi trạng thái chuyến giao.
+      queryClient.invalidateQueries({ queryKey: ['trips'] })
     },
   })
 }
@@ -28,6 +32,9 @@ export function useAdvanceOrderStatus() {
       queryClient.setQueryData<Order[]>(orderKeys.all, (orders) => orders?.map((order) => (order.id === updated.id ? updated : order)))
       queryClient.invalidateQueries({ queryKey: orderKeys.all })
       queryClient.invalidateQueries({ queryKey: productKeys.all })
+      queryClient.invalidateQueries({ queryKey: customerKeys.all })
+      // Kết quả giao từng đơn làm đổi trạng thái chuyến giao.
+      queryClient.invalidateQueries({ queryKey: ['trips'] })
     },
   })
 }
@@ -49,6 +56,9 @@ export function useOrderAction() {
       queryClient.setQueryData<Order[]>(orderKeys.all, (orders) => orders?.map((order) => (order.id === updated.id ? updated : order)))
       queryClient.invalidateQueries({ queryKey: orderKeys.all })
       queryClient.invalidateQueries({ queryKey: productKeys.all })
+      queryClient.invalidateQueries({ queryKey: customerKeys.all })
+      // Kết quả giao từng đơn làm đổi trạng thái chuyến giao.
+      queryClient.invalidateQueries({ queryKey: ['trips'] })
     },
   })
 }

@@ -1,12 +1,10 @@
-import { Avatar, Badge, Button, Dropdown, Tooltip } from 'antd'
-import { Bell, ChevronDown, LogOut, Menu as MenuIcon, Store, Waves } from 'lucide-react'
+import { Avatar, Button, Dropdown } from 'antd'
+import { ChevronDown, LogOut, Menu as MenuIcon, Store, Waves } from 'lucide-react'
 import { Link } from 'react-router'
-import { useOrders } from '../features/orders/useOrders'
+import { NotificationPopover } from './NotificationPopover'
 
-/** Thanh ứng dụng; thông báo dẫn tới danh sách đơn cần xử lý. */
+/** Thanh ứng dụng và các thao tác nhanh. */
 export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
-  const { data: orders = [] } = useOrders()
-  const pendingCount = orders.filter((order) => order.status === 'Chờ xác nhận').length
 
   return (
     <header className="af-topbar">
@@ -25,13 +23,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
       </div>
       <div className="af-topbar-right">
         <span className="af-demo-label">Dữ liệu mẫu</span>
-        <Tooltip title={`${pendingCount} đơn chờ xác nhận`}>
-          <Link to="/orders" className="af-notification-link" aria-label={`Xem đơn hàng, ${pendingCount} đơn chờ xác nhận`}>
-            <Badge dot={pendingCount > 0} offset={[-3, 3]} color="#ffc56d">
-              <Bell size={19} color="#e0edf9" />
-            </Badge>
-          </Link>
-        </Tooltip>
+        <NotificationPopover />
         <Dropdown trigger={['click']} menu={{ items: [{ key: 'logout', danger: true, icon: <LogOut size={16} />, label: <Link to="/login">Đăng xuất</Link> }] }}>
           <button type="button" className="af-topbar-user af-account-menu" aria-label="Menu tài khoản">
             <Avatar className="af-avatar">NA</Avatar>

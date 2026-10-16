@@ -1,7 +1,8 @@
 import { db } from '../../mocks/db'
 import { mockError, mockRequest } from '../../mocks/mockRequest'
+import { addBottleEntry, bottleBalance, ensureCustomer } from '../customers/customerService'
 import { daysUntilExpiry } from '../inventory/expiry'
-import { amountDue, type DeliveryResult, type Order, type OrderDraft, type OrderLine, type PaymentDraft } from './types'
+import { amountDue, jugCount, type DeliveryResult, type Order, type OrderDraft, type OrderLine, type PaymentDraft } from './types'
 
 // Bản mô phỏng trong bộ nhớ; API thật cần transaction, phân quyền và nhật ký phía máy chủ.
 const now = () => new Date().toISOString()
@@ -41,6 +42,36 @@ const checkExpiry = (order: Order) => {
   }
 }
 
+/** Đơn giao tận nơi đang chuẩn bị hoặc giao thất bại có thể xuất đi giao (lần đầu hoặc giao lại). */
+export const canDispatch = (order: Order) => order.method === 'Giao tận nơi' && ['Đang chuẩn bị', 'Giao thất bại'].includes(order.status)
+
+/** Chuyển đơn sang "Đang giao"; dùng chung cho thao tác lẻ và xuất phát chuyến. */
+export function beginDelivery(order: Order, via?: string) {
+  if (!canDispatch(order)) throw mockError(400, `Đơn ${order.id} chưa sẵn sàng xuất giao.`)
+  checkExpiry(order)
+  const retry = order.status === 'Giao thất bại'
+  order.status = 'Đang giao'
+  record(order, `${retry ? 'Bắt đầu lần giao lại' : 'Bắt đầu giao hàng'}${via ? ` · ${via}` : ''}.`)
+}
+
+/** Kiểm tra rồi ghi sổ vỏ khi bàn giao; trả về undefined nếu đơn không có vỏ luân chuyển. */
+function settleBottles(order: Order, result: DeliveryResult) {
+  const delivered = jugCount(order)
+  const returned = result.bottlesReturned ?? 0
+  const deposit = result.depositCollected ?? 0
+  if (!Number.isSafeInteger(returned) || returned < 0) throw mockError(400, 'Số vỏ thu về phải là số nguyên không âm.')
+  if (!Number.isSafeInteger(deposit) || deposit < 0) throw mockError(400, 'Tiền cọc phải là số nguyên không âm.')
+  if (!delivered && !returned && !deposit) return undefined
+  if (!order.customerId) throw mockError(400, 'Đơn chưa gắn hồ sơ khách nên không ghi được vỏ/cọc.')
+  const held = bottleBalance(order.customerId).bottles
+  if (returned > held + delivered) throw mockError(400, `Khách chỉ có ${held + delivered} vỏ (kể cả vỏ vừa giao).`)
+  const base = { customerId: order.customerId, orderId: order.id }
+  if (delivered) addBottleEntry({ ...base, kind: 'Giao kèm đơn', bottles: delivered, deposit: 0 })
+  if (returned) addBottleEntry({ ...base, kind: 'Thu vỏ', bottles: -returned, deposit: 0 })
+  if (deposit) addBottleEntry({ ...base, kind: 'Thu cọc', bottles: 0, deposit })
+  return { delivered, returned, deposit }
+}
+
 export const orderService = {
   list: () => mockRequest(() => db.orders),
   create: (draft: OrderDraft) =>
@@ -57,9 +88,14 @@ export const orderService = {
       const deliveryFee = delivery ? draft.deliveryFee : 0
       if (!Number.isSafeInteger(deliveryFee) || deliveryFee < 0) throw mockError(400, 'Phí giao hàng phải là số nguyên không âm.')
       if (delivery) validateAppointment(draft.appointment)
+      const floor = delivery ? draft.floor ?? 0 : 0
+      if (!Number.isSafeInteger(floor) || floor < 0 || floor > 30) throw mockError(400, 'Số lầu không hợp lệ.')
       const id = `AF-${Math.max(1000, ...db.orders.map((order) => Number(order.id.replace('AF-', '')) || 0)) + 1}`
+      // Có tên và số điện thoại thì gắn đơn vào hồ sơ khách (tạo mới nếu chưa có) để theo dõi vỏ, cọc, công nợ.
+      const profile = draft.customer?.trim() && draft.phone?.trim() ? ensureCustomer(draft.customer, draft.phone, delivery ? draft.address?.trim() : undefined) : undefined
       const order: Order = {
         id,
+        customerId: profile?.id,
         customer: draft.customer?.trim() || 'Khách vãng lai',
         phone: draft.phone?.trim() || '',
         address: delivery ? draft.address!.trim() : 'Nhận tại cửa hàng',
@@ -67,6 +103,7 @@ export const orderService = {
         items: summary(lines),
         total: subtotal(lines) + deliveryFee,
         deliveryFee,
+        floor: floor || undefined,
         method: draft.method,
         channel: draft.channel,
         appointment: delivery ? draft.appointment : undefined,
@@ -98,14 +135,8 @@ export const orderService = {
         order.stockReserved = true
         order.status = 'Đang chuẩn bị'
         record(order, 'Xác nhận đơn, chốt giá và giữ hàng.')
-      } else if (order.status === 'Đang chuẩn bị' && order.method === 'Giao tận nơi') {
-        checkExpiry(order)
-        order.status = 'Đang giao'
-        record(order, 'Bắt đầu giao hàng.')
-      } else if (order.status === 'Giao thất bại') {
-        checkExpiry(order)
-        order.status = 'Đang giao'
-        record(order, 'Bắt đầu lần giao lại.')
+      } else if ((order.status === 'Đang chuẩn bị' && order.method === 'Giao tận nơi') || order.status === 'Giao thất bại') {
+        beginDelivery(order)
       } else {
         throw mockError(400, 'Đơn không thể chuyển trạng thái bằng thao tác này.')
       }
@@ -124,8 +155,13 @@ export const orderService = {
       } else {
         if (!counter && !result.receiver?.trim()) throw mockError(400, 'Nhập tên người nhận thực tế.')
         checkExpiry(order)
+        const bottles = settleBottles(order, result)
         order.stockReserved = false
         order.status = amountDue(order) === 0 ? 'Đã hoàn tất' : 'Đã giao'
+        if (bottles) {
+          order.bottles = bottles
+          record(order, `Vỏ: giao ${bottles.delivered}, thu về ${bottles.returned}${bottles.deposit ? ` · Thu cọc ${bottles.deposit.toLocaleString('vi-VN')} ₫ (ghi sổ cọc, không tính doanh thu)` : ''}`)
+        }
         record(order, `${counter ? 'Khách nhận tại quầy' : 'Giao thành công'} · Người nhận: ${result.receiver?.trim() || order.customer}`)
       }
       return order

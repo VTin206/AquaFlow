@@ -9,6 +9,7 @@ const OrdersPage = lazy(() => import('../features/orders/OrdersPage').then((m) =
 const InventoryPage = lazy(() => import('../features/inventory/InventoryPage').then((m) => ({ default: m.InventoryPage })))
 const ProductsPage = lazy(() => import('../features/inventory/ProductsPage').then((m) => ({ default: m.ProductsPage })))
 const CustomersPage = lazy(() => import('../features/customers/CustomersPage').then((m) => ({ default: m.CustomersPage })))
+const SuppliersPage = lazy(() => import('../features/suppliers/SuppliersPage').then((m) => ({ default: m.SuppliersPage })))
 const DeliveryPage = lazy(() => import('../features/delivery/DeliveryPage').then((m) => ({ default: m.DeliveryPage })))
 const ReportsPage = lazy(() => import('../features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })))
 const LoginPage = lazy(() => import('../features/auth/LoginPage').then((m) => ({ default: m.LoginPage })))
@@ -30,6 +31,7 @@ export function App() {
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="products" element={<ProductsPage />} />
           <Route path="customers" element={<CustomersPage />} />
+          <Route path="suppliers" element={<SuppliersPage />} />
           <Route path="delivery" element={<DeliveryPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -144,6 +144,9 @@ body {
   white-space: nowrap;
 }
 .af-notification-link {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
   align-items: center;
   border-radius: 10px;
   color: var(--af-text-secondary);
@@ -156,6 +159,24 @@ body {
   background: #ffffff1a;
   color: #fff;
 }
+.af-notifications { width: min(360px, calc(100vw - 32px)); color: var(--af-text); }
+.af-notifications-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--af-border); }
+.af-notifications-header strong { font-size: 14px; color: var(--af-text-strong); }
+.af-notifications-header strong span { color: var(--af-text-tertiary); font-weight: 400; }
+.af-notifications-list { max-height: min(360px, calc(100dvh - 200px)); overflow-y: auto; overscroll-behavior: contain; }
+.af-notifications-list ul { list-style: none; margin: 0; padding: 0; }
+.af-notifications-list li + li { border-top: 1px solid var(--af-border); }
+.af-notification-item { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; width: 100%; border: 0; background: transparent; text-align: left; cursor: pointer; font: inherit; color: inherit; }
+.af-notification-item:hover, .af-notification-item:focus-visible { background: var(--af-primary-soft); }
+.af-notification-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 32px; height: 32px; border-radius: 9px; color: var(--af-primary); background: var(--af-primary-soft); }
+.af-notification-icon-danger { color: var(--af-danger); }
+.af-notification-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; }
+.af-notification-copy strong { font-size: 13px; font-weight: 600; }
+.af-notification-copy > span { font-size: 12px; color: var(--af-text-secondary); overflow-wrap: anywhere; }
+.af-notification-copy small { font-size: 11px; color: var(--af-text-tertiary); }
+.af-notification-arrow { flex-shrink: 0; margin-top: 8px; color: var(--af-text-tertiary); }
+.af-notifications-state { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; padding: 28px 16px; color: var(--af-text-secondary); }
+.af-notifications-footer { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 11px 16px; border-top: 1px solid var(--af-border); font-size: 12px; }
 .af-topbar .af-account-menu:hover { background: #ffffff1a; }
 .af-topbar a:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 .af-topbar-user {
@@ -325,11 +346,11 @@ body {
   flex-wrap: wrap;
   gap: 12px 16px;
   justify-content: space-between;
-  padding: 30px 0 26px;
+  padding: 18px 0 16px;
 }
 .af-page-header h1 {
   color: var(--af-text-strong);
-  font-size: 27px;
+  font-size: 22px;
   font-weight: 700;
   line-height: 1.3;
   margin: 0;
@@ -341,8 +362,8 @@ body {
 }
 .af-page-header p {
   color: var(--af-text-secondary);
-  font-size: 14px;
-  margin: 8px 0 0;
+  font-size: 13px;
+  margin: 2px 0 0;
 }
 .af-page-actions {
   align-items: center;
@@ -354,7 +375,18 @@ body {
   padding: 0 0 40px;
 }
 .af-stat-row {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
+}
+/* Thẻ số liệu gọn: nhãn và số sát nhau, không chiếm nửa màn hình. */
+.af-stat-row .ant-card-body {
+  padding: 12px 18px;
+}
+.af-stat-row .ant-statistic-title {
+  margin-bottom: 2px;
+}
+.af-stat-row .ant-statistic-content {
+  font-size: 22px;
+  line-height: 1.35;
 }
 .af-inventory-stats {
   margin-bottom: 16px;
@@ -405,6 +437,11 @@ body {
 }
 
 /* ---------- Ô trong bảng ---------- */
+.af-sort-trigger { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: inherit; white-space: nowrap; cursor: pointer; }
+.af-sort-trigger:focus-visible { outline: 2px solid var(--af-primary); outline-offset: 2px; border-radius: 4px; }
+.af-sort-icon { flex-shrink: 0; color: var(--af-text-tertiary); }
+.af-sort-trigger:hover .af-sort-icon, .af-sort-trigger.is-active .af-sort-icon { color: var(--af-primary); }
+.af-sort-check-space { display: inline-block; width: 14px; }
 .af-data-table .af-cell-stack { line-height: 20px; }
 .af-data-table .af-cell-stack > small { font-size: 12px; }
 .af-cell-stack > .af-cell-truncate {
@@ -501,6 +538,12 @@ body {
 .af-metric-link .af-metric-caption {
   justify-content: space-between;
 }
+.af-dashboard-stats { margin-bottom: 16px; }
+.af-dashboard-stats .af-metric-top { margin-bottom: 4px; }
+.af-dashboard-stats .af-metric-icon { width: 28px; height: 28px; border-radius: 8px; }
+.af-dashboard-stats .af-metric-icon svg { width: 16px; height: 16px; }
+.af-dashboard-stats .af-metric-caption { margin-top: 4px; min-height: 16px; line-height: 1.4; }
+.af-dashboard-stats + .af-section-heading { margin-top: 16px; }
 .af-section-heading {
   align-items: center;
   display: flex;
@@ -799,10 +842,10 @@ body {
     padding: 0 16px;
   }
   .af-page-header {
-    padding: 24px 0 20px;
+    padding: 14px 0 12px;
   }
   .af-page-header h1 {
-    font-size: 24px;
+    font-size: 20px;
   }
   .af-toolbar .ant-segmented {
     max-width: 100%;
@@ -921,6 +964,14 @@ body {
   line-height: 1.7;
   margin-top: 12px;
 }
+.af-order-details .af-order-summary {
+  background: transparent;
+  margin-top: 4px;
+  padding: 8px 12px;
+}
+.af-order-details .af-order-summary-highlight {
+  background: var(--af-primary-soft);
+}
 .af-order-filters {
   display: flex;
   flex-wrap: wrap;
@@ -928,7 +979,7 @@ body {
   max-width: 100%;
 }
 .af-detail-actions {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 .af-delivery-reason {
   margin: 10px 0 0;
@@ -947,3 +998,62 @@ body {
     width: 100%;
   }
 }
+
+/* ---------- Hồ sơ khách hàng & sổ vỏ ---------- */
+.af-link-button { padding: 0; border: 0; background: none; color: var(--af-text-strong); font: inherit; font-weight: 600; text-align: left; cursor: pointer; max-width: 100%; }
+.af-link-button:hover { color: var(--af-primary); text-decoration: underline; }
+.af-link-button:focus-visible { outline: 2px solid var(--af-primary); outline-offset: 2px; border-radius: 4px; }
+.af-text-muted { color: var(--af-text-tertiary); }
+.af-row-actions { display: inline-flex; gap: 6px; }
+.af-profile-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.af-profile-name { font-size: 17px; font-weight: 700; color: var(--af-text-strong); }
+.af-inline-tag { margin-inline-end: 0; }
+.af-profile-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
+.af-profile-summary > div { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--af-border); border-radius: 8px; background: var(--af-bg); min-width: 0; }
+.af-profile-summary small { color: var(--af-text-secondary); font-size: 12px; }
+.af-profile-summary strong { color: var(--af-text-strong); font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.af-profile-summary .is-warning strong { color: var(--af-warning); }
+.af-address-view { margin: 0; padding-inline-start: 18px; }
+.af-bottle-balance { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.af-bottle-actions { margin-bottom: 12px; }
+.af-bottle-fieldset { margin: 0 0 12px; padding: 10px 14px 0; border: 1px solid var(--af-border); border-radius: 8px; }
+.af-bottle-fieldset legend { width: auto; margin: 0; padding: 0 6px; border: 0; font-size: 13px; font-weight: 600; color: var(--af-text-strong); }
+.af-form-label { margin-bottom: 8px; color: var(--af-text); font-size: 14px; }
+.af-address-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.af-address-row { display: flex; gap: 6px; }
+.af-known-customer { margin-top: -12px; margin-bottom: 16px; color: var(--af-primary); }
+@media (max-width: 575px) {
+  .af-profile-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ---------- Phiếu nhập & lô ---------- */
+.af-tab-card > .ant-card-head { min-height: 46px; }
+.af-tab-card > .ant-card-head .ant-tabs-tab { padding: 12px 0; }
+.af-receipt-line { margin-bottom: 12px; padding: 10px 14px 4px; border: 1px solid var(--af-border); border-radius: 8px; background: var(--af-bg); }
+.af-receipt-line-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; color: var(--af-text-strong); font-size: 13px; }
+.af-receipt-line .ant-form-item { margin-bottom: 12px; }
+.af-receipt-line-hint { display: block; margin: -4px 0 8px; color: var(--af-text-secondary); font-size: 12px; }
+.af-receipt-note { margin: 8px 0 0; }
+
+/* ---------- Chuyến giao ---------- */
+.af-trip-icon { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: var(--af-primary-soft); color: var(--af-primary); }
+.af-trip-card { height: 100%; }
+.af-trip-card .ant-card-body { display: flex; flex-direction: column; gap: 6px; }
+.af-trip-card-head, .af-trip-card-foot, .af-trip-stop-top, .af-trip-stop-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.af-trip-card-foot small, .af-trip-stop-foot small { color: var(--af-text-secondary); }
+.af-trip-progress { margin: 0 0 12px; color: var(--af-text-secondary); }
+.af-trip-stops { list-style: none; margin: 12px 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.af-trip-stops > li { display: flex; gap: 10px; align-items: flex-start; }
+.af-trip-stops-detail > li { padding: 10px 12px; border: 1px solid var(--af-border); border-radius: 8px; }
+.af-trip-stop-index { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: var(--af-primary-soft); color: var(--af-primary); font-size: 12px; font-weight: 700; }
+.af-trip-stop-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.af-trip-stop-top .ant-btn-link { padding: 0; height: auto; font-weight: 600; }
+.af-trip-stop-foot { margin-top: 6px; }
+.af-trip-settle { margin-top: 16px; padding: 14px 16px 4px; border: 1px solid var(--af-border); border-radius: 8px; background: var(--af-bg); }
+.af-strong { font-weight: 600; color: var(--af-text-strong); }
+@media (max-width: 575px) {
+  /* Ngăn kéo hồ sơ: nút chỉ còn biểu tượng để tên khách không bị che. */
+  .af-drawer-actions .ant-btn > span:not(.ant-btn-icon) { display: none; }
+  .af-drawer-actions .ant-btn { padding-inline: 10px; }
+}
+.af-fee-hint { margin-top: -12px; margin-bottom: 16px; }

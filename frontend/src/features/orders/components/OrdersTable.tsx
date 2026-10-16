@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Button, Space, Table, type TableColumnsType } from 'antd'
+import { Button, Space, Table, Tooltip, type TableColumnsType } from 'antd'
 import { Eye } from 'lucide-react'
 import { currency } from '../../../shared/utils/format'
 import { tablePagination, tableScrollHeight } from '../../../shared/utils/table'
+import { useColumnSort } from '../../../shared/components/sortableColumn'
 import { amountDue, paymentLabel, type Order } from '../types'
 import { AdvanceStatusButton } from './AdvanceStatusButton'
 import { OrderStatusTag } from './OrderStatusTag'
@@ -18,6 +19,7 @@ type OrdersTableProps = {
 
 export function OrdersTable({ orders, loading, compact = false, emptyText = 'Chưa có đơn hàng nào.' }: OrdersTableProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const sort = useColumnSort<Order>()
   const columns: TableColumnsType<Order> = [
     {
       title: 'Mã đơn',
@@ -45,9 +47,10 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
         </div>
       ),
     },
-    ...(compact ? [] : [{ title: 'Giờ đặt', dataIndex: 'time', width: 110, sorter: (a: Order, b: Order) => a.time.localeCompare(b.time) }]),
+    ...(compact ? [] : [{ ...sort.column('Giờ đặt', 'time', 'time'), dataIndex: 'time', width: 130, sorter: (a: Order, b: Order) => a.time.localeCompare(b.time) }]),
     {
       title: 'Tổng tiền',
+      ...(!compact && sort.column('Tổng tiền', 'total', 'number')),
       dataIndex: 'total',
       align: 'right',
       width: 140,
@@ -73,13 +76,13 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
     {
       title: 'Thao tác',
       key: 'action',
-      width: compact ? 120 : 160,
+      width: compact ? 80 : 100,
       fixed: 'right',
       render: (_, order) => (
         <Space size={6}>
-          <Button size="small" icon={<Eye size={15} />} onClick={() => setSelectedId(order.id)} aria-label={`Chi tiết đơn ${order.id}`}>
-            Chi tiết
-          </Button>
+          <Tooltip title="Xem chi tiết">
+            <Button size="small" icon={<Eye size={15} />} onClick={() => setSelectedId(order.id)} aria-label={`Chi tiết đơn ${order.id}`} />
+          </Tooltip>
           {!compact && <AdvanceStatusButton order={order} menu />}
         </Space>
       ),

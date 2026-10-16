@@ -1,27 +1,36 @@
 import { useState } from 'react'
-import { App, Avatar, Button, Card, Col, Input, Row, Statistic, Table, Tag, type TableColumnsType } from 'antd'
+import { Avatar, Button, Card, Col, Input, Row, Statistic, Table, Tag, type TableColumnsType } from 'antd'
 import { Plus, Search } from 'lucide-react'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
+import { useColumnSort } from '../../shared/components/sortableColumn'
+import { currency } from '../../shared/utils/format'
 import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
 import { CreateOrderModal } from '../orders/components/CreateOrderModal'
+import { CustomerDrawer } from './components/CustomerDrawer'
+import { CustomerFormModal } from './components/CustomerFormModal'
 import type { Customer } from './types'
 import { useCustomers } from './useCustomers'
 
 export function CustomersPage() {
-  const { message } = App.useApp()
   const customersQuery = useCustomers()
   const [query, setQuery] = useState('')
-  const [orderFor, setOrderFor] = useState<string | null>(null)
+  const [profileId, setProfileId] = useState<string | null>(null)
+  // undefined: đóng; null: thêm mới; Customer: sửa.
+  const [editing, setEditing] = useState<Customer | null | undefined>(undefined)
+  const [orderFor, setOrderFor] = useState<Customer | null>(null)
 
   const customers = customersQuery.data ?? []
   const keyword = query.trim().toLowerCase()
-  const visible = customers.filter((customer) => `${customer.name} ${customer.phone} ${customer.area}`.toLowerCase().includes(keyword))
+  const visible = customers.filter((customer) => `${customer.id} ${customer.name} ${customer.phone} ${customer.area}`.toLowerCase().includes(keyword))
   const totalBottles = customers.reduce((sum, customer) => sum + customer.bottlesHeld, 0)
+  const totalDeposit = customers.reduce((sum, customer) => sum + customer.depositHeld, 0)
+  const totalDebt = customers.reduce((sum, customer) => sum + customer.debt, 0)
 
+  const sort = useColumnSort<Customer>({ key: 'orders', order: 'descend' })
   const columns: TableColumnsType<Customer> = [
     {
-      title: 'Khách hàng',
+      ...sort.column('Khách hàng', 'name', 'text'),
       dataIndex: 'name',
       width: 260,
       sorter: (a, b) => a.name.localeCompare(b.name, 'vi'),
@@ -29,7 +38,9 @@ export function CustomersPage() {
         <div className="af-customer-cell">
           <Avatar className="af-avatar">{customer.initials}</Avatar>
           <div className="af-cell-stack">
-            <span className="af-cell-truncate" title={customer.name}>{customer.name}</span>
+            <button type="button" className="af-link-button af-cell-truncate" title={`Xem hồ sơ ${customer.name}`} onClick={() => setProfileId(customer.id)}>
+              {customer.name}
+            </button>
             <small>
               <a href={`tel:${customer.phone.replace(/\s/g, '')}`}>{customer.phone}</a>
             </small>
@@ -38,22 +49,35 @@ export function CustomersPage() {
       ),
     },
     { title: 'Khu vực', dataIndex: 'area', ellipsis: true },
-    { title: 'Số đơn đã mua', dataIndex: 'orders', align: 'right', width: 140, sorter: (a, b) => a.orders - b.orders, defaultSortOrder: 'descend' },
+    { ...sort.column('Số đơn', 'orders', 'number'), dataIndex: 'orders', align: 'right', width: 100, sorter: (a, b) => a.orders - b.orders },
     {
-      title: 'Vỏ đang giữ',
-      dataIndex: 'bottlesHeld',
+      ...sort.column('Còn phải thu', 'debt', 'number'),
+      dataIndex: 'debt',
+      align: 'right',
       width: 140,
+      sorter: (a, b) => a.debt - b.debt,
+      render: (debt: number) => (debt > 0 ? <span className="af-money af-text-warning">{currency(debt)}</span> : <span className="af-text-muted">—</span>),
+    },
+    {
+      ...sort.column('Vỏ đang giữ', 'bottlesHeld', 'number'),
+      dataIndex: 'bottlesHeld',
+      width: 130,
       sorter: (a, b) => a.bottlesHeld - b.bottlesHeld,
       render: (count: number) => (count > 0 ? <Tag color="orange">{count} vỏ</Tag> : <Tag>Không</Tag>),
     },
     {
       title: 'Thao tác',
       key: 'action',
-      width: 120,
+      width: 160,
       render: (_, customer) => (
-        <Button size="small" onClick={() => setOrderFor(customer.name)}>
-          Tạo đơn
-        </Button>
+        <span className="af-row-actions">
+          <Button size="small" onClick={() => setProfileId(customer.id)}>
+            Hồ sơ
+          </Button>
+          <Button size="small" onClick={() => setOrderFor(customer)}>
+            Tạo đơn
+          </Button>
+        </span>
       ),
     },
   ]
@@ -61,9 +85,9 @@ export function CustomersPage() {
   return (
     <Page
       title="Khách hàng"
-      description="Thông tin liên hệ, lịch sử mua và số vỏ bình đang giữ."
+      description="Hồ sơ liên hệ, lịch sử mua, công nợ và sổ vỏ bình của từng khách."
       actions={
-        <Button type="primary" icon={<Plus size={16} />} onClick={() => message.info('Biểu mẫu thêm khách hàng sẽ được bổ sung ở bước tiếp theo.')}>
+        <Button type="primary" icon={<Plus size={16} />} onClick={() => setEditing(null)}>
           Thêm khách hàng
         </Button>
       }
@@ -74,20 +98,25 @@ export function CustomersPage() {
         </Card>
       ) : (
         <>
-          <Row gutter={[16, 16]} className="af-stat-row">
-            <Col xs={12} lg={8}>
+          <Row gutter={[12, 12]} className="af-stat-row">
+            <Col xs={12} lg={6}>
               <Card loading={customersQuery.isPending}>
                 <Statistic title="Khách hàng" value={customers.length} />
               </Card>
             </Col>
-            <Col xs={12} lg={8}>
+            <Col xs={12} lg={6}>
               <Card loading={customersQuery.isPending}>
-                <Statistic title="Vỏ bình khách đang giữ" value={totalBottles} suffix="vỏ" />
+                <Statistic title="Còn phải thu" value={totalDebt} formatter={(value) => currency(Number(value))} />
               </Card>
             </Col>
-            <Col xs={24} lg={8}>
+            <Col xs={12} lg={6}>
               <Card loading={customersQuery.isPending}>
-                <Statistic title="Khách đang giữ vỏ" value={customers.filter((customer) => customer.bottlesHeld > 0).length} />
+                <Statistic title="Vỏ khách đang giữ" value={totalBottles} suffix="vỏ" />
+              </Card>
+            </Col>
+            <Col xs={12} lg={6}>
+              <Card loading={customersQuery.isPending}>
+                <Statistic title="Tiền cọc đang giữ" value={totalDeposit} formatter={(value) => currency(Number(value))} />
               </Card>
             </Col>
           </Row>
@@ -97,7 +126,7 @@ export function CustomersPage() {
               <Input
                 allowClear
                 prefix={<Search size={16} className="af-input-icon" />}
-                placeholder="Tìm tên, số điện thoại, khu vực..."
+                placeholder="Tìm mã, tên, số điện thoại, khu vực..."
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 className="af-search"
@@ -106,21 +135,37 @@ export function CustomersPage() {
             <Table<Customer>
               className="af-data-table"
               size="middle"
-              rowKey="phone"
+              rowKey="id"
               columns={columns}
               dataSource={visible}
               loading={customersQuery.isPending}
               pagination={tablePagination}
               locale={{ emptyText: keyword ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.' }}
-              scroll={{ x: 850, y: tableScrollHeight }}
+              scroll={{ x: 920, y: tableScrollHeight }}
             />
           </Card>
         </>
       )}
+      {profileId && (
+        <CustomerDrawer
+          key={profileId}
+          customerId={profileId}
+          onClose={() => setProfileId(null)}
+          onEdit={(customer) => setEditing(customer)}
+          onCreateOrder={(customer) => setOrderFor(customer)}
+        />
+      )}
+      <CustomerFormModal
+        open={editing !== undefined}
+        customer={editing ?? undefined}
+        onClose={() => setEditing(undefined)}
+        onSaved={(customer) => editing === null && setProfileId(customer.id)}
+      />
       <CreateOrderModal
         open={orderFor !== null}
-        defaultCustomer={orderFor ?? undefined}
-        defaultPhone={customers.find((customer) => customer.name === orderFor)?.phone}
+        defaultCustomer={orderFor?.name}
+        defaultPhone={orderFor?.phone}
+        defaultAddress={orderFor?.addresses[0]}
         onClose={() => setOrderFor(null)}
       />
     </Page>

@@ -15,7 +15,7 @@ const queryClient = new QueryClient({
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <ConfigProvider locale={viVN} theme={appTheme}>
+      <ConfigProvider locale={viVN} theme={appTheme} form={{ requiredMark: true }}>
         <AntApp message={{ maxCount: 3 }}>
           <BrowserRouter>{children}</BrowserRouter>
         </AntApp>

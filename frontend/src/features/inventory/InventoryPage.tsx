@@ -4,14 +4,18 @@ import { FilePlus2, PackagePlus, Search } from 'lucide-react'
 import { CountLabel } from '../../shared/components/CountLabel'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
+import { useColumnSort } from '../../shared/components/sortableColumn'
 import { currency } from '../../shared/utils/format'
 import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
+import { LotsPanel } from './components/LotsPanel'
+import { ReceiptsPanel } from './components/ReceiptsPanel'
 import { ReceiveStockModal } from './components/ReceiveStockModal'
 import { daysUntilExpiry, EXPIRY_WARNING_DAYS } from './expiry'
 import { isLowStock, type Product } from './types'
 import { useProducts } from './useProducts'
 
 type Filter = 'all' | 'low' | 'expiring'
+type View = 'stock' | 'lots' | 'receipts'
 
 const isExpiringSoon = (product: Product) => {
   const days = daysUntilExpiry(product.expiry)
@@ -22,6 +26,7 @@ export function InventoryPage() {
   const productsQuery = useProducts()
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
+  const [view, setView] = useState<View>('stock')
   const [receiving, setReceiving] = useState<{ productId?: string } | null>(null)
 
   const products = productsQuery.data ?? []
@@ -32,6 +37,7 @@ export function InventoryPage() {
     .filter((product) => (filter === 'low' ? isLowStock(product) : filter === 'expiring' ? isExpiringSoon(product) : true))
     .filter((product) => `${product.name} ${product.sku} ${product.brand}`.toLowerCase().includes(keyword))
 
+  const sort = useColumnSort<Product>()
   const columns: TableColumnsType<Product> = [
     {
       title: 'Sản phẩm',
@@ -46,7 +52,7 @@ export function InventoryPage() {
       ),
     },
     {
-      title: 'Có thể bán',
+      ...sort.column('Có thể bán', 'stock', 'stockRatio'),
       dataIndex: 'stock',
       width: 240,
       sorter: (a, b) => a.stock / a.threshold - b.stock / b.threshold,
@@ -103,7 +109,7 @@ export function InventoryPage() {
   return (
     <Page
       title="Kho hàng"
-      description="Theo dõi lượng hàng có thể bán sau khi trừ hàng đã giữ cho đơn, cùng hạn sử dụng."
+      description="Tồn có thể bán, lô hàng theo hạn dùng và phiếu nhập kiểm nhận từ nhà cung cấp."
       actions={
         <Button type="primary" icon={<FilePlus2 size={16} />} onClick={() => setReceiving({})}>
           Tạo phiếu nhập
@@ -141,37 +147,55 @@ export function InventoryPage() {
             </Row>
           </ConfigProvider>
 
-          <Card className="af-card" styles={{ body: { padding: 0 } }}>
-            <div className="af-toolbar">
-              <Segmented<Filter>
-                value={filter}
-                onChange={setFilter}
-                options={[
-                  { value: 'all', label: <CountLabel label="Tất cả" count={products.length} /> },
-                  { value: 'low', label: <CountLabel label="Sắp hết" count={lowStock.length} urgent /> },
-                  { value: 'expiring', label: <CountLabel label="Sắp hết hạn" count={expiring.length} urgent /> },
-                ]}
-              />
-              <Input
-                allowClear
-                prefix={<Search size={16} className="af-input-icon" />}
-                placeholder="Tìm tên, mã hàng, thương hiệu..."
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                className="af-search"
-              />
-            </div>
-            <Table<Product>
-              className="af-data-table"
-              size="middle"
-              rowKey="id"
-              columns={columns}
-              dataSource={visible}
-              loading={productsQuery.isPending}
-              pagination={tablePagination}
-              locale={{ emptyText: 'Không có sản phẩm phù hợp.' }}
-              scroll={{ x: 1000, y: tableScrollHeight }}
-            />
+          <Card
+            className="af-card af-tab-card"
+            styles={{ body: { padding: 0 } }}
+            activeTabKey={view}
+            onTabChange={(key) => setView(key as View)}
+            tabList={[
+              { key: 'stock', label: 'Tồn kho' },
+              { key: 'lots', label: 'Lô hàng' },
+              { key: 'receipts', label: 'Phiếu nhập' },
+            ]}
+          >
+            {view === 'lots' ? (
+              <LotsPanel />
+            ) : view === 'receipts' ? (
+              <ReceiptsPanel />
+            ) : (
+              <>
+                <div className="af-toolbar">
+                  <Segmented<Filter>
+                    value={filter}
+                    onChange={setFilter}
+                    options={[
+                      { value: 'all', label: <CountLabel label="Tất cả" count={products.length} /> },
+                      { value: 'low', label: <CountLabel label="Sắp hết" count={lowStock.length} urgent /> },
+                      { value: 'expiring', label: <CountLabel label="Sắp hết hạn" count={expiring.length} urgent /> },
+                    ]}
+                  />
+                  <Input
+                    allowClear
+                    prefix={<Search size={16} className="af-input-icon" />}
+                    placeholder="Tìm tên, mã hàng, thương hiệu..."
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    className="af-search"
+                  />
+                </div>
+                <Table<Product>
+                  className="af-data-table"
+                  size="middle"
+                  rowKey="id"
+                  columns={columns}
+                  dataSource={visible}
+                  loading={productsQuery.isPending}
+                  pagination={tablePagination}
+                  locale={{ emptyText: 'Không có sản phẩm phù hợp.' }}
+                  scroll={{ x: 1000, y: tableScrollHeight }}
+                />
+              </>
+            )}
           </Card>
         </>
       )}

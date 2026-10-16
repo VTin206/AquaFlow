@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Avatar, Button, Card, Col, Empty, Row, Statistic, Tag } from 'antd'
+import { Avatar, Button, Card, Col, ConfigProvider, Empty, Row, Statistic, Tag } from 'antd'
 import { ArrowRight, Boxes, CircleCheck, Clock3, PackagePlus, Plus, ShoppingBag, Truck, Wallet } from 'lucide-react'
 import { Link } from 'react-router'
 import { BarChart } from '../../shared/components/BarChart'
@@ -46,74 +46,76 @@ export function DashboardPage() {
         </>
       }
     >
-      <Row gutter={[20, 20]} className="af-stat-row">
-        <Col xs={12} xl={6}>
-          <Card loading={ordersQuery.isPending} className="af-metric af-metric-revenue">
-            <div className="af-metric-top">
-              <span>Doanh thu đã hoàn tất</span>
-              <span className="af-metric-icon">
-                <Wallet size={19} />
-              </span>
-            </div>
-            <Statistic value={ordersQuery.isError ? '—' : currency(completedRevenue)} />
-            <div className="af-metric-caption">
-              <CircleCheck size={14} />
-              {ordersQuery.isError ? 'Chưa tải được dữ liệu' : `Từ ${completed.length} đơn đã hoàn tất`}
-            </div>
-          </Card>
-        </Col>
-        <Col xs={12} xl={6}>
-          <Link to="/orders" className="af-metric-link">
-            <Card hoverable loading={ordersQuery.isPending} className="af-metric">
+      <ConfigProvider theme={{ components: { Card: { bodyPadding: 14 }, Statistic: { contentFontSize: 'clamp(18px, 1.6vw, 22px)', lineHeight: 1.3 } } }}>
+        <Row gutter={[12, 12]} className="af-stat-row af-dashboard-stats">
+          <Col xs={12} xl={6}>
+            <Card loading={ordersQuery.isPending} className="af-metric af-metric-revenue">
               <div className="af-metric-top">
-                <span>Đơn chờ xác nhận</span>
-                <span className={`af-metric-icon ${pending.length ? 'is-warning' : ''}`}>
-                  <ShoppingBag size={19} />
-                </span>
-              </div>
-              <Statistic value={ordersQuery.isError ? '—' : pending.length} />
-              <div className="af-metric-caption">
-                <span>{ordersQuery.isError ? 'Chưa tải được dữ liệu' : pending.length ? 'Cần bạn xử lý' : 'Đã xử lý hết đơn mới'}</span>
-                <ArrowRight size={15} />
-              </div>
-            </Card>
-          </Link>
-        </Col>
-        <Col xs={12} xl={6}>
-          <Link to="/delivery" className="af-metric-link">
-            <Card hoverable loading={ordersQuery.isPending} className="af-metric">
-              <div className="af-metric-top">
-                <span>Đơn đang giao</span>
+                <span>Doanh thu đã hoàn tất</span>
                 <span className="af-metric-icon">
-                  <Truck size={19} />
+                  <Wallet size={19} />
                 </span>
               </div>
-              <Statistic value={ordersQuery.isError ? '—' : shipping.length} />
+              <Statistic value={ordersQuery.isError ? '—' : currency(completedRevenue)} />
               <div className="af-metric-caption">
-                <span>Theo dõi tiến độ giao hàng</span>
-                <ArrowRight size={15} />
+                <CircleCheck size={14} />
+                {ordersQuery.isError ? 'Chưa tải được dữ liệu' : `Từ ${completed.length} đơn đã hoàn tất`}
               </div>
             </Card>
-          </Link>
-        </Col>
-        <Col xs={12} xl={6}>
-          <Link to="/inventory" className="af-metric-link">
-            <Card hoverable loading={productsQuery.isPending} className="af-metric">
-              <div className="af-metric-top">
-                <span>Sản phẩm sắp hết</span>
-                <span className={`af-metric-icon ${lowStock.length ? 'is-danger' : ''}`}>
-                  <Boxes size={19} />
-                </span>
-              </div>
-              <Statistic value={productsQuery.isError ? '—' : lowStock.length} />
-              <div className="af-metric-caption">
-                <span>{productsQuery.isError ? 'Chưa tải được dữ liệu' : lowStock.length ? 'Cần bổ sung tồn kho' : 'Tồn kho trong mức an toàn'}</span>
-                <ArrowRight size={15} />
-              </div>
-            </Card>
-          </Link>
-        </Col>
-      </Row>
+          </Col>
+          <Col xs={12} xl={6}>
+            <Link to="/orders" className="af-metric-link">
+              <Card hoverable loading={ordersQuery.isPending} className="af-metric">
+                <div className="af-metric-top">
+                  <span>Đơn chờ xác nhận</span>
+                  <span className={`af-metric-icon ${pending.length ? 'is-warning' : ''}`}>
+                    <ShoppingBag size={19} />
+                  </span>
+                </div>
+                <Statistic value={ordersQuery.isError ? '—' : pending.length} />
+                <div className="af-metric-caption">
+                  <span>{ordersQuery.isError ? 'Chưa tải được dữ liệu' : pending.length ? 'Cần bạn xử lý' : 'Đã xử lý hết đơn mới'}</span>
+                  <ArrowRight size={15} />
+                </div>
+              </Card>
+            </Link>
+          </Col>
+          <Col xs={12} xl={6}>
+            <Link to="/delivery" className="af-metric-link">
+              <Card hoverable loading={ordersQuery.isPending} className="af-metric">
+                <div className="af-metric-top">
+                  <span>Đơn đang giao</span>
+                  <span className="af-metric-icon">
+                    <Truck size={19} />
+                  </span>
+                </div>
+                <Statistic value={ordersQuery.isError ? '—' : shipping.length} />
+                <div className="af-metric-caption">
+                  <span>Theo dõi tiến độ giao hàng</span>
+                  <ArrowRight size={15} />
+                </div>
+              </Card>
+            </Link>
+          </Col>
+          <Col xs={12} xl={6}>
+            <Link to="/inventory" className="af-metric-link">
+              <Card hoverable loading={productsQuery.isPending} className="af-metric">
+                <div className="af-metric-top">
+                  <span>Sản phẩm sắp hết</span>
+                  <span className={`af-metric-icon ${lowStock.length ? 'is-danger' : ''}`}>
+                    <Boxes size={19} />
+                  </span>
+                </div>
+                <Statistic value={productsQuery.isError ? '—' : lowStock.length} />
+                <div className="af-metric-caption">
+                  <span>{productsQuery.isError ? 'Chưa tải được dữ liệu' : lowStock.length ? 'Cần bổ sung tồn kho' : 'Tồn kho trong mức an toàn'}</span>
+                  <ArrowRight size={15} />
+                </div>
+              </Card>
+            </Link>
+          </Col>
+        </Row>
+      </ConfigProvider>
 
       <div className="af-section-heading">
         <h2>Ưu tiên xử lý</h2>

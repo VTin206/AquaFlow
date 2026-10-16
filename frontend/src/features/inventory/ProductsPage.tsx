@@ -67,7 +67,7 @@ export function ProductsPage() {
             return (
               <Col key={product.id} xs={24} sm={12} lg={8} xl={6}>
                 <Card className="af-product-card" cover={<ProductImage key={product.image ?? product.id} product={product} />}>
-                  <div className="af-product-brand-line"><span>{product.brand}</span><Tag>{details.category}</Tag></div>
+                  <div className="af-product-brand-line"><span>{brandName(product)}</span><Tag>{details.category}</Tag></div>
                   <Typography.Title level={5} className="af-product-name">{product.name}</Typography.Title>
                   <p className="af-product-spec">{details.packaging} · {details.volumeMl ? (details.volumeMl >= 1000 ? `${(details.volumeMl / 1000).toLocaleString('vi-VN')}L` : `${details.volumeMl}ml`) : details.capacity}</p>
                   <Typography.Text type="secondary" className="af-product-sku">{product.sku}</Typography.Text>

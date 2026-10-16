@@ -1,26 +1,37 @@
-import { App, Button, Col, Form, Input, InputNumber, Modal, Row, Select, Typography } from 'antd'
+import { App, AutoComplete, Button, Col, Form, Input, InputNumber, Modal, Row, Select, Typography } from 'antd'
 import { Plus, Trash2 } from 'lucide-react'
 import { currency } from '../../../shared/utils/format'
+import { FREE_DELIVERY_MIN_UNITS, SMALL_ORDER_FEE, stairsSurcharge, suggestedDeliveryFee } from '../../../shared/policy'
+import { normalizePhone } from '../../customers/types'
+import { useCustomers } from '../../customers/useCustomers'
 import { daysUntilExpiry } from '../../inventory/expiry'
 import { useProducts } from '../../inventory/useProducts'
 import type { Order, OrderDraft } from '../types'
 import { useCreateOrder } from '../useOrders'
 
-type CreateOrderModalProps = { open: boolean; onClose: () => void; onCreated?: (order: Order) => void; defaultCustomer?: string; defaultPhone?: string }
+type CreateOrderModalProps = { open: boolean; onClose: () => void; onCreated?: (order: Order) => void; defaultCustomer?: string; defaultPhone?: string; defaultAddress?: string }
 
 export function CreateOrderModal(props: CreateOrderModalProps) {
   return props.open ? <CreateOrderDialog {...props} /> : null
 }
 
-function CreateOrderDialog({ open, onClose, onCreated, defaultCustomer, defaultPhone }: CreateOrderModalProps) {
+function CreateOrderDialog({ open, onClose, onCreated, defaultCustomer, defaultPhone, defaultAddress }: CreateOrderModalProps) {
   const { message } = App.useApp()
   const [form] = Form.useForm<OrderDraft>()
   const { data: products = [], isPending: loadingProducts } = useProducts()
   const createOrder = useCreateOrder()
+  const { data: customers = [] } = useCustomers()
   const sellable = products.filter((product) => product.sku !== 'VO-20L')
   const lines: OrderDraft['lines'] = Form.useWatch('lines', form) ?? []
   const method = Form.useWatch('method', form) ?? 'Giao tận nơi'
   const fee = Form.useWatch('deliveryFee', form) ?? 0
+  const phone: string = Form.useWatch('phone', form) ?? ''
+  const floor: number = Form.useWatch('floor', form) ?? 0
+  const units = lines.reduce((sum, line) => sum + (line?.quantity ?? 0), 0)
+  const jugs = lines.reduce((sum, line) => sum + (products.find((product) => product.id === line?.productId)?.unit === 'Bình' ? line?.quantity ?? 0 : 0), 0)
+  const suggestedFee = suggestedDeliveryFee({ units, jugs, floor })
+  // Khách đã có hồ sơ: gợi ý các địa chỉ giao đã lưu.
+  const knownCustomer = phone ? customers.find((customer) => normalizePhone(customer.phone) === normalizePhone(phone)) : undefined
   const needsCustomer = method === 'Giao tận nơi' || lines.some((line) => products.find((product) => product.id === line?.productId)?.unit === 'Bình')
   const total = lines.reduce((sum, line) => sum + (products.find((product) => product.id === line?.productId)?.price ?? 0) * (line?.quantity ?? 0), 0)
   return (
@@ -40,13 +51,14 @@ function CreateOrderDialog({ open, onClose, onCreated, defaultCustomer, defaultP
       <Form<OrderDraft>
         form={form}
         layout="vertical"
-        requiredMark="optional"
         initialValues={{
           customer: defaultCustomer,
           phone: defaultPhone,
+          address: defaultAddress,
           method: 'Giao tận nơi',
           channel: 'Điện thoại',
           deliveryFee: 0,
+          floor: 0,
           lines: [{ quantity: 1 }],
         }}
         onFinish={(draft) =>
@@ -106,8 +118,16 @@ function CreateOrderDialog({ open, onClose, onCreated, defaultCustomer, defaultP
               label="Địa chỉ giao hàng"
               rules={[{ required: true, whitespace: true, message: 'Nhập địa chỉ giao hàng.' }, { max: 255 }]}
             >
-              <Input placeholder="Số nhà, tên đường, phường/xã, tỉnh/thành phố" />
+              <AutoComplete
+                options={knownCustomer?.addresses.map((address) => ({ value: address }))}
+                placeholder="Số nhà, tên đường, phường/xã, tỉnh/thành phố"
+              />
             </Form.Item>
+            {knownCustomer && (
+              <p className="af-form-hint af-known-customer">
+                Khách {knownCustomer.id} · đang giữ {knownCustomer.bottlesHeld} vỏ{knownCustomer.debt > 0 ? ` · còn nợ ${currency(knownCustomer.debt)}` : ''}
+              </p>
+            )}
             <Form.Item
               name="appointment"
               label="Giờ nhận mong muốn"
@@ -172,9 +192,36 @@ function CreateOrderDialog({ open, onClose, onCreated, defaultCustomer, defaultP
         </Form.List>
         <div className="af-form-section-title">3. Tổng tiền & ghi chú</div>
         {method === 'Giao tận nơi' && (
-          <Form.Item name="deliveryFee" label="Phí giao hàng (₫)" rules={[{ required: true }, { type: 'integer', min: 0 }]}>
-            <InputNumber min={0} precision={0} style={{ width: 180 }} />
-          </Form.Item>
+          <>
+            <Row gutter={16}>
+              <Col xs={24} sm={12}>
+                <Form.Item name="floor" label="Giao lên lầu (thang bộ)">
+                  <Select
+                    options={[
+                      { value: 0, label: 'Tầng trệt / có thang máy' },
+                      ...[1, 2, 3, 4].map((value) => ({ value, label: `Lầu ${value} · +${stairsSurcharge(value, 1).toLocaleString('vi-VN')} ₫/bình` })),
+                    ]}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Form.Item name="deliveryFee" label="Phí giao hàng (₫)" rules={[{ required: true }, { type: 'integer', min: 0 }]}>
+                  <InputNumber min={0} step={1000} precision={0} style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+            </Row>
+            <p className="af-form-hint af-fee-hint">
+              {units >= FREE_DELIVERY_MIN_UNITS
+                ? `Từ ${FREE_DELIVERY_MIN_UNITS} bình/thùng: miễn phí giao trong 5 km`
+                : `Dưới ${FREE_DELIVERY_MIN_UNITS} bình/thùng: phí ${SMALL_ORDER_FEE.min.toLocaleString('vi-VN')}–${SMALL_ORDER_FEE.max.toLocaleString('vi-VN')} ₫ tùy khoảng cách`}
+              {floor > 0 && jugs > 0 ? `, thang bộ +${currency(stairsSurcharge(floor, jugs))}` : ''}. Gợi ý {currency(suggestedFee)}{' '}
+              {fee !== suggestedFee && (
+                <Button type="link" size="small" onClick={() => form.setFieldValue('deliveryFee', suggestedFee)}>
+                  Áp dụng
+                </Button>
+              )}
+            </p>
+          </>
         )}
         <Form.Item name="note" label="Ghi chú" rules={[{ max: 500 }]}>
           <Input.TextArea rows={2} placeholder="Hướng dẫn tìm địa chỉ, lưu ý giao nhận..." />
@@ -184,7 +231,7 @@ function CreateOrderDialog({ open, onClose, onCreated, defaultCustomer, defaultP
           <strong>{currency(total + (method === 'Giao tận nơi' ? fee : 0))}</strong>
         </div>
         <Typography.Paragraph type="secondary" className="af-form-hint">
-          Giá và lượng hàng được chốt khi xác nhận đơn. Tiền cọc vỏ cần được đối soát riêng, không gộp vào tiền hàng.
+          Giá và lượng hàng được chốt khi xác nhận đơn. Khách chưa có vỏ để đổi đặt cọc riêng khi nhận hàng, không gộp vào tiền hàng.
         </Typography.Paragraph>
       </Form>
     </Modal>
