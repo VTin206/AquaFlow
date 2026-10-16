@@ -1,0 +1,949 @@
+/*
+ * CSS toàn cục: chỉ chứa bố cục mà Ant Design không có sẵn.
+ * Màu, font, bo góc của component được đặt trong src/app/theme.ts.
+ * Mọi class tự đặt dùng tiền tố "af-" để không đụng class của Ant Design.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');
+
+:root {
+  --af-primary: #087fad;
+  --af-primary-soft: #eaf5fb;
+  --af-text: #263e53;
+  --af-text-strong: #16324f;
+  --af-text-secondary: #52687b;
+  --af-text-tertiary: #687d8e;
+  --af-border: #e7eef4;
+  --af-bg: #f4f7fb;
+  --af-warning: #b86b0a;
+  --af-danger: #c34444;
+  /* Màu nhấn cho những thứ cần chú ý: đơn mới, số đếm khẩn. */
+  --af-accent: #b86b0a;
+  --af-topbar-height: 72px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--af-bg);
+  color: var(--af-text);
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Khung ứng dụng ---------- */
+.af-account-menu {
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 4px;
+  text-align: left;
+}
+.af-account-menu:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.af-shell {
+  min-height: 100vh;
+}
+/* Thanh trên cùng */
+.af-topbar {
+  --af-text: #fff;
+  --af-text-strong: #fff;
+  --af-text-secondary: #e0edf9;
+  --af-text-tertiary: #c6ddf2;
+  --af-border: #ffffff30;
+  align-items: center;
+  background: #205b96;
+  box-shadow: 0 2px 8px #16324f14;
+  border-bottom: 1px solid var(--af-border);
+  color: var(--af-text);
+  display: flex;
+  gap: 16px;
+  height: var(--af-topbar-height);
+  justify-content: space-between;
+  padding: 0 28px;
+  flex: none;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+.af-topbar-left,
+.af-topbar-right {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+}
+.af-topbar-brand {
+  align-items: center;
+  color: var(--af-text-strong);
+  display: flex;
+  gap: 10px;
+}
+.af-topbar-brand strong {
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.7px;
+}
+.af-brand-mark {
+  align-items: center;
+  background: var(--af-primary);
+  border-radius: 12px;
+  box-shadow: 0 4px 10px #087fad26;
+  color: #fff;
+  display: flex;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+.af-topbar .af-brand-mark {
+  background: #fff;
+  color: #205b96;
+  box-shadow: none;
+}
+.af-topbar .af-topbar-brand:hover {
+  color: #fff;
+}
+.af-topbar-divider {
+  background: var(--af-border);
+  height: 26px;
+  margin: 0 18px;
+  width: 1px;
+}
+.af-topbar-store {
+  align-items: center;
+  color: var(--af-text-secondary);
+  display: inline-flex;
+  gap: 8px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.af-topbar-icon.ant-btn {
+  color: var(--af-text-secondary);
+}
+.af-topbar-icon.ant-btn:hover {
+  background: #ffffff1a !important;
+  color: #fff !important;
+}
+.af-nav-toggle {
+  display: none !important;
+}
+.af-demo-label {
+  background: #ffffff1a;
+  border-radius: 6px;
+  color: var(--af-text-secondary);
+  font-size: 12px;
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+.af-notification-link {
+  align-items: center;
+  border-radius: 10px;
+  color: var(--af-text-secondary);
+  display: inline-flex;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+.af-notification-link:hover {
+  background: #ffffff1a;
+  color: #fff;
+}
+.af-topbar .af-account-menu:hover { background: #ffffff1a; }
+.af-topbar a:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.af-topbar-user {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  border-left: 1px solid var(--af-border);
+  padding-left: 18px;
+  margin-left: 6px;
+}
+.af-topbar-user-text strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.af-topbar-user-text small {
+  color: var(--af-text-tertiary);
+  display: block;
+  font-size: 11px;
+  margin-top: 4px;
+}
+.af-avatar {
+  background: var(--af-primary-soft) !important;
+  color: var(--af-primary) !important;
+  flex: none;
+  font-weight: 600;
+}
+
+/* Menu bên trái */
+.af-sider {
+  border-right: 1px solid var(--af-border);
+  height: calc(100vh - var(--af-topbar-height));
+  position: sticky !important;
+  top: var(--af-topbar-height);
+  z-index: 20;
+}
+.af-nav {
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding-top: 20px;
+}
+.af-workspace {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  margin: 0 16px 20px;
+  padding: 12px 10px;
+  background: #f8fafc;
+  border: 1px solid var(--af-border);
+  border-radius: 10px;
+}
+.af-workspace-icon {
+  color: var(--af-primary);
+  display: flex;
+}
+.af-workspace strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+}
+.af-workspace small {
+  color: var(--af-text-tertiary);
+  font-size: 11px;
+}
+.af-menu {
+  border-inline-end: 0 !important;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 0 12px;
+}
+.af-menu .ant-menu-item-group-title {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 14px 12px 6px !important;
+}
+.af-menu-label {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  justify-content: space-between;
+  width: 100%;
+}
+.af-sider-footer {
+  border-top: 1px solid var(--af-border);
+  padding: 12px 16px;
+}
+.af-sider-link {
+  align-items: center;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  color: var(--af-text-secondary);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  gap: 10px;
+  padding: 8px 12px;
+  width: 100%;
+}
+.af-sider-link:hover {
+  background: #f2f4f7;
+}
+
+/* Nhãn đếm dạng viên thuốc và nhãn "Mới" */
+.af-count-label {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+}
+.af-count {
+  background: #eaf0f5;
+  border-radius: 999px;
+  color: var(--af-text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 18px;
+  min-width: 20px;
+  padding: 0 6px;
+  text-align: center;
+}
+.ant-segmented-item-selected .af-count {
+  background: var(--af-primary);
+  color: #fff;
+}
+.af-count.is-urgent {
+  background: #fff1dc;
+  color: var(--af-accent);
+}
+.ant-segmented-item-selected .af-count.is-urgent {
+  background: var(--af-accent);
+  color: #fff;
+}
+.af-order-id {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+.af-new-tag {
+  background: #fff1dc;
+  border-radius: 4px;
+  color: var(--af-accent);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 5px;
+  text-transform: uppercase;
+}
+
+/* ---------- Trang ---------- */
+.af-content {
+  min-width: 0;
+}
+.af-page {
+  margin: 0 auto;
+  max-width: 1680px;
+  padding: 0 32px;
+}
+.af-page-header {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  justify-content: space-between;
+  padding: 30px 0 26px;
+}
+.af-page-header h1 {
+  color: var(--af-text-strong);
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0;
+  letter-spacing: -0.7px;
+}
+.af-breadcrumb {
+  flex-basis: 100%;
+  min-width: 0;
+}
+.af-page-header p {
+  color: var(--af-text-secondary);
+  font-size: 14px;
+  margin: 8px 0 0;
+}
+.af-page-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.af-page-body {
+  padding: 0 0 40px;
+}
+.af-stat-row {
+  margin-bottom: 24px;
+}
+.af-inventory-stats {
+  margin-bottom: 16px;
+}
+.af-metric-link {
+  display: block;
+  height: 100%;
+}
+.af-stat-danger .ant-statistic-content {
+  color: var(--af-danger);
+}
+.af-stat-warning .ant-statistic-content {
+  color: var(--af-warning);
+}
+.af-card {
+  overflow: hidden;
+  box-shadow: 0 2px 6px #16324f03;
+}
+.af-fill {
+  height: 100%;
+}
+.af-toolbar {
+  align-items: center;
+  border-bottom: 1px solid var(--af-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 20px;
+}
+.af-toolbar-plain {
+  border-bottom: 0;
+  margin: -8px -8px 8px;
+  padding: 0 0 8px;
+}
+.af-toolbar-title {
+  color: var(--af-text-strong);
+  font-weight: 600;
+}
+.af-search {
+  max-width: 320px;
+}
+.af-input-icon {
+  color: var(--af-text-tertiary);
+}
+.af-inline-icon {
+  vertical-align: -2px;
+}
+
+/* ---------- Ô trong bảng ---------- */
+.af-data-table .af-cell-stack { line-height: 20px; }
+.af-data-table .af-cell-stack > small { font-size: 12px; }
+.af-cell-stack > .af-cell-truncate {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.af-customer-cell > .af-cell-stack { flex: 1; }
+.af-stock-summary { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.af-data-table .ant-pagination { padding-inline: 16px; }
+
+.af-cell-stack {
+  min-width: 0;
+}
+.af-cell-stack > span {
+  color: var(--af-text-strong);
+  display: block;
+  font-weight: 500;
+}
+.af-cell-stack > small {
+  color: var(--af-text-tertiary);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.af-money {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.af-text-warning {
+  color: var(--af-warning) !important;
+}
+.af-stock-cell .ant-progress {
+  margin: 2px 0 0;
+}
+.af-stock-cell small {
+  color: var(--af-text-tertiary);
+  font-size: 12px;
+}
+.af-customer-cell {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+/* ---------- Tổng quan ---------- */
+.af-metric {
+  height: 100%;
+}
+.af-metric-revenue {
+  background: linear-gradient(120deg, #eef8fd, #ffffff);
+  border-color: #d4e9f4;
+}
+.af-metric-top {
+  align-items: center;
+  color: var(--af-text-secondary);
+  display: flex;
+  font-size: 12px;
+  font-weight: 500;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.af-metric-icon,
+.af-stock-icon {
+  align-items: center;
+  background: var(--af-primary-soft);
+  border-radius: 10px;
+  color: var(--af-primary);
+  display: flex;
+  flex: none;
+  height: 36px;
+  justify-content: center;
+  width: 36px;
+}
+.af-metric-icon.is-warning {
+  background: #fff4e3;
+  color: var(--af-warning);
+}
+.af-metric-icon.is-danger {
+  background: #fceeee;
+  color: var(--af-danger);
+}
+.af-metric-caption {
+  align-items: center;
+  color: var(--af-text-tertiary);
+  display: flex;
+  font-size: 11px;
+  gap: 6px;
+  margin-top: 12px;
+  min-height: 20px;
+}
+.af-metric-link .af-metric-caption {
+  justify-content: space-between;
+}
+.af-section-heading {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  margin: 28px 0 14px;
+}
+.af-section-heading h2 {
+  color: var(--af-text-strong);
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+.af-section-heading > span {
+  color: var(--af-text-tertiary);
+  font-size: 12px;
+}
+.af-panel-title,
+.af-text-link,
+.af-list-more {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+.af-text-link,
+.af-list-more {
+  font-size: 12px;
+  font-weight: 500;
+}
+.af-list-more {
+  justify-content: center;
+  padding-top: 16px;
+}
+.af-task-list {
+  display: flex;
+  flex-direction: column;
+}
+.af-pending-order,
+.af-stock-task {
+  align-items: center;
+  border-bottom: 1px solid var(--af-border);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 16px 0;
+}
+.af-pending-order {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+.af-pending-order:first-child,
+.af-stock-task:first-child {
+  padding-top: 0;
+}
+.af-pending-order:last-child,
+.af-stock-task:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.af-pending-total {
+  text-align: right;
+}
+.af-pending-total small {
+  align-items: center;
+  color: var(--af-text-tertiary);
+  display: flex;
+  font-size: 11px;
+  gap: 4px;
+  justify-content: flex-end;
+  margin-top: 3px;
+}
+.af-stock-task .af-cell-stack > span {
+  font-size: 13px;
+}
+.af-stock-task .af-cell-stack > small {
+  font-size: 11px;
+}
+.af-stat-row > .ant-col > .ant-card {
+  height: 100%;
+}
+.af-chart-total {
+  margin-bottom: 24px;
+}
+
+/* ---------- Biểu đồ cột ---------- */
+.af-chart-scroll {
+  overflow-x: auto;
+  padding: 2px 0 8px;
+}
+.af-bar-chart {
+  align-items: flex-end;
+  display: flex;
+  gap: 10px;
+  background: repeating-linear-gradient(to top, transparent 0, transparent calc(25% - 1px), var(--af-border) calc(25% - 1px), var(--af-border) 25%);
+  background-origin: content-box;
+  background-clip: content-box;
+  padding-bottom: 24px;
+}
+.af-bar-column {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  height: 100%;
+  justify-content: flex-end;
+  position: relative;
+}
+.af-bar {
+  background: #b9deee;
+  border-radius: 6px 6px 2px 2px;
+  min-height: 0;
+  transition: background 0.15s;
+  width: 100%;
+  max-width: 52px;
+}
+.af-bar-column:hover .af-bar {
+  background: #81c2df;
+}
+.af-bar.is-latest {
+  background: var(--af-primary);
+}
+.af-bar-label {
+  bottom: -22px;
+  color: var(--af-text-tertiary);
+  font-size: 12px;
+  position: absolute;
+  white-space: nowrap;
+}
+
+/* ---------- Sản phẩm ---------- */
+.af-catalog-heading, .af-catalog-results { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.af-catalog-heading { margin-bottom: 14px; }
+.af-brand-select { width: 220px; max-width: 65%; }
+.af-catalog-results { margin: 16px 0; min-height: 24px; }
+.af-brand-filters { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 10px; margin-bottom: 12px; }
+.af-brand-filter { flex: 0 0 118px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 90px; padding: 10px; border: 1px solid var(--af-border); border-radius: 10px; background: white; color: var(--af-text); font: inherit; cursor: pointer; }
+.af-brand-filter:hover { border-color: var(--af-primary); }
+.af-brand-filter.is-active { border-color: var(--af-primary); background: var(--af-primary-soft); color: var(--af-primary); }
+.af-brand-filter:focus-visible { outline: 2px solid var(--af-primary); outline-offset: 2px; }
+.af-brand-filter img { width: 76px; height: 34px; object-fit: contain; }
+.af-brand-filter > span { font-size: 12px; font-weight: 500; white-space: nowrap; }
+.af-brand-filter small { color: var(--af-text-secondary); margin-left: 3px; }
+.af-catalog-filters { display: grid; grid-template-columns: minmax(220px, 1.5fr) repeat(3, minmax(140px, 1fr)); gap: 12px; }
+.af-product-card { height: 100%; }
+.af-product-brand-line { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 12px; color: var(--af-text-secondary); }
+.af-product-spec { font-size: 12px; color: var(--af-text-secondary); margin: 0 0 4px; }
+.af-product-card .af-product-footer { margin-top: 12px; }
+.af-catalog-pagination { margin-top: 24px; justify-content: flex-end; }
+@media (max-width: 1100px) { .af-catalog-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 575px) {
+  .af-catalog-filters { grid-template-columns: minmax(0, 1fr); }
+  .af-brand-filter { flex-basis: 105px; }
+}
+.af-product-card .ant-card-body {
+  padding: 14px;
+}
+.af-product-image,
+.af-product-placeholder {
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  width: 100%;
+}
+.ant-card-cover > .af-product-placeholder {
+  align-items: center;
+  background: var(--af-primary-soft);
+  color: var(--af-primary);
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12px;
+}
+.af-product-image { padding: 16px; background: #fff; }
+.af-product-sku {
+  font-size: 12px;
+}
+.af-product-name.ant-typography {
+  margin: 4px 0 10px;
+  min-height: 44px;
+}
+.af-product-footer {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: space-between;
+}
+.af-upload-preview {
+  border-radius: 8px;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+.af-upload-empty {
+  align-items: center;
+  color: var(--af-text-secondary);
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  gap: 6px;
+}
+.af-order-total {
+  font-size: 15px;
+  margin: 0;
+}
+
+/* ---------- Giao hàng ---------- */
+.af-board-column {
+  background: #eaf0f6;
+  border: 1px solid #e1e9f1;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 320px;
+  padding: 16px;
+}
+.af-board-head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+.af-board-count {
+  background: #fff;
+  border-radius: 10px;
+  color: var(--af-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 8px;
+}
+.af-board-hint {
+  font-size: 12px;
+  margin-top: -6px;
+}
+.af-delivery-top,
+.af-delivery-footer {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+.af-delivery-customer {
+  color: var(--af-text-strong);
+  font-weight: 600;
+  margin: 6px 0 4px;
+}
+.af-delivery-line {
+  align-items: flex-start;
+  color: var(--af-text-secondary);
+  display: flex;
+  font-size: 13px;
+  gap: 6px;
+  margin-top: 2px;
+}
+.af-delivery-line svg {
+  flex: none;
+  margin-top: 3px;
+}
+.af-delivery-footer {
+  border-top: 1px solid var(--af-border);
+  margin-top: 10px;
+  padding-top: 8px;
+}
+
+/* ---------- Màn hình nhỏ ---------- */
+@media (max-width: 991px) {
+  .af-sider {
+    display: none;
+  }
+  .af-nav-toggle {
+    display: inline-flex !important;
+  }
+  .af-page {
+    padding: 0 24px;
+  }
+}
+@media (max-width: 768px) {
+  :root {
+    --af-topbar-height: 64px;
+  }
+  .af-topbar {
+    padding: 0 16px 0 8px;
+  }
+  .af-topbar-divider,
+  .af-topbar-store,
+  .af-topbar-user-text {
+    display: none;
+  }
+  .af-topbar-right {
+    gap: 4px;
+  }
+  .af-topbar-user {
+    padding-left: 10px;
+    margin-left: 2px;
+  }
+  .af-page {
+    padding: 0 16px;
+  }
+  .af-page-header {
+    padding: 24px 0 20px;
+  }
+  .af-page-header h1 {
+    font-size: 24px;
+  }
+  .af-toolbar .ant-segmented {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .af-page-body {
+    padding: 0 0 24px;
+  }
+  .af-search {
+    max-width: none;
+  }
+  .af-pending-order {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+  }
+  .af-pending-total {
+    grid-column: 2;
+    text-align: left;
+  }
+  .af-pending-total small {
+    justify-content: flex-start;
+  }
+  .af-toolbar {
+    padding: 16px;
+  }
+}
+@media (max-width: 575px) {
+  .af-demo-label {
+    display: none;
+  }
+  .af-page-actions {
+    width: 100%;
+  }
+  .af-page-actions > * {
+    flex: 1;
+  }
+  .af-stock-icon {
+    display: none;
+  }
+  .af-stock-task {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .af-section-heading > span {
+    display: none;
+  }
+  .af-metric-top {
+    align-items: flex-start;
+    min-height: 36px;
+  }
+  .af-metric-icon {
+    background: transparent;
+    border-radius: 0;
+    height: 20px;
+    width: 20px;
+  }
+  .af-metric-caption {
+    align-items: flex-start;
+    min-height: 34px;
+  }
+  .af-metric-caption svg {
+    flex: none;
+    margin-top: 2px;
+  }
+}
+
+.af-metric-link:focus-visible,
+.af-topbar-brand:focus-visible,
+.af-notification-link:focus-visible,
+.af-sider-link:focus-visible,
+.af-chart-scroll:focus-visible {
+  border-radius: 10px;
+  outline: 3px solid var(--af-primary);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .af-bar {
+    transition: none;
+  }
+}
+
+.af-page-loading {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+/* Luồng tiếp nhận, giao nhận và thanh toán */
+.af-form-section-title {
+  color: var(--af-text-strong);
+  font-weight: 600;
+  margin: 20px 0 16px;
+}
+.af-order-line-form {
+  align-items: start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 100px 32px;
+  gap: 12px;
+}
+.af-order-line-form > button {
+  margin-top: 29px;
+}
+.af-order-summary {
+  align-items: center;
+  background: var(--af-primary-soft);
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 12px 16px;
+}
+.af-form-hint {
+  color: var(--af-text-secondary);
+  font-size: 12px;
+  line-height: 1.7;
+  margin-top: 12px;
+}
+.af-order-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-width: 100%;
+}
+.af-detail-actions {
+  margin-bottom: 24px;
+}
+.af-delivery-reason {
+  margin: 10px 0 0;
+  font-size: 12px;
+}
+@media (max-width: 575px) {
+  .af-order-line-form {
+    grid-template-columns: minmax(0, 1fr) 32px;
+    gap: 0 8px;
+  }
+  .af-order-line-form > :first-child {
+    grid-column: 1 / -1;
+  }
+  .af-order-filters,
+  .af-order-filters > * {
+    width: 100%;
+  }
+}

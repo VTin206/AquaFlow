@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <title>AquaFlow</title>
+  <rect width="32" height="32" rx="8" fill="#205b96"/>
+  <g stroke="#fff" stroke-width="2.2" stroke-linecap="round">
+    <path d="M7 9q2.25 2 4.5 0t4.5 0 4.5 0 4.5 0"/>
+    <path d="M7 16q2.25 2 4.5 0t4.5 0 4.5 0 4.5 0"/>
+    <path d="M7 23q2.25 2 4.5 0t4.5 0 4.5 0 4.5 0"/>
+  </g>
+</svg>
