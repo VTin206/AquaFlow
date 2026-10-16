@@ -29,11 +29,40 @@ export const httpClient = axios.create({
   headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
 })
 
+// localStorage có thể bị chặn (chế độ riêng tư); lỗi đọc/ghi coi như không có token.
+const readStorage = (key: string) => {
+  try {
+    return localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+const writeStorage = (key: string, value: string | null) => {
+  try {
+    if (value) localStorage.setItem(key, value)
+    else localStorage.removeItem(key)
+  } catch {
+    // Bỏ qua: phiên chỉ tồn tại tới khi tải lại trang.
+  }
+}
+
 httpClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem(TOKEN_KEY)
+  const token = readStorage(TOKEN_KEY)
   if (token) config.headers.Authorization = `Bearer ${token}`
   else delete config.headers.Authorization
   return config
+})
+
+let onUnauthorized: (() => void) | null = null
+
+/** Gọi khi request có JWT bị backend trả 401 (token hết hạn, tài khoản bị khóa). */
+export const setUnauthorizedHandler = (handler: (() => void) | null) => {
+  onUnauthorized = handler
+}
+
+httpClient.interceptors.response.use(undefined, (error) => {
+  if (axios.isAxiosError(error) && error.response?.status === 401 && error.config?.headers?.Authorization) onUnauthorized?.()
+  return Promise.reject(error)
 })
 
 const defaultMessage = (status: number) => {
@@ -73,8 +102,5 @@ export const api = {
   delete: <T>(path: string, options?: AxiosRequestConfig) => request<T>({ ...options, method: 'DELETE', url: path }),
 }
 
-export const getStoredAuthToken = () => localStorage.getItem(TOKEN_KEY)
-export const storeAuthToken = (token: string | null) => {
-  if (token) localStorage.setItem(TOKEN_KEY, token)
-  else localStorage.removeItem(TOKEN_KEY)
-}
+export const getStoredAuthToken = () => readStorage(TOKEN_KEY)
+export const storeAuthToken = (token: string | null) => writeStorage(TOKEN_KEY, token)
