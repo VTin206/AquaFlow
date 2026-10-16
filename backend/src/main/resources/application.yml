@@ -21,4 +21,5 @@ server:
 
 app:
   jwt:
-    secret: ${APP_JWT_SECRET:local-development-secret-change-me-please-32-characters}
+    secret: ${APP_JWT_SECRET:}
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}
