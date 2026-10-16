@@ -1,18 +1,24 @@
+import { useState } from 'react'
 import { ChevronDown, ChevronLeft, ChevronRight, Filter } from 'lucide-react'
 import { OrderTable } from '../components/OrderTable'
 import { SearchField } from '../components/SearchField'
-import type { Order } from '../types'
+import { QueryFallback } from '../components/StateViews'
+import { useOrders } from '../hooks/useOrders'
 
-type OrdersPageProps = {
-  orders: Order[]
-  query: string
-  setQuery: (value: string) => void
-  orderFilter: string
-  setOrderFilter: (value: string) => void
-  onChangeStatus: (id: string) => void
-}
+const ALL_STATUSES = 'Tất cả trạng thái'
 
-export function OrdersPage({ orders, query, setQuery, orderFilter, setOrderFilter, onChangeStatus }: OrdersPageProps) {
+export function OrdersPage({ onChangeStatus }: { onChangeStatus: (id: string) => void }) {
+  const ordersQuery = useOrders()
+  const [query, setQuery] = useState('')
+  const [orderFilter, setOrderFilter] = useState(ALL_STATUSES)
+
+  if (ordersQuery.isPending || ordersQuery.isError) return <QueryFallback query={ordersQuery} />
+
+  const orders = ordersQuery.data.filter((order) => {
+    const matchesQuery = `${order.id} ${order.customer} ${order.phone} ${order.items}`.toLowerCase().includes(query.toLowerCase())
+    return matchesQuery && (orderFilter === ALL_STATUSES || order.status === orderFilter)
+  })
+
   return (
     <div className="page-content subpage-content">
       <div className="surface data-surface">
@@ -26,7 +32,7 @@ export function OrdersPage({ orders, query, setQuery, orderFilter, setOrderFilte
             <label className="filter-select">
               <Filter size={15} />
               <select value={orderFilter} onChange={(event) => setOrderFilter(event.target.value)}>
-                <option>Tất cả trạng thái</option>
+                <option>{ALL_STATUSES}</option>
                 <option>Chờ xác nhận</option>
                 <option>Đang chuẩn bị</option>
                 <option>Đang giao</option>

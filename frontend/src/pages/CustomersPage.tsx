@@ -1,11 +1,16 @@
 import { ArrowUpRight, Boxes, Ellipsis, Filter, MapPin, Search, Users } from 'lucide-react'
+import { useState } from 'react'
 import { SearchField } from '../components/SearchField'
-import { EmptyState } from '../components/StateViews'
-import { customers } from '../mocks/data'
+import { EmptyState, QueryFallback } from '../components/StateViews'
+import { useCustomers } from '../hooks/useCustomers'
 
-type CustomersPageProps = { query: string; setQuery: (value: string) => void }
+export function CustomersPage() {
+  const customersQuery = useCustomers()
+  const [query, setQuery] = useState('')
 
-export function CustomersPage({ query, setQuery }: CustomersPageProps) {
+  if (customersQuery.isPending || customersQuery.isError) return <QueryFallback query={customersQuery} />
+
+  const customers = customersQuery.data
   const visible = customers.filter((customer) => `${customer.name} ${customer.phone} ${customer.area}`.toLowerCase().includes(query.toLowerCase()))
 
   return (

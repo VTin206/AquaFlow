@@ -6,9 +6,14 @@ import type { ToastTone } from './Toast'
 
 const emptyProduct: ProductDraft = { name: '', brand: '', sku: '', unit: 'Bình', price: 0, stock: 0, image: '' }
 
-type ProductModalProps = { onSubmit: (draft: ProductDraft) => void; onClose: () => void; onNotice: (message: string, tone?: ToastTone) => void }
+type ProductModalProps = {
+  submitting?: boolean
+  onSubmit: (draft: ProductDraft) => void
+  onClose: () => void
+  onNotice: (message: string, tone?: ToastTone) => void
+}
 
-export function ProductModal({ onSubmit, onClose, onNotice }: ProductModalProps) {
+export function ProductModal({ submitting = false, onSubmit, onClose, onNotice }: ProductModalProps) {
   const [form, setForm] = useState(emptyProduct)
 
   const selectImage = (event: ChangeEvent<HTMLInputElement>) => {
@@ -87,8 +92,8 @@ export function ProductModal({ onSubmit, onClose, onNotice }: ProductModalProps)
           <button type="button" className="button button-secondary" onClick={onClose}>
             Hủy
           </button>
-          <button type="submit" className="button button-primary">
-            <Plus size={16} /> Lưu sản phẩm
+          <button type="submit" className="button button-primary" disabled={submitting}>
+            <Plus size={16} /> {submitting ? 'Đang lưu...' : 'Lưu sản phẩm'}
           </button>
         </div>
       </form>

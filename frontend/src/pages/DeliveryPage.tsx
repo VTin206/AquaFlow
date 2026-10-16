@@ -1,13 +1,15 @@
 import { ArrowRight, Check, Clock3, FileBarChart, MapPin, Package, Truck, Users } from 'lucide-react'
-import { EmptyState } from '../components/StateViews'
+import { EmptyState, QueryFallback } from '../components/StateViews'
 import { StatusBadge } from '../components/StatusBadge'
-import type { Order } from '../types'
+import { useOrders } from '../hooks/useOrders'
 import { currency } from '../utils/format'
 
-type DeliveryPageProps = { orders: Order[]; onChangeStatus: (id: string) => void }
+export function DeliveryPage({ onChangeStatus }: { onChangeStatus: (id: string) => void }) {
+  const ordersQuery = useOrders()
 
-export function DeliveryPage({ orders, onChangeStatus }: DeliveryPageProps) {
-  const deliveries = orders.filter((order) => order.method === 'Giao tận nơi' && order.status !== 'Đã hoàn tất')
+  if (ordersQuery.isPending || ordersQuery.isError) return <QueryFallback query={ordersQuery} />
+
+  const deliveries = ordersQuery.data.filter((order) => order.method === 'Giao tận nơi' && order.status !== 'Đã hoàn tất')
 
   return (
     <div className="page-content subpage-content">
