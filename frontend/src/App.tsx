@@ -14,6 +14,7 @@ import { InventoryPage } from './pages/InventoryPage'
 import { OrdersPage } from './pages/OrdersPage'
 import { ProductsPage } from './pages/ProductsPage'
 import { ReportsPage } from './pages/ReportsPage'
+import { getHealth } from './services/health'
 import type { Order, OrderDraft, Product, ProductDraft, Section, StockDraft } from './types'
 
 type ModalKind = 'order' | 'stock' | 'product' | null
@@ -30,7 +31,7 @@ function App() {
   const [apiOnline, setApiOnline] = useState<boolean | null>(null)
 
   useEffect(() => {
-    fetch('/api/v1/health').then((response) => setApiOnline(response.ok)).catch(() => setApiOnline(false))
+    getHealth().then((health) => setApiOnline(health.status === 'UP')).catch(() => setApiOnline(false))
   }, [])
 
   useEffect(() => {
