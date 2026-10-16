@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import { ArrowDownRight, PackagePlus, Plus } from 'lucide-react'
 import { Sidebar } from './components/layout/Sidebar'
 import { Topbar } from './components/layout/Topbar'
+import type { ToastTone } from './components/Toast'
 import { OrderModal } from './components/OrderModal'
 import { ProductModal } from './components/ProductModal'
 import { StockModal } from './components/StockModal'
@@ -26,7 +27,7 @@ function App() {
   const [orderFilter, setOrderFilter] = useState('Tất cả trạng thái')
   const [modal, setModal] = useState<ModalKind>(null)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [notice, setNotice] = useState('')
+  const [notice, setToast] = useState<{ message: string; tone: ToastTone } | null>(null)
   const [apiOnline, setApiOnline] = useState<boolean | null>(null)
 
   useEffect(() => {
@@ -35,9 +36,11 @@ function App() {
 
   useEffect(() => {
     if (!notice) return
-    const timer = window.setTimeout(() => setNotice(''), 3200)
+    const timer = window.setTimeout(() => setToast(null), notice.tone === 'error' ? 5000 : 3200)
     return () => window.clearTimeout(timer)
   }, [notice])
+
+  const setNotice = (message: string, tone: ToastTone = 'success') => setToast(message ? { message, tone } : null)
 
   const filteredOrders = useMemo(() => orders.filter((order) => {
     const matchesQuery = `${order.id} ${order.customer} ${order.phone} ${order.items}`.toLowerCase().includes(query.toLowerCase())
@@ -60,7 +63,7 @@ function App() {
   const createOrder = (draft: OrderDraft) => {
     const product = products.find((item) => item.name === draft.product)
     if (!product || product.stock < draft.quantity) {
-      setNotice('Tồn kho không đủ để tạo đơn hàng này.')
+      setNotice('Tồn kho không đủ để tạo đơn hàng này.', 'error')
       return
     }
     const newOrder: Order = {
@@ -140,7 +143,7 @@ function App() {
       {modal === 'order' && <OrderModal products={products} onSubmit={createOrder} onClose={closeModal} />}
       {modal === 'stock' && <StockModal products={products} onSubmit={receiveStock} onClose={closeModal} />}
       {modal === 'product' && <ProductModal onSubmit={createProduct} onClose={closeModal} onNotice={setNotice} />}
-      {notice && <Toast message={notice} onClose={() => setNotice('')} />}
+      {notice && <Toast message={notice.message} tone={notice.tone} onClose={() => setToast(null)} />}
     </div>
   )
 }

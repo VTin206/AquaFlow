@@ -1,6 +1,7 @@
 import { Clock3, Ellipsis, Search } from 'lucide-react'
 import type { Order } from '../types'
 import { currency } from '../utils/format'
+import { EmptyState } from './StateViews'
 import { StatusBadge } from './StatusBadge'
 
 type OrderTableProps = { orders: Order[]; onChangeStatus: (id: string) => void; compact?: boolean }
@@ -58,13 +59,7 @@ export function OrderTable({ orders, onChangeStatus, compact = false }: OrderTab
           ))}
         </tbody>
       </table>
-      {orders.length === 0 && (
-        <div className="empty-state">
-          <Search size={22} />
-          <strong>Không tìm thấy đơn hàng</strong>
-          <span>Thử thay đổi từ khóa hoặc bộ lọc trạng thái.</span>
-        </div>
-      )}
+      {orders.length === 0 && <EmptyState icon={Search} title="Không tìm thấy đơn hàng" description="Thử thay đổi từ khóa hoặc bộ lọc trạng thái." />}
     </div>
   )
 }

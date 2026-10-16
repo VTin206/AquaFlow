@@ -1,4 +1,5 @@
 import { ArrowRight, Check, Clock3, FileBarChart, MapPin, Package, Truck, Users } from 'lucide-react'
+import { EmptyState } from '../components/StateViews'
 import { StatusBadge } from '../components/StatusBadge'
 import type { Order } from '../types'
 import { currency } from '../utils/format'
@@ -100,7 +101,7 @@ export function DeliveryPage({ orders, onChangeStatus }: DeliveryPageProps) {
               </div>
             </article>
           ))}
-          {deliveries.length === 0 && <div className="empty-state">Chưa có đơn giao đang xử lý.</div>}
+          {deliveries.length === 0 && <EmptyState icon={Truck} title="Chưa có đơn giao đang xử lý" description="Đơn giao tận nơi chưa hoàn tất sẽ hiển thị tại đây." />}
         </div>
       </div>
     </div>

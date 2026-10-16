@@ -1,5 +1,6 @@
-import { Activity, Boxes, CircleDollarSign, Clock3, Droplets, Filter, Plus } from 'lucide-react'
+import { Activity, Boxes, CircleDollarSign, Clock3, Droplets, Filter, Plus, Search } from 'lucide-react'
 import { SearchField } from '../components/SearchField'
+import { EmptyState } from '../components/StateViews'
 import type { Product } from '../types'
 import { currency } from '../utils/format'
 
@@ -109,7 +110,7 @@ export function InventoryPage({ products, query, setQuery, onReceiveStock }: Inv
               })}
             </tbody>
           </table>
-          {visible.length === 0 && <div className="empty-state">Không có sản phẩm phù hợp.</div>}
+          {visible.length === 0 && <EmptyState icon={Search} title="Không có sản phẩm phù hợp" description="Thử tìm theo tên, mã hàng hoặc thương hiệu." />}
         </div>
       </div>
 
