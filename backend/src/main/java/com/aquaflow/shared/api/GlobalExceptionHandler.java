@@ -33,6 +33,11 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.UNAUTHORIZED, exception.getMessage(), request);
     }
 
+    @ExceptionHandler(NotFoundException.class)
+    ResponseEntity<ApiError> handleNotFound(NotFoundException exception, HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, exception.getMessage(), request);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ApiError> handleValidation(
             MethodArgumentNotValidException exception,
