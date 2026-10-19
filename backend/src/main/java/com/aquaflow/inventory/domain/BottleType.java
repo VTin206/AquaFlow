@@ -34,8 +34,7 @@ public class BottleType {
         this.active = true;
     }
 
-    public void update(String name, BigDecimal depositUnitAmount){
-        this.name = name;
+    public void update(BigDecimal depositUnitAmount){
         this.depositUnitAmount = depositUnitAmount;
     }
 
