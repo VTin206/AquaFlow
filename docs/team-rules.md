@@ -45,6 +45,17 @@ Hai branch chính:
 - `main`: phiên bản ổn định, dùng để demo/phát hành.
 - `develop`: branch tích hợp các chức năng đã được review.
 
+Luồng làm việc chuẩn:
+
+```text
+feature/fix branch → Pull Request → develop → kiểm thử tích hợp → main
+```
+
+`develop` là branch mặc định để nhận các tính năng mới. `main` chỉ nhận
+những thay đổi đã ổn định từ `develop` thông qua quy trình release hoặc PR
+được maintainer phê duyệt. Không tạo branch công việc mới trực tiếp từ
+`main`, trừ khi maintainer yêu cầu để xử lý hotfix.
+
 Mỗi công việc phải tạo branch riêng từ `develop`:
 
 ```text
@@ -75,12 +86,39 @@ Không dùng tên chung chung như `test`, `code-moi`, `branch1`, `update`, `fin
 Khởi tạo branch:
 
 ```bash
+git fetch origin
 git switch develop
-git pull origin develop
+git pull --ff-only origin develop
 git switch -c feat/be-auth-login
 ```
 
-Không dùng `git push --force` trên `main` hoặc `develop`.
+Trước khi bắt đầu task mới, phải cập nhật branch từ `develop`. Trong thời
+gian làm việc, nếu `develop` có thay đổi ảnh hưởng đến task thì cần đồng bộ
+lại branch cá nhân trước khi tạo PR.
+
+Branch cá nhân chỉ phục vụ cho một task hoặc một PR. Không dùng một branch
+cho nhiều chức năng không liên quan và không tạo các branch trùng mục đích
+chỉ vì đổi tên giao diện hoặc thay đổi nhỏ.
+
+Sau khi PR đã được merge:
+
+1. Cập nhật Issue/Project sang `Done` sau khi kiểm tra tích hợp thành công.
+2. Xóa branch nguồn trên GitHub nếu không còn PR hoặc công việc nào sử dụng.
+3. Xóa branch local tương ứng và chạy `git fetch --prune` để dọn các remote-tracking branch đã không còn tồn tại.
+
+Không xóa branch nếu PR chưa được merge, còn commit chưa được tích hợp hoặc
+còn thành viên đang sử dụng branch đó. Không dùng `git push --force` trên
+`main` hoặc `develop`.
+
+Ví dụ dọn branch sau khi merge:
+
+```bash
+git switch develop
+git pull --ff-only origin develop
+git branch -d feat/be-auth-login
+git push origin --delete feat/be-auth-login
+git fetch --prune
+```
 
 ## 4. Quy tắc commit
 
@@ -138,7 +176,11 @@ git push -u origin feat/be-auth-login
 
 ## 5. Pull Request và review
 
-Mọi thay đổi được đưa vào `develop` thông qua PR. PR phải:
+Mọi thay đổi được đưa vào `develop` thông qua PR. PR phải dùng đúng branch
+đích và không được mở nhiều PR khác nhau cho cùng một thay đổi. PR vào
+`main` chỉ dành cho release hoặc hotfix đã được maintainer thống nhất.
+
+PR phải:
 
 - Liên kết với GitHub Issue.
 - Mô tả chức năng đã thực hiện.
@@ -169,6 +211,7 @@ Một chức năng chỉ được coi là hoàn thành khi:
 - Không còn lỗi nghiêm trọng đã biết trong phạm vi chức năng.
 - PR đã được review và merge vào `develop`.
 - Chức năng hoạt động trên phiên bản tích hợp.
+- Branch nguồn đã được dọn sau khi xác nhận không còn công việc chưa tích hợp.
 
 ## 7. Quy tắc backend
 
