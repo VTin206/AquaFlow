@@ -11,6 +11,7 @@
     "test:operations": "node scripts/test-operations.mjs",
     "test:after-sales": "node scripts/test-after-sales.mjs",
     "test:ux": "node scripts/test-ux.mjs",
+    "test:report-excel": "node scripts/test-report-excel.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview"
   },
@@ -19,6 +20,7 @@
     "antd": "^6.6.5",
     "axios": "^1.20.0",
     "dayjs": "^1.11.23",
+    "exceljs": "^4.4.0",
     "lucide-react": "^1.57.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

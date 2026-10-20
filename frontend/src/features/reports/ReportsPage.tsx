@@ -7,7 +7,6 @@ import { Money } from '../../shared/components/Money'
 import { Page } from '../../shared/components/Page'
 import { PanelHeading } from '../../shared/components/PanelHeading'
 import { QueryError } from '../../shared/components/QueryError'
-import { downloadCsv } from '../../shared/utils/csv'
 import { compactCurrency, currency, shortDate } from '../../shared/utils/format'
 import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
 import { useReport, type DriverReportRow, type PeriodReport, type ProductReportRow, type ReportRange } from './reportService'
@@ -48,44 +47,9 @@ const driverColumns: TableColumnsType<DriverReportRow> = [
   { title: 'Trễ hẹn', dataIndex: 'late', align: 'right', width: 90, render: (value: number) => (value ? <Tag color="orange">{value}</Tag> : 0) },
 ]
 
-/** Gom các phần của báo cáo thành một tệp CSV. */
-function exportReport(report: PeriodReport) {
-  const { range, sales, cash, deposits, delivery, profit } = report
-  downloadCsv(`bao-cao-${range.from}_${range.to}.csv`, [
-    ['Báo cáo AquaFlow', `${range.from} đến ${range.to}`],
-    [],
-    ['Chỉ tiêu', 'Giá trị'],
-    ['Doanh thu (đơn đã giao)', sales.revenue],
-    ['Trong đó phí giao', sales.deliveryFees],
-    ['Hàng khách trả lại', sales.returnsValue],
-    ['Đơn tạo trong kỳ', sales.orders],
-    ['Đơn đã giao', sales.delivered],
-    ['Đơn hủy', sales.cancelled],
-    ['Tiền thực thu (sau hoàn)', cash.collected],
-    ['Thu tiền mặt', cash.cash],
-    ['Thu chuyển khoản', cash.transfer],
-    ['Hoàn tiền', cash.refunds],
-    ['Cọc vỏ thu (ngoài doanh thu)', deposits.collected],
-    ['Cọc vỏ hoàn', deposits.refunded],
-    ['Giá vốn ước tính', profit.cost],
-    ['Lãi gộp ước tính', profit.gross],
-    ['Giao thành công', delivery.delivered],
-    ['Lần giao thất bại', delivery.failedAttempts],
-    ['Giao trễ hẹn', delivery.late],
-    [],
-    ['Ngày', 'Doanh thu', 'Tiền thu', 'Đơn tạo'],
-    ...report.days.map((day) => [day.date, day.revenue, day.collected, day.orders]),
-    [],
-    ['Sản phẩm', 'Nhập đạt', 'Đã bán', 'Trả lại', 'Tồn hiện tại', 'Doanh thu', 'Giá vốn ước tính', 'Lãi gộp'],
-    ...report.products.map((row) => [row.name, row.received, row.sold, row.returned, row.stock, row.revenue, row.cost, row.revenue - row.cost]),
-    [],
-    ['Tài xế', 'Thành công', 'Thất bại', 'Trễ hẹn'],
-    ...delivery.drivers.map((row) => [row.driver, row.delivered, row.failed, row.late]),
-  ])
-}
-
 export function ReportsPage() {
   const { message } = App.useApp()
+  const [exporting, setExporting] = useState(false)
   const [dates, setDates] = useState<[Dayjs, Dayjs]>(presets[2].value)
   const range = toRange(dates)
   const reportQuery = useReport(range)
@@ -104,6 +68,7 @@ export function ReportsPage() {
           <DatePicker.RangePicker
             aria-label="Chọn kỳ báo cáo"
             allowClear={false}
+            disabled={exporting}
             format="DD/MM/YYYY"
             value={dates}
             presets={presets}
@@ -114,13 +79,22 @@ export function ReportsPage() {
           <Button
             icon={<Download size={16} />}
             disabled={!report}
-            onClick={() => {
-              if (!report) return
-              exportReport(report)
-              message.success('Đã tải tệp CSV.')
+            loading={exporting}
+            onClick={async () => {
+              if (!report || exporting) return
+              setExporting(true)
+              try {
+                const { downloadReportExcel } = await import('./exportReport')
+                await downloadReportExcel(report)
+                message.success('Đã tạo tệp Excel.')
+              } catch {
+                message.error('Không thể tạo tệp Excel. Vui lòng thử lại.')
+              } finally {
+                setExporting(false)
+              }
             }}
           >
-            Xuất CSV
+            Xuất Excel
           </Button>
         </div>
       }
