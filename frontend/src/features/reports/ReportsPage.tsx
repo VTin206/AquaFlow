@@ -414,7 +414,7 @@ export function ReportsPage() {
                         <Table
                           rowKey="channel"
                           size="small"
-                          className="af-data-table"
+                          className="af-data-table af-table-flush"
                           pagination={false}
                           dataSource={report.channels}
                           columns={[
@@ -483,7 +483,7 @@ export function ReportsPage() {
                 <Card title="Bán hàng theo sản phẩm" className="af-card" styles={{ body: { padding: 0 } }}>
                   <Table<ProductReportRow>
                     locale={{ emptyText: 'Không bán sản phẩm nào trong kỳ.' }}
-                    className="af-data-table"
+                    className="af-data-table af-table-flush"
                     rowKey="productId"
                     size="middle"
                     columns={productColumns}
@@ -501,7 +501,7 @@ export function ReportsPage() {
                 >
                   <Table<InventoryReportRow>
                     locale={{ emptyText: 'Không có hàng trong kho.' }}
-                    className="af-data-table"
+                    className="af-data-table af-table-flush"
                     rowKey="productId"
                     size="middle"
                     columns={inventoryColumns}

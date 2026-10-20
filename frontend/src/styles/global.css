@@ -449,6 +449,10 @@ body {
 .af-data-table .af-link-button { font-weight: 500; }
 .af-stock-summary { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .af-data-table .ant-pagination { padding-inline: 16px; }
+/* Bảng nằm sát mép thẻ: cột đầu thẳng hàng với tiêu đề và ô tìm kiếm của thẻ. */
+.af-data-table.af-table-flush .ant-table .ant-table-thead > tr > th:first-child,
+.af-data-table.af-table-flush .ant-table .ant-table-tbody > tr > td:first-child { padding-inline-start: 20px; }
+.af-table-flush .ant-pagination { padding-inline: 20px; }
 
 .af-cell-stack {
   min-width: 0;
