@@ -67,6 +67,9 @@ function exportReport(report: PeriodReport) {
     ['Hoàn tiền', cash.refunds],
     ['Cọc vỏ thu (ngoài doanh thu)', deposits.collected],
     ['Cọc vỏ hoàn', deposits.refunded],
+    ['Vỏ khách đang giữ cuối kỳ', deposits.held.bottles],
+    ['Cọc đang giữ cuối kỳ', deposits.held.deposit],
+    ['Vỏ chưa đủ cọc cuối kỳ', deposits.held.uncoveredBottles],
     ['Giá vốn ước tính', profit.cost],
     ['Lãi gộp ước tính', profit.gross],
     ['Giao thành công', delivery.delivered],
@@ -193,8 +196,8 @@ export function ReportsPage() {
             </Col>
           </Row>
           <Row gutter={[16, 16]}>
-            <Col xs={24} xl={10}>
-              <Card title="Tiền, cọc và vỏ" className="af-card af-fill" loading={loading}>
+            <Col xs={24} lg={12} xl={8}>
+              <Card title="Tiền thu" className="af-card af-fill" loading={loading}>
                 {report && (
                   <Descriptions
                     size="small"
@@ -203,21 +206,55 @@ export function ReportsPage() {
                       { key: 'cash', label: 'Thu tiền mặt', children: <Money value={report.cash.cash} tone="paid" /> },
                       { key: 'transfer', label: 'Thu chuyển khoản', children: <Money value={report.cash.transfer} tone="paid" /> },
                       { key: 'refunds', label: 'Hoàn tiền cho khách', children: <Money value={report.cash.refunds} tone="refund" /> },
-                      { key: 'deposit', label: 'Cọc vỏ thu / hoàn', children: (
-                          <>
-                            <Money value={report.deposits.collected} tone="deposit" /> / <Money value={report.deposits.refunded} tone="refund" />
-                          </>
-                        ),
-                      },
-                      { key: 'bottles', label: 'Vỏ giao / thu / mất', children: `${report.deposits.bottlesOut} / ${report.deposits.bottlesBack} / ${report.deposits.bottlesLost}` },
-                      { key: 'receipts', label: 'Nhập hàng', children: `${report.receipts.count} phiếu · ${currency(report.receipts.value)}` },
+                      { key: 'collected', label: <strong>Thực thu</strong>, children: <strong><Money value={report.cash.collected} tone="paid" /></strong> },
+                      { key: 'receipts', label: 'Chi nhập hàng', children: `${report.receipts.count} phiếu · ${currency(report.receipts.value)}` },
                     ]}
                   />
                 )}
-                <p className="af-form-hint">Tiền cọc vỏ ghi sổ riêng, không tính vào doanh thu.</p>
               </Card>
             </Col>
-            <Col xs={24} xl={14}>
+            <Col xs={24} lg={12} xl={8}>
+              <Card title="Vỏ bình và tiền cọc" className="af-card af-fill" loading={loading}>
+                {report && (
+                  <>
+                    <Descriptions
+                      size="small"
+                      column={1}
+                      items={[
+                        { key: 'bottles', label: 'Vỏ giao / thu / mất', children: `${report.deposits.bottlesOut} / ${report.deposits.bottlesBack} / ${report.deposits.bottlesLost}` },
+                        { key: 'deposit', label: 'Cọc thu / hoàn', children: (
+                            <>
+                              <Money value={report.deposits.collected} tone="deposit" /> / <Money value={report.deposits.refunded} tone="refund" />
+                            </>
+                          ),
+                        },
+                      ]}
+                    />
+                    <Typography.Text strong className="af-report-subhead">Đến hết {shortDate(report.range.to)}</Typography.Text>
+                    <Descriptions
+                      size="small"
+                      column={1}
+                      items={[
+                        { key: 'held', label: 'Khách đang giữ', children: `${report.deposits.held.bottles} vỏ · ${report.deposits.held.customers} khách` },
+                        { key: 'heldDeposit', label: 'Cọc cửa hàng đang giữ', children: <Money value={report.deposits.held.deposit} tone="deposit" /> },
+                        {
+                          key: 'uncovered',
+                          label: 'Vỏ chưa đủ cọc',
+                          children: report.deposits.held.uncoveredBottles ? <Tag color="orange">{report.deposits.held.uncoveredBottles} vỏ</Tag> : 'Không có',
+                        },
+                        {
+                          key: 'top',
+                          label: 'Giữ nhiều nhất',
+                          children: report.deposits.held.top.length ? report.deposits.held.top.slice(0, 3).map((row) => `${row.name} (${row.bottles})`).join(', ') : '—',
+                        },
+                      ]}
+                    />
+                  </>
+                )}
+                <p className="af-form-hint">Cọc là tiền phải trả lại khách khi thu hết vỏ, không tính vào doanh thu.</p>
+              </Card>
+            </Col>
+            <Col xs={24} xl={8}>
               <Card title="Theo kênh tiếp nhận" className="af-card af-fill" loading={loading} styles={{ body: { padding: 0 } }}>
                 {report && (
                   <Table

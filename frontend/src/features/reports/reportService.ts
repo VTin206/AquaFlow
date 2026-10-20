@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { db } from '../../mocks/db'
+import { DEPOSIT_PER_BOTTLE } from '../../shared/policy'
 import { mockError, mockRequest } from '../../mocks/mockRequest'
 import { createdAtOf, minutesLate, type Order, type OrderLine } from '../orders/types'
 
@@ -26,6 +27,8 @@ export type ProductReportRow = {
   stock: number
 }
 
+export type BottleHolderRow = { customerId: string; name: string; bottles: number; deposit: number }
+
 export type DriverReportRow = { driver: string; delivered: number; failed: number; late: number }
 
 export type PeriodReport = {
@@ -45,7 +48,22 @@ export type PeriodReport = {
     averageOrder: number
   }
   cash: { collected: number; cash: number; transfer: number; refunds: number }
-  deposits: { collected: number; refunded: number; bottlesOut: number; bottlesBack: number; bottlesLost: number }
+  deposits: {
+    collected: number
+    refunded: number
+    bottlesOut: number
+    bottlesBack: number
+    bottlesLost: number
+    /** Số dư tới hết ngày cuối kỳ, cộng dồn từ sổ vỏ. */
+    held: {
+      bottles: number
+      deposit: number
+      customers: number
+      /** Vỏ khách giữ mà tiền cọc chưa đủ, quy ra số vỏ. */
+      uncoveredBottles: number
+      top: BottleHolderRow[]
+    }
+  }
   delivery: { delivered: number; failedAttempts: number; withAppointment: number; late: number; averageLateMinutes: number; drivers: DriverReportRow[] }
   channels: { channel: Order['channel']; orders: number; revenue: number }[]
   products: ProductReportRow[]
@@ -107,6 +125,14 @@ function buildReport(range: ReportRange): PeriodReport {
   const refunds = payments.filter((payment) => payment.refund).reduce((sum, payment) => sum + payment.amount, 0)
 
   const ledger = db.bottleLedger.filter((entry) => inRange(entry.at))
+  const balances = new Map<string, BottleHolderRow>()
+  for (const entry of db.bottleLedger.filter((item) => localDay(item.at) <= range.to)) {
+    const row = balances.get(entry.customerId) ?? { customerId: entry.customerId, name: db.customers.find((customer) => customer.id === entry.customerId)?.name ?? entry.customerId, bottles: 0, deposit: 0 }
+    row.bottles += entry.bottles
+    row.deposit += entry.deposit
+    balances.set(entry.customerId, row)
+  }
+  const holders = [...balances.values()].filter((row) => row.bottles > 0 || row.deposit > 0)
   const ledgerSum = (kind: string, field: 'bottles' | 'deposit') => ledger.filter((entry) => entry.kind === kind).reduce((sum, entry) => sum + Math.abs(entry[field]), 0)
 
   const handovers = orders.flatMap((order) => order.history.filter((event) => inRange(event.at) && /^Giao (thành công|thất bại)/.test(event.message)).map((event) => ({ order, event })))
@@ -187,6 +213,13 @@ function buildReport(range: ReportRange): PeriodReport {
       bottlesOut: ledgerSum('Giao kèm đơn', 'bottles'),
       bottlesBack: ledgerSum('Thu vỏ', 'bottles'),
       bottlesLost: ledgerSum('Báo mất/vỡ', 'bottles'),
+      held: {
+        bottles: holders.reduce((sum, row) => sum + Math.max(0, row.bottles), 0),
+        deposit: holders.reduce((sum, row) => sum + row.deposit, 0),
+        customers: holders.filter((row) => row.bottles > 0).length,
+        uncoveredBottles: holders.reduce((sum, row) => sum + Math.max(0, row.bottles - Math.floor(row.deposit / DEPOSIT_PER_BOTTLE)), 0),
+        top: [...holders].sort((a, b) => b.bottles - a.bottles).slice(0, 5),
+      },
     },
     delivery: {
       delivered: homeDeliveries.length,

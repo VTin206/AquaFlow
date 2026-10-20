@@ -201,6 +201,26 @@ try {
     assert.equal(later.sales.returnsValue, 90000)
   })
 
+  await test('period report: bottles and deposit held are balances up to the period end', async () => {
+    db.customers = [{ id: 'KH-1', name: 'Khách giữ vỏ', phone: '0901', type: 'Cá nhân', area: 'Q1', addresses: [], legacyOrders: 0 }]
+    db.bottleLedger = [
+      { id: 'S1', customerId: 'KH-1', at: '2026-09-01T08:00:00+07:00', kind: 'Số dư đầu kỳ', bottles: 3, deposit: 100000 },
+      { id: 'S2', customerId: 'KH-1', at: '2026-09-10T08:00:00+07:00', kind: 'Giao kèm đơn', bottles: 2, deposit: 0 },
+      { id: 'S3', customerId: 'KH-1', at: '2026-09-20T08:00:00+07:00', kind: 'Thu vỏ', bottles: -4, deposit: 0 },
+    ]
+    const mid = await reportService.summary({ from: '2026-09-05', to: '2026-09-15' })
+    assert.equal(mid.deposits.bottlesOut, 2)
+    assert.equal(mid.deposits.held.bottles, 5)
+    assert.equal(mid.deposits.held.deposit, 100000)
+    // 5 vỏ, cọc đủ cho 2 vỏ (50.000 ₫/vỏ) nên thiếu cọc 3 vỏ.
+    assert.equal(mid.deposits.held.uncoveredBottles, 3)
+    assert.equal(mid.deposits.held.top[0].name, 'Khách giữ vỏ')
+    const end = await reportService.summary({ from: '2026-09-16', to: '2026-09-30' })
+    assert.equal(end.deposits.bottlesBack, 4)
+    assert.equal(end.deposits.held.bottles, 1)
+    assert.equal(end.deposits.held.uncoveredBottles, 0)
+  })
+
   await test('VietQR payload: EMVCo fields, amount, ASCII note and CRC', async () => {
     const payload = vietQrPayload({ bin: '970436', account: '0071000123456', amount: 185000, note: 'AF-1070' })
     assert.ok(payload.startsWith('000201010212'))
