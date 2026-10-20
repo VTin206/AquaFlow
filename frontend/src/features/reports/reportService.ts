@@ -9,6 +9,11 @@ import { createdAtOf, minutesLate, type Order, type OrderLine } from '../orders/
 /** Khoảng ngày "yyyy-mm-dd", tính cả hai đầu, theo giờ địa phương. */
 export type ReportRange = { from: string; to: string }
 
+/** Lọc các số liệu theo đơn. Tồn kho, vỏ cọc và nhập hàng luôn tính cho cả cửa hàng. */
+export type ReportFilters = { channels?: Order['channel'][]; method?: Order['method'] }
+
+export const reportChannels: Order['channel'][] = ['Tại quầy', 'Điện thoại', 'Tin nhắn', 'Website']
+
 /** `revenue` là doanh thu thuần trong ngày: tiền hàng + phí giao của đơn giao trong ngày, trừ hàng khách trả trong ngày. */
 export type DailyRevenue = { date: string; revenue: number; collected: number; orders: number }
 
@@ -168,10 +173,13 @@ function buildInventory(range: ReportRange, orders: Order[]): PeriodReport['inve
   }
 }
 
-function buildReport(range: ReportRange): PeriodReport {
+function buildReport(range: ReportRange, filters: ReportFilters = {}): PeriodReport {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(range.from) || !/^\d{4}-\d{2}-\d{2}$/.test(range.to) || range.from > range.to) throw mockError(400, 'Khoảng thời gian không hợp lệ.')
   const inRange = (iso?: string) => Boolean(iso) && localDay(iso!) >= range.from && localDay(iso!) <= range.to
-  const orders = allOrders()
+  const everyOrder = allOrders()
+  const orders = everyOrder.filter(
+    (order) => (!filters.channels?.length || filters.channels.includes(order.channel)) && (!filters.method || order.method === filters.method),
+  )
   const created = orders.filter((order) => inRange(createdAtOf(order)))
   // Doanh thu ghi nhận khi khách nhận hàng; đơn đã hủy không tính. Hàng trả trừ vào kỳ khách trả.
   const delivered = orders.filter((order) => order.status !== 'Đã hủy' && inRange(order.deliveredAt))
@@ -221,7 +229,7 @@ function buildReport(range: ReportRange): PeriodReport {
     drivers.set(driver, row)
   }
 
-  const channels = (['Tại quầy', 'Điện thoại', 'Tin nhắn', 'Website'] as const).map((channel) => ({
+  const channels = reportChannels.filter((channel) => !filters.channels?.length || filters.channels.includes(channel)).map((channel) => ({
     channel,
     orders: created.filter((order) => order.channel === channel).length,
     revenue:
@@ -258,7 +266,7 @@ function buildReport(range: ReportRange): PeriodReport {
   const goodsRevenue = productRows.reduce((sum, row) => sum + row.revenue, 0)
   const cost = productRows.reduce((sum, row) => sum + row.cost, 0)
 
-  const inventory = buildInventory(range, orders)
+  const inventory = buildInventory(range, everyOrder)
 
   return {
     range,
@@ -305,10 +313,24 @@ function buildReport(range: ReportRange): PeriodReport {
 }
 
 export const reportService = {
-  summary: (range: ReportRange) => mockRequest(() => buildReport(range)),
+  summary: (range: ReportRange, filters?: ReportFilters) => mockRequest(() => buildReport(range, filters)),
 }
 
-export const reportKeys = { all: ['reports'] as const, summary: (range: ReportRange) => ['reports', 'summary', range.from, range.to] as const }
+export const reportKeys = {
+  all: ['reports'] as const,
+  summary: (range: ReportRange, filters: ReportFilters = {}) => ['reports', 'summary', range.from, range.to, filters.channels?.join('|') ?? '', filters.method ?? ''] as const,
+}
+
+/** Kỳ liền trước, cùng số ngày. */
+export function previousRange({ from, to }: ReportRange): ReportRange {
+  const start = new Date(`${from}T00:00:00`)
+  const length = Math.round((new Date(`${to}T00:00:00`).getTime() - start.getTime()) / 86_400_000) + 1
+  const end = new Date(start)
+  end.setDate(end.getDate() - 1)
+  const begin = new Date(end)
+  begin.setDate(begin.getDate() - length + 1)
+  return { from: localDay(begin.toISOString()), to: localDay(end.toISOString()) }
+}
 
 /** Ngày "yyyy-mm-dd" cách hôm nay `offset` ngày. */
 export const dayFromToday = (offset = 0) => {
@@ -317,7 +339,8 @@ export const dayFromToday = (offset = 0) => {
   return localDay(date.toISOString())
 }
 
-export const useReport = (range: ReportRange) => useQuery({ queryKey: reportKeys.summary(range), queryFn: () => reportService.summary(range) })
+export const useReport = (range: ReportRange, filters?: ReportFilters) =>
+  useQuery({ queryKey: reportKeys.summary(range, filters), queryFn: () => reportService.summary(range, filters) })
 
 /** Doanh thu 14 ngày gần nhất cho trang tổng quan. */
 export function useDailyRevenue() {

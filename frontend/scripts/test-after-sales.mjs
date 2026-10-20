@@ -13,6 +13,8 @@ const { db } = await load('/src/mocks/db.ts')
 const { setMockSession } = await load('/src/mocks/session.ts')
 const { amountDue, paidAmount, minutesLate, isOverdue } = await load('/src/features/orders/types.ts')
 const { vietQrPayload, transferNote } = await load('/src/shared/payment/vietqr.ts')
+const { previousRange } = await load('/src/features/reports/reportService.ts')
+const { groupRevenue, autoGranularity } = await load('/src/features/reports/periods.ts')
 
 const seed = globalThis.structuredClone(db)
 seed.products = [
@@ -238,6 +240,35 @@ try {
     assert.equal(row.closing, stock('P-003') + 3)
     assert.equal(row.opening, 30)
     assert.equal(row.opening + row.received + row.restocked - row.issued, row.closing)
+  })
+
+  await test('period report: channel and method filters apply to order figures only', async () => {
+    const today = new Date().toLocaleDateString('sv-SE')
+    db.receipts = [{ id: 'PN-1', supplierId: 'NCC-1', supplierName: 'NCC', receivedAt: today, receiver: 'Kho', total: 600000, lines: [{ productId: 'P-003', productName: 'Thùng', unit: 'Thùng', received: 10, damaged: 0, costPrice: 60000 }] }]
+    await deliveredOrder({ channel: 'Điện thoại' })
+    await deliveredOrder({ channel: 'Website' })
+    const all = await reportService.summary({ from: today, to: today })
+    const phone = await reportService.summary({ from: today, to: today }, { channels: ['Điện thoại'] })
+    const counter = await reportService.summary({ from: today, to: today }, { method: 'Tại quầy' })
+    assert.equal(all.sales.net, 380000)
+    assert.equal(phone.sales.net, 190000)
+    assert.deepEqual(phone.channels.map((row) => row.channel), ['Điện thoại'])
+    assert.equal(counter.sales.delivered, 0)
+    // Tồn kho và nhập hàng không đổi theo bộ lọc.
+    assert.equal(phone.receipts.count, 1)
+    assert.deepEqual(phone.inventory.rows, all.inventory.rows)
+  })
+
+  await test('period helpers: previous period has the same length; revenue groups by week and month', async () => {
+    assert.deepEqual(previousRange({ from: '2026-10-01', to: '2026-10-31' }), { from: '2026-08-31', to: '2026-09-30' })
+    assert.deepEqual(previousRange({ from: '2026-10-20', to: '2026-10-20' }), { from: '2026-10-19', to: '2026-10-19' })
+    assert.equal(autoGranularity({ from: '2026-10-01', to: '2026-10-31' }), 'day')
+    assert.equal(autoGranularity({ from: '2026-08-01', to: '2026-10-31' }), 'week')
+    assert.equal(autoGranularity({ from: '2026-01-01', to: '2026-10-31' }), 'month')
+    const days = ['2026-09-30', '2026-10-01', '2026-10-04', '2026-10-05'].map((date, index) => ({ date, revenue: (index + 1) * 1000, collected: 0, orders: 0 }))
+    // 30/9 (T4) tới 4/10 (CN) cùng một tuần bắt đầu 28/9; 5/10 là thứ Hai tuần sau.
+    assert.deepEqual(groupRevenue(days, 'week').map((bucket) => [bucket.key, bucket.revenue]), [['2026-09-28', 6000], ['2026-10-05', 4000]])
+    assert.deepEqual(groupRevenue(days, 'month').map((bucket) => [bucket.label, bucket.revenue]), [['T9/2026', 1000], ['T10/2026', 9000]])
   })
 
   await test('VietQR payload: EMVCo fields, amount, ASCII note and CRC', async () => {

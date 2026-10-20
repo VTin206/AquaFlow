@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { App, Button, Card, Col, DatePicker, Descriptions, Empty, Progress, Row, Statistic, Table, Tag, Typography, type TableColumnsType } from 'antd'
+import { App, Button, Card, Col, DatePicker, Descriptions, Empty, Progress, Row, Segmented, Select, Statistic, Table, Tag, Typography, type TableColumnsType } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
-import { Download } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, Download } from 'lucide-react'
 import { BarChart } from '../../shared/components/BarChart'
 import { Money } from '../../shared/components/Money'
 import { Page } from '../../shared/components/Page'
@@ -9,7 +9,8 @@ import { QueryError } from '../../shared/components/QueryError'
 import { downloadCsv } from '../../shared/utils/csv'
 import { compactCurrency, currency, shortDate } from '../../shared/utils/format'
 import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
-import { useReport, type DriverReportRow, type InventoryReportRow, type PeriodReport, type ProductReportRow, type ReportRange } from './reportService'
+import { autoGranularity, granularityLabels, groupRevenue, type Granularity } from './periods'
+import { previousRange, reportChannels, useReport, type DriverReportRow, type InventoryReportRow, type PeriodReport, type ProductReportRow, type ReportFilters, type ReportRange } from './reportService'
 
 const FORMAT = 'YYYY-MM-DD'
 const toRange = ([from, to]: [Dayjs, Dayjs]): ReportRange => ({ from: from.format(FORMAT), to: to.format(FORMAT) })
@@ -59,10 +60,12 @@ const driverColumns: TableColumnsType<DriverReportRow> = [
 ]
 
 /** Gom các phần của báo cáo thành một tệp CSV. */
-function exportReport(report: PeriodReport) {
+function exportReport(report: PeriodReport, filters: ReportFilters) {
   const { range, sales, cash, deposits, delivery, profit } = report
   downloadCsv(`bao-cao-${range.from}_${range.to}.csv`, [
     ['Báo cáo AquaFlow', `${range.from} đến ${range.to}`],
+    ['Kênh', filters.channels?.length ? filters.channels.join(', ') : 'Tất cả'],
+    ['Hình thức nhận', filters.method ?? 'Tất cả'],
     [],
     ['Chỉ tiêu', 'Giá trị'],
     ['Tiền hàng (đơn đã giao)', sales.goods],
@@ -101,14 +104,46 @@ function exportReport(report: PeriodReport) {
   ])
 }
 
+/** Thay đổi so với kỳ trước. `upIsGood` false khi số tăng là xấu (vd. đơn hủy). */
+function Delta({ current, previous, upIsGood = true }: { current: number; previous?: number; upIsGood?: boolean }) {
+  if (previous === undefined) return null
+  if (previous === 0)
+    return (
+      <Typography.Text type="secondary" className="af-report-delta">
+        {current ? 'Kỳ trước chưa có số liệu' : 'Không đổi so với kỳ trước'}
+      </Typography.Text>
+    )
+  const change = Math.round(((current - previous) / Math.abs(previous)) * 100)
+  if (change === 0) return <Typography.Text type="secondary" className="af-report-delta">Không đổi so với kỳ trước</Typography.Text>
+  const Icon = change > 0 ? ArrowUpRight : ArrowDownRight
+  return (
+    <Typography.Text type={change > 0 === upIsGood ? 'success' : 'danger'} className="af-report-delta">
+      <Icon size={14} aria-hidden /> {change > 0 ? 'Tăng' : 'Giảm'} {Math.abs(change)}% so với kỳ trước
+    </Typography.Text>
+  )
+}
+
+const methodOptions = [
+  { value: 'Giao tận nơi', label: 'Giao tận nơi' },
+  { value: 'Tại quầy', label: 'Nhận tại quầy' },
+]
+
 export function ReportsPage() {
   const { message } = App.useApp()
   const [dates, setDates] = useState<[Dayjs, Dayjs]>(presets[2].value)
+  const [channels, setChannels] = useState<NonNullable<ReportFilters['channels']>>([])
+  const [method, setMethod] = useState<ReportFilters['method']>()
+  const [granularity, setGranularity] = useState<Granularity>()
   const range = toRange(dates)
-  const reportQuery = useReport(range)
+  const filters: ReportFilters = { channels, method }
+  const filtered = Boolean(channels.length || method)
+  const reportQuery = useReport(range, filters)
+  const previous = useReport(previousRange(range), filters).data
   const report = reportQuery.data
   const loading = reportQuery.isPending
-  const best = report?.days.reduce<PeriodReport['days'][number] | undefined>((top, day) => (!top || day.revenue > top.revenue ? day : top), undefined)
+  const unit = granularity ?? autoGranularity(range)
+  const buckets = report ? groupRevenue(report.days, unit) : []
+  const best = buckets.reduce<(typeof buckets)[number] | undefined>((top, bucket) => (!top || bucket.revenue > top.revenue ? bucket : top), undefined)
   const onTime = report && report.delivery.withAppointment ? Math.round(((report.delivery.withAppointment - report.delivery.late) / report.delivery.withAppointment) * 100) : null
   const margin = report && report.profit.goodsRevenue ? Math.round((report.profit.gross / report.profit.goodsRevenue) * 100) : 0
 
@@ -128,12 +163,32 @@ export function ReportsPage() {
             onChange={(value) => value?.[0] && value[1] && setDates([value[0], value[1]])}
             style={{ maxWidth: '100%' }}
           />
+          <Select
+            mode="multiple"
+            allowClear
+            maxTagCount="responsive"
+            aria-label="Lọc theo kênh tiếp nhận"
+            placeholder="Mọi kênh"
+            value={channels}
+            onChange={setChannels}
+            options={reportChannels.map((channel) => ({ value: channel, label: channel }))}
+            className="af-report-filter"
+          />
+          <Select
+            allowClear
+            aria-label="Lọc theo hình thức nhận"
+            placeholder="Mọi hình thức"
+            value={method}
+            onChange={setMethod}
+            options={methodOptions}
+            className="af-report-filter"
+          />
           <Button
             icon={<Download size={16} />}
             disabled={!report}
             onClick={() => {
               if (!report) return
-              exportReport(report)
+              exportReport(report, filters)
               message.success('Đã tải tệp CSV.')
             }}
           >
@@ -142,6 +197,12 @@ export function ReportsPage() {
         </>
       }
     >
+      {filtered && (
+        <p className="af-form-hint af-report-filter-hint">
+          Đang lọc: {[channels.length ? `kênh ${channels.join(', ')}` : '', method ? method.toLowerCase() : ''].filter(Boolean).join(' · ')}. Bộ lọc áp dụng cho doanh thu, tiền thu,
+          giao hàng và bán hàng; tồn kho, vỏ cọc và nhập hàng vẫn tính cho cả cửa hàng.
+        </p>
+      )}
       {reportQuery.isError ? (
         <Card>
           <QueryError error={reportQuery.error} onRetry={reportQuery.refetch} />
@@ -155,24 +216,28 @@ export function ReportsPage() {
                 <Typography.Text type="secondary">
                   {report?.sales.delivered ?? 0} đơn · TB {currency(report?.sales.averageOrder ?? 0)}
                 </Typography.Text>
+                {report && <Delta current={report.sales.net} previous={previous?.sales.net} />}
               </Card>
             </Col>
             <Col xs={12} xl={6}>
               <Card loading={loading}>
                 <Statistic className="af-stat-paid" title="Tiền thực thu" value={currency(report?.cash.collected ?? 0)} />
                 <Typography.Text type="secondary">Đã trừ hoàn {currency(report?.cash.refunds ?? 0)}</Typography.Text>
+                {report && <Delta current={report.cash.collected} previous={previous?.cash.collected} />}
               </Card>
             </Col>
             <Col xs={12} xl={6}>
               <Card loading={loading}>
                 <Statistic className={(report?.profit.gross ?? 0) < 0 ? 'af-stat-refund' : 'af-stat-paid'} title="Lãi gộp ước tính" value={currency(report?.profit.gross ?? 0)} />
                 <Typography.Text type="secondary">Biên {margin}% · giá vốn bình quân lô</Typography.Text>
+                {report && <Delta current={report.profit.gross} previous={previous?.profit.gross} />}
               </Card>
             </Col>
             <Col xs={12} xl={6}>
               <Card loading={loading}>
                 <Statistic title="Đơn tạo trong kỳ" value={report?.sales.orders ?? 0} />
                 <Typography.Text type="secondary">{report?.sales.cancelled ?? 0} đơn hủy</Typography.Text>
+                {report && <Delta current={report.sales.orders} previous={previous?.sales.orders} />}
               </Card>
             </Col>
           </Row>
@@ -196,13 +261,24 @@ export function ReportsPage() {
             </Col>
             <Col xs={24} xl={16}>
               <Card
-                title="Doanh thu thuần theo ngày"
-                extra={best && best.revenue > 0 && <Typography.Text type="secondary">Cao nhất {shortDate(best.date)}: {compactCurrency(best.revenue)}</Typography.Text>}
+                title={`Doanh thu thuần theo ${granularityLabels[unit].toLowerCase()}`}
+                extra={
+                  <Segmented<Granularity>
+                    size="small"
+                    aria-label="Gom biểu đồ theo"
+                    value={unit}
+                    onChange={setGranularity}
+                    options={(Object.keys(granularityLabels) as Granularity[]).map((value) => ({ value, label: granularityLabels[value] }))}
+                  />
+                }
                 className="af-card af-fill"
                 loading={loading}
               >
-                {report?.days.some((day) => day.revenue > 0) ? (
-                  <BarChart data={report.days.map((day) => ({ label: shortDate(day.date).slice(3), value: day.revenue }))} formatValue={compactCurrency} height={240} />
+                {buckets.some((bucket) => bucket.revenue > 0) ? (
+                  <>
+                    <BarChart data={buckets.map((bucket) => ({ label: bucket.label, title: bucket.title, value: bucket.revenue }))} formatValue={compactCurrency} height={240} />
+                    {best && <Typography.Text type="secondary">Cao nhất {best.title.toLowerCase()}: {compactCurrency(best.revenue)}</Typography.Text>}
+                  </>
                 ) : (
                   <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có doanh thu trong kỳ." />
                 )}
