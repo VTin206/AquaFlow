@@ -1,13 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { db } from '../../mocks/db'
 import { mockError, mockRequest } from '../../mocks/mockRequest'
-import { createdAtOf, minutesLate, type Order } from '../orders/types'
+import { createdAtOf, minutesLate, type Order, type OrderLine } from '../orders/types'
 
 // Đang tính từ dữ liệu mẫu. Khi backend có API báo cáo, thay bằng api.get('/reports/summary', { params: range }).
 
 /** Khoảng ngày "yyyy-mm-dd", tính cả hai đầu, theo giờ địa phương. */
 export type ReportRange = { from: string; to: string }
 
+/** `revenue` là doanh thu thuần trong ngày: tiền hàng + phí giao của đơn giao trong ngày, trừ hàng khách trả trong ngày. */
 export type DailyRevenue = { date: string; revenue: number; collected: number; orders: number }
 
 export type ProductReportRow = {
@@ -30,7 +31,19 @@ export type DriverReportRow = { driver: string; delivered: number; failed: numbe
 export type PeriodReport = {
   range: ReportRange
   days: DailyRevenue[]
-  sales: { orders: number; delivered: number; cancelled: number; revenue: number; deliveryFees: number; returnsValue: number; averageOrder: number }
+  sales: {
+    orders: number
+    delivered: number
+    cancelled: number
+    /** Tiền hàng của đơn giao trong kỳ, theo giá đã chốt (chưa trừ hàng trả). */
+    goods: number
+    deliveryFees: number
+    /** Hàng khách trả trong kỳ, tính theo ngày trả chứ không theo ngày giao. */
+    returnsValue: number
+    /** Doanh thu thuần = tiền hàng + phí giao − hàng trả. */
+    net: number
+    averageOrder: number
+  }
   cash: { collected: number; cash: number; transfer: number; refunds: number }
   deposits: { collected: number; refunded: number; bottlesOut: number; bottlesBack: number; bottlesLost: number }
   delivery: { delivered: number; failedAttempts: number; withAppointment: number; late: number; averageLateMinutes: number; drivers: DriverReportRow[] }
@@ -54,6 +67,10 @@ const daysBetween = ({ from, to }: ReportRange) => {
 
 const allOrders = () => [...db.archivedOrders, ...db.orders]
 
+const valueOf = (lines: OrderLine[]) => lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0)
+/** Tiền hàng + phí giao theo các dòng đã chốt. Không dùng `order.total` vì trả hàng sau này làm giảm nó. */
+const grossOf = (order: Order) => valueOf(order.lines) + order.deliveryFee
+
 /** Giá vốn bình quân theo các lô đã nhập; chưa có lô thì ước 70% giá bán. */
 const unitCost = (productId: string) => {
   const lots = db.lots.filter((lot) => lot.productId === productId && lot.received > 0)
@@ -67,20 +84,24 @@ function buildReport(range: ReportRange): PeriodReport {
   const inRange = (iso?: string) => Boolean(iso) && localDay(iso!) >= range.from && localDay(iso!) <= range.to
   const orders = allOrders()
   const created = orders.filter((order) => inRange(createdAtOf(order)))
-  // Doanh thu ghi nhận khi khách nhận hàng; đơn đã hủy không tính.
+  // Doanh thu ghi nhận khi khách nhận hàng; đơn đã hủy không tính. Hàng trả trừ vào kỳ khách trả.
   const delivered = orders.filter((order) => order.status !== 'Đã hủy' && inRange(order.deliveredAt))
   const payments = orders.flatMap((order) => order.payments).filter((payment) => inRange(payment.recordedAt))
-  const returns = orders.flatMap((order) => order.returns ?? []).filter((item) => inRange(item.at))
+  const returnsOf = (list: Order[]) => list.flatMap((order) => order.returns ?? []).filter((item) => inRange(item.at))
+  const returns = returnsOf(orders)
 
   const days = daysBetween(range).map((date) => ({
     date,
-    revenue: delivered.filter((order) => localDay(order.deliveredAt!) === date).reduce((sum, order) => sum + order.total, 0),
+    revenue:
+      delivered.filter((order) => localDay(order.deliveredAt!) === date).reduce((sum, order) => sum + grossOf(order), 0) -
+      returns.filter((item) => localDay(item.at) === date).reduce((sum, item) => sum + valueOf(item.lines), 0),
     collected: payments.filter((payment) => localDay(payment.recordedAt) === date).reduce((sum, payment) => sum + (payment.refund ? -payment.amount : payment.amount), 0),
     orders: created.filter((order) => localDay(createdAtOf(order)!) === date).length,
   }))
 
-  const revenue = delivered.reduce((sum, order) => sum + order.total, 0)
+  const goods = delivered.reduce((sum, order) => sum + valueOf(order.lines), 0)
   const deliveryFees = delivered.reduce((sum, order) => sum + order.deliveryFee, 0)
+  const returnsValue = returns.reduce((sum, item) => sum + valueOf(item.lines), 0)
   const sumOf = (method: string, refund: boolean) =>
     payments.filter((payment) => payment.method === method && Boolean(payment.refund) === refund).reduce((sum, payment) => sum + payment.amount, 0)
   const refunds = payments.filter((payment) => payment.refund).reduce((sum, payment) => sum + payment.amount, 0)
@@ -106,7 +127,9 @@ function buildReport(range: ReportRange): PeriodReport {
   const channels = (['Tại quầy', 'Điện thoại', 'Tin nhắn', 'Website'] as const).map((channel) => ({
     channel,
     orders: created.filter((order) => order.channel === channel).length,
-    revenue: delivered.filter((order) => order.channel === channel).reduce((sum, order) => sum + order.total, 0),
+    revenue:
+      delivered.filter((order) => order.channel === channel).reduce((sum, order) => sum + grossOf(order), 0) -
+      returnsOf(orders.filter((order) => order.channel === channel)).reduce((sum, item) => sum + valueOf(item.lines), 0),
   }))
 
   const receipts = db.receipts.filter((receipt) => receipt.receivedAt >= range.from && receipt.receivedAt <= range.to)
@@ -143,7 +166,6 @@ function buildReport(range: ReportRange): PeriodReport {
   const productRows = [...products.values()].sort((a, b) => b.revenue - a.revenue)
   const goodsRevenue = productRows.reduce((sum, row) => sum + row.revenue, 0)
   const cost = productRows.reduce((sum, row) => sum + row.cost, 0)
-  const returnsValue = returns.flatMap((item) => item.lines).reduce((sum, line) => sum + line.quantity * line.unitPrice, 0)
 
   return {
     range,
@@ -152,10 +174,11 @@ function buildReport(range: ReportRange): PeriodReport {
       orders: created.length,
       delivered: delivered.length,
       cancelled: created.filter((order) => order.status === 'Đã hủy').length,
-      revenue,
+      goods,
       deliveryFees,
       returnsValue,
-      averageOrder: delivered.length ? Math.round(revenue / delivered.length) : 0,
+      net: goods + deliveryFees - returnsValue,
+      averageOrder: delivered.length ? Math.round((goods + deliveryFees) / delivered.length) : 0,
     },
     cash: { collected: payments.reduce((sum, payment) => sum + (payment.refund ? -payment.amount : payment.amount), 0), cash: sumOf('Tiền mặt', false), transfer: sumOf('Chuyển khoản', false), refunds },
     deposits: {

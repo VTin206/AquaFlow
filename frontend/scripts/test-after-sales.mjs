@@ -167,7 +167,11 @@ try {
     await orderService.pay(order.id, { amount: 190000, method: 'Chuyển khoản', reference: 'FT1' })
     await orderService.returnItems(order.id, { lines: [{ productId: 'P-003', quantity: 1 }], reason: 'Hỏng', restock: false, refundMethod: 'Tiền mặt' })
     const report = await reportService.summary({ from: today, to: today })
-    assert.equal(report.sales.revenue, 100000)
+    assert.equal(report.sales.goods, 180000)
+    assert.equal(report.sales.deliveryFees, 10000)
+    assert.equal(report.sales.returnsValue, 90000)
+    assert.equal(report.sales.net, 100000)
+    assert.equal(report.days[0].revenue, 100000)
     assert.equal(report.cash.transfer, 190000)
     assert.equal(report.cash.refunds, 90000)
     assert.equal(report.cash.collected, 100000)
@@ -177,6 +181,24 @@ try {
     assert.equal(report.profit.cost, 60000)
     assert.equal(report.days.length, 1)
     await assert.rejects(reportService.summary({ from: today, to: '2000-01-01' }), /không hợp lệ/)
+  })
+
+  await test('period report: a later return counts in the return period, not the delivery period', async () => {
+    const today = new Date().toLocaleDateString('sv-SE')
+    const order = await deliveredOrder()
+    await orderService.pay(order.id, { amount: 190000, method: 'Tiền mặt' })
+    await orderService.returnItems(order.id, { lines: [{ productId: 'P-003', quantity: 1 }], reason: 'Hỏng', restock: false, refundMethod: 'Tiền mặt' })
+    // Đẩy ngày trả sang hôm sau: kỳ giao hàng phải giữ nguyên doanh thu.
+    const stored = db.orders.find((item) => item.id === order.id)
+    const tomorrow = new Date(Date.now() + 86_400_000)
+    stored.returns[0].at = tomorrow.toISOString()
+    const deliveryDay = await reportService.summary({ from: today, to: today })
+    assert.equal(deliveryDay.sales.net, 190000)
+    assert.equal(deliveryDay.sales.returnsValue, 0)
+    const returnDay = tomorrow.toLocaleDateString('sv-SE')
+    const later = await reportService.summary({ from: returnDay, to: returnDay })
+    assert.equal(later.sales.net, -90000)
+    assert.equal(later.sales.returnsValue, 90000)
   })
 
   await test('VietQR payload: EMVCo fields, amount, ASCII note and CRC', async () => {

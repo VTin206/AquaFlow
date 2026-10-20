@@ -54,9 +54,10 @@ function exportReport(report: PeriodReport) {
     ['Báo cáo AquaFlow', `${range.from} đến ${range.to}`],
     [],
     ['Chỉ tiêu', 'Giá trị'],
-    ['Doanh thu (đơn đã giao)', sales.revenue],
-    ['Trong đó phí giao', sales.deliveryFees],
-    ['Hàng khách trả lại', sales.returnsValue],
+    ['Tiền hàng (đơn đã giao)', sales.goods],
+    ['Phí giao', sales.deliveryFees],
+    ['Trừ hàng khách trả trong kỳ', -sales.returnsValue],
+    ['Doanh thu thuần', sales.net],
     ['Đơn tạo trong kỳ', sales.orders],
     ['Đơn đã giao', sales.delivered],
     ['Đơn hủy', sales.cancelled],
@@ -133,7 +134,7 @@ export function ReportsPage() {
           <Row gutter={[16, 16]} className="af-stat-row">
             <Col xs={12} xl={6}>
               <Card loading={loading}>
-                <Statistic title="Doanh thu (đơn đã giao)" value={currency(report?.sales.revenue ?? 0)} />
+                <Statistic title="Doanh thu thuần" value={currency(report?.sales.net ?? 0)} />
                 <Typography.Text type="secondary">
                   {report?.sales.delivered ?? 0} đơn · TB {currency(report?.sales.averageOrder ?? 0)}
                 </Typography.Text>
@@ -159,9 +160,26 @@ export function ReportsPage() {
             </Col>
           </Row>
           <Row gutter={[16, 16]}>
-            <Col xs={24} xl={15}>
+            <Col xs={24} xl={8}>
+              <Card title="Doanh thu" className="af-card af-fill" loading={loading}>
+                {report && (
+                  <Descriptions
+                    size="small"
+                    column={1}
+                    items={[
+                      { key: 'goods', label: 'Tiền hàng đơn đã giao', children: currency(report.sales.goods) },
+                      { key: 'fees', label: 'Phí giao', children: currency(report.sales.deliveryFees) },
+                      { key: 'returns', label: 'Trừ hàng khách trả', children: <Money value={report.sales.returnsValue} tone="refund" /> },
+                      { key: 'net', label: <strong>Doanh thu thuần</strong>, children: <strong>{currency(report.sales.net)}</strong> },
+                    ]}
+                  />
+                )}
+                <p className="af-form-hint">Ghi nhận khi khách nhận hàng. Hàng trả trừ vào kỳ khách trả, không sửa số của kỳ đã giao.</p>
+              </Card>
+            </Col>
+            <Col xs={24} xl={16}>
               <Card
-                title="Doanh thu theo ngày"
+                title="Doanh thu thuần theo ngày"
                 extra={best && best.revenue > 0 && <Typography.Text type="secondary">Cao nhất {shortDate(best.date)}: {compactCurrency(best.revenue)}</Typography.Text>}
                 className="af-card af-fill"
                 loading={loading}
@@ -173,7 +191,9 @@ export function ReportsPage() {
                 )}
               </Card>
             </Col>
-            <Col xs={24} xl={9}>
+          </Row>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} xl={10}>
               <Card title="Tiền, cọc và vỏ" className="af-card af-fill" loading={loading}>
                 {report && (
                   <Descriptions
@@ -183,8 +203,6 @@ export function ReportsPage() {
                       { key: 'cash', label: 'Thu tiền mặt', children: <Money value={report.cash.cash} tone="paid" /> },
                       { key: 'transfer', label: 'Thu chuyển khoản', children: <Money value={report.cash.transfer} tone="paid" /> },
                       { key: 'refunds', label: 'Hoàn tiền cho khách', children: <Money value={report.cash.refunds} tone="refund" /> },
-                      { key: 'returns', label: 'Hàng khách trả lại', children: <Money value={report.sales.returnsValue} tone="refund" /> },
-                      { key: 'fees', label: 'Phí giao đã tính', children: currency(report.sales.deliveryFees) },
                       { key: 'deposit', label: 'Cọc vỏ thu / hoàn', children: (
                           <>
                             <Money value={report.deposits.collected} tone="deposit" /> / <Money value={report.deposits.refunded} tone="refund" />
@@ -199,9 +217,28 @@ export function ReportsPage() {
                 <p className="af-form-hint">Tiền cọc vỏ ghi sổ riêng, không tính vào doanh thu.</p>
               </Card>
             </Col>
+            <Col xs={24} xl={14}>
+              <Card title="Theo kênh tiếp nhận" className="af-card af-fill" loading={loading} styles={{ body: { padding: 0 } }}>
+                {report && (
+                  <Table
+                    rowKey="channel"
+                    size="small"
+                    className="af-data-table"
+                    pagination={false}
+                    dataSource={report.channels}
+                    scroll={{ x: 360 }}
+                    columns={[
+                      { title: 'Kênh', dataIndex: 'channel' },
+                      { title: 'Đơn tạo', dataIndex: 'orders', align: 'right', width: 90 },
+                      { title: 'Doanh thu', dataIndex: 'revenue', align: 'right', width: 140, render: currency },
+                    ]}
+                  />
+                )}
+              </Card>
+            </Col>
           </Row>
           <Row gutter={[16, 16]}>
-            <Col xs={24} xl={14}>
+            <Col xs={24}>
               <Card title="Giao hàng" className="af-card af-fill" loading={loading} styles={{ body: { paddingTop: 12 } }}>
                 {report && (
                   <>
@@ -228,25 +265,6 @@ export function ReportsPage() {
                       scroll={{ x: 420 }}
                     />
                   </>
-                )}
-              </Card>
-            </Col>
-            <Col xs={24} xl={10}>
-              <Card title="Theo kênh tiếp nhận" className="af-card af-fill" loading={loading} styles={{ body: { padding: 0 } }}>
-                {report && (
-                  <Table
-                    rowKey="channel"
-                    size="small"
-                    className="af-data-table"
-                    pagination={false}
-                    dataSource={report.channels}
-                    scroll={{ x: 360 }}
-                    columns={[
-                      { title: 'Kênh', dataIndex: 'channel' },
-                      { title: 'Đơn tạo', dataIndex: 'orders', align: 'right', width: 90 },
-                      { title: 'Doanh thu', dataIndex: 'revenue', align: 'right', width: 140, render: currency },
-                    ]}
-                  />
                 )}
               </Card>
             </Col>
