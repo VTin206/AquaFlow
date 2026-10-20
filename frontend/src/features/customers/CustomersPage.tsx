@@ -99,22 +99,22 @@ export function CustomersPage() {
       ) : (
         <>
           <Row gutter={[12, 12]} className="af-stat-row">
-            <Col xs={12} lg={6}>
+            <Col xs={24} sm={12} lg={6}>
               <Card loading={customersQuery.isPending}>
                 <Statistic title="Khách hàng" value={customers.length} />
               </Card>
             </Col>
-            <Col xs={12} lg={6}>
+            <Col xs={24} sm={12} lg={6}>
               <Card loading={customersQuery.isPending}>
                 <Statistic className={totalDebt > 0 ? 'af-stat-due' : 'af-stat-paid'} title="Còn phải thu" value={totalDebt} formatter={(value) => currency(Number(value))} />
               </Card>
             </Col>
-            <Col xs={12} lg={6}>
+            <Col xs={24} sm={12} lg={6}>
               <Card loading={customersQuery.isPending}>
                 <Statistic title="Vỏ khách đang giữ" value={totalBottles} suffix="vỏ" />
               </Card>
             </Col>
-            <Col xs={12} lg={6}>
+            <Col xs={24} sm={12} lg={6}>
               <Card loading={customersQuery.isPending}>
                 <Statistic className="af-stat-deposit" title="Tiền cọc đang giữ" value={totalDeposit} formatter={(value) => currency(Number(value))} />
               </Card>

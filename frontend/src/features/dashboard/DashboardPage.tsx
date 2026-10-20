@@ -4,6 +4,7 @@ import { ArrowRight, Boxes, CircleCheck, Clock3, PackagePlus, Plus, ShoppingBag,
 import { Link } from 'react-router'
 import { BarChart } from '../../shared/components/BarChart'
 import { Page } from '../../shared/components/Page'
+import { PanelHeading } from '../../shared/components/PanelHeading'
 import { QueryError } from '../../shared/components/QueryError'
 import { compactCurrency, currency, shortDate } from '../../shared/utils/format'
 import { ReceiveStockModal } from '../inventory/components/ReceiveStockModal'
@@ -48,7 +49,7 @@ export function DashboardPage() {
     >
       <ConfigProvider theme={{ components: { Card: { bodyPadding: 14 }, Statistic: { contentFontSize: 'clamp(18px, 1.6vw, 22px)', lineHeight: 1.3 } } }}>
         <Row gutter={[12, 12]} className="af-stat-row af-dashboard-stats">
-          <Col xs={12} xl={6}>
+          <Col xs={24} sm={12} xl={6}>
             <Card loading={ordersQuery.isPending} className="af-metric af-metric-revenue">
               <div className="af-metric-top">
                 <span>Doanh thu đã hoàn tất</span>
@@ -63,7 +64,7 @@ export function DashboardPage() {
               </div>
             </Card>
           </Col>
-          <Col xs={12} xl={6}>
+          <Col xs={24} sm={12} xl={6}>
             <Link to="/orders" className="af-metric-link">
               <Card hoverable loading={ordersQuery.isPending} className="af-metric">
                 <div className="af-metric-top">
@@ -80,7 +81,7 @@ export function DashboardPage() {
               </Card>
             </Link>
           </Col>
-          <Col xs={12} xl={6}>
+          <Col xs={24} sm={12} xl={6}>
             <Link to="/delivery" className="af-metric-link">
               <Card hoverable loading={ordersQuery.isPending} className="af-metric">
                 <div className="af-metric-top">
@@ -97,7 +98,7 @@ export function DashboardPage() {
               </Card>
             </Link>
           </Col>
-          <Col xs={12} xl={6}>
+          <Col xs={24} sm={12} xl={6}>
             <Link to="/inventory" className="af-metric-link">
               <Card hoverable loading={productsQuery.isPending} className="af-metric">
                 <div className="af-metric-top">
@@ -125,14 +126,10 @@ export function DashboardPage() {
         <Col xs={24} xl={15}>
           <Card
             title={
-              <span className="af-panel-title">
-                Đơn chờ xác nhận <span className="af-count">{ordersQuery.isError ? '—' : pending.length}</span>
-              </span>
-            }
-            extra={
-              <Link to="/orders" className="af-text-link">
-                Xem đơn hàng <ArrowRight size={14} />
-              </Link>
+              <PanelHeading
+                title={<span className="af-panel-title">Đơn chờ xác nhận <span className="af-count">{ordersQuery.isError ? '—' : pending.length}</span></span>}
+                extra={<Link to="/orders" className="af-text-link">Xem đơn hàng <ArrowRight size={14} /></Link>}
+              />
             }
             className="af-card af-fill"
             loading={ordersQuery.isPending}
@@ -175,14 +172,10 @@ export function DashboardPage() {
         <Col xs={24} xl={9}>
           <Card
             title={
-              <span className="af-panel-title">
-                Cần nhập thêm <span className="af-count">{productsQuery.isError ? '—' : lowStock.length}</span>
-              </span>
-            }
-            extra={
-              <Link to="/inventory" className="af-text-link">
-                Xem kho <ArrowRight size={14} />
-              </Link>
+              <PanelHeading
+                title={<span className="af-panel-title">Cần nhập thêm <span className="af-count">{productsQuery.isError ? '—' : lowStock.length}</span></span>}
+                extra={<Link to="/inventory" className="af-text-link">Xem kho <ArrowRight size={14} /></Link>}
+              />
             }
             className="af-card af-fill"
             loading={productsQuery.isPending}
@@ -232,7 +225,7 @@ export function DashboardPage() {
       </div>
       <Row gutter={[20, 20]}>
         <Col xs={24} xl={9}>
-          <Card title="Doanh thu 7 ngày" extra={<Tag variant="filled">Dữ liệu mẫu</Tag>} className="af-card af-fill" loading={revenueQuery.isPending}>
+          <Card title={<PanelHeading title="Doanh thu 7 ngày" extra={<Tag variant="filled">Dữ liệu mẫu</Tag>} />} className="af-card af-fill" loading={revenueQuery.isPending}>
             {revenueQuery.isError ? (
               <QueryError error={revenueQuery.error} onRetry={revenueQuery.refetch} />
             ) : lastWeek.length === 0 ? (

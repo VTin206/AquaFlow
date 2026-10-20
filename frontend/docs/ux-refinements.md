@@ -68,3 +68,21 @@ không phải xác nhận nghiệp vụ với API thật.
 8 nhóm `test:after-sales`. Chrome với profile tạm đã xác minh phân trang đơn,
 chi tiết/chuyển trạng thái, tìm kiếm/rỗng/xóa lọc, hồ sơ khách, điền sẵn tên
 khi tạo đơn, bảng desktop, thẻ 320px và đặt đơn demo giữ nguyên tổng tiền.
+
+## Rà soát căn lề và màn hình nhỏ
+
+- Thanh trên cùng ở màn hình tối đa 360px chỉ giữ chữ AquaFlow, dành đủ
+  chỗ cho các nút cửa hàng, thông báo và tài khoản.
+- Thống kê Tổng quan, Khách hàng và Báo cáo dùng một cột dưới 576px để
+  số tiền đầy đủ không bị tràn; các breakpoint lớn giữ bố cục nhiều cột.
+- `PanelHeading` cho phép tiêu đề và thao tác/chú thích xuống dòng trong
+  các thẻ Tổng quan và biểu đồ doanh thu Báo cáo.
+- Bộ chọn kỳ báo cáo giữ chiều rộng đủ đọc ngày; nút xuất CSV xuống hàng
+  khi thiếu chỗ. Bảng theo kênh tiếp nhận dùng cỡ middle, nhận lề 20px
+  từ theme chung như các bảng chính.
+
+Đã chạy lint và build (bao gồm TypeScript). Kiểm tra Chrome với dữ liệu
+demo trên ba trang ở 320, 360, 390, 575, 576, 768, 991, 1024 và 1440px:
+không tràn trang, không chồng logo/nút, không tràn thẻ thống kê.
+Đã xem ảnh 320px và 1440px, xác minh lề tiêu đề/dòng dữ liệu bảng theo
+kênh đều 20px, và chọn kỳ “Hôm nay” cập nhật hai ngày trong bộ lọc.

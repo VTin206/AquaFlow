@@ -567,6 +567,9 @@ body {
   display: inline-flex;
   gap: 8px;
 }
+.af-panel-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding-block: 12px; white-space: normal; }
+.af-panel-heading-title { min-width: 0; }
+.af-panel-heading-extra { display: inline-flex; align-items: center; font-size: 13px; font-weight: 400; }
 .af-text-link,
 .af-list-more {
   font-size: 12px;
@@ -907,6 +910,12 @@ body {
     margin-top: 2px;
   }
 }
+@media (max-width: 360px) {
+  .af-topbar-brand .af-brand-mark { display: none; }
+}
+
+.af-report-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.af-report-range { width: 286px; max-width: 100%; }
 
 .af-metric-link:focus-visible,
 .af-topbar-brand:focus-visible,

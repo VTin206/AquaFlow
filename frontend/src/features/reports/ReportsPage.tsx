@@ -5,6 +5,7 @@ import { Download } from 'lucide-react'
 import { BarChart } from '../../shared/components/BarChart'
 import { Money } from '../../shared/components/Money'
 import { Page } from '../../shared/components/Page'
+import { PanelHeading } from '../../shared/components/PanelHeading'
 import { QueryError } from '../../shared/components/QueryError'
 import { downloadCsv } from '../../shared/utils/csv'
 import { compactCurrency, currency, shortDate } from '../../shared/utils/format'
@@ -99,7 +100,7 @@ export function ReportsPage() {
       title="Báo cáo"
       description="Doanh thu, tiền thu, giao hàng và nhập–xuất–tồn theo kỳ, tính từ giao dịch."
       actions={
-        <>
+        <div className="af-report-actions">
           <DatePicker.RangePicker
             aria-label="Chọn kỳ báo cáo"
             allowClear={false}
@@ -108,7 +109,7 @@ export function ReportsPage() {
             presets={presets}
             disabledDate={(day) => day.isAfter(dayjs(), 'day')}
             onChange={(value) => value?.[0] && value[1] && setDates([value[0], value[1]])}
-            style={{ maxWidth: '100%' }}
+            className="af-report-range"
           />
           <Button
             icon={<Download size={16} />}
@@ -121,7 +122,7 @@ export function ReportsPage() {
           >
             Xuất CSV
           </Button>
-        </>
+        </div>
       }
     >
       {reportQuery.isError ? (
@@ -131,7 +132,7 @@ export function ReportsPage() {
       ) : (
         <>
           <Row gutter={[16, 16]} className="af-stat-row">
-            <Col xs={12} xl={6}>
+            <Col xs={24} sm={12} xl={6}>
               <Card loading={loading}>
                 <Statistic title="Doanh thu (đơn đã giao)" value={currency(report?.sales.revenue ?? 0)} />
                 <Typography.Text type="secondary">
@@ -139,19 +140,19 @@ export function ReportsPage() {
                 </Typography.Text>
               </Card>
             </Col>
-            <Col xs={12} xl={6}>
+            <Col xs={24} sm={12} xl={6}>
               <Card loading={loading}>
                 <Statistic className="af-stat-paid" title="Tiền thực thu" value={currency(report?.cash.collected ?? 0)} />
                 <Typography.Text type="secondary">Đã trừ hoàn {currency(report?.cash.refunds ?? 0)}</Typography.Text>
               </Card>
             </Col>
-            <Col xs={12} xl={6}>
+            <Col xs={24} sm={12} xl={6}>
               <Card loading={loading}>
                 <Statistic className={(report?.profit.gross ?? 0) < 0 ? 'af-stat-refund' : 'af-stat-paid'} title="Lãi gộp ước tính" value={currency(report?.profit.gross ?? 0)} />
                 <Typography.Text type="secondary">Biên {margin}% · giá vốn bình quân lô</Typography.Text>
               </Card>
             </Col>
-            <Col xs={12} xl={6}>
+            <Col xs={24} sm={12} xl={6}>
               <Card loading={loading}>
                 <Statistic title="Đơn tạo trong kỳ" value={report?.sales.orders ?? 0} />
                 <Typography.Text type="secondary">{report?.sales.cancelled ?? 0} đơn hủy</Typography.Text>
@@ -161,8 +162,7 @@ export function ReportsPage() {
           <Row gutter={[16, 16]}>
             <Col xs={24} xl={15}>
               <Card
-                title="Doanh thu theo ngày"
-                extra={best && best.revenue > 0 && <Typography.Text type="secondary">Cao nhất {shortDate(best.date)}: {compactCurrency(best.revenue)}</Typography.Text>}
+                title={<PanelHeading title="Doanh thu theo ngày" extra={best && best.revenue > 0 && <Typography.Text type="secondary">Cao nhất {shortDate(best.date)}: {compactCurrency(best.revenue)}</Typography.Text>} />}
                 className="af-card af-fill"
                 loading={loading}
               >
@@ -236,14 +236,14 @@ export function ReportsPage() {
                 {report && (
                   <Table
                     rowKey="channel"
-                    size="small"
+                    size="middle"
                     className="af-data-table"
                     pagination={false}
                     dataSource={report.channels}
                     scroll={{ x: 360 }}
                     columns={[
                       { title: 'Kênh', dataIndex: 'channel' },
-                      { title: 'Đơn tạo', dataIndex: 'orders', align: 'right', width: 90 },
+                      { title: 'Đơn tạo', dataIndex: 'orders', align: 'right', width: 110 },
                       { title: 'Doanh thu', dataIndex: 'revenue', align: 'right', width: 140, render: currency },
                     ]}
                   />
