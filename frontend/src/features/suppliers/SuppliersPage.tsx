@@ -9,8 +9,7 @@ import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
 import { SupplierFormModal } from './components/SupplierFormModal'
 import { useSuppliers } from './useSuppliers'
 import type { Supplier } from './types'
-
-const searchable = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase()
+import { matchesSearch } from '../../shared/utils/search'
 
 type SortColumn = ReturnType<typeof useColumnSort<Supplier>>['column']
 
@@ -37,9 +36,9 @@ export function SuppliersPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [adding, setAdding] = useState(false)
-  const keyword = searchable(query.trim())
+  const keyword = query.trim()
   const suppliers = suppliersQuery.data ?? []
-  const visible = suppliers.filter((supplier) => searchable([supplier.id, supplier.name, supplier.contactName, supplier.phone, supplier.email, supplier.address].join(' ')).includes(keyword))
+  const visible = suppliers.filter((supplier) => matchesSearch(query, [supplier.id, supplier.name, supplier.contactName, supplier.phone, supplier.email, supplier.address].join(' '), supplier.phone))
 
   return (
     <Page title="Nhà cung cấp" description="Quản lý thông tin và đầu mối liên hệ của các đơn vị cung cấp hàng."

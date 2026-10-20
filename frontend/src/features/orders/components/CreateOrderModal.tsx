@@ -51,8 +51,10 @@ function CreateOrderDialog({ open, onClose, onCreated, defaultCustomer, defaultP
       destroyOnHidden
     >
       <Form<OrderDraft>
+        name="create-order"
         form={form}
         layout="vertical"
+        scrollToFirstError={{ block: 'center', focus: true }}
         initialValues={{
           customer: defaultCustomer,
           phone: defaultPhone,

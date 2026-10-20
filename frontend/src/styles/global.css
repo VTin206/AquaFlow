@@ -471,6 +471,9 @@ body {
 .af-text-warning {
   color: var(--af-warning) !important;
 }
+.af-text-danger {
+  color: var(--af-danger) !important;
+}
 .af-money-stack > small { font-size: 12px; }
 .af-money.is-due, .af-stat-due .ant-statistic-content { color: var(--af-money-due); }
 .af-money.is-paid, .af-stat-paid .ant-statistic-content { color: var(--af-money-paid); }
@@ -972,6 +975,16 @@ body {
   flex-wrap: wrap;
   gap: 10px;
   max-width: 100%;
+}
+.af-filter-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 20px 12px;
+  color: var(--af-text-secondary);
+  font-size: 13px;
 }
 .af-detail-actions {
   margin-bottom: 16px;

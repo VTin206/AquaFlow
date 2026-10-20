@@ -11,17 +11,13 @@ import { LotsPanel } from './components/LotsPanel'
 import { ReceiptsPanel } from './components/ReceiptsPanel'
 import { ReceiveStockModal } from './components/ReceiveStockModal'
 import { useExpiryWarningDays } from '../settings/settingsService'
-import { daysUntilExpiry } from './expiry'
+import { daysUntilExpiry, expiryStatus } from './expiry'
+import { matchesSearch } from '../../shared/utils/search'
 import { isLowStock, type Product } from './types'
 import { useProducts } from './useProducts'
 
-type Filter = 'all' | 'low' | 'expiring'
+type Filter = 'all' | 'low' | 'expiring' | 'expired'
 type View = 'stock' | 'lots' | 'receipts'
-
-const isExpiringSoon = (product: Product, warningDays: number) => {
-  const days = daysUntilExpiry(product.expiry)
-  return days !== null && days <= warningDays
-}
 
 export function InventoryPage() {
   const productsQuery = useProducts()
@@ -33,11 +29,11 @@ export function InventoryPage() {
 
   const products = productsQuery.data ?? []
   const lowStock = products.filter(isLowStock)
-  const expiring = products.filter((product) => isExpiringSoon(product, warningDays))
-  const keyword = query.trim().toLowerCase()
+  const expiring = products.filter((product) => product.stock > 0 && expiryStatus(product.expiry, warningDays) === 'expiring')
+  const expired = products.filter((product) => product.stock > 0 && expiryStatus(product.expiry, warningDays) === 'expired')
   const visible = products
-    .filter((product) => (filter === 'low' ? isLowStock(product) : filter === 'expiring' ? isExpiringSoon(product, warningDays) : true))
-    .filter((product) => `${product.name} ${product.sku} ${product.brand}`.toLowerCase().includes(keyword))
+    .filter((product) => (filter === 'low' ? isLowStock(product) : filter === 'expiring' ? expiring.includes(product) : filter === 'expired' ? expired.includes(product) : true))
+    .filter((product) => matchesSearch(query, `${product.name} ${product.sku} ${product.brand}`))
 
   const sort = useColumnSort<Product>()
   const columns: TableColumnsType<Product> = [
@@ -54,7 +50,7 @@ export function InventoryPage() {
       ),
     },
     {
-      ...sort.column('Có thể bán', 'stock', 'stockRatio'),
+      ...sort.column('Tồn kho', 'stock', 'stockRatio'),
       dataIndex: 'stock',
       width: 240,
       sorter: (a, b) => a.stock / a.threshold - b.stock / b.threshold,
@@ -85,7 +81,7 @@ export function InventoryPage() {
         return (
           <div className="af-cell-stack">
             <span>{expiry}</span>
-            <small className={days <= warningDays ? 'af-text-warning' : undefined}>{days < 0 ? 'Đã hết hạn' : `Còn ${days} ngày`}</small>
+            <small className={days < 0 ? 'af-text-danger' : days <= warningDays ? 'af-text-warning' : undefined}>{days < 0 ? 'Đã hết hạn' : days === 0 ? 'Hết hạn hôm nay' : `Còn ${days} ngày`}</small>
           </div>
         )
       },
@@ -94,7 +90,11 @@ export function InventoryPage() {
       title: 'Trạng thái',
       key: 'state',
       width: 130,
-      render: (_, product) => (isLowStock(product) ? <Tag color="red">Sắp hết</Tag> : <Tag color="green">Đủ hàng</Tag>),
+      render: (_, product) => expired.includes(product)
+        ? <Tag color="red">Có lô hết hạn</Tag>
+        : expiring.includes(product)
+          ? <Tag color="gold">Sắp hết hạn</Tag>
+          : isLowStock(product) ? <Tag color="red">Sắp hết</Tag> : <Tag color="green">Đủ hàng</Tag>,
     },
     {
       title: 'Thao tác',
@@ -111,7 +111,7 @@ export function InventoryPage() {
   return (
     <Page
       title="Kho hàng"
-      description="Tồn có thể bán, lô hàng theo hạn dùng và phiếu nhập kiểm nhận từ nhà cung cấp."
+      description="Theo dõi tồn kho, tách lô đã hết hạn và kiểm nhận hàng từ nhà cung cấp."
       actions={
         <Button type="primary" icon={<FilePlus2 size={16} />} onClick={() => setReceiving({})}>
           Tạo phiếu nhập
@@ -126,24 +126,29 @@ export function InventoryPage() {
         <>
           <ConfigProvider theme={{ components: { Card: { bodyPadding: 12 }, Statistic: { titleFontSize: 12, contentFontSize: 20, lineHeight: 1.4 } } }}>
             <Row gutter={[12, 12]} className="af-stat-row af-inventory-stats">
-              <Col xs={12} lg={6}>
+              <Col xs={12} lg={4}>
                 <Card loading={productsQuery.isPending}>
                   <Statistic title="Mã hàng đang kinh doanh" value={products.length} />
                 </Card>
               </Col>
-              <Col xs={12} lg={6}>
+              <Col xs={12} lg={4}>
                 <Card loading={productsQuery.isPending}>
                   <Statistic title="Tồn kho thấp" value={lowStock.length} className={lowStock.length ? 'af-stat-danger' : undefined} />
                 </Card>
               </Col>
-              <Col xs={12} lg={6}>
+              <Col xs={12} lg={4}>
                 <Card loading={productsQuery.isPending}>
                   <Statistic title={`Hết hạn trong ${warningDays} ngày`} value={expiring.length} className={expiring.length ? 'af-stat-warning' : undefined} />
                 </Card>
               </Col>
-              <Col xs={12} lg={6}>
+              <Col xs={12} lg={4}>
                 <Card loading={productsQuery.isPending}>
-                  <Statistic title="Giá trị khả dụng (giá bán)" value={currency(products.reduce((sum, item) => sum + item.stock * item.price, 0))} />
+                  <Statistic title="Mã hàng có lô hết hạn" value={expired.length} className={expired.length ? 'af-stat-danger' : undefined} />
+                </Card>
+              </Col>
+              <Col xs={24} lg={8}>
+                <Card loading={productsQuery.isPending}>
+                  <Statistic title="Giá trị tồn (giá bán)" value={currency(products.reduce((sum, item) => sum + item.stock * item.price, 0))} />
                 </Card>
               </Col>
             </Row>
@@ -174,18 +179,21 @@ export function InventoryPage() {
                       { value: 'all', label: <CountLabel label="Tất cả" count={products.length} /> },
                       { value: 'low', label: <CountLabel label="Sắp hết" count={lowStock.length} urgent /> },
                       { value: 'expiring', label: <CountLabel label="Sắp hết hạn" count={expiring.length} urgent /> },
+                      { value: 'expired', label: <span className="af-text-danger"><CountLabel label="Đã hết hạn" count={expired.length} /></span> },
                     ]}
                   />
                   <Input
                     allowClear
                     prefix={<Search size={16} className="af-input-icon" />}
                     placeholder="Tìm tên, mã hàng, thương hiệu..."
+                    aria-label="Tìm trong kho hàng"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     className="af-search"
                   />
                 </div>
                 <Table<Product>
+                  key={`${filter}:${query}`}
                   className="af-data-table"
                   size="middle"
                   rowKey="id"

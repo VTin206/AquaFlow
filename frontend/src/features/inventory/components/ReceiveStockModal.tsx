@@ -43,8 +43,10 @@ function ReceiptDialog({ open, onClose, defaultProductId }: ReceiveStockModalPro
       destroyOnHidden
     >
       <Form<ReceiptDraft>
+        name="receive-stock"
         form={form}
         layout="vertical"
+        scrollToFirstError={{ block: 'center', focus: true }}
         initialValues={{
           receivedAt: today,
           receiver: 'Nguyễn An',

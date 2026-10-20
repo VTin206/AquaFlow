@@ -12,6 +12,7 @@ import { CustomerDrawer } from './components/CustomerDrawer'
 import { CustomerFormModal } from './components/CustomerFormModal'
 import type { Customer } from './types'
 import { useCustomers } from './useCustomers'
+import { matchesSearch } from '../../shared/utils/search'
 
 export function CustomersPage() {
   const customersQuery = useCustomers()
@@ -22,8 +23,7 @@ export function CustomersPage() {
   const [orderFor, setOrderFor] = useState<Customer | null>(null)
 
   const customers = customersQuery.data ?? []
-  const keyword = query.trim().toLowerCase()
-  const visible = customers.filter((customer) => `${customer.id} ${customer.name} ${customer.phone} ${customer.area}`.toLowerCase().includes(keyword))
+  const visible = customers.filter((customer) => matchesSearch(query, `${customer.id} ${customer.name} ${customer.phone} ${customer.area}`, customer.phone))
   const totalBottles = customers.reduce((sum, customer) => sum + customer.bottlesHeld, 0)
   const totalDeposit = customers.reduce((sum, customer) => sum + customer.depositHeld, 0)
   const totalDebt = customers.reduce((sum, customer) => sum + customer.debt, 0)
@@ -133,6 +133,7 @@ export function CustomersPage() {
               />
             </div>
             <Table<Customer>
+              key={query}
               className="af-data-table"
               size="middle"
               rowKey="id"
@@ -140,7 +141,7 @@ export function CustomersPage() {
               dataSource={visible}
               loading={customersQuery.isPending}
               pagination={tablePagination}
-              locale={{ emptyText: keyword ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.' }}
+              locale={{ emptyText: query.trim() ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.' }}
               scroll={{ x: 920, y: tableScrollHeight }}
             />
           </Card>

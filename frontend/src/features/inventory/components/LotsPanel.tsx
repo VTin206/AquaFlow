@@ -6,11 +6,12 @@ import { QueryError } from '../../../shared/components/QueryError'
 import { currency } from '../../../shared/utils/format'
 import { tablePagination, tableScrollHeight } from '../../../shared/utils/table'
 import { useExpiryWarningDays } from '../../settings/settingsService'
-import { daysUntilExpiry, isoToVnDate } from '../expiry'
+import { daysUntilExpiry, expiryStatus, isoToVnDate } from '../expiry'
+import { matchesSearch } from '../../../shared/utils/search'
 import type { Lot } from '../types'
 import { useLots, useProducts } from '../useProducts'
 
-type LotFilter = 'stock' | 'expiring' | 'all'
+type LotFilter = 'stock' | 'expiring' | 'expired' | 'all'
 
 const daysLeft = (lot: Lot) => (lot.expiryDate ? daysUntilExpiry(isoToVnDate(lot.expiryDate)) : null)
 
@@ -23,11 +24,13 @@ export function LotsPanel() {
   const [query, setQuery] = useState('')
   const lots = lotsQuery.data ?? []
   const inStock = lots.filter((lot) => lot.remaining > 0)
-  const expiring = inStock.filter((lot) => (daysLeft(lot) ?? Infinity) <= warningDays)
+  const stateOf = (lot: Lot) => expiryStatus(lot.expiryDate ? isoToVnDate(lot.expiryDate) : '—', warningDays)
+  const expiring = inStock.filter((lot) => stateOf(lot) === 'expiring')
+  const expired = inStock.filter((lot) => stateOf(lot) === 'expired')
+  const eligible = inStock.filter((lot) => stateOf(lot) !== 'expired')
   const productOf = (id: string) => products.find((product) => product.id === id)
-  const keyword = query.trim().toLowerCase()
-  const visible = (filter === 'stock' ? inStock : filter === 'expiring' ? expiring : lots).filter((lot) =>
-    `${lot.lotCode} ${productOf(lot.productId)?.name ?? ''} ${lot.receiptId}`.toLowerCase().includes(keyword),
+  const visible = (filter === 'stock' ? inStock : filter === 'expiring' ? expiring : filter === 'expired' ? expired : lots).filter((lot) =>
+    matchesSearch(query, `${lot.lotCode} ${productOf(lot.productId)?.name ?? ''} ${lot.receiptId}`),
   )
 
   if (lotsQuery.isError) return <QueryError error={lotsQuery.error} onRetry={lotsQuery.refetch} />
@@ -41,12 +44,14 @@ export function LotsPanel() {
           options={[
             { value: 'stock', label: <CountLabel label="Còn hàng" count={inStock.length} /> },
             { value: 'expiring', label: <CountLabel label="Sắp hết hạn" count={expiring.length} urgent /> },
+            { value: 'expired', label: <span className="af-text-danger"><CountLabel label="Đã hết hạn" count={expired.length} /></span> },
             { value: 'all', label: <CountLabel label="Tất cả lô" count={lots.length} /> },
           ]}
         />
-        <Input allowClear prefix={<Search size={16} className="af-input-icon" />} placeholder="Tìm mã lô, sản phẩm, phiếu nhập..." value={query} onChange={(event) => setQuery(event.target.value)} className="af-search" />
+        <Input allowClear aria-label="Tìm lô hàng" prefix={<Search size={16} className="af-input-icon" />} placeholder="Tìm mã lô, sản phẩm, phiếu nhập..." value={query} onChange={(event) => setQuery(event.target.value)} className="af-search" />
       </div>
       <Table<Lot>
+        key={`${filter}:${query}`}
         className="af-data-table"
         size="middle"
         rowKey="id"
@@ -77,7 +82,7 @@ export function LotsPanel() {
               return (
                 <div className="af-cell-stack">
                   <span>{isoToVnDate(lot.expiryDate!)}</span>
-                  <small className={days <= warningDays ? 'af-text-warning' : undefined}>{days < 0 ? 'Đã hết hạn' : `Còn ${days} ngày`}</small>
+                  <small className={days < 0 ? 'af-text-danger' : days <= warningDays ? 'af-text-warning' : undefined}>{days < 0 ? 'Đã hết hạn' : days === 0 ? 'Hết hạn hôm nay' : `Còn ${days} ngày`}</small>
                 </div>
               )
             },
@@ -110,7 +115,9 @@ export function LotsPanel() {
             key: 'state',
             width: 120,
             render: (_, lot) =>
-              lot.remaining === 0 ? <Tag>Đã hết</Tag> : lot.id === inStock.find((item) => item.productId === lot.productId)?.id ? <Tag color="blue">Xuất trước</Tag> : <Tag color="default">Chờ</Tag>,
+              lot.remaining === 0 ? <Tag>Đã hết</Tag>
+                : stateOf(lot) === 'expired' ? <Tag color="red">Không xuất</Tag>
+                  : lot.id === eligible.find((item) => item.productId === lot.productId)?.id ? <Tag color="blue">Xuất trước</Tag> : <Tag color="default">Chờ</Tag>,
           },
         ]}
       />
