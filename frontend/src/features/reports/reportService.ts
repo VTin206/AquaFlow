@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { db } from '../../mocks/db'
 import { DEPOSIT_PER_BOTTLE } from '../../shared/policy'
 import { mockError, mockRequest } from '../../mocks/mockRequest'
+import { expectedHandover, tripStatus } from '../delivery/tripService'
 import { createdAtOf, minutesLate, type Order, type OrderLine } from '../orders/types'
 
 // Đang tính từ dữ liệu mẫu. Khi backend có API báo cáo, thay bằng api.get('/reports/summary', { params: range }).
@@ -49,7 +50,23 @@ export type InventoryReportRow = {
 
 export type BottleHolderRow = { customerId: string; name: string; bottles: number; deposit: number }
 
-export type DriverReportRow = { driver: string; delivered: number; failed: number; late: number }
+export type DriverReportRow = {
+  driver: string
+  delivered: number
+  failed: number
+  late: number
+  /** Chuyến đã đối soát trong kỳ (theo ngày đối soát). */
+  settledTrips: number
+  cashExpected: number
+  cashHandedOver: number
+  /** Dương: tài xế nộp thiếu; âm: nộp dư. */
+  cashShort: number
+  /** Chuyến đã về nhưng chưa đối soát, tính tới hiện tại. */
+  pendingTrips: number
+  pendingCash: number
+}
+
+export type CustomerReportRow = { key: string; name: string; phone: string; orders: number; revenue: number; lastOrder?: string; daysSince?: number }
 
 export type PeriodReport = {
   range: ReportRange
@@ -84,7 +101,25 @@ export type PeriodReport = {
       top: BottleHolderRow[]
     }
   }
-  delivery: { delivered: number; failedAttempts: number; withAppointment: number; late: number; averageLateMinutes: number; drivers: DriverReportRow[] }
+  delivery: {
+    delivered: number
+    failedAttempts: number
+    withAppointment: number
+    late: number
+    averageLateMinutes: number
+    drivers: DriverReportRow[]
+    cashShort: number
+    pendingTrips: number
+  }
+  customers: {
+    /** Khách có đơn giao trong kỳ. */
+    active: number
+    /** Đơn đầu tiên rơi vào kỳ và không có đơn trước khi dùng hệ thống. */
+    new: number
+    top: CustomerReportRow[]
+    /** Đã mua từ 2 lần, không có đơn trong 30 ngày tính tới cuối kỳ. */
+    lapsed: CustomerReportRow[]
+  }
   channels: { channel: Order['channel']; orders: number; revenue: number }[]
   products: ProductReportRow[]
   inventory: { rows: InventoryReportRow[]; openingValue: number; closingValue: number }
@@ -173,6 +208,45 @@ function buildInventory(range: ReportRange, orders: Order[]): PeriodReport['inve
   }
 }
 
+const LAPSED_DAYS = 30
+
+function buildCustomers(range: ReportRange, orders: Order[], inRange: (iso?: string) => boolean): PeriodReport['customers'] {
+  const keyOf = (order: Order) => order.customerId ?? `SĐT ${order.phone}`
+  const end = Date.parse(`${range.to}T23:59:59`)
+  const rows = new Map<string, CustomerReportRow & { first?: string; total: number; legacy: number }>()
+  for (const order of orders.filter((item) => item.status !== 'Đã hủy' && item.deliveredAt && Date.parse(item.deliveredAt) <= end)) {
+    const key = keyOf(order)
+    const profile = order.customerId ? db.customers.find((customer) => customer.id === order.customerId) : undefined
+    const row = rows.get(key) ?? { key, name: profile?.name ?? order.customer, phone: order.phone, orders: 0, revenue: 0, total: 0, legacy: profile?.legacyOrders ?? 0 }
+    row.total++
+    const created = createdAtOf(order) ?? order.deliveredAt!
+    if (!row.first || created < row.first) row.first = created
+    if (!row.lastOrder || order.deliveredAt! > row.lastOrder) row.lastOrder = order.deliveredAt
+    if (inRange(order.deliveredAt)) {
+      row.orders++
+      row.revenue += grossOf(order)
+    }
+    row.revenue -= returnsOfOrder(order, inRange)
+    rows.set(key, row)
+  }
+  const all = [...rows.values()].map((row) => ({ ...row, daysSince: row.lastOrder ? Math.floor((end - Date.parse(row.lastOrder)) / 86_400_000) : undefined }))
+  const strip = ({ key, name, phone, orders, revenue, lastOrder, daysSince }: (typeof all)[number]): CustomerReportRow => ({ key, name, phone, orders, revenue, lastOrder, daysSince })
+  const active = all.filter((row) => row.orders > 0)
+  return {
+    active: active.length,
+    new: active.filter((row) => !row.legacy && row.first && inRange(row.first)).length,
+    top: [...active].sort((a, b) => b.revenue - a.revenue).slice(0, 10).map(strip),
+    lapsed: all
+      .filter((row) => row.total + row.legacy >= 2 && (row.daysSince ?? 0) >= LAPSED_DAYS)
+      .sort((a, b) => (a.daysSince ?? 0) - (b.daysSince ?? 0))
+      .slice(0, 10)
+      .map(strip),
+  }
+}
+
+const returnsOfOrder = (order: Order, inRange: (iso?: string) => boolean) =>
+  (order.returns ?? []).filter((item) => inRange(item.at)).reduce((sum, item) => sum + valueOf(item.lines), 0)
+
 function buildReport(range: ReportRange, filters: ReportFilters = {}): PeriodReport {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(range.from) || !/^\d{4}-\d{2}-\d{2}$/.test(range.to) || range.from > range.to) throw mockError(400, 'Khoảng thời gian không hợp lệ.')
   const inRange = (iso?: string) => Boolean(iso) && localDay(iso!) >= range.from && localDay(iso!) <= range.to
@@ -218,16 +292,33 @@ function buildReport(range: ReportRange, filters: ReportFilters = {}): PeriodRep
   const homeDeliveries = delivered.filter((order) => order.method === 'Giao tận nơi')
   const lateMinutes = homeDeliveries.map((order) => minutesLate(order)).filter((minutes) => minutes > 0)
   const drivers = new Map<string, DriverReportRow>()
+  const driverRow = (driver: string) => {
+    const row = drivers.get(driver) ?? { driver, delivered: 0, failed: 0, late: 0, settledTrips: 0, cashExpected: 0, cashHandedOver: 0, cashShort: 0, pendingTrips: 0, pendingCash: 0 }
+    drivers.set(driver, row)
+    return row
+  }
   for (const { order, event } of handovers) {
-    const driver = event.by ?? 'Chưa rõ'
-    const row = drivers.get(driver) ?? { driver, delivered: 0, failed: 0, late: 0 }
+    const row = driverRow(event.by ?? 'Chưa rõ')
     if (event.message.startsWith('Giao thất bại')) row.failed++
     else {
       row.delivered++
       if (minutesLate(order) > 0) row.late++
     }
-    drivers.set(driver, row)
   }
+  // Đối soát tiền là dòng tiền của cả cửa hàng nên không lọc theo kênh.
+  for (const trip of [...db.archivedTrips, ...db.trips]) {
+    const row = driverRow(trip.driver)
+    if (trip.settlement && inRange(trip.settlement.settledAt)) {
+      row.settledTrips++
+      row.cashExpected += trip.settlement.cashExpected
+      row.cashHandedOver += trip.settlement.cashHandedOver
+      row.cashShort += trip.settlement.cashExpected - trip.settlement.cashHandedOver
+    } else if (!trip.settlement && tripStatus(trip) === 'Chờ đối soát') {
+      row.pendingTrips++
+      row.pendingCash += expectedHandover(trip).cash
+    }
+  }
+  const driverRows = [...drivers.values()].filter((row) => row.delivered || row.failed || row.settledTrips || row.pendingTrips)
 
   const channels = reportChannels.filter((channel) => !filters.channels?.length || filters.channels.includes(channel)).map((channel) => ({
     channel,
@@ -302,8 +393,11 @@ function buildReport(range: ReportRange, filters: ReportFilters = {}): PeriodRep
       withAppointment: homeDeliveries.filter((order) => order.appointment).length,
       late: lateMinutes.length,
       averageLateMinutes: lateMinutes.length ? Math.round(lateMinutes.reduce((sum, minutes) => sum + minutes, 0) / lateMinutes.length) : 0,
-      drivers: [...drivers.values()].sort((a, b) => b.delivered - a.delivered),
+      drivers: driverRows.sort((a, b) => b.delivered - a.delivered),
+      cashShort: driverRows.reduce((sum, row) => sum + row.cashShort, 0),
+      pendingTrips: driverRows.reduce((sum, row) => sum + row.pendingTrips, 0),
     },
+    customers: buildCustomers(range, orders, inRange),
     channels,
     products: productRows,
     inventory,

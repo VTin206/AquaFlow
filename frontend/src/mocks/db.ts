@@ -1,5 +1,5 @@
 import { bottleLedger, customers, initialOrders, initialProducts } from './data'
-import { archivedOrders, seedActivity, withActors } from './history'
+import { archivedOrders, archivedTrips, seedActivity, withActors } from './history'
 import { initialLots, initialReceipts } from './inventory'
 import { initialSettings } from './settings'
 import { initialSuppliers } from './suppliers'
@@ -20,6 +20,8 @@ export const db = {
   lots: structuredClone(initialLots),
   receipts: structuredClone(initialReceipts),
   trips: structuredClone(initialTrips),
+  /** Chuyến đã đối soát của các ngày trước, chỉ dùng cho báo cáo. */
+  archivedTrips: archivedTrips(archived),
   settings: structuredClone(initialSettings),
   /** Nhật ký thao tác chỉ thêm, không sửa/xóa. */
   activity: seedActivity([...archived, ...orders]),

@@ -10,7 +10,7 @@ import { downloadCsv } from '../../shared/utils/csv'
 import { compactCurrency, currency, shortDate } from '../../shared/utils/format'
 import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
 import { autoGranularity, granularityLabels, groupRevenue, type Granularity } from './periods'
-import { previousRange, reportChannels, useReport, type DriverReportRow, type InventoryReportRow, type PeriodReport, type ProductReportRow, type ReportFilters, type ReportRange } from './reportService'
+import { previousRange, reportChannels, useReport, type CustomerReportRow, type DriverReportRow, type InventoryReportRow, type PeriodReport, type ProductReportRow, type ReportFilters, type ReportRange } from './reportService'
 
 const FORMAT = 'YYYY-MM-DD'
 const toRange = ([from, to]: [Dayjs, Dayjs]): ReportRange => ({ from: from.format(FORMAT), to: to.format(FORMAT) })
@@ -53,10 +53,40 @@ const inventoryColumns: TableColumnsType<InventoryReportRow> = [
 ]
 
 const driverColumns: TableColumnsType<DriverReportRow> = [
-  { title: 'Tài xế', dataIndex: 'driver', ellipsis: true },
+  { title: 'Tài xế', dataIndex: 'driver', ellipsis: true, fixed: 'left', width: 160 },
   { title: 'Thành công', dataIndex: 'delivered', align: 'right', width: 100 },
   { title: 'Thất bại', dataIndex: 'failed', align: 'right', width: 90, render: (value: number) => (value ? <Tag color="red">{value}</Tag> : 0) },
   { title: 'Trễ hẹn', dataIndex: 'late', align: 'right', width: 90, render: (value: number) => (value ? <Tag color="orange">{value}</Tag> : 0) },
+  { title: 'Chuyến đối soát', dataIndex: 'settledTrips', align: 'right', width: 120, render: dash },
+  { title: 'Tiền mặt phải nộp', dataIndex: 'cashExpected', align: 'right', width: 140, render: currency },
+  { title: 'Đã nộp', dataIndex: 'cashHandedOver', align: 'right', width: 130, render: (value: number) => <Money value={value} tone="paid" /> },
+  {
+    title: 'Chênh lệch',
+    dataIndex: 'cashShort',
+    align: 'right',
+    width: 130,
+    sorter: (a, b) => a.cashShort - b.cashShort,
+    render: (value: number) => (value > 0 ? <Money value={value} tone="refund" prefix="Thiếu " /> : value < 0 ? `Dư ${currency(-value)}` : 'Đủ'),
+  },
+  {
+    title: 'Chờ đối soát',
+    key: 'pending',
+    align: 'right',
+    width: 150,
+    render: (_, row) => (row.pendingTrips ? <Tag color="orange">{row.pendingTrips} chuyến · {compactCurrency(row.pendingCash)}</Tag> : '—'),
+  },
+]
+
+const customerColumns: TableColumnsType<CustomerReportRow> = [
+  { title: 'Khách hàng', dataIndex: 'name', ellipsis: true, render: (name: string, row) => <span title={row.phone}>{name}</span> },
+  { title: 'Đơn', dataIndex: 'orders', align: 'right', width: 60 },
+  { title: 'Doanh thu', dataIndex: 'revenue', align: 'right', width: 130, render: currency },
+]
+
+const lapsedColumns: TableColumnsType<CustomerReportRow> = [
+  { title: 'Khách hàng', dataIndex: 'name', ellipsis: true, render: (name: string, row) => <span title={row.phone}>{name}</span> },
+  { title: 'SĐT', dataIndex: 'phone', width: 120 },
+  { title: 'Lần cuối', dataIndex: 'daysSince', align: 'right', width: 110, render: (days: number) => `${days} ngày trước` },
 ]
 
 /** Gom các phần của báo cáo thành một tệp CSV. */
@@ -99,8 +129,16 @@ function exportReport(report: PeriodReport, filters: ReportFilters) {
     ['Nhập – xuất – tồn', 'Đơn vị', 'Tồn đầu kỳ', 'Nhập NCC', 'Khách trả nhập lại', 'Xuất bán', 'Tồn cuối kỳ', 'Hỏng khi nhận', 'Giá trị tồn cuối'],
     ...report.inventory.rows.map((row) => [row.name, row.unit, row.opening, row.received, row.restocked, row.issued, row.closing, row.damaged, row.closingValue]),
     [],
-    ['Tài xế', 'Thành công', 'Thất bại', 'Trễ hẹn'],
-    ...delivery.drivers.map((row) => [row.driver, row.delivered, row.failed, row.late]),
+    ['Tài xế', 'Thành công', 'Thất bại', 'Trễ hẹn', 'Chuyến đối soát', 'Tiền mặt phải nộp', 'Đã nộp', 'Nộp thiếu', 'Chuyến chờ đối soát', 'Tiền chờ đối soát'],
+    ...delivery.drivers.map((row) => [row.driver, row.delivered, row.failed, row.late, row.settledTrips, row.cashExpected, row.cashHandedOver, row.cashShort, row.pendingTrips, row.pendingCash]),
+    [],
+    ['Khách mua trong kỳ', report.customers.active],
+    ['Khách mới', report.customers.new],
+    ['Khách mua nhiều nhất', 'SĐT', 'Đơn', 'Doanh thu'],
+    ...report.customers.top.map((row) => [row.name, row.phone, row.orders, row.revenue]),
+    [],
+    [`Lâu chưa đặt lại (từ ${LAPSED_LABEL})`, 'SĐT', 'Số ngày từ lần cuối'],
+    ...report.customers.lapsed.map((row) => [row.name, row.phone, row.daysSince]),
   ])
 }
 
@@ -122,6 +160,8 @@ function Delta({ current, previous, upIsGood = true }: { current: number; previo
     </Typography.Text>
   )
 }
+
+const LAPSED_LABEL = '30 ngày'
 
 const methodOptions = [
   { value: 'Giao tận nơi', label: 'Giao tận nơi' },
@@ -200,7 +240,7 @@ export function ReportsPage() {
       {filtered && (
         <p className="af-form-hint af-report-filter-hint">
           Đang lọc: {[channels.length ? `kênh ${channels.join(', ')}` : '', method ? method.toLowerCase() : ''].filter(Boolean).join(' · ')}. Bộ lọc áp dụng cho doanh thu, tiền thu,
-          giao hàng và bán hàng; tồn kho, vỏ cọc và nhập hàng vẫn tính cho cả cửa hàng.
+          giao hàng, bán hàng và khách hàng; tồn kho, vỏ cọc, nhập hàng và đối soát tài xế vẫn tính cho cả cửa hàng.
         </p>
       )}
       {reportQuery.isError ? (
@@ -366,7 +406,7 @@ export function ReportsPage() {
           </Row>
           <Row gutter={[16, 16]}>
             <Col xs={24}>
-              <Card title="Giao hàng" className="af-card af-fill" loading={loading} styles={{ body: { paddingTop: 12 } }}>
+              <Card title="Giao hàng và đối soát tài xế" className="af-card af-fill" loading={loading} styles={{ body: { paddingTop: 12 } }}>
                 {report && (
                   <>
                     <div className="af-report-delivery">
@@ -389,8 +429,13 @@ export function ReportsPage() {
                       columns={driverColumns}
                       dataSource={report.delivery.drivers}
                       locale={{ emptyText: 'Chưa có lượt giao trong kỳ.' }}
-                      scroll={{ x: 420 }}
+                      scroll={{ x: 1130 }}
                     />
+                    <p className="af-form-hint af-report-table-hint">
+                      Đối soát tính theo ngày đối soát chuyến, chỉ gồm tiền mặt tài xế thu.
+                      {report.delivery.cashShort > 0 && <> Tổng nộp thiếu trong kỳ: <Money value={report.delivery.cashShort} tone="refund" />.</>}
+                      {report.delivery.pendingTrips > 0 && ` Còn ${report.delivery.pendingTrips} chuyến chờ đối soát.`}
+                    </p>
                   </>
                 )}
               </Card>
@@ -427,6 +472,44 @@ export function ReportsPage() {
               scroll={{ x: 1150, y: tableScrollHeight }}
             />
             <p className="af-form-hint af-report-table-hint">Tồn tính theo hàng thực có trong kho, gồm hàng đang giữ cho đơn chưa giao. Tồn đầu + nhập − xuất = tồn cuối.</p>
+          </Card>
+          <Card
+            title="Khách hàng"
+            extra={report && <Typography.Text type="secondary">{report.customers.active} khách mua · {report.customers.new} khách mới</Typography.Text>}
+            className="af-card"
+            loading={loading}
+          >
+            {report && (
+              <Row gutter={[16, 16]}>
+                <Col xs={24} xl={12}>
+                  <Typography.Text strong className="af-report-subhead">Mua nhiều nhất trong kỳ</Typography.Text>
+                  <Table<CustomerReportRow>
+                    rowKey="key"
+                    size="small"
+                    className="af-data-table"
+                    pagination={false}
+                    columns={customerColumns}
+                    dataSource={report.customers.top}
+                    locale={{ emptyText: 'Chưa có khách mua trong kỳ.' }}
+                    scroll={{ x: 360 }}
+                  />
+                </Col>
+                <Col xs={24} xl={12}>
+                  <Typography.Text strong className="af-report-subhead">Lâu chưa đặt lại (từ {LAPSED_LABEL})</Typography.Text>
+                  <Table<CustomerReportRow>
+                    rowKey="key"
+                    size="small"
+                    className="af-data-table"
+                    pagination={false}
+                    columns={lapsedColumns}
+                    dataSource={report.customers.lapsed}
+                    locale={{ emptyText: 'Khách quen đều có đơn gần đây.' }}
+                    scroll={{ x: 360 }}
+                  />
+                  <p className="af-form-hint">Khách đã mua từ 2 lần trở lên, gọi lại hoặc nhắn tin để chăm sóc.</p>
+                </Col>
+              </Row>
+            )}
           </Card>
         </>
       )}

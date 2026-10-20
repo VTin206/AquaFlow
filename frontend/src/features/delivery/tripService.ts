@@ -14,12 +14,12 @@ const findTrip = (id: string) => {
 }
 const ordersOf = (trip: TripRecord) => trip.orderIds.map((id) => db.orders.find((order) => order.id === id)).filter((order): order is Order => Boolean(order))
 
-const statusOf = (trip: TripRecord): Trip['status'] => {
+export const tripStatus = (trip: TripRecord): Trip['status'] => {
   if (trip.settlement) return 'Đã đối soát'
   if (!trip.departedAt) return 'Chờ xuất phát'
   return ordersOf(trip).some((order) => order.status === 'Đang giao') ? 'Đang giao' : 'Chờ đối soát'
 }
-const toView = (trip: TripRecord): Trip => ({ ...trip, status: statusOf(trip) })
+const toView = (trip: TripRecord): Trip => ({ ...trip, status: tripStatus(trip) })
 
 /** Chuyến chưa đối soát đang chứa đơn này. */
 export const activeTripOf = (orderId: string) => db.trips.find((trip) => !trip.settlement && trip.orderIds.includes(orderId))
@@ -69,7 +69,7 @@ export const tripService = {
     mockRequest(() => {
       const trip = findTrip(id)
       requireRole(['ADMIN', 'SALES_STAFF', 'DELIVERY_STAFF'], 'cho chuyến xuất phát')
-      if (statusOf(trip) !== 'Chờ xuất phát') throw mockError(400, 'Chuyến đã xuất phát.')
+      if (tripStatus(trip) !== 'Chờ xuất phát') throw mockError(400, 'Chuyến đã xuất phát.')
       // Kiểm tra mọi đơn trước khi chuyển trạng thái để không xuất phát dở dang.
       const orders = ordersOf(trip)
       const blocked = orders.filter((order) => !canDispatch(order) && order.status !== 'Đang giao')
@@ -105,7 +105,7 @@ export const tripService = {
     mockRequest(() => {
       const trip = findTrip(id)
       requireRole(['ADMIN', 'SALES_STAFF'], 'đối soát chuyến')
-      if (statusOf(trip) !== 'Chờ đối soát') throw mockError(400, 'Chỉ đối soát khi mọi đơn trong chuyến đã có kết quả giao.')
+      if (tripStatus(trip) !== 'Chờ đối soát') throw mockError(400, 'Chỉ đối soát khi mọi đơn trong chuyến đã có kết quả giao.')
       const { cashHandedOver, bottlesHandedOver } = draft
       if (!Number.isSafeInteger(cashHandedOver) || cashHandedOver < 0) throw mockError(400, 'Tiền mặt bàn giao phải là số nguyên không âm.')
       if (!Number.isSafeInteger(bottlesHandedOver) || bottlesHandedOver < 0) throw mockError(400, 'Số vỏ bàn giao phải là số nguyên không âm.')
