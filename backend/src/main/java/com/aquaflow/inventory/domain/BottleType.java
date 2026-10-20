@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "bottle_types")
 public class BottleType {
-    @Id 
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 

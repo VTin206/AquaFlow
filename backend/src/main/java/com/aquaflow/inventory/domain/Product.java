@@ -16,16 +16,16 @@ import java.time.Instant;
 @Entity
 @Table(name = "products")
 public class Product {
-    @Id 
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, length = 64, unique = true)
     private String sku;
-    
+
     @Column(nullable = false, length = 200)
     private String name;
-    
+
     @Column(length = 150)
     private String brand;
 
@@ -41,7 +41,7 @@ public class Product {
 
     @Column(name = "sale_price", nullable = false, precision = 14, scale = 2)
     private BigDecimal salePrice;
-    
+
     @Column(nullable = false)
     private boolean active;
 

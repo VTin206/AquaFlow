@@ -51,7 +51,7 @@ public class SupplierController {
     public ResponseEntity<SupplierResponse> getSupplierById(@PathVariable Long id){
         return ResponseEntity.ok(supplierService.findById(id));
     }
-    
+
     @PostMapping
     @Operation(summary = "Create new supplier")
     @ApiResponses({
