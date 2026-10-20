@@ -1107,6 +1107,15 @@ body {
 .af-report-delta { display: flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 12px; }
 .af-report-filter { min-width: 160px; max-width: 100%; }
 .af-report-filter-hint { margin: -8px 0 16px; }
+.af-report-range { max-width: 100%; }
+.af-report-tabs > .ant-tabs-nav { margin-bottom: 16px; }
+.af-report-tabs .ant-card-head-wrapper { flex-wrap: wrap; gap: 4px 12px; }
+.af-report-tabs .ant-card-head-title { min-width: 0; white-space: normal; }
+@media (max-width: 575px) {
+  .af-page-actions > .af-report-range { flex-basis: 100%; }
+  .af-report-tabs .ant-card-extra { margin-inline-start: 0; padding-bottom: 8px; }
+  .af-report-kpis .ant-statistic-content { font-size: 19px; }
+}
 .af-report-table-hint { margin: 0; padding: 10px 16px; }
 .af-report-delivery { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
 @media (max-width: 640px) {

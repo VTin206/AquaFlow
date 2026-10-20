@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { App, Button, Card, Col, DatePicker, Descriptions, Empty, Progress, Row, Segmented, Select, Statistic, Table, Tag, Typography, type TableColumnsType } from 'antd'
+import { App, Button, Card, Col, DatePicker, Descriptions, Empty, Progress, Row, Segmented, Select, Statistic, Table, Tabs, Tag, Typography, type TableColumnsType } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
+import { useSearchParams } from 'react-router'
 import { ArrowDownRight, ArrowUpRight, Download } from 'lucide-react'
 import { BarChart } from '../../shared/components/BarChart'
 import { Money } from '../../shared/components/Money'
@@ -41,38 +42,38 @@ const productColumns: TableColumnsType<ProductReportRow> = [
 
 const dash = (value: number) => value || '—'
 const inventoryColumns: TableColumnsType<InventoryReportRow> = [
-  { title: 'Sản phẩm', dataIndex: 'name', ellipsis: true, fixed: 'left', width: 240 },
-  { title: 'Đơn vị', dataIndex: 'unit', width: 80 },
+  { title: 'Sản phẩm', dataIndex: 'name', ellipsis: true, fixed: 'left', width: 220 },
+  { title: 'Đơn vị', dataIndex: 'unit', width: 70 },
   { title: 'Tồn đầu kỳ', dataIndex: 'opening', align: 'right', width: 100 },
   { title: 'Nhập NCC', dataIndex: 'received', align: 'right', width: 90, render: dash },
-  { title: 'Khách trả nhập lại', dataIndex: 'restocked', align: 'right', width: 110, render: dash },
+  { title: 'Khách trả nhập lại', dataIndex: 'restocked', align: 'right', width: 100, render: dash },
   { title: 'Xuất bán', dataIndex: 'issued', align: 'right', width: 90, sorter: (a, b) => a.issued - b.issued, render: dash },
   { title: 'Tồn cuối kỳ', dataIndex: 'closing', align: 'right', width: 100, render: (value: number) => <strong>{value}</strong> },
   { title: 'Hỏng khi nhận', dataIndex: 'damaged', align: 'right', width: 100, render: (value: number) => (value ? <Tag color="red">{value}</Tag> : '—') },
-  { title: 'Giá trị tồn cuối', dataIndex: 'closingValue', align: 'right', width: 140, sorter: (a, b) => a.closingValue - b.closingValue, render: currency },
+  { title: 'Giá trị tồn cuối', dataIndex: 'closingValue', align: 'right', width: 130, sorter: (a, b) => a.closingValue - b.closingValue, render: currency },
 ]
 
 const driverColumns: TableColumnsType<DriverReportRow> = [
-  { title: 'Tài xế', dataIndex: 'driver', ellipsis: true, fixed: 'left', width: 160 },
-  { title: 'Thành công', dataIndex: 'delivered', align: 'right', width: 100 },
-  { title: 'Thất bại', dataIndex: 'failed', align: 'right', width: 90, render: (value: number) => (value ? <Tag color="red">{value}</Tag> : 0) },
-  { title: 'Trễ hẹn', dataIndex: 'late', align: 'right', width: 90, render: (value: number) => (value ? <Tag color="orange">{value}</Tag> : 0) },
-  { title: 'Chuyến đối soát', dataIndex: 'settledTrips', align: 'right', width: 120, render: dash },
-  { title: 'Tiền mặt phải nộp', dataIndex: 'cashExpected', align: 'right', width: 140, render: currency },
-  { title: 'Đã nộp', dataIndex: 'cashHandedOver', align: 'right', width: 130, render: (value: number) => <Money value={value} tone="paid" /> },
+  { title: 'Tài xế', dataIndex: 'driver', ellipsis: true, fixed: 'left', width: 150 },
+  { title: 'Thành công', dataIndex: 'delivered', align: 'right', width: 96 },
+  { title: 'Thất bại', dataIndex: 'failed', align: 'right', width: 80, render: (value: number) => (value ? <Tag color="red">{value}</Tag> : 0) },
+  { title: 'Trễ hẹn', dataIndex: 'late', align: 'right', width: 80, render: (value: number) => (value ? <Tag color="orange">{value}</Tag> : 0) },
+  { title: 'Chuyến đã đối soát', dataIndex: 'settledTrips', align: 'right', width: 100, render: dash },
+  { title: 'Tiền mặt phải nộp', dataIndex: 'cashExpected', align: 'right', width: 130, render: currency },
+  { title: 'Đã nộp', dataIndex: 'cashHandedOver', align: 'right', width: 120, render: (value: number) => <Money value={value} tone="paid" /> },
   {
     title: 'Chênh lệch',
     dataIndex: 'cashShort',
     align: 'right',
     width: 130,
     sorter: (a, b) => a.cashShort - b.cashShort,
-    render: (value: number) => (value > 0 ? <Money value={value} tone="refund" prefix="Thiếu " /> : value < 0 ? `Dư ${currency(-value)}` : 'Đủ'),
+    render: (value: number) => (value > 0 ? <span className="af-money is-refund">Thiếu {currency(value)}</span> : value < 0 ? `Dư ${currency(-value)}` : 'Đủ'),
   },
   {
     title: 'Chờ đối soát',
     key: 'pending',
     align: 'right',
-    width: 150,
+    width: 140,
     render: (_, row) => (row.pendingTrips ? <Tag color="orange">{row.pendingTrips} chuyến · {compactCurrency(row.pendingCash)}</Tag> : '—'),
   },
 ]
@@ -162,6 +163,7 @@ function Delta({ current, previous, upIsGood = true }: { current: number; previo
 }
 
 const LAPSED_LABEL = '30 ngày'
+const reportTabs = ['overview', 'delivery', 'stock', 'customers']
 
 const methodOptions = [
   { value: 'Giao tận nơi', label: 'Giao tận nơi' },
@@ -174,6 +176,18 @@ export function ReportsPage() {
   const [channels, setChannels] = useState<NonNullable<ReportFilters['channels']>>([])
   const [method, setMethod] = useState<ReportFilters['method']>()
   const [granularity, setGranularity] = useState<Granularity>()
+  // Giữ tab trên URL để tải lại trang hoặc gửi đường dẫn vẫn mở đúng phần đang xem.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tab = reportTabs.includes(searchParams.get('tab') ?? '') ? searchParams.get('tab')! : 'overview'
+  const setTab = (key: string) =>
+    setSearchParams(
+      (params) => {
+        if (key === 'overview') params.delete('tab')
+        else params.set('tab', key)
+        return params
+      },
+      { replace: true },
+    )
   const range = toRange(dates)
   const filters: ReportFilters = { channels, method }
   const filtered = Boolean(channels.length || method)
@@ -201,7 +215,7 @@ export function ReportsPage() {
             presets={presets}
             disabledDate={(day) => day.isAfter(dayjs(), 'day')}
             onChange={(value) => value?.[0] && value[1] && setDates([value[0], value[1]])}
-            style={{ maxWidth: '100%' }}
+            className="af-report-range"
           />
           <Select
             mode="multiple"
@@ -249,7 +263,7 @@ export function ReportsPage() {
         </Card>
       ) : (
         <>
-          <Row gutter={[16, 16]} className="af-stat-row">
+          <Row gutter={[16, 16]} className="af-stat-row af-report-kpis">
             <Col xs={12} xl={6}>
               <Card loading={loading}>
                 <Statistic title="Doanh thu thuần" value={currency(report?.sales.net ?? 0)} />
@@ -281,236 +295,274 @@ export function ReportsPage() {
               </Card>
             </Col>
           </Row>
-          <Row gutter={[16, 16]}>
-            <Col xs={24} xl={8}>
-              <Card title="Doanh thu" className="af-card af-fill" loading={loading}>
-                {report && (
-                  <Descriptions
-                    size="small"
-                    column={1}
-                    items={[
-                      { key: 'goods', label: 'Tiền hàng đơn đã giao', children: currency(report.sales.goods) },
-                      { key: 'fees', label: 'Phí giao', children: currency(report.sales.deliveryFees) },
-                      { key: 'returns', label: 'Trừ hàng khách trả', children: <Money value={report.sales.returnsValue} tone="refund" /> },
-                      { key: 'net', label: <strong>Doanh thu thuần</strong>, children: <strong>{currency(report.sales.net)}</strong> },
-                    ]}
-                  />
-                )}
-                <p className="af-form-hint">Ghi nhận khi khách nhận hàng. Hàng trả trừ vào kỳ khách trả, không sửa số của kỳ đã giao.</p>
-              </Card>
-            </Col>
-            <Col xs={24} xl={16}>
-              <Card
-                title={`Doanh thu thuần theo ${granularityLabels[unit].toLowerCase()}`}
-                extra={
-                  <Segmented<Granularity>
-                    size="small"
-                    aria-label="Gom biểu đồ theo"
-                    value={unit}
-                    onChange={setGranularity}
-                    options={(Object.keys(granularityLabels) as Granularity[]).map((value) => ({ value, label: granularityLabels[value] }))}
-                  />
-                }
-                className="af-card af-fill"
-                loading={loading}
-              >
-                {buckets.some((bucket) => bucket.revenue > 0) ? (
+          <Tabs
+            className="af-report-tabs"
+            activeKey={tab}
+            onChange={setTab}
+            items={[
+              {
+                key: 'overview',
+                label: 'Doanh thu và tiền',
+                children: (
                   <>
-                    <BarChart data={buckets.map((bucket) => ({ label: bucket.label, title: bucket.title, value: bucket.revenue }))} formatValue={compactCurrency} height={240} />
-                    {best && <Typography.Text type="secondary">Cao nhất {best.title.toLowerCase()}: {compactCurrency(best.revenue)}</Typography.Text>}
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} xl={8}>
+                    <Card title="Doanh thu" className="af-card af-fill" loading={loading}>
+                      {report && (
+                        <Descriptions
+                          size="small"
+                          column={1}
+                          items={[
+                            { key: 'goods', label: 'Tiền hàng đơn đã giao', children: currency(report.sales.goods) },
+                            { key: 'fees', label: 'Phí giao', children: currency(report.sales.deliveryFees) },
+                            { key: 'returns', label: 'Trừ hàng khách trả', children: <Money value={report.sales.returnsValue} tone="refund" /> },
+                            { key: 'net', label: <strong>Doanh thu thuần</strong>, children: <strong>{currency(report.sales.net)}</strong> },
+                          ]}
+                        />
+                      )}
+                      <p className="af-form-hint">Ghi nhận khi khách nhận hàng. Hàng trả trừ vào kỳ khách trả, không sửa số của kỳ đã giao.</p>
+                    </Card>
+                  </Col>
+                  <Col xs={24} xl={16}>
+                    <Card
+                      title={`Doanh thu thuần theo ${granularityLabels[unit].toLowerCase()}`}
+                      extra={
+                        <Segmented<Granularity>
+                          size="small"
+                          aria-label="Gom biểu đồ theo"
+                          value={unit}
+                          onChange={setGranularity}
+                          options={(Object.keys(granularityLabels) as Granularity[]).map((value) => ({ value, label: granularityLabels[value] }))}
+                        />
+                      }
+                      className="af-card af-fill"
+                      loading={loading}
+                    >
+                      {buckets.some((bucket) => bucket.revenue > 0) ? (
+                        <>
+                          <BarChart data={buckets.map((bucket) => ({ label: bucket.label, title: bucket.title, value: bucket.revenue }))} formatValue={compactCurrency} height={240} />
+                          {best && <Typography.Text type="secondary">Cao nhất {best.title.toLowerCase()}: {compactCurrency(best.revenue)}</Typography.Text>}
+                        </>
+                      ) : (
+                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có doanh thu trong kỳ." />
+                      )}
+                    </Card>
+                  </Col>
+                </Row>
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} lg={12} xl={8}>
+                    <Card title="Tiền thu" className="af-card af-fill" loading={loading}>
+                      {report && (
+                        <Descriptions
+                          size="small"
+                          column={1}
+                          items={[
+                            { key: 'cash', label: 'Thu tiền mặt', children: <Money value={report.cash.cash} tone="paid" /> },
+                            { key: 'transfer', label: 'Thu chuyển khoản', children: <Money value={report.cash.transfer} tone="paid" /> },
+                            { key: 'refunds', label: 'Hoàn tiền cho khách', children: <Money value={report.cash.refunds} tone="refund" /> },
+                            { key: 'collected', label: <strong>Thực thu</strong>, children: <strong><Money value={report.cash.collected} tone="paid" /></strong> },
+                            { key: 'receipts', label: 'Chi nhập hàng', children: `${report.receipts.count} phiếu · ${currency(report.receipts.value)}` },
+                          ]}
+                        />
+                      )}
+                    </Card>
+                  </Col>
+                  <Col xs={24} lg={12} xl={8}>
+                    <Card title="Vỏ bình và tiền cọc" className="af-card af-fill" loading={loading}>
+                      {report && (
+                        <>
+                          <Descriptions
+                            size="small"
+                            column={1}
+                            items={[
+                              { key: 'bottles', label: 'Vỏ giao / thu / mất', children: `${report.deposits.bottlesOut} / ${report.deposits.bottlesBack} / ${report.deposits.bottlesLost}` },
+                              { key: 'deposit', label: 'Cọc thu / hoàn', children: (
+                                  <>
+                                    <Money value={report.deposits.collected} tone="deposit" /> / <Money value={report.deposits.refunded} tone="refund" />
+                                  </>
+                                ),
+                              },
+                            ]}
+                          />
+                          <Typography.Text strong className="af-report-subhead">Đến hết {shortDate(report.range.to)}</Typography.Text>
+                          <Descriptions
+                            size="small"
+                            column={1}
+                            items={[
+                              { key: 'held', label: 'Khách đang giữ', children: `${report.deposits.held.bottles} vỏ · ${report.deposits.held.customers} khách` },
+                              { key: 'heldDeposit', label: 'Cọc cửa hàng đang giữ', children: <Money value={report.deposits.held.deposit} tone="deposit" /> },
+                              {
+                                key: 'uncovered',
+                                label: 'Vỏ chưa đủ cọc',
+                                children: report.deposits.held.uncoveredBottles ? <Tag color="orange">{report.deposits.held.uncoveredBottles} vỏ</Tag> : 'Không có',
+                              },
+                              {
+                                key: 'top',
+                                label: 'Giữ nhiều nhất',
+                                children: report.deposits.held.top.length ? report.deposits.held.top.slice(0, 3).map((row) => `${row.name} (${row.bottles})`).join(', ') : '—',
+                              },
+                            ]}
+                          />
+                        </>
+                      )}
+                      <p className="af-form-hint">Cọc là tiền phải trả lại khách khi thu hết vỏ, không tính vào doanh thu.</p>
+                    </Card>
+                  </Col>
+                  <Col xs={24} xl={8}>
+                    <Card title="Theo kênh tiếp nhận" className="af-card af-fill" loading={loading} styles={{ body: { padding: 0 } }}>
+                      {report && (
+                        <Table
+                          rowKey="channel"
+                          size="small"
+                          className="af-data-table"
+                          pagination={false}
+                          dataSource={report.channels}
+                          columns={[
+                            { title: 'Kênh', dataIndex: 'channel', ellipsis: true },
+                            { title: 'Đơn tạo', dataIndex: 'orders', align: 'right', width: 76 },
+                            { title: 'Doanh thu thuần', dataIndex: 'revenue', align: 'right', width: 132, render: (value: number) => compactCurrency(value) },
+                          ]}
+                        />
+                      )}
+                    </Card>
+                  </Col>
+                </Row>
                   </>
-                ) : (
-                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có doanh thu trong kỳ." />
-                )}
-              </Card>
-            </Col>
-          </Row>
-          <Row gutter={[16, 16]}>
-            <Col xs={24} lg={12} xl={8}>
-              <Card title="Tiền thu" className="af-card af-fill" loading={loading}>
-                {report && (
-                  <Descriptions
-                    size="small"
-                    column={1}
-                    items={[
-                      { key: 'cash', label: 'Thu tiền mặt', children: <Money value={report.cash.cash} tone="paid" /> },
-                      { key: 'transfer', label: 'Thu chuyển khoản', children: <Money value={report.cash.transfer} tone="paid" /> },
-                      { key: 'refunds', label: 'Hoàn tiền cho khách', children: <Money value={report.cash.refunds} tone="refund" /> },
-                      { key: 'collected', label: <strong>Thực thu</strong>, children: <strong><Money value={report.cash.collected} tone="paid" /></strong> },
-                      { key: 'receipts', label: 'Chi nhập hàng', children: `${report.receipts.count} phiếu · ${currency(report.receipts.value)}` },
-                    ]}
-                  />
-                )}
-              </Card>
-            </Col>
-            <Col xs={24} lg={12} xl={8}>
-              <Card title="Vỏ bình và tiền cọc" className="af-card af-fill" loading={loading}>
-                {report && (
+                ),
+              },
+              {
+                key: 'delivery',
+                label: 'Giao hàng',
+                children: (
                   <>
-                    <Descriptions
-                      size="small"
-                      column={1}
-                      items={[
-                        { key: 'bottles', label: 'Vỏ giao / thu / mất', children: `${report.deposits.bottlesOut} / ${report.deposits.bottlesBack} / ${report.deposits.bottlesLost}` },
-                        { key: 'deposit', label: 'Cọc thu / hoàn', children: (
-                            <>
-                              <Money value={report.deposits.collected} tone="deposit" /> / <Money value={report.deposits.refunded} tone="refund" />
-                            </>
-                          ),
-                        },
-                      ]}
-                    />
-                    <Typography.Text strong className="af-report-subhead">Đến hết {shortDate(report.range.to)}</Typography.Text>
-                    <Descriptions
-                      size="small"
-                      column={1}
-                      items={[
-                        { key: 'held', label: 'Khách đang giữ', children: `${report.deposits.held.bottles} vỏ · ${report.deposits.held.customers} khách` },
-                        { key: 'heldDeposit', label: 'Cọc cửa hàng đang giữ', children: <Money value={report.deposits.held.deposit} tone="deposit" /> },
-                        {
-                          key: 'uncovered',
-                          label: 'Vỏ chưa đủ cọc',
-                          children: report.deposits.held.uncoveredBottles ? <Tag color="orange">{report.deposits.held.uncoveredBottles} vỏ</Tag> : 'Không có',
-                        },
-                        {
-                          key: 'top',
-                          label: 'Giữ nhiều nhất',
-                          children: report.deposits.held.top.length ? report.deposits.held.top.slice(0, 3).map((row) => `${row.name} (${row.bottles})`).join(', ') : '—',
-                        },
-                      ]}
-                    />
+                <Row gutter={[16, 16]}>
+                  <Col xs={24}>
+                    <Card title="Giao hàng và đối soát tài xế" className="af-card af-fill" loading={loading} styles={{ body: { paddingTop: 12 } }}>
+                      {report && (
+                        <>
+                          <div className="af-report-delivery">
+                            <Statistic title="Giao thành công" value={report.delivery.delivered} />
+                            <Statistic title="Lần giao thất bại" value={report.delivery.failedAttempts} />
+                            <div>
+                              <Statistic title="Trễ hẹn" value={report.delivery.late} />
+                              {report.delivery.late > 0 && <Typography.Text type="secondary">TB trễ {report.delivery.averageLateMinutes} phút</Typography.Text>}
+                            </div>
+                            <div>
+                              <Typography.Text type="secondary">Đúng hẹn</Typography.Text>
+                              <Progress percent={onTime ?? 100} size="small" status={onTime !== null && onTime < 85 ? 'exception' : 'normal'} format={(value) => (onTime === null ? '—' : `${value}%`)} />
+                            </div>
+                          </div>
+                          <Table<DriverReportRow>
+                            rowKey="driver"
+                            size="small"
+                            className="af-data-table"
+                            pagination={false}
+                            columns={driverColumns}
+                            dataSource={report.delivery.drivers}
+                            locale={{ emptyText: 'Chưa có lượt giao trong kỳ.' }}
+                            scroll={{ x: 1030 }}
+                          />
+                          <p className="af-form-hint af-report-table-hint">
+                            Đối soát tính theo ngày đối soát chuyến, chỉ gồm tiền mặt tài xế thu.
+                            {report.delivery.cashShort > 0 && <> Tổng nộp thiếu trong kỳ: <Money value={report.delivery.cashShort} tone="refund" />.</>}
+                            {report.delivery.pendingTrips > 0 && ` Còn ${report.delivery.pendingTrips} chuyến chờ đối soát.`}
+                          </p>
+                        </>
+                      )}
+                    </Card>
+                  </Col>
+                </Row>
                   </>
-                )}
-                <p className="af-form-hint">Cọc là tiền phải trả lại khách khi thu hết vỏ, không tính vào doanh thu.</p>
-              </Card>
-            </Col>
-            <Col xs={24} xl={8}>
-              <Card title="Theo kênh tiếp nhận" className="af-card af-fill" loading={loading} styles={{ body: { padding: 0 } }}>
-                {report && (
-                  <Table
-                    rowKey="channel"
-                    size="small"
-                    className="af-data-table"
-                    pagination={false}
-                    dataSource={report.channels}
-                    scroll={{ x: 360 }}
-                    columns={[
-                      { title: 'Kênh', dataIndex: 'channel' },
-                      { title: 'Đơn tạo', dataIndex: 'orders', align: 'right', width: 90 },
-                      { title: 'Doanh thu', dataIndex: 'revenue', align: 'right', width: 140, render: currency },
-                    ]}
-                  />
-                )}
-              </Card>
-            </Col>
-          </Row>
-          <Row gutter={[16, 16]}>
-            <Col xs={24}>
-              <Card title="Giao hàng và đối soát tài xế" className="af-card af-fill" loading={loading} styles={{ body: { paddingTop: 12 } }}>
-                {report && (
+                ),
+              },
+              {
+                key: 'stock',
+                label: 'Sản phẩm và kho',
+                children: (
                   <>
-                    <div className="af-report-delivery">
-                      <Statistic title="Giao thành công" value={report.delivery.delivered} />
-                      <Statistic title="Lần giao thất bại" value={report.delivery.failedAttempts} />
-                      <div>
-                        <Statistic title="Trễ hẹn" value={report.delivery.late} />
-                        {report.delivery.late > 0 && <Typography.Text type="secondary">TB trễ {report.delivery.averageLateMinutes} phút</Typography.Text>}
-                      </div>
-                      <div>
-                        <Typography.Text type="secondary">Đúng hẹn</Typography.Text>
-                        <Progress percent={onTime ?? 100} size="small" status={onTime !== null && onTime < 85 ? 'exception' : 'normal'} format={(value) => (onTime === null ? '—' : `${value}%`)} />
-                      </div>
-                    </div>
-                    <Table<DriverReportRow>
-                      rowKey="driver"
-                      size="small"
-                      className="af-data-table"
-                      pagination={false}
-                      columns={driverColumns}
-                      dataSource={report.delivery.drivers}
-                      locale={{ emptyText: 'Chưa có lượt giao trong kỳ.' }}
-                      scroll={{ x: 1130 }}
-                    />
-                    <p className="af-form-hint af-report-table-hint">
-                      Đối soát tính theo ngày đối soát chuyến, chỉ gồm tiền mặt tài xế thu.
-                      {report.delivery.cashShort > 0 && <> Tổng nộp thiếu trong kỳ: <Money value={report.delivery.cashShort} tone="refund" />.</>}
-                      {report.delivery.pendingTrips > 0 && ` Còn ${report.delivery.pendingTrips} chuyến chờ đối soát.`}
-                    </p>
+                <Card title="Bán hàng theo sản phẩm" className="af-card" styles={{ body: { padding: 0 } }}>
+                  <Table<ProductReportRow>
+                    locale={{ emptyText: 'Không bán sản phẩm nào trong kỳ.' }}
+                    className="af-data-table"
+                    rowKey="productId"
+                    size="middle"
+                    columns={productColumns}
+                    dataSource={report?.products}
+                    loading={loading}
+                    pagination={tablePagination}
+                    scroll={{ x: 860, y: tableScrollHeight }}
+                  />
+                </Card>
+                <Card
+                  title="Nhập – xuất – tồn"
+                  extra={report && <Typography.Text type="secondary">Giá trị tồn: {compactCurrency(report.inventory.openingValue)} → {compactCurrency(report.inventory.closingValue)}</Typography.Text>}
+                  className="af-card"
+                  styles={{ body: { padding: 0 } }}
+                >
+                  <Table<InventoryReportRow>
+                    locale={{ emptyText: 'Không có hàng trong kho.' }}
+                    className="af-data-table"
+                    rowKey="productId"
+                    size="middle"
+                    columns={inventoryColumns}
+                    dataSource={report?.inventory.rows}
+                    loading={loading}
+                    pagination={tablePagination}
+                    scroll={{ x: 1010, y: tableScrollHeight }}
+                  />
+                  <p className="af-form-hint af-report-table-hint">Tồn tính theo hàng thực có trong kho, gồm hàng đang giữ cho đơn chưa giao. Tồn đầu + nhập − xuất = tồn cuối.</p>
+                </Card>
                   </>
-                )}
-              </Card>
-            </Col>
-          </Row>
-          <Card title="Bán hàng theo sản phẩm" className="af-card" styles={{ body: { padding: 0 } }}>
-            <Table<ProductReportRow>
-              locale={{ emptyText: 'Không bán sản phẩm nào trong kỳ.' }}
-              className="af-data-table"
-              rowKey="productId"
-              size="middle"
-              columns={productColumns}
-              dataSource={report?.products}
-              loading={loading}
-              pagination={tablePagination}
-              scroll={{ x: 860, y: tableScrollHeight }}
-            />
-          </Card>
-          <Card
-            title="Nhập – xuất – tồn"
-            extra={report && <Typography.Text type="secondary">Giá trị tồn: {compactCurrency(report.inventory.openingValue)} → {compactCurrency(report.inventory.closingValue)}</Typography.Text>}
-            className="af-card"
-            styles={{ body: { padding: 0 } }}
-          >
-            <Table<InventoryReportRow>
-              locale={{ emptyText: 'Không có hàng trong kho.' }}
-              className="af-data-table"
-              rowKey="productId"
-              size="middle"
-              columns={inventoryColumns}
-              dataSource={report?.inventory.rows}
-              loading={loading}
-              pagination={tablePagination}
-              scroll={{ x: 1150, y: tableScrollHeight }}
-            />
-            <p className="af-form-hint af-report-table-hint">Tồn tính theo hàng thực có trong kho, gồm hàng đang giữ cho đơn chưa giao. Tồn đầu + nhập − xuất = tồn cuối.</p>
-          </Card>
-          <Card
-            title="Khách hàng"
-            extra={report && <Typography.Text type="secondary">{report.customers.active} khách mua · {report.customers.new} khách mới</Typography.Text>}
-            className="af-card"
-            loading={loading}
-          >
-            {report && (
-              <Row gutter={[16, 16]}>
-                <Col xs={24} xl={12}>
-                  <Typography.Text strong className="af-report-subhead">Mua nhiều nhất trong kỳ</Typography.Text>
-                  <Table<CustomerReportRow>
-                    rowKey="key"
-                    size="small"
-                    className="af-data-table"
-                    pagination={false}
-                    columns={customerColumns}
-                    dataSource={report.customers.top}
-                    locale={{ emptyText: 'Chưa có khách mua trong kỳ.' }}
-                    scroll={{ x: 360 }}
-                  />
-                </Col>
-                <Col xs={24} xl={12}>
-                  <Typography.Text strong className="af-report-subhead">Lâu chưa đặt lại (từ {LAPSED_LABEL})</Typography.Text>
-                  <Table<CustomerReportRow>
-                    rowKey="key"
-                    size="small"
-                    className="af-data-table"
-                    pagination={false}
-                    columns={lapsedColumns}
-                    dataSource={report.customers.lapsed}
-                    locale={{ emptyText: 'Khách quen đều có đơn gần đây.' }}
-                    scroll={{ x: 360 }}
-                  />
-                  <p className="af-form-hint">Khách đã mua từ 2 lần trở lên, gọi lại hoặc nhắn tin để chăm sóc.</p>
-                </Col>
-              </Row>
-            )}
-          </Card>
+                ),
+              },
+              {
+                key: 'customers',
+                label: 'Khách hàng',
+                children: (
+                  <>
+                <Card
+                  title="Khách hàng"
+                  extra={report && <Typography.Text type="secondary">{report.customers.active} khách mua · {report.customers.new} khách mới</Typography.Text>}
+                  className="af-card"
+                  loading={loading}
+                >
+                  {report && (
+                    <Row gutter={[16, 16]}>
+                      <Col xs={24} xl={12}>
+                        <Typography.Text strong className="af-report-subhead">Mua nhiều nhất trong kỳ</Typography.Text>
+                        <Table<CustomerReportRow>
+                          rowKey="key"
+                          size="small"
+                          className="af-data-table"
+                          pagination={false}
+                          columns={customerColumns}
+                          dataSource={report.customers.top}
+                          locale={{ emptyText: 'Chưa có khách mua trong kỳ.' }}
+                          scroll={{ x: 360 }}
+                        />
+                      </Col>
+                      <Col xs={24} xl={12}>
+                        <Typography.Text strong className="af-report-subhead">Lâu chưa đặt lại (từ {LAPSED_LABEL})</Typography.Text>
+                        <Table<CustomerReportRow>
+                          rowKey="key"
+                          size="small"
+                          className="af-data-table"
+                          pagination={false}
+                          columns={lapsedColumns}
+                          dataSource={report.customers.lapsed}
+                          locale={{ emptyText: 'Khách quen đều có đơn gần đây.' }}
+                          scroll={{ x: 360 }}
+                        />
+                        <p className="af-form-hint">Khách đã mua từ 2 lần trở lên, gọi lại hoặc nhắn tin để chăm sóc.</p>
+                      </Col>
+                    </Row>
+                  )}
+                </Card>
+                  </>
+                ),
+              },
+            ]}
+          />
         </>
       )}
     </Page>
