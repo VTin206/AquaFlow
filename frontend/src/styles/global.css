@@ -112,12 +112,13 @@ body {
   margin: 0 18px;
   width: 1px;
 }
-.af-topbar-store {
+.af-topbar-clock {
   align-items: center;
   color: var(--af-text-secondary);
   display: inline-flex;
   gap: 8px;
   font-size: 13px;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .af-topbar-icon.ant-btn {
@@ -821,7 +822,7 @@ body {
     padding: 0 16px 0 8px;
   }
   .af-topbar-divider,
-  .af-topbar-store,
+  .af-topbar-clock,
   .af-topbar-user-text {
     display: none;
   }
