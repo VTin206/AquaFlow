@@ -83,7 +83,7 @@ export function NotificationPopover() {
         }
       >
         <button ref={triggerRef} type="button" className="af-notification-link" aria-label={`Thông báo, ${notifications.length} đơn cần xử lý`} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? panelId : undefined}>
-          <Badge dot={notifications.length > 0} offset={[-3, 3]} color="#ffc56d"><Bell size={19} color="#e0edf9" aria-hidden /></Badge>
+          <Badge dot={notifications.length > 0} offset={[-3, 3]} color="var(--af-warning)" style={{ color: 'inherit' }}><Bell size={19} aria-hidden /></Badge>
         </button>
       </Popover>
       {orderId && <OrderDetailsModal orderId={orderId} onClose={() => { setOrderId(null); triggerRef.current?.focus() }} />}

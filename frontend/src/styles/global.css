@@ -50,7 +50,7 @@ body {
   text-align: left;
 }
 .af-account-menu:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--af-primary);
   outline-offset: 3px;
 }
 
@@ -59,14 +59,9 @@ body {
 }
 /* Thanh trên cùng */
 .af-topbar {
-  --af-text: #fff;
-  --af-text-strong: #fff;
-  --af-text-secondary: #e0edf9;
-  --af-text-tertiary: #c6ddf2;
-  --af-border: #ffffff30;
   align-items: center;
-  background: #205b96;
-  box-shadow: 0 2px 8px #16324f14;
+  background: #f5fbfe;
+  box-shadow: 0 2px 8px #087fad0a;
   border-bottom: 1px solid var(--af-border);
   color: var(--af-text);
   display: flex;
@@ -88,7 +83,7 @@ body {
 }
 .af-topbar-brand {
   align-items: center;
-  color: var(--af-text-strong);
+  color: var(--af-primary);
   display: flex;
   gap: 10px;
 }
@@ -108,13 +103,8 @@ body {
   justify-content: center;
   width: 38px;
 }
-.af-topbar .af-brand-mark {
-  background: #fff;
-  color: #205b96;
-  box-shadow: none;
-}
 .af-topbar .af-topbar-brand:hover {
-  color: #fff;
+  color: var(--af-text-strong);
 }
 .af-topbar-divider {
   background: var(--af-border);
@@ -134,16 +124,16 @@ body {
   color: var(--af-text-secondary);
 }
 .af-topbar-icon.ant-btn:hover {
-  background: #ffffff1a !important;
-  color: #fff !important;
+  background: var(--af-primary-soft) !important;
+  color: var(--af-primary) !important;
 }
 .af-nav-toggle {
   display: none !important;
 }
 .af-demo-label {
-  background: #ffffff1a;
+  background: var(--af-primary-soft);
   border-radius: 6px;
-  color: var(--af-text-secondary);
+  color: var(--af-primary);
   font-size: 12px;
   padding: 5px 10px;
   white-space: nowrap;
@@ -161,8 +151,8 @@ body {
   width: 40px;
 }
 .af-notification-link:hover {
-  background: #ffffff1a;
-  color: #fff;
+  background: var(--af-primary-soft);
+  color: var(--af-primary);
 }
 .af-notifications { width: min(360px, calc(100vw - 32px)); color: var(--af-text); }
 .af-notifications-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--af-border); }
@@ -182,8 +172,8 @@ body {
 .af-notification-arrow { flex-shrink: 0; margin-top: 8px; color: var(--af-text-tertiary); }
 .af-notifications-state { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; padding: 28px 16px; color: var(--af-text-secondary); }
 .af-notifications-footer { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 11px 16px; border-top: 1px solid var(--af-border); font-size: 12px; }
-.af-topbar .af-account-menu:hover { background: #ffffff1a; }
-.af-topbar a:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.af-topbar .af-account-menu:hover { background: var(--af-primary-soft); }
+.af-topbar a:focus-visible { outline: 2px solid var(--af-primary); outline-offset: 3px; }
 .af-topbar-user {
   align-items: center;
   display: flex;

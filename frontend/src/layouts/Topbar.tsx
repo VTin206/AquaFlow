@@ -50,7 +50,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
         <span className="af-demo-label">Dữ liệu mẫu</span>
         <Tooltip title="Trang khách đặt hàng (dùng chung dữ liệu mẫu trong tab này)">
           <Link to="/shop" className="af-notification-link" aria-label="Mở trang khách đặt hàng">
-            <ShoppingCart size={19} color="#e0edf9" aria-hidden />
+            <ShoppingCart size={19} aria-hidden />
           </Link>
         </Tooltip>
         <NotificationPopover />
