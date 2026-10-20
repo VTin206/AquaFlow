@@ -1,6 +1,9 @@
 package com.aquaflow.shared.health;
 
 import com.aquaflow.auth.repository.UserRepository;
+import com.aquaflow.inventory.repository.BottleTypeRepository;
+import com.aquaflow.inventory.repository.ProductRepository;
+import com.aquaflow.inventory.repository.SupplierRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,6 +18,16 @@ class HealthControllerTest {
 
     @MockBean
     private UserRepository userRepository;
+
+    // Test này tắt JPA nên phải giả lập các repository của module inventory
+    @MockBean
+    private ProductRepository productRepository;
+
+    @MockBean
+    private SupplierRepository supplierRepository;
+
+    @MockBean
+    private BottleTypeRepository bottleTypeRepository;
 
     @Test
     void applicationContextLoads() {
