@@ -31,4 +31,4 @@ export const getCatalogDetails = (product: Product): CatalogDetails => product.c
   ? { category: 'Vỏ bình & phụ kiện', packaging: 'Vỏ bình', capacity: '18,5–20L', volumeMl: 20000 }
   : { category: 'Chưa phân loại', packaging: product.unit, capacity: 'Chưa có dung tích', volumeMl: 0 })
 
-export const normalizeSearch = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase()
+export { normalizeSearch } from '../../shared/utils/search'
