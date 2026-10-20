@@ -39,3 +39,32 @@
 
 Không thay đổi backend hoặc database. Kiểm tra giao diện dùng dữ liệu demo,
 không phải xác nhận nghiệp vụ với API thật.
+
+## Giỏ hàng và danh sách trên điện thoại
+
+- Giỏ có bình nước hiển thị “Chưa gồm tiền cọc vỏ” cạnh tạm tính, ở cả
+  bước giỏ hàng và bước nhập thông tin giao. Mức cọc lấy từ chính sách hiện có;
+  không cộng cọc vào tổng đơn hoặc thay đổi dữ liệu gửi đi.
+- Dưới 768px, danh sách đơn hàng và khách hàng dùng thẻ, có sắp xếp,
+  phân trang 10 mục, trạng thái đang tải và không có kết quả.
+- Thẻ giữ các thao tác xem chi tiết, chuyển trạng thái đơn, mở hồ sơ và
+  tạo đơn với thông tin khách đã điền. Nút chính cao 44px; chữ phụ từ 13px.
+- Bản rút gọn của danh sách đơn trên tổng quan cũng dùng thẻ trên mobile.
+  Desktop tiếp tục dùng bảng.
+
+### Kiểm tra
+
+1. Với màn hình 390px, vào Đơn hàng: chuyển trang, mở chi tiết, xác nhận
+   đơn đang chờ, tìm từ khóa không tồn tại rồi xóa bộ lọc.
+2. Vào Khách hàng: mở hồ sơ và tạo đơn từ cùng một thẻ; tên trong form
+   phải đúng khách đã chọn. Thử sắp xếp và phân trang.
+3. Thu về 320px: thẻ xuống dòng, các nút vẫn đọc và bấm được.
+   Mở rộng lên 1440px: danh sách trở lại bảng.
+4. Vào cửa hàng, thêm bình nước: nhắc cọc có ở cả giỏ và bước xác nhận.
+   Đặt đơn demo, đối chiếu tổng với tiền hàng + phí giao.
+5. Giỏ chỉ có nước đóng thùng không hiển thị nhắc cọc vỏ bình.
+
+Đã chạy lint, build (bao gồm TypeScript), 8 nhóm `test:operations` và
+8 nhóm `test:after-sales`. Chrome với profile tạm đã xác minh phân trang đơn,
+chi tiết/chuyển trạng thái, tìm kiếm/rỗng/xóa lọc, hồ sơ khách, điền sẵn tên
+khi tạo đơn, bảng desktop, thẻ 320px và đặt đơn demo giữ nguyên tổng tiền.

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { App, Button, Dropdown, Typography } from 'antd'
+import { App, Button, Dropdown, Typography, type ButtonProps } from 'antd'
 import { Ellipsis } from 'lucide-react'
 import { nextActionLabel } from '../orderStatus'
 import type { Order } from '../types'
@@ -7,7 +7,7 @@ import { useAdvanceOrderStatus } from '../useOrders'
 import { ReceiveOrderModal } from './ReceiveOrderModal'
 
 /** Nút ghi rõ bước tiếp theo của đơn (Xác nhận → Bắt đầu giao → Hoàn tất). */
-export function AdvanceStatusButton({ order, menu = false }: { order: Order; menu?: boolean }) {
+export function AdvanceStatusButton({ order, menu = false, size = 'small' }: { order: Order; menu?: boolean; size?: ButtonProps['size'] }) {
   const { message } = App.useApp()
   const advance = useAdvanceOrderStatus()
   const [receiving, setReceiving] = useState(false)
@@ -33,7 +33,7 @@ export function AdvanceStatusButton({ order, menu = false }: { order: Order; men
           <Button size="small" icon={<Ellipsis size={16} />} loading={pendingThisOrder} aria-label={`Thao tác đơn ${order.id}`} />
         </Dropdown>
       ) : <Button
-        size="small"
+        size={size}
         type={order.status === 'Chờ xác nhận' ? 'primary' : 'default'}
         loading={pendingThisOrder}
         onClick={handleAdvance}

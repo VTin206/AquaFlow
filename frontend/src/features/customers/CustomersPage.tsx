@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Card, Col, Input, Row, Statistic, Table, Tag, type TableColumnsType } from 'antd'
+import { Button, Card, Col, Grid, Input, Row, Statistic, Table, Tag, type TableColumnsType } from 'antd'
 import { Plus, Search } from 'lucide-react'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
@@ -10,11 +10,13 @@ import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
 import { CreateOrderModal } from '../orders/components/CreateOrderModal'
 import { CustomerDrawer } from './components/CustomerDrawer'
 import { CustomerFormModal } from './components/CustomerFormModal'
+import { CustomerCards } from './components/CustomerCards'
 import type { Customer } from './types'
 import { useCustomers } from './useCustomers'
 import { matchesSearch } from '../../shared/utils/search'
 
 export function CustomersPage() {
+  const screens = Grid.useBreakpoint()
   const customersQuery = useCustomers()
   const [query, setQuery] = useState('')
   const [profileId, setProfileId] = useState<string | null>(null)
@@ -132,7 +134,16 @@ export function CustomersPage() {
                 className="af-search"
               />
             </div>
-            <Table<Customer>
+            {screens.md === false ? (
+              <CustomerCards
+                key={query}
+                customers={visible}
+                loading={customersQuery.isPending}
+                emptyText={query.trim() ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.'}
+                onProfile={setProfileId}
+                onCreateOrder={setOrderFor}
+              />
+            ) : <Table<Customer>
               key={query}
               className="af-data-table"
               size="middle"
@@ -143,7 +154,7 @@ export function CustomersPage() {
               pagination={tablePagination}
               locale={{ emptyText: query.trim() ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.' }}
               scroll={{ x: 920, y: tableScrollHeight }}
-            />
+            />}
           </Card>
         </>
       )}
