@@ -52,6 +52,8 @@ public class ProductController {
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Success creation of new product"),
         @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "403", description = "Admin role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "404", description = "Bottle type not found or inactive", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "409", description = "SKU already exists", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
     })
@@ -65,6 +67,8 @@ public class ProductController {
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Success updated product"),
         @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "403", description = "Admin role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
     })
     public ResponseEntity<ProductResponse> updateProduct(@PathVariable Long id, @Valid @RequestBody UpdateProductRequest request){
@@ -77,6 +81,7 @@ public class ProductController {
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Success deletion of product"),
         @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "403", description = "Admin role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
     })
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {

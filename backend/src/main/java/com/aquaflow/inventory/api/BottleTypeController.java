@@ -52,6 +52,8 @@ public class BottleTypeController {
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Success creation of new bottle type"),
         @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "403", description = "Admin role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "409", description = "Bottle type name already exists", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
     })
     public ResponseEntity<BottleTypeResponse> createBottleType(@Valid @RequestBody CreateBottleTypeRequest request){
@@ -64,6 +66,8 @@ public class BottleTypeController {
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Success updated bottle type"),
         @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "403", description = "Admin role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "404", description = "Bottle type not found", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
     })
     public ResponseEntity<BottleTypeResponse> updateBottleType(@PathVariable Long id, @Valid @RequestBody UpdateBottleTypeRequest request){
@@ -76,6 +80,7 @@ public class BottleTypeController {
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Success deletion of bottle type"),
         @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "403", description = "Admin role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "404", description = "Bottle type not found", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
     })
     public ResponseEntity<Void> deleteBottleType(@PathVariable Long id) {

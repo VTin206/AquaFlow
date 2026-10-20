@@ -44,9 +44,7 @@ public class BottleTypeService {
     @Transactional
     public BottleTypeResponse update(Long id, UpdateBottleTypeRequest request) {
         BottleType bottleType = getBottleType(id);
-        if (request.depositUnitAmount() != null) {
-            bottleType.update(request.depositUnitAmount());
-        }
+        bottleType.update(request.depositUnitAmount());
         return toResponse(bottleType);
     }
 

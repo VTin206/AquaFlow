@@ -33,7 +33,8 @@ public class SupplierController {
     @Operation(summary = "Get all suppliers")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "List of suppliers"),
-        @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
+        @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "403", description = "Admin or sales staff role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
     })
     public ResponseEntity<List<SupplierResponse>> getAllSuppliers(@RequestParam(required = false) Boolean active) {
         return ResponseEntity.ok(supplierService.findAll(active));
@@ -44,6 +45,7 @@ public class SupplierController {
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Success retrieval of supplier"),
         @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "403", description = "Admin or sales staff role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "404", description = "Supplier not found", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
     })
     public ResponseEntity<SupplierResponse> getSupplierById(@PathVariable Long id){
@@ -54,7 +56,9 @@ public class SupplierController {
     @Operation(summary = "Create new supplier")
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Success creation of new supplier"),
-        @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
+        @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "403", description = "Admin role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
     })
     public ResponseEntity<SupplierResponse> createSupplier(@Valid @RequestBody SupplierRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(supplierService.create(request));
@@ -65,6 +69,8 @@ public class SupplierController {
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Success update of supplier"),
         @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "403", description = "Admin role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "404", description = "Supplier not found", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
     })
     public ResponseEntity<SupplierResponse> updateSupplier(@PathVariable Long id, @Valid @RequestBody SupplierRequest request) {
@@ -76,6 +82,7 @@ public class SupplierController {
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Success deletion of supplier"),
         @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "403", description = "Admin role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "404", description = "Supplier not found", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
     })
     public ResponseEntity<Void> deleteSupplier(@PathVariable Long id) {
