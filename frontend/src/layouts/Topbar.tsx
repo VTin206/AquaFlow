@@ -1,10 +1,34 @@
+import { useEffect, useState } from 'react'
 import { Avatar, Button, Dropdown, Tooltip, type MenuProps } from 'antd'
-import { Check, ChevronDown, LogOut, Menu as MenuIcon, ShoppingCart, Store, Waves } from 'lucide-react'
+import { Check, ChevronDown, Clock3, LogOut, Menu as MenuIcon, ShoppingCart, Waves } from 'lucide-react'
 import { Link, useNavigate } from 'react-router'
 import { roleNames, type RoleCode } from '../features/auth/permissions'
 import { useAuth } from '../features/auth/useAuth'
 import { setDemoRole, useStaff } from '../features/auth/useStaff'
 import { NotificationPopover } from './NotificationPopover'
+
+const dateFormatter = new Intl.DateTimeFormat('vi-VN', {
+  timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric',
+})
+const timeFormatter = new Intl.DateTimeFormat('vi-VN', {
+  timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+})
+
+function TopbarClock() {
+  const [now, setNow] = useState(() => new Date())
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  return (
+    <time className="af-topbar-clock" dateTime={now.toISOString()} title="Giờ Việt Nam (UTC+7)">
+      <Clock3 size={16} aria-hidden />
+      {dateFormatter.format(now)} · {timeFormatter.format(now)}
+    </time>
+  )
+}
 
 /** Thanh ứng dụng và các thao tác nhanh. */
 export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
@@ -42,15 +66,13 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
           <strong>AquaFlow</strong>
         </Link>
         <span className="af-topbar-divider" aria-hidden />
-        <span className="af-topbar-store">
-          <Store size={16} /> Một cửa hàng · Một kho
-        </span>
+        <TopbarClock />
       </div>
       <div className="af-topbar-right">
         <span className="af-demo-label">Dữ liệu mẫu</span>
         <Tooltip title="Trang khách đặt hàng (dùng chung dữ liệu mẫu trong tab này)">
           <Link to="/shop" className="af-notification-link" aria-label="Mở trang khách đặt hàng">
-            <ShoppingCart size={19} color="#e0edf9" aria-hidden />
+            <ShoppingCart size={19} aria-hidden />
           </Link>
         </Tooltip>
         <NotificationPopover />
