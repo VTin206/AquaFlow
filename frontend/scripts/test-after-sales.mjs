@@ -221,6 +221,25 @@ try {
     assert.equal(end.deposits.held.uncoveredBottles, 0)
   })
 
+  await test('period report: stock movement balances opening + in - out = closing, counting reserved goods', async () => {
+    const today = new Date().toLocaleDateString('sv-SE')
+    db.receipts = [{ id: 'PN-1', supplierId: 'NCC-1', supplierName: 'NCC', receivedAt: today, receiver: 'Kho', total: 600000, lines: [{ productId: 'P-003', productName: 'Thùng', unit: 'Thùng', received: 12, damaged: 2, costPrice: 60000 }] }]
+    db.products.find((product) => product.id === 'P-003').stock += 10
+    const order = await deliveredOrder()
+    await orderService.returnItems(order.id, { lines: [{ productId: 'P-003', quantity: 1 }], reason: 'Đổi ý', restock: true, refundMethod: 'Tiền mặt' })
+    // Đơn đã xác nhận nhưng chưa giao: tồn bán được giảm, hàng vẫn nằm trong kho.
+    const open = await orderService.create(draft({ lines: [{ productId: 'P-003', quantity: 3 }] }))
+    await orderService.advanceStatus(open.id)
+    const row = (await reportService.summary({ from: today, to: today })).inventory.rows.find((item) => item.productId === 'P-003')
+    assert.equal(row.received, 10)
+    assert.equal(row.damaged, 2)
+    assert.equal(row.issued, 2)
+    assert.equal(row.restocked, 1)
+    assert.equal(row.closing, stock('P-003') + 3)
+    assert.equal(row.opening, 30)
+    assert.equal(row.opening + row.received + row.restocked - row.issued, row.closing)
+  })
+
   await test('VietQR payload: EMVCo fields, amount, ASCII note and CRC', async () => {
     const payload = vietQrPayload({ bin: '970436', account: '0071000123456', amount: 185000, note: 'AF-1070' })
     assert.ok(payload.startsWith('000201010212'))

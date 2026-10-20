@@ -9,7 +9,7 @@ import { QueryError } from '../../shared/components/QueryError'
 import { downloadCsv } from '../../shared/utils/csv'
 import { compactCurrency, currency, shortDate } from '../../shared/utils/format'
 import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
-import { useReport, type DriverReportRow, type PeriodReport, type ProductReportRow, type ReportRange } from './reportService'
+import { useReport, type DriverReportRow, type InventoryReportRow, type PeriodReport, type ProductReportRow, type ReportRange } from './reportService'
 
 const FORMAT = 'YYYY-MM-DD'
 const toRange = ([from, to]: [Dayjs, Dayjs]): ReportRange => ({ from: from.format(FORMAT), to: to.format(FORMAT) })
@@ -24,10 +24,8 @@ const presets: { label: string; value: [Dayjs, Dayjs] }[] = [
 
 const productColumns: TableColumnsType<ProductReportRow> = [
   { title: 'Sản phẩm', dataIndex: 'name', ellipsis: true, fixed: 'left', width: 240 },
-  { title: 'Nhập đạt', dataIndex: 'received', align: 'right', width: 90, render: (value: number) => value || '—' },
   { title: 'Đã bán', dataIndex: 'sold', align: 'right', width: 90, sorter: (a, b) => a.sold - b.sold },
   { title: 'Trả lại', dataIndex: 'returned', align: 'right', width: 80, render: (value: number) => value || '—' },
-  { title: 'Tồn hiện tại', dataIndex: 'stock', align: 'right', width: 110, render: (stock: number, row) => `${stock} ${row.unit.toLowerCase()}` },
   { title: 'Doanh thu', dataIndex: 'revenue', align: 'right', width: 130, defaultSortOrder: 'descend', sorter: (a, b) => a.revenue - b.revenue, render: currency },
   { title: 'Giá vốn (ước tính)', dataIndex: 'cost', align: 'right', width: 150, render: currency },
   {
@@ -38,6 +36,19 @@ const productColumns: TableColumnsType<ProductReportRow> = [
     sorter: (a, b) => a.revenue - a.cost - (b.revenue - b.cost),
     render: (_, row) => <Money value={Math.abs(row.revenue - row.cost)} tone={row.revenue >= row.cost ? 'paid' : 'refund'} />,
   },
+]
+
+const dash = (value: number) => value || '—'
+const inventoryColumns: TableColumnsType<InventoryReportRow> = [
+  { title: 'Sản phẩm', dataIndex: 'name', ellipsis: true, fixed: 'left', width: 240 },
+  { title: 'Đơn vị', dataIndex: 'unit', width: 80 },
+  { title: 'Tồn đầu kỳ', dataIndex: 'opening', align: 'right', width: 100 },
+  { title: 'Nhập NCC', dataIndex: 'received', align: 'right', width: 90, render: dash },
+  { title: 'Khách trả nhập lại', dataIndex: 'restocked', align: 'right', width: 110, render: dash },
+  { title: 'Xuất bán', dataIndex: 'issued', align: 'right', width: 90, sorter: (a, b) => a.issued - b.issued, render: dash },
+  { title: 'Tồn cuối kỳ', dataIndex: 'closing', align: 'right', width: 100, render: (value: number) => <strong>{value}</strong> },
+  { title: 'Hỏng khi nhận', dataIndex: 'damaged', align: 'right', width: 100, render: (value: number) => (value ? <Tag color="red">{value}</Tag> : '—') },
+  { title: 'Giá trị tồn cuối', dataIndex: 'closingValue', align: 'right', width: 140, sorter: (a, b) => a.closingValue - b.closingValue, render: currency },
 ]
 
 const driverColumns: TableColumnsType<DriverReportRow> = [
@@ -79,8 +90,11 @@ function exportReport(report: PeriodReport) {
     ['Ngày', 'Doanh thu', 'Tiền thu', 'Đơn tạo'],
     ...report.days.map((day) => [day.date, day.revenue, day.collected, day.orders]),
     [],
-    ['Sản phẩm', 'Nhập đạt', 'Đã bán', 'Trả lại', 'Tồn hiện tại', 'Doanh thu', 'Giá vốn ước tính', 'Lãi gộp'],
-    ...report.products.map((row) => [row.name, row.received, row.sold, row.returned, row.stock, row.revenue, row.cost, row.revenue - row.cost]),
+    ['Sản phẩm', 'Đã bán', 'Trả lại', 'Doanh thu', 'Giá vốn ước tính', 'Lãi gộp'],
+    ...report.products.map((row) => [row.name, row.sold, row.returned, row.revenue, row.cost, row.revenue - row.cost]),
+    [],
+    ['Nhập – xuất – tồn', 'Đơn vị', 'Tồn đầu kỳ', 'Nhập NCC', 'Khách trả nhập lại', 'Xuất bán', 'Tồn cuối kỳ', 'Hỏng khi nhận', 'Giá trị tồn cuối'],
+    ...report.inventory.rows.map((row) => [row.name, row.unit, row.opening, row.received, row.restocked, row.issued, row.closing, row.damaged, row.closingValue]),
     [],
     ['Tài xế', 'Thành công', 'Thất bại', 'Trễ hẹn'],
     ...delivery.drivers.map((row) => [row.driver, row.delivered, row.failed, row.late]),
@@ -306,9 +320,9 @@ export function ReportsPage() {
               </Card>
             </Col>
           </Row>
-          <Card title="Nhập – xuất – tồn theo sản phẩm" className="af-card" styles={{ body: { padding: 0 } }}>
+          <Card title="Bán hàng theo sản phẩm" className="af-card" styles={{ body: { padding: 0 } }}>
             <Table<ProductReportRow>
-              locale={{ emptyText: 'Không có hàng nhập hoặc bán trong kỳ.' }}
+              locale={{ emptyText: 'Không bán sản phẩm nào trong kỳ.' }}
               className="af-data-table"
               rowKey="productId"
               size="middle"
@@ -316,8 +330,27 @@ export function ReportsPage() {
               dataSource={report?.products}
               loading={loading}
               pagination={tablePagination}
-              scroll={{ x: 1050, y: tableScrollHeight }}
+              scroll={{ x: 860, y: tableScrollHeight }}
             />
+          </Card>
+          <Card
+            title="Nhập – xuất – tồn"
+            extra={report && <Typography.Text type="secondary">Giá trị tồn: {compactCurrency(report.inventory.openingValue)} → {compactCurrency(report.inventory.closingValue)}</Typography.Text>}
+            className="af-card"
+            styles={{ body: { padding: 0 } }}
+          >
+            <Table<InventoryReportRow>
+              locale={{ emptyText: 'Không có hàng trong kho.' }}
+              className="af-data-table"
+              rowKey="productId"
+              size="middle"
+              columns={inventoryColumns}
+              dataSource={report?.inventory.rows}
+              loading={loading}
+              pagination={tablePagination}
+              scroll={{ x: 1150, y: tableScrollHeight }}
+            />
+            <p className="af-form-hint af-report-table-hint">Tồn tính theo hàng thực có trong kho, gồm hàng đang giữ cho đơn chưa giao. Tồn đầu + nhập − xuất = tồn cuối.</p>
           </Card>
         </>
       )}

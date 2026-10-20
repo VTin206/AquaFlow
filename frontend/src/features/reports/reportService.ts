@@ -22,9 +22,24 @@ export type ProductReportRow = {
   revenue: number
   /** Giá vốn ước tính theo giá nhập bình quân của các lô. */
   cost: number
+}
+
+/** Nhập – xuất – tồn theo số lượng thực có trong kho (gồm hàng đang giữ cho đơn chưa giao). */
+export type InventoryReportRow = {
+  productId: string
+  name: string
+  unit: string
+  opening: number
+  /** Hàng đạt nhập từ nhà cung cấp. */
   received: number
+  /** Hàng khách trả còn tốt, nhập lại kho. */
+  restocked: number
+  /** Xuất giao cho khách. */
+  issued: number
+  closing: number
+  /** Hỏng khi kiểm nhận, không vào kho. */
   damaged: number
-  stock: number
+  closingValue: number
 }
 
 export type BottleHolderRow = { customerId: string; name: string; bottles: number; deposit: number }
@@ -67,6 +82,7 @@ export type PeriodReport = {
   delivery: { delivered: number; failedAttempts: number; withAppointment: number; late: number; averageLateMinutes: number; drivers: DriverReportRow[] }
   channels: { channel: Order['channel']; orders: number; revenue: number }[]
   products: ProductReportRow[]
+  inventory: { rows: InventoryReportRow[]; openingValue: number; closingValue: number }
   receipts: { count: number; value: number }
   profit: { goodsRevenue: number; cost: number; gross: number }
 }
@@ -95,6 +111,61 @@ const unitCost = (productId: string) => {
   const quantity = lots.reduce((sum, lot) => sum + lot.received, 0)
   if (quantity) return Math.round(lots.reduce((sum, lot) => sum + lot.received * lot.costPrice, 0) / quantity)
   return Math.round(((db.products.find((product) => product.id === productId)?.price ?? 0) * 0.7) / 1000) * 1000
+}
+
+type StockMove = { productId: string; day: string; received?: number; restocked?: number; issued?: number }
+
+/**
+ * Chưa có sổ kho nên tính lùi từ tồn thực có hôm nay: tồn cuối = tồn hôm nay − (nhập − xuất) sau kỳ,
+ * tồn đầu = tồn cuối − (nhập − xuất) trong kỳ. Backend thật nên lưu sổ kho và trả thẳng các số này.
+ */
+function buildInventory(range: ReportRange, orders: Order[]): PeriodReport['inventory'] {
+  const moves: StockMove[] = [
+    ...db.receipts.flatMap((receipt) => receipt.lines.map((line) => ({ productId: line.productId, day: receipt.receivedAt, received: line.received - line.damaged }))),
+    ...orders
+      .filter((order) => order.status !== 'Đã hủy' && order.deliveredAt)
+      .flatMap((order) => order.lines.map((line) => ({ productId: line.productId, day: localDay(order.deliveredAt!), issued: line.quantity }))),
+    ...orders
+      .flatMap((order) => order.returns ?? [])
+      .filter((item) => item.restocked)
+      .flatMap((item) => item.lines.map((line) => ({ productId: line.productId, day: localDay(item.at), restocked: line.quantity }))),
+  ]
+  // Hàng đã trừ khỏi tồn bán được nhưng vẫn còn trong kho vì đơn chưa giao.
+  const reserved = new Map<string, number>()
+  for (const order of orders.filter((item) => item.stockReserved && !item.deliveredAt))
+    for (const line of order.lines) reserved.set(line.productId, (reserved.get(line.productId) ?? 0) + line.quantity)
+  const net = (move: StockMove) => (move.received ?? 0) + (move.restocked ?? 0) - (move.issued ?? 0)
+
+  const rows = db.products.map((product): InventoryReportRow => {
+    const own = moves.filter((move) => move.productId === product.id)
+    const during = own.filter((move) => move.day >= range.from && move.day <= range.to)
+    const sum = (field: 'received' | 'restocked' | 'issued') => during.reduce((total, move) => total + (move[field] ?? 0), 0)
+    const onHand = product.stock + (reserved.get(product.id) ?? 0)
+    const closing = onHand - own.filter((move) => move.day > range.to).reduce((total, move) => total + net(move), 0)
+    const damaged = db.receipts
+      .filter((receipt) => receipt.receivedAt >= range.from && receipt.receivedAt <= range.to)
+      .flatMap((receipt) => receipt.lines)
+      .filter((line) => line.productId === product.id)
+      .reduce((total, line) => total + line.damaged, 0)
+    return {
+      productId: product.id,
+      name: product.name,
+      unit: product.unit,
+      opening: closing - during.reduce((total, move) => total + net(move), 0),
+      received: sum('received'),
+      restocked: sum('restocked'),
+      issued: sum('issued'),
+      closing,
+      damaged,
+      closingValue: closing * unitCost(product.id),
+    }
+  })
+  const active = rows.filter((row) => row.opening || row.received || row.restocked || row.issued || row.closing || row.damaged)
+  return {
+    rows: active.sort((a, b) => b.issued - a.issued || a.name.localeCompare(b.name, 'vi')),
+    openingValue: active.reduce((total, row) => total + row.opening * unitCost(row.productId), 0),
+    closingValue: active.reduce((total, row) => total + row.closingValue, 0),
+  }
 }
 
 function buildReport(range: ReportRange): PeriodReport {
@@ -163,7 +234,7 @@ function buildReport(range: ReportRange): PeriodReport {
   const rowOf = (productId: string, name: string, unit: string) => {
     const existing = products.get(productId)
     if (existing) return existing
-    const row: ProductReportRow = { productId, name, unit, sold: 0, returned: 0, revenue: 0, cost: 0, received: 0, damaged: 0, stock: db.products.find((product) => product.id === productId)?.stock ?? 0 }
+    const row: ProductReportRow = { productId, name, unit, sold: 0, returned: 0, revenue: 0, cost: 0 }
     products.set(productId, row)
     return row
   }
@@ -180,18 +251,14 @@ function buildReport(range: ReportRange): PeriodReport {
       row.sold -= line.quantity
       row.revenue -= line.quantity * line.unitPrice
     }
-  for (const receipt of receipts)
-    for (const line of receipt.lines) {
-      const row = rowOf(line.productId, line.productName, line.unit)
-      row.received += line.received - line.damaged
-      row.damaged += line.damaged
-    }
   products.forEach((row) => {
     row.cost = row.sold * unitCost(row.productId)
   })
   const productRows = [...products.values()].sort((a, b) => b.revenue - a.revenue)
   const goodsRevenue = productRows.reduce((sum, row) => sum + row.revenue, 0)
   const cost = productRows.reduce((sum, row) => sum + row.cost, 0)
+
+  const inventory = buildInventory(range, orders)
 
   return {
     range,
@@ -231,6 +298,7 @@ function buildReport(range: ReportRange): PeriodReport {
     },
     channels,
     products: productRows,
+    inventory,
     receipts: { count: receipts.length, value: receipts.reduce((sum, receipt) => sum + receipt.total, 0) },
     profit: { goodsRevenue, cost, gross: goodsRevenue - cost },
   }

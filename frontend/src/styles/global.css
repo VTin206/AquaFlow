@@ -1104,6 +1104,7 @@ body {
 
 /* Báo cáo */
 .af-report-subhead { display: block; margin: 12px 0 4px; }
+.af-report-table-hint { margin: 0; padding: 10px 16px; }
 .af-report-delivery { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
 @media (max-width: 640px) {
   .af-report-delivery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
