@@ -36,8 +36,6 @@ export function CustomersPage() {
       ...sort.column('Khách hàng', 'name', 'text'),
       dataIndex: 'name',
       width: 260,
-      onHeaderCell: () => ({ style: { paddingInlineStart: 20 } }),
-      onCell: () => ({ style: { paddingInlineStart: 20 } }),
       sorter: (a, b) => a.name.localeCompare(b.name, 'vi'),
       render: (_, customer) => (
         <div className="af-cell-stack">

@@ -16,8 +16,6 @@ type SortColumn = ReturnType<typeof useColumnSort<Supplier>>['column']
 const supplierColumns = (sortColumn: SortColumn): TableColumnsType<Supplier> => [
   {
     ...sortColumn('Nhà cung cấp', 'name', 'text'), dataIndex: 'name', width: 260,
-    onHeaderCell: () => ({ style: { paddingInlineStart: 20 } }),
-    onCell: () => ({ style: { paddingInlineStart: 20 } }),
     sorter: (a, b) => a.name.localeCompare(b.name, 'vi'),
     render: (_, supplier) => <div className="af-cell-stack"><span className="af-cell-truncate" title={supplier.name}>{supplier.name}</span><small>{supplier.id}</small></div>,
   },
