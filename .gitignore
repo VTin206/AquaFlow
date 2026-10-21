@@ -11,6 +11,7 @@ npm-debug.log*
 
 # IDE
 .idea/
+.vs/
 *.iml
 .vscode/*
 !.vscode/extensions.json

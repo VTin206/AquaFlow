@@ -1,5 +1,9 @@
 package com.aquaflow.auth.api;
 
+import com.aquaflow.customer.order.repository.OrderItemRepository;
+import com.aquaflow.customer.order.repository.OrderRepository;
+import com.aquaflow.customer.repository.CustomerAddressRepository;
+import com.aquaflow.customer.repository.CustomerRepository;
 import com.aquaflow.auth.domain.Role;
 import com.aquaflow.auth.domain.User;
 import com.aquaflow.auth.domain.UserStatus;
@@ -55,6 +59,18 @@ class AuthControllerIntegrationTest {
 
     @MockBean
     private BottleTypeRepository bottleTypeRepository;
+
+    @MockBean
+    private CustomerRepository customerRepository;
+
+    @MockBean
+    private CustomerAddressRepository customerAddressRepository;
+
+    @MockBean
+    private OrderRepository orderRepository;
+
+    @MockBean
+    private OrderItemRepository orderItemRepository;
 
     private User activeUser;
 
