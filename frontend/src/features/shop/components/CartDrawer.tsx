@@ -91,6 +91,12 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
               <span>Tạm tính</span>
               <strong>{currency(subtotal + fee)}</strong>
             </div>
+            {jugs > 0 && (
+              <div className="af-deposit-note" role="note" aria-label="Lưu ý tiền cọc vỏ bình">
+                <strong>Chưa gồm tiền cọc vỏ</strong>
+                <span>Nếu thiếu vỏ để đổi, bạn gửi cọc {currency(DEPOSIT_PER_BOTTLE)}/vỏ khi nhận hàng. Tiền cọc được hoàn khi trả vỏ.</span>
+              </div>
+            )}
             {step === 'cart' ? (
               <Button type="primary" block size="large" disabled={unavailable.length > 0} onClick={() => setStep('checkout')}>
                 Đặt hàng
@@ -131,11 +137,6 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
               </li>
             ))}
           </ul>
-          {jugs > 0 && (
-            <p className="af-form-hint">
-              Đơn có {jugs} bình 20L. Nếu chưa có vỏ để đổi, khách gửi cọc {currency(DEPOSIT_PER_BOTTLE)}/vỏ khi nhận hàng (hoàn lại khi trả vỏ).
-            </p>
-          )}
         </>
       ) : (
         <Form<CheckoutForm>

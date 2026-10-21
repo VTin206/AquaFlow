@@ -13,6 +13,14 @@ export function daysUntilExpiry(expiry: string, today = new Date()): number | nu
 /** Ngưỡng cảnh báo hạn sử dụng (ngày). */
 export const EXPIRY_WARNING_DAYS = 120
 
+/** Hết hạn và sắp hết hạn là hai nhóm riêng; ngày hết hạn hôm nay vẫn thuộc cảnh báo. */
+export function expiryStatus(expiry: string, warningDays: number, today = new Date()) {
+  const days = daysUntilExpiry(expiry, today)
+  if (days === null) return 'none'
+  if (days < 0) return 'expired'
+  return days <= warningDays ? 'expiring' : 'fresh'
+}
+
 /** "2027-01-31" → "31/01/2027" (định dạng hạn dùng đang hiển thị trên sản phẩm). */
 export const isoToVnDate = (iso: string) => iso.split('-').reverse().join('/')
 

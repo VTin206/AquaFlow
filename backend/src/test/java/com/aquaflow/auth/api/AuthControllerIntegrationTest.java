@@ -4,6 +4,9 @@ import com.aquaflow.auth.domain.Role;
 import com.aquaflow.auth.domain.User;
 import com.aquaflow.auth.domain.UserStatus;
 import com.aquaflow.auth.repository.UserRepository;
+import com.aquaflow.inventory.repository.BottleTypeRepository;
+import com.aquaflow.inventory.repository.ProductRepository;
+import com.aquaflow.inventory.repository.SupplierRepository;
 import com.aquaflow.auth.application.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,6 +45,16 @@ class AuthControllerIntegrationTest {
 
     @MockBean
     private UserRepository userRepository;
+
+    // Test này tắt JPA nên phải giả lập các repository của module inventory
+    @MockBean
+    private ProductRepository productRepository;
+
+    @MockBean
+    private SupplierRepository supplierRepository;
+
+    @MockBean
+    private BottleTypeRepository bottleTypeRepository;
 
     private User activeUser;
 

@@ -52,6 +52,9 @@ export const appTheme: ThemeConfig = {
       rowHoverBg: '#f2f9fc',
       cellPaddingBlock: 10,
       cellPaddingBlockMD: 10,
+      // Cùng lề với toolbar; bảng middle mặc định chỉ chừa 8px.
+      cellPaddingInline: 20,
+      cellPaddingInlineMD: 20,
     },
     Segmented: { trackBg: '#f0f4f8', itemSelectedColor: '#087fad', trackPadding: 4 },
     Form: { labelColor: '#263e53', labelFontSize: 13, verticalLabelPadding: '0 0 8px' },

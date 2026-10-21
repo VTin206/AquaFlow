@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Space, Table, Tooltip, type TableColumnsType } from 'antd'
+import { Button, Grid, Space, Table, Tooltip, type TableColumnsType } from 'antd'
 import { Eye } from 'lucide-react'
 import { Money } from '../../../shared/components/Money'
 import { tablePagination, tableScrollHeight } from '../../../shared/utils/table'
@@ -9,6 +9,7 @@ import { AdvanceStatusButton } from './AdvanceStatusButton'
 import { LateTag } from './LateTag'
 import { OrderStatusTag } from './OrderStatusTag'
 import { OrderDetailsModal } from './OrderDetailsModal'
+import { OrderCards } from './OrderCards'
 
 type OrdersTableProps = {
   orders: Order[]
@@ -19,6 +20,7 @@ type OrdersTableProps = {
 }
 
 export function OrdersTable({ orders, loading, compact = false, emptyText = 'Chưa có đơn hàng nào.' }: OrdersTableProps) {
+  const screens = Grid.useBreakpoint()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const sort = useColumnSort<Order>()
   const columns: TableColumnsType<Order> = [
@@ -109,7 +111,9 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
 
   return (
     <>
-      <Table<Order>
+      {screens.md === false ? (
+        <OrderCards orders={orders} loading={loading} compact={compact} emptyText={emptyText} onDetails={setSelectedId} />
+      ) : <Table<Order>
         className="af-data-table"
         rowKey="id"
         columns={columns}
@@ -119,7 +123,7 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
         pagination={compact ? false : tablePagination}
         locale={{ emptyText }}
         scroll={{ x: compact ? 720 : 1220, ...(!compact && { y: tableScrollHeight }) }}
-      />
+      />}
       {selectedId && <OrderDetailsModal key={selectedId} orderId={selectedId} onClose={() => setSelectedId(null)} />}
     </>
   )

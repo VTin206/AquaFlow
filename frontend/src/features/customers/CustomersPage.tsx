@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Card, Col, Input, Row, Statistic, Table, Tag, type TableColumnsType } from 'antd'
+import { Button, Card, Col, Grid, Input, Row, Statistic, Table, Tag, type TableColumnsType } from 'antd'
 import { Plus, Search } from 'lucide-react'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
@@ -10,10 +10,13 @@ import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
 import { CreateOrderModal } from '../orders/components/CreateOrderModal'
 import { CustomerDrawer } from './components/CustomerDrawer'
 import { CustomerFormModal } from './components/CustomerFormModal'
+import { CustomerCards } from './components/CustomerCards'
 import type { Customer } from './types'
 import { useCustomers } from './useCustomers'
+import { matchesSearch } from '../../shared/utils/search'
 
 export function CustomersPage() {
+  const screens = Grid.useBreakpoint()
   const customersQuery = useCustomers()
   const [query, setQuery] = useState('')
   const [profileId, setProfileId] = useState<string | null>(null)
@@ -22,8 +25,7 @@ export function CustomersPage() {
   const [orderFor, setOrderFor] = useState<Customer | null>(null)
 
   const customers = customersQuery.data ?? []
-  const keyword = query.trim().toLowerCase()
-  const visible = customers.filter((customer) => `${customer.id} ${customer.name} ${customer.phone} ${customer.area}`.toLowerCase().includes(keyword))
+  const visible = customers.filter((customer) => matchesSearch(query, `${customer.id} ${customer.name} ${customer.phone} ${customer.area}`, customer.phone))
   const totalBottles = customers.reduce((sum, customer) => sum + customer.bottlesHeld, 0)
   const totalDeposit = customers.reduce((sum, customer) => sum + customer.depositHeld, 0)
   const totalDebt = customers.reduce((sum, customer) => sum + customer.debt, 0)
@@ -34,8 +36,6 @@ export function CustomersPage() {
       ...sort.column('Khách hàng', 'name', 'text'),
       dataIndex: 'name',
       width: 260,
-      onHeaderCell: () => ({ style: { paddingInlineStart: 20 } }),
-      onCell: () => ({ style: { paddingInlineStart: 20 } }),
       sorter: (a, b) => a.name.localeCompare(b.name, 'vi'),
       render: (_, customer) => (
         <div className="af-cell-stack">
@@ -99,22 +99,22 @@ export function CustomersPage() {
       ) : (
         <>
           <Row gutter={[12, 12]} className="af-stat-row">
-            <Col xs={12} lg={6}>
+            <Col xs={24} sm={12} lg={6}>
               <Card loading={customersQuery.isPending}>
                 <Statistic title="Khách hàng" value={customers.length} />
               </Card>
             </Col>
-            <Col xs={12} lg={6}>
+            <Col xs={24} sm={12} lg={6}>
               <Card loading={customersQuery.isPending}>
                 <Statistic className={totalDebt > 0 ? 'af-stat-due' : 'af-stat-paid'} title="Còn phải thu" value={totalDebt} formatter={(value) => currency(Number(value))} />
               </Card>
             </Col>
-            <Col xs={12} lg={6}>
+            <Col xs={24} sm={12} lg={6}>
               <Card loading={customersQuery.isPending}>
                 <Statistic title="Vỏ khách đang giữ" value={totalBottles} suffix="vỏ" />
               </Card>
             </Col>
-            <Col xs={12} lg={6}>
+            <Col xs={24} sm={12} lg={6}>
               <Card loading={customersQuery.isPending}>
                 <Statistic className="af-stat-deposit" title="Tiền cọc đang giữ" value={totalDeposit} formatter={(value) => currency(Number(value))} />
               </Card>
@@ -132,7 +132,17 @@ export function CustomersPage() {
                 className="af-search"
               />
             </div>
-            <Table<Customer>
+            {screens.md === false ? (
+              <CustomerCards
+                key={query}
+                customers={visible}
+                loading={customersQuery.isPending}
+                emptyText={query.trim() ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.'}
+                onProfile={setProfileId}
+                onCreateOrder={setOrderFor}
+              />
+            ) : <Table<Customer>
+              key={query}
               className="af-data-table"
               size="middle"
               rowKey="id"
@@ -140,9 +150,9 @@ export function CustomersPage() {
               dataSource={visible}
               loading={customersQuery.isPending}
               pagination={tablePagination}
-              locale={{ emptyText: keyword ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.' }}
+              locale={{ emptyText: query.trim() ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.' }}
               scroll={{ x: 920, y: tableScrollHeight }}
-            />
+            />}
           </Card>
         </>
       )}
