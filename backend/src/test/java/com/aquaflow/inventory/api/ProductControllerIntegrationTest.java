@@ -1,5 +1,9 @@
 package com.aquaflow.inventory.api;
 
+import com.aquaflow.customer.order.repository.OrderItemRepository;
+import com.aquaflow.customer.order.repository.OrderRepository;
+import com.aquaflow.customer.repository.CustomerAddressRepository;
+import com.aquaflow.customer.repository.CustomerRepository;
 import com.aquaflow.auth.repository.UserRepository;
 import com.aquaflow.inventory.api.dto.CreateProductRequest;
 import com.aquaflow.inventory.api.dto.ProductResponse;
@@ -55,6 +59,18 @@ class ProductControllerIntegrationTest {
 
     @MockitoBean
     private UserRepository userRepository;
+
+    @MockitoBean
+    private CustomerRepository customerRepository;
+
+    @MockitoBean
+    private CustomerAddressRepository customerAddressRepository;
+
+    @MockitoBean
+    private OrderRepository orderRepository;
+
+    @MockitoBean
+    private OrderItemRepository orderItemRepository;
 
     @Test
     void anonymousUserCanListProducts() throws Exception {

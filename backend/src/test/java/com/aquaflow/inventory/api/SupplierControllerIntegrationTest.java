@@ -1,5 +1,9 @@
 package com.aquaflow.inventory.api;
 
+import com.aquaflow.customer.order.repository.OrderItemRepository;
+import com.aquaflow.customer.order.repository.OrderRepository;
+import com.aquaflow.customer.repository.CustomerAddressRepository;
+import com.aquaflow.customer.repository.CustomerRepository;
 import com.aquaflow.auth.repository.UserRepository;
 import com.aquaflow.inventory.api.dto.SupplierRequest;
 import com.aquaflow.inventory.api.dto.SupplierResponse;
@@ -55,6 +59,18 @@ class SupplierControllerIntegrationTest {
 
     @MockitoBean
     private UserRepository userRepository;
+
+    @MockitoBean
+    private CustomerRepository customerRepository;
+
+    @MockitoBean
+    private CustomerAddressRepository customerAddressRepository;
+
+    @MockitoBean
+    private OrderRepository orderRepository;
+
+    @MockitoBean
+    private OrderItemRepository orderItemRepository;
 
     // ---- Phân quyền xem danh sách ----
 
