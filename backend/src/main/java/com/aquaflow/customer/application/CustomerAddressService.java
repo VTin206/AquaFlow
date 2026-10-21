@@ -31,14 +31,28 @@ public class CustomerAddressService {
             Long customerId,
             CustomerAddressRequest request) {
 
-        return customerRepository.findById(customerId)
+        return customerRepository.findByIdAndActiveTrue(customerId)
                 .map(customer -> {
+                    List<CustomerAddress> existingAddresses =
+                            customerAddressRepository
+                                    .findAllByCustomer_Id(customerId);
+
+                    boolean shouldBeDefault =
+                            existingAddresses.isEmpty()
+                                    || Boolean.TRUE.equals(request.isDefault());
+
+                    if (shouldBeDefault) {
+                        clearDefaultAddress(existingAddresses);
+                    }
+
                     CustomerAddress address = new CustomerAddress(
                             customer,
                             request.recipientName(),
                             request.recipientPhone(),
                             request.addressLine(),
                             request.area());
+
+                    address.setDefault(shouldBeDefault);
 
                     CustomerAddress savedAddress =
                             customerAddressRepository.save(address);
@@ -50,25 +64,23 @@ public class CustomerAddressService {
     public Optional<List<CustomerAddressResponse>> findAllByCustomerId(
             Long customerId) {
 
-        if (!customerRepository.existsById(customerId)) {
-            return Optional.empty();
-        }
-
-        List<CustomerAddressResponse> addresses =
-                customerAddressRepository.findAllByCustomer_Id(customerId)
-                        .stream()
-                        .map(this::toResponse)
-                        .toList();
-
-        return Optional.of(addresses);
+        return customerRepository.findByIdAndActiveTrue(customerId)
+                .map(customer ->
+                        customerAddressRepository
+                                .findAllByCustomer_Id(customerId)
+                                .stream()
+                                .map(this::toResponse)
+                                .toList());
     }
 
     public Optional<CustomerAddressResponse> findById(
             Long customerId,
             Long addressId) {
 
-        return customerAddressRepository
-                .findByIdAndCustomer_Id(addressId, customerId)
+        return customerRepository.findByIdAndActiveTrue(customerId)
+                .flatMap(customer ->
+                        customerAddressRepository
+                                .findByIdAndCustomer_Id(addressId, customerId))
                 .map(this::toResponse);
     }
 
@@ -78,14 +90,27 @@ public class CustomerAddressService {
             Long addressId,
             CustomerAddressRequest request) {
 
-        return customerAddressRepository
-                .findByIdAndCustomer_Id(addressId, customerId)
+        return customerRepository.findByIdAndActiveTrue(customerId)
+                .flatMap(customer ->
+                        customerAddressRepository
+                                .findByIdAndCustomer_Id(addressId, customerId))
                 .map(address -> {
                     address.updateDetails(
                             request.recipientName(),
                             request.recipientPhone(),
                             request.addressLine(),
                             request.area());
+
+                    if (Boolean.TRUE.equals(request.isDefault())) {
+                        List<CustomerAddress> existingAddresses =
+                                customerAddressRepository
+                                        .findAllByCustomer_Id(customerId);
+
+                        clearDefaultAddress(existingAddresses);
+                        address.setDefault(true);
+                    } else if (Boolean.FALSE.equals(request.isDefault())) {
+                        address.setDefault(false);
+                    }
 
                     CustomerAddress savedAddress =
                             customerAddressRepository.save(address);
@@ -96,16 +121,15 @@ public class CustomerAddressService {
 
     @Transactional
     public boolean delete(Long customerId, Long addressId) {
-        Optional<CustomerAddress> address =
-                customerAddressRepository
-                        .findByIdAndCustomer_Id(addressId, customerId);
-
-        if (address.isEmpty()) {
-            return false;
-        }
-
-        customerAddressRepository.delete(address.get());
-        return true;
+        return customerRepository.findByIdAndActiveTrue(customerId)
+                .flatMap(customer ->
+                        customerAddressRepository
+                                .findByIdAndCustomer_Id(addressId, customerId))
+                .map(address -> {
+                    customerAddressRepository.delete(address);
+                    return true;
+                })
+                .orElse(false);
     }
 
     private CustomerAddressResponse toResponse(
@@ -121,5 +145,14 @@ public class CustomerAddressService {
                 address.getAddressLine(),
                 address.getArea(),
                 address.isDefault());
+    }
+
+    private void clearDefaultAddress(List<CustomerAddress> addresses) {
+        for (CustomerAddress address : addresses) {
+            if (address.isDefault()) {
+                address.setDefault(false);
+                customerAddressRepository.saveAndFlush(address);
+            }
+        }
     }
 }

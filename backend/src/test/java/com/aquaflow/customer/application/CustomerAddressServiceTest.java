@@ -1,4 +1,3 @@
-
 package com.aquaflow.customer.application;
 
 import com.aquaflow.customer.api.dto.CustomerAddressRequest;
@@ -45,8 +44,11 @@ class CustomerAddressServiceTest {
                 "123 Nguyen Trai",
                 "Quan 5");
 
-        when(customerRepository.findById(5L))
+        when(customerRepository.findByIdAndActiveTrue(5L))
                 .thenReturn(Optional.of(customer));
+
+        when(customerAddressRepository.findAllByCustomer_Id(5L))
+                .thenReturn(List.of());
 
         when(customerAddressRepository.save(any(CustomerAddress.class)))
                 .thenAnswer(invocation -> {
@@ -68,29 +70,51 @@ class CustomerAddressServiceTest {
         assertThat(response.recipientPhone()).isEqualTo("0901234567");
         assertThat(response.addressLine()).isEqualTo("123 Nguyen Trai");
         assertThat(response.area()).isEqualTo("Quan 5");
-        assertThat(response.isDefault()).isFalse();
+        assertThat(response.isDefault()).isTrue();
 
         verify(customerAddressRepository).save(any(CustomerAddress.class));
     }
 
     @Test
-    void createReturnsEmptyWhenCustomerDoesNotExist() {
-        when(customerRepository.findById(999L))
-                .thenReturn(Optional.empty());
+    void createMakesNewAddressDefaultAndClearsPreviousDefault() {
+        Customer customer = customer(5L);
+
+        CustomerAddress previousDefault = address(11L, customer);
+        previousDefault.setDefault(true);
 
         CustomerAddressRequest request = new CustomerAddressRequest(
-                "Nguyen Van An",
-                "0901234567",
-                "123 Nguyen Trai",
-                "Quan 5");
+                "Tran Thi Binh",
+                "0987654321",
+                "456 Le Loi",
+                "Quan 1",
+                true);
+
+        when(customerRepository.findByIdAndActiveTrue(5L))
+                .thenReturn(Optional.of(customer));
+
+        when(customerAddressRepository.findAllByCustomer_Id(5L))
+                .thenReturn(List.of(previousDefault));
+
+        when(customerAddressRepository.save(any(CustomerAddress.class)))
+                .thenAnswer(invocation -> {
+                    CustomerAddress saved = invocation.getArgument(0);
+                    ReflectionTestUtils.setField(saved, "id", 13L);
+                    return saved;
+                });
 
         Optional<CustomerAddressResponse> result =
-                customerAddressService.create(999L, request);
+                customerAddressService.create(5L, request);
 
-        assertThat(result).isEmpty();
+        assertThat(result).isPresent();
 
-        verify(customerAddressRepository, never())
-                .save(any(CustomerAddress.class));
+        CustomerAddressResponse response = result.orElseThrow();
+
+        assertThat(response.id()).isEqualTo(13L);
+        assertThat(response.isDefault()).isTrue();
+        assertThat(previousDefault.isDefault()).isFalse();
+
+        verify(customerAddressRepository).saveAndFlush(previousDefault);
+        verify(customerAddressRepository).save(any(CustomerAddress.class));
     }
 
     @Test
@@ -98,7 +122,9 @@ class CustomerAddressServiceTest {
         Customer customer = customer(5L);
         CustomerAddress address = address(12L, customer);
 
-        when(customerRepository.existsById(5L)).thenReturn(true);
+        when(customerRepository.findByIdAndActiveTrue(5L))
+                .thenReturn(Optional.of(customer));
+
         when(customerAddressRepository.findAllByCustomer_Id(5L))
                 .thenReturn(List.of(address));
 
@@ -120,7 +146,8 @@ class CustomerAddressServiceTest {
 
     @Test
     void findAllReturnsEmptyWhenCustomerDoesNotExist() {
-        when(customerRepository.existsById(999L)).thenReturn(false);
+        when(customerRepository.findByIdAndActiveTrue(999L))
+                .thenReturn(Optional.empty());
 
         Optional<List<CustomerAddressResponse>> result =
                 customerAddressService.findAllByCustomerId(999L);
@@ -133,7 +160,11 @@ class CustomerAddressServiceTest {
 
     @Test
     void findByIdReturnsAddressWhenItBelongsToCustomer() {
-        CustomerAddress address = address(12L, customer(5L));
+        Customer customer = customer(5L);
+        CustomerAddress address = address(12L, customer);
+
+        when(customerRepository.findByIdAndActiveTrue(5L))
+                .thenReturn(Optional.of(customer));
 
         when(customerAddressRepository.findByIdAndCustomer_Id(12L, 5L))
                 .thenReturn(Optional.of(address));
@@ -151,6 +182,11 @@ class CustomerAddressServiceTest {
 
     @Test
     void findByIdReturnsEmptyWhenAddressDoesNotMatchCustomer() {
+        Customer customer = customer(7L);
+
+        when(customerRepository.findByIdAndActiveTrue(7L))
+                .thenReturn(Optional.of(customer));
+
         when(customerAddressRepository.findByIdAndCustomer_Id(12L, 7L))
                 .thenReturn(Optional.empty());
 
@@ -162,13 +198,17 @@ class CustomerAddressServiceTest {
 
     @Test
     void updateChangesAddressDetails() {
-        CustomerAddress address = address(12L, customer(5L));
+        Customer customer = customer(5L);
+        CustomerAddress address = address(12L, customer);
 
         CustomerAddressRequest request = new CustomerAddressRequest(
                 "Tran Thi Binh",
                 "0987654321",
                 "456 Le Loi",
                 "Quan 1");
+
+        when(customerRepository.findByIdAndActiveTrue(5L))
+                .thenReturn(Optional.of(customer));
 
         when(customerAddressRepository.findByIdAndCustomer_Id(12L, 5L))
                 .thenReturn(Optional.of(address));
@@ -195,6 +235,11 @@ class CustomerAddressServiceTest {
 
     @Test
     void updateReturnsEmptyWhenAddressDoesNotMatchCustomer() {
+        Customer customer = customer(7L);
+
+        when(customerRepository.findByIdAndActiveTrue(7L))
+                .thenReturn(Optional.of(customer));
+
         when(customerAddressRepository.findByIdAndCustomer_Id(12L, 7L))
                 .thenReturn(Optional.empty());
 
@@ -214,8 +259,53 @@ class CustomerAddressServiceTest {
     }
 
     @Test
+    void updateMakesRequestedAddressDefaultAndClearsPreviousDefault() {
+        Customer customer = customer(5L);
+
+        CustomerAddress previousDefault = address(11L, customer);
+        previousDefault.setDefault(true);
+
+        CustomerAddress requestedDefault = address(12L, customer);
+
+        CustomerAddressRequest request = new CustomerAddressRequest(
+                "Tran Thi Binh",
+                "0987654321",
+                "456 Le Loi",
+                "Quan 1",
+                true);
+
+        when(customerRepository.findByIdAndActiveTrue(5L))
+                .thenReturn(Optional.of(customer));
+
+        when(customerAddressRepository.findByIdAndCustomer_Id(12L, 5L))
+                .thenReturn(Optional.of(requestedDefault));
+
+        when(customerAddressRepository.findAllByCustomer_Id(5L))
+                .thenReturn(List.of(previousDefault, requestedDefault));
+
+        when(customerAddressRepository.save(any(CustomerAddress.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Optional<CustomerAddressResponse> result =
+                customerAddressService.update(5L, 12L, request);
+
+        assertThat(result).isPresent();
+        assertThat(result.orElseThrow().isDefault()).isTrue();
+
+        assertThat(previousDefault.isDefault()).isFalse();
+        assertThat(requestedDefault.isDefault()).isTrue();
+
+        verify(customerAddressRepository).saveAndFlush(previousDefault);
+        verify(customerAddressRepository).save(requestedDefault);
+    }
+
+    @Test
     void deleteRemovesAddressWhenFound() {
-        CustomerAddress address = address(12L, customer(5L));
+        Customer customer = customer(5L);
+        CustomerAddress address = address(12L, customer);
+
+        when(customerRepository.findByIdAndActiveTrue(5L))
+                .thenReturn(Optional.of(customer));
 
         when(customerAddressRepository.findByIdAndCustomer_Id(12L, 5L))
                 .thenReturn(Optional.of(address));
@@ -224,12 +314,16 @@ class CustomerAddressServiceTest {
 
         assertThat(deleted).isTrue();
 
-        verify(customerAddressRepository)
-                .delete(address);
+        verify(customerAddressRepository).delete(address);
     }
 
     @Test
     void deleteReturnsFalseWhenAddressDoesNotMatchCustomer() {
+        Customer customer = customer(7L);
+
+        when(customerRepository.findByIdAndActiveTrue(7L))
+                .thenReturn(Optional.of(customer));
+
         when(customerAddressRepository.findByIdAndCustomer_Id(12L, 7L))
                 .thenReturn(Optional.empty());
 

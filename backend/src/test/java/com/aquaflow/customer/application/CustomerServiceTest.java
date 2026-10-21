@@ -65,7 +65,7 @@ class CustomerServiceTest {
         Customer customer =
                 customer(1L, "Nguyen Van An", "0901234567");
 
-        when(customerRepository.findAll())
+        when(customerRepository.findAllByActiveTrue())
                 .thenReturn(List.of(customer));
 
         List<CustomerResponse> responses = customerService.findAll();
@@ -81,7 +81,7 @@ class CustomerServiceTest {
         Customer customer =
                 customer(2L, "Tran Thi Binh", "0912345678");
 
-        when(customerRepository.findById(2L))
+        when(customerRepository.findByIdAndActiveTrue(2L))
                 .thenReturn(Optional.of(customer));
 
         Optional<CustomerResponse> response =
@@ -95,7 +95,7 @@ class CustomerServiceTest {
 
     @Test
     void findByIdReturnsEmptyWhenCustomerDoesNotExist() {
-        when(customerRepository.findById(999L))
+        when(customerRepository.findByIdAndActiveTrue(999L))
                 .thenReturn(Optional.empty());
 
         Optional<CustomerResponse> response =
@@ -112,7 +112,7 @@ class CustomerServiceTest {
         CustomerRequest request =
                 new CustomerRequest("Nguyen Van An Updated", "0987654321");
 
-        when(customerRepository.findById(3L))
+        when(customerRepository.findByIdAndActiveTrue(3L))
                 .thenReturn(Optional.of(customer));
 
         when(customerRepository.save(any(Customer.class)))
@@ -132,7 +132,7 @@ class CustomerServiceTest {
 
     @Test
     void updateReturnsEmptyWhenCustomerDoesNotExist() {
-        when(customerRepository.findById(999L))
+        when(customerRepository.findByIdAndActiveTrue(999L))
                 .thenReturn(Optional.empty());
 
         Optional<CustomerResponse> result =
@@ -145,23 +145,31 @@ class CustomerServiceTest {
     }
 
     @Test
-    void deleteRemovesExistingCustomer() {
-        when(customerRepository.existsById(4L)).thenReturn(true);
+    void deleteDeactivatesExistingCustomer() {
+        Customer customer =
+                customer(4L, "Nguyen Van An", "0901234567");
+
+        when(customerRepository.findByIdAndActiveTrue(4L))
+                .thenReturn(Optional.of(customer));
 
         boolean deleted = customerService.delete(4L);
 
         assertThat(deleted).isTrue();
-        verify(customerRepository).deleteById(4L);
+        assertThat(customer.isActive()).isFalse();
+
+        verify(customerRepository).save(customer);
     }
 
     @Test
-    void deleteDoesNotRemoveMissingCustomer() {
-        when(customerRepository.existsById(999L)).thenReturn(false);
+    void deleteReturnsFalseWhenCustomerDoesNotExist() {
+        when(customerRepository.findByIdAndActiveTrue(999L))
+                .thenReturn(Optional.empty());
 
         boolean deleted = customerService.delete(999L);
 
         assertThat(deleted).isFalse();
-        verify(customerRepository, never()).deleteById(999L);
+
+        verify(customerRepository, never()).save(any(Customer.class));
     }
 
     private Customer customer(

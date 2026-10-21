@@ -3,6 +3,10 @@ package com.aquaflow.customer.repository;
 import com.aquaflow.customer.domain.Customer;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface CustomerRepository extends JpaRepository<Customer, Long> {
+import java.util.List;
+import java.util.Optional;
 
+public interface CustomerRepository extends JpaRepository<Customer, Long> {
+    List<Customer> findAllByActiveTrue();
+    Optional<Customer> findByIdAndActiveTrue(Long id);
 }

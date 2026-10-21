@@ -24,6 +24,9 @@ public class Customer {
     @Column(length = 20)
     private String phone;
 
+    @Column(nullable = false)
+    private boolean active = true;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -39,6 +42,10 @@ public class Customer {
     public void updateDetails(String fullName, String phone) {
         this.fullName = fullName;
         this.phone = phone;
+    }
+
+    public void deactivate() {
+        this.active = false;
     }
 
     public Long getId() {
@@ -59,5 +66,9 @@ public class Customer {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public boolean isActive() {
+        return active;
     }
 }

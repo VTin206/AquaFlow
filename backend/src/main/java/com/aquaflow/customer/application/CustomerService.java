@@ -32,14 +32,14 @@ public class CustomerService {
     }
 
     public List<CustomerResponse> findAll() {
-        return customerRepository.findAll()
+        return customerRepository.findAllByActiveTrue()
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     public Optional<CustomerResponse> findById(Long id) {
-        return customerRepository.findById(id)
+        return customerRepository.findByIdAndActiveTrue(id)
                 .map(this::toResponse);
     }
 
@@ -48,7 +48,7 @@ public class CustomerService {
             Long id,
             CustomerRequest request) {
 
-        return customerRepository.findById(id)
+        return customerRepository.findByIdAndActiveTrue(id)
                 .map(customer -> {
                     customer.updateDetails(
                             request.fullName(),
@@ -62,12 +62,13 @@ public class CustomerService {
 
     @Transactional
     public boolean delete(Long id) {
-        if (!customerRepository.existsById(id)) {
-            return false;
-        }
-
-        customerRepository.deleteById(id);
-        return true;
+        return customerRepository.findByIdAndActiveTrue(id)
+                .map(customer -> {
+                    customer.deactivate();
+                    customerRepository.save(customer);
+                    return true;
+                })
+                .orElse(false);
     }
 
     private CustomerResponse toResponse(Customer customer) {
