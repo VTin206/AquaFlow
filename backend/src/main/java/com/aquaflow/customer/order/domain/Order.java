@@ -182,7 +182,10 @@ public class Order {
     }
 
     public void transitionTo(OrderStatus nextStatus) {
-        if (!OrderStatusPolicy.canTransition(this.status, nextStatus)) {
+        if (!OrderStatusPolicy.canTransition(
+                this.status,
+                nextStatus,
+                this.fulfillmentType)) {
             throw new IllegalStateException(
                     "Invalid order status transition from "
                             + this.status
@@ -194,8 +197,7 @@ public class Order {
 
         OffsetDateTime now = OffsetDateTime.now();
 
-        if ((nextStatus == OrderStatus.CONFIRMED
-                || nextStatus == OrderStatus.PREPARING)
+        if (nextStatus == OrderStatus.CONFIRMED
                 && this.confirmedAt == null) {
             this.confirmedAt = now;
         }

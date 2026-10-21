@@ -37,8 +37,12 @@ public class CustomerAddressService {
                             customerAddressRepository
                                     .findAllByCustomer_Id(customerId);
 
+                    boolean hasDefaultAddress = existingAddresses.stream()
+                            .anyMatch(CustomerAddress::isDefault);
+
                     boolean shouldBeDefault =
                             existingAddresses.isEmpty()
+                                    || !hasDefaultAddress
                                     || Boolean.TRUE.equals(request.isDefault());
 
                     if (shouldBeDefault) {
@@ -108,8 +112,27 @@ public class CustomerAddressService {
 
                         clearDefaultAddress(existingAddresses);
                         address.setDefault(true);
-                    } else if (Boolean.FALSE.equals(request.isDefault())) {
-                        address.setDefault(false);
+                    } else if (Boolean.FALSE.equals(request.isDefault())
+                            && address.isDefault()) {
+
+                        List<CustomerAddress> replacementAddresses =
+                                customerAddressRepository
+                                        .findAllByCustomer_IdOrderByIdAsc(customerId)
+                                        .stream()
+                                        .filter(candidate ->
+                                                !candidate.getId().equals(address.getId()))
+                                        .toList();
+
+                        if (!replacementAddresses.isEmpty()) {
+                            address.setDefault(false);
+                            customerAddressRepository.saveAndFlush(address);
+
+                            CustomerAddress replacementDefault =
+                                    replacementAddresses.get(0);
+
+                            replacementDefault.setDefault(true);
+                            customerAddressRepository.saveAndFlush(replacementDefault);
+                        }
                     }
 
                     CustomerAddress savedAddress =
@@ -126,7 +149,27 @@ public class CustomerAddressService {
                         customerAddressRepository
                                 .findByIdAndCustomer_Id(addressId, customerId))
                 .map(address -> {
+                    boolean wasDefault = address.isDefault();
+
                     customerAddressRepository.delete(address);
+
+                    if (wasDefault) {
+                        customerAddressRepository.flush();
+
+                        List<CustomerAddress> remainingAddresses =
+                                customerAddressRepository
+                                        .findAllByCustomer_IdOrderByIdAsc(
+                                                customerId);
+
+                        if (!remainingAddresses.isEmpty()) {
+                            CustomerAddress nextDefault =
+                                    remainingAddresses.get(0);
+
+                            nextDefault.setDefault(true);
+                            customerAddressRepository.saveAndFlush(nextDefault);
+                        }
+                    }
+
                     return true;
                 })
                 .orElse(false);

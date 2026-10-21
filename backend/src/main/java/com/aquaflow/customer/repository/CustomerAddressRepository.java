@@ -11,6 +11,9 @@ public interface CustomerAddressRepository
 
     List<CustomerAddress> findAllByCustomer_Id(Long customerId);
 
+    List<CustomerAddress> findAllByCustomer_IdOrderByIdAsc(
+        Long customerId);
+
     Optional<CustomerAddress> findByIdAndCustomer_Id(
             Long id,
             Long customerId);

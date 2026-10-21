@@ -206,7 +206,10 @@ class OrderServiceTest {
     void transitionStatusRejectsInvalidTransitionAndDoesNotSave() {
         Order order = createOrder(4L);
 
+        order.transitionTo(OrderStatus.CONFIRMED);
         order.transitionTo(OrderStatus.PREPARING);
+        order.transitionTo(OrderStatus.OUT_FOR_DELIVERY);
+        order.transitionTo(OrderStatus.DELIVERED);
         order.transitionTo(OrderStatus.COMPLETED);
 
         when(orderRepository.findById(4L))
