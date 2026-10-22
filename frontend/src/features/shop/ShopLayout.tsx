@@ -1,15 +1,18 @@
 import { useState } from 'react'
-import { Badge, Button } from 'antd'
+import { Alert, Badge, Button } from 'antd'
 import { LayoutDashboard, PackageSearch, Phone, ShoppingCart, Waves } from 'lucide-react'
 import { Link, NavLink, Outlet } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { useSettings } from '../settings/settingsService'
 import { useCart } from './cart'
 import { CartDrawer } from './components/CartDrawer'
+import { useShopDemo } from './shopService'
 
 /** Khung trang công khai cho khách: không cần đăng nhập, dùng chung dữ liệu mẫu với trang quản lý trong cùng tab. */
 export function ShopLayout() {
-  const { data: settings } = useSettings()
+  const demo = useShopDemo()
+  const settingsQuery = useSettings(demo)
+  const settings = demo ? settingsQuery.data : undefined
   const { isAuthenticated } = useAuth()
   const cart = useCart()
   const [cartOpen, setCartOpen] = useState(false)
@@ -29,10 +32,10 @@ export function ShopLayout() {
             <NavLink to="/shop" end>
               Sản phẩm
             </NavLink>
-            <NavLink to="/track" aria-label="Tra cứu đơn">
+            {demo && <NavLink to="/track" aria-label="Tra cứu đơn">
               <PackageSearch size={16} aria-hidden />
               <span className="af-shop-nav-text">Tra cứu đơn</span>
-            </NavLink>
+            </NavLink>}
             {isAuthenticated && (
               <Link to="/" title="Về trang quản lý cửa hàng" aria-label="Về trang quản lý">
                 <LayoutDashboard size={16} aria-hidden />
@@ -48,6 +51,7 @@ export function ShopLayout() {
         </div>
       </header>
       <main className="af-shop-main">
+        {demo && <Alert type="warning" showIcon title="Bản dùng thử — dữ liệu mẫu, không gửi đơn tới cửa hàng" style={{ marginBottom: 16 }} />}
         <Outlet context={{ openCart: () => setCartOpen(true) }} />
       </main>
       <footer className="af-shop-footer">
@@ -58,7 +62,7 @@ export function ShopLayout() {
             <Phone size={14} aria-hidden /> {settings.phone}
           </a>
         )}
-        <small>Bản demo: đơn đặt ở đây hiện ngay trong trang quản lý khi mở cùng một tab trình duyệt.</small>
+        <small>{demo ? 'Đơn dùng thử chỉ lưu trong tab hiện tại và mất khi tải lại trang.' : 'AquaFlow · Danh mục sản phẩm'}</small>
       </footer>
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </div>

@@ -15,7 +15,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const staff = useStaff()
   const { data: orders = [] } = useOrders(Boolean(staff?.isDemo))
   const { data: settings } = useSettings(Boolean(staff?.isDemo))
-  const allowed = (path: string) => (!staff?.isDemo && !['/products', '/suppliers', '/customers'].includes(path))
+  const allowed = (path: string) => (!staff?.isDemo && !['/products', '/suppliers', '/customers', '/orders', '/inventory'].includes(path))
     ? false : !staff || canOpen(staff.role, path)
   const pendingCount = staff?.isDemo ? orders.filter((order) => order.status === 'Chờ xác nhận').length : 0
 

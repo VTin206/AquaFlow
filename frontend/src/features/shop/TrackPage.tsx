@@ -8,7 +8,7 @@ import { dueTone } from '../../shared/utils/money'
 import { currency } from '../../shared/utils/format'
 import type { PublicOrder } from '../orders/types'
 import { useSettings } from '../settings/settingsService'
-import { lookupOrder, useTrackedOrder } from './shopService'
+import { lookupOrder, useShopDemo, useTrackedOrder } from './shopService'
 
 const stepOf: Record<PublicOrder['status'], number> = {
   'Chờ xác nhận': 0,
@@ -206,9 +206,10 @@ function TrackedOrder({ token }: { token: string }) {
 }
 
 export function TrackPage() {
+  const demo = useShopDemo()
   const { token } = useParams()
   useEffect(() => {
     if (!token) document.title = 'Tra cứu đơn hàng'
   }, [token])
-  return <div className="af-shop-page af-shop-narrow">{token ? <TrackedOrder token={token} /> : <LookupForm />}</div>
+  return <div className="af-shop-page af-shop-narrow">{!demo ? <Result status="info" title="Tra cứu đơn trực tuyến chưa khả dụng" subTitle="Chức năng này đang được hoàn thiện." extra={<Link to="/shop">Về cửa hàng</Link>} /> : token ? <TrackedOrder token={token} /> : <LookupForm />}</div>
 }
