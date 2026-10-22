@@ -102,7 +102,10 @@ class OrderDomainTest {
     void transitionToRejectsInvalidTransition() {
         Order order = createOrder();
 
+        order.transitionTo(OrderStatus.CONFIRMED);
         order.transitionTo(OrderStatus.PREPARING);
+        order.transitionTo(OrderStatus.OUT_FOR_DELIVERY);
+        order.transitionTo(OrderStatus.DELIVERED);
         order.transitionTo(OrderStatus.COMPLETED);
 
         assertThatThrownBy(() -> order.transitionTo(OrderStatus.PENDING))

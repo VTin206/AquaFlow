@@ -10,7 +10,6 @@ public final class OrderStatusPolicy {
                     OrderStatus.PENDING,
                     Set.of(
                             OrderStatus.CONFIRMED,
-                            OrderStatus.PREPARING,
                             OrderStatus.CANCELLED
                     ),
 
@@ -24,14 +23,13 @@ public final class OrderStatusPolicy {
                     Set.of(
                             OrderStatus.OUT_FOR_DELIVERY,
                             OrderStatus.DELIVERED,
-                            OrderStatus.COMPLETED,
                             OrderStatus.CANCELLED
                     ),
 
                     OrderStatus.OUT_FOR_DELIVERY,
                     Set.of(
                             OrderStatus.DELIVERED,
-                            OrderStatus.COMPLETED
+                            OrderStatus.CANCELLED
                     ),
 
                     OrderStatus.DELIVERED,
@@ -49,9 +47,29 @@ public final class OrderStatusPolicy {
 
     public static boolean canTransition(
             OrderStatus currentStatus,
-            OrderStatus nextStatus) {
+            OrderStatus nextStatus,
+            FulfillmentType fulfillmentType) {
 
-        if (currentStatus == null || nextStatus == null) {
+        if (currentStatus == null
+                || nextStatus == null
+                || fulfillmentType == null) {
+            return false;
+        }
+
+        if (currentStatus == OrderStatus.PREPARING) {
+            if (nextStatus == OrderStatus.OUT_FOR_DELIVERY
+                    && fulfillmentType != FulfillmentType.DELIVERY) {
+                return false;
+            }
+
+            if (nextStatus == OrderStatus.DELIVERED
+                    && fulfillmentType != FulfillmentType.COUNTER) {
+                return false;
+            }
+        }
+
+        if (currentStatus == OrderStatus.OUT_FOR_DELIVERY
+                && fulfillmentType != FulfillmentType.DELIVERY) {
             return false;
         }
 

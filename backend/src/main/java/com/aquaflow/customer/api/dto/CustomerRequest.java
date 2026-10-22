@@ -10,7 +10,6 @@ public record CustomerRequest(
         @Size(max = 150, message = "Full name must not exceed 150 characters")
         String fullName,
 
-        @NotBlank(message = "Phone is required")
         @Size(max = 20, message = "Phone must not exceed 20 characters")
         @Pattern(
                 regexp = "^(0|\\+84)[0-9]{9,10}$",

@@ -113,4 +113,29 @@ class CustomerControllerTest {
                 .andExpect(jsonPath("$.phone")
                         .value("0901234567"));
     }
+
+    @Test
+    @WithMockUser(roles = "SALES_STAFF")
+    void missingPhoneIsAllowedWhenCreatingCustomer() throws Exception {
+        CustomerResponse response = new CustomerResponse(
+                102L,
+                "Nguyen Van An",
+                null,
+                Instant.parse("2026-10-21T08:00:00Z"));
+
+        when(customerService.create(any(CustomerRequest.class)))
+                .thenReturn(response);
+
+        mockMvc.perform(post(CUSTOMER_URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "fullName": "Nguyen Van An"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(102))
+                .andExpect(jsonPath("$.fullName")
+                        .value("Nguyen Van An"));
+    }
 }

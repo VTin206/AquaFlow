@@ -300,6 +300,52 @@ class CustomerAddressServiceTest {
     }
 
     @Test
+    void updatePromotesOldestRemainingAddressWhenCurrentDefaultIsUnset() {
+        Customer customer = customer(5L);
+
+        CustomerAddress currentDefault = address(12L, customer);
+        currentDefault.setDefault(true);
+
+        CustomerAddress oldestRemaining = address(8L, customer);
+        CustomerAddress newerRemaining = address(15L, customer);
+
+        CustomerAddressRequest request = new CustomerAddressRequest(
+                "Nguyen Van An",
+                "0901234567",
+                "12 Nguyen Hue",
+                "Quan 1",
+                false);
+
+        when(customerRepository.findByIdAndActiveTrue(5L))
+                .thenReturn(Optional.of(customer));
+
+        when(customerAddressRepository.findByIdAndCustomer_Id(12L, 5L))
+                .thenReturn(Optional.of(currentDefault));
+
+        when(customerAddressRepository.findAllByCustomer_IdOrderByIdAsc(5L))
+                .thenReturn(List.of(
+                        oldestRemaining,
+                        currentDefault,
+                        newerRemaining));
+
+        when(customerAddressRepository.save(any(CustomerAddress.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Optional<CustomerAddressResponse> result =
+                customerAddressService.update(5L, 12L, request);
+
+        assertThat(result).isPresent();
+        assertThat(result.orElseThrow().isDefault()).isFalse();
+
+        assertThat(currentDefault.isDefault()).isFalse();
+        assertThat(oldestRemaining.isDefault()).isTrue();
+        assertThat(newerRemaining.isDefault()).isFalse();
+
+        verify(customerAddressRepository).saveAndFlush(currentDefault);
+        verify(customerAddressRepository).saveAndFlush(oldestRemaining);
+    }
+
+    @Test
     void deleteRemovesAddressWhenFound() {
         Customer customer = customer(5L);
         CustomerAddress address = address(12L, customer);
@@ -315,6 +361,37 @@ class CustomerAddressServiceTest {
         assertThat(deleted).isTrue();
 
         verify(customerAddressRepository).delete(address);
+    }
+
+    @Test
+    void deletePromotesOldestRemainingAddressWhenDeletingDefault() {
+        Customer customer = customer(5L);
+
+        CustomerAddress defaultAddress = address(12L, customer);
+        defaultAddress.setDefault(true);
+
+        CustomerAddress oldestRemaining = address(8L, customer);
+        CustomerAddress newerRemaining = address(10L, customer);
+
+        when(customerRepository.findByIdAndActiveTrue(5L))
+                .thenReturn(Optional.of(customer));
+
+        when(customerAddressRepository.findByIdAndCustomer_Id(12L, 5L))
+                .thenReturn(Optional.of(defaultAddress));
+
+        when(customerAddressRepository.findAllByCustomer_IdOrderByIdAsc(5L))
+                .thenReturn(List.of(oldestRemaining, newerRemaining));
+
+        boolean deleted = customerAddressService.delete(5L, 12L);
+
+        assertThat(deleted).isTrue();
+
+        verify(customerAddressRepository).delete(defaultAddress);
+        verify(customerAddressRepository).flush();
+        verify(customerAddressRepository).saveAndFlush(oldestRemaining);
+
+        assertThat(oldestRemaining.isDefault()).isTrue();
+        assertThat(newerRemaining.isDefault()).isFalse();
     }
 
     @Test
