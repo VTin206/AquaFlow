@@ -7,7 +7,9 @@ import com.aquaflow.customer.repository.CustomerRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -15,23 +17,31 @@ import java.util.Optional;
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final CustomerAuditService customerAuditService;
 
-    public CustomerService(CustomerRepository customerRepository) {
+    public CustomerService(
+            CustomerRepository customerRepository,
+            CustomerAuditService customerAuditService) {
+
         this.customerRepository = customerRepository;
+        this.customerAuditService = customerAuditService;
     }
 
     @Transactional
     public CustomerResponse create(CustomerRequest request) {
+
         Customer customer = new Customer(
                 request.fullName(),
                 request.phone());
 
-        Customer savedCustomer = customerRepository.save(customer);
+        Customer savedCustomer =
+                customerRepository.save(customer);
 
         return toResponse(savedCustomer);
     }
 
     public List<CustomerResponse> findAll() {
+
         return customerRepository.findAllByActiveTrue()
                 .stream()
                 .map(this::toResponse)
@@ -39,6 +49,7 @@ public class CustomerService {
     }
 
     public Optional<CustomerResponse> findById(Long id) {
+
         return customerRepository.findByIdAndActiveTrue(id)
                 .map(this::toResponse);
     }
@@ -50,11 +61,25 @@ public class CustomerService {
 
         return customerRepository.findByIdAndActiveTrue(id)
                 .map(customer -> {
+
+                    Map<String, Object> before =
+                            snapshot(customer);
+
                     customer.updateDetails(
                             request.fullName(),
                             request.phone());
 
-                    Customer savedCustomer = customerRepository.save(customer);
+                    Customer savedCustomer =
+                            customerRepository.save(customer);
+
+                    Map<String, Object> after =
+                            snapshot(savedCustomer);
+
+                    customerAuditService.recordUpdate(
+                            "CUSTOMER",
+                            savedCustomer.getId(),
+                            before,
+                            after);
 
                     return toResponse(savedCustomer);
                 });
@@ -62,6 +87,7 @@ public class CustomerService {
 
     @Transactional
     public boolean delete(Long id) {
+
         return customerRepository.findByIdAndActiveTrue(id)
                 .map(customer -> {
                     customer.deactivate();
@@ -71,7 +97,18 @@ public class CustomerService {
                 .orElse(false);
     }
 
+    private Map<String, Object> snapshot(Customer customer) {
+
+        Map<String, Object> data = new LinkedHashMap<>();
+
+        data.put("fullName", customer.getFullName());
+        data.put("phone", customer.getPhone());
+
+        return data;
+    }
+
     private CustomerResponse toResponse(Customer customer) {
+
         return new CustomerResponse(
                 customer.getId(),
                 customer.getFullName(),

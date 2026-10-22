@@ -17,6 +17,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -26,6 +28,9 @@ class CustomerServiceTest {
 
     @Mock
     private CustomerRepository customerRepository;
+
+    @Mock
+    private CustomerAuditService customerAuditService;
 
     @InjectMocks
     private CustomerService customerService;
@@ -110,7 +115,9 @@ class CustomerServiceTest {
                 customer(3L, "Nguyen Van An", "0901234567");
 
         CustomerRequest request =
-                new CustomerRequest("Nguyen Van An Updated", "0987654321");
+                new CustomerRequest(
+                        "Nguyen Van An Updated",
+                        "0987654321");
 
         when(customerRepository.findByIdAndActiveTrue(3L))
                 .thenReturn(Optional.of(customer));
@@ -128,6 +135,12 @@ class CustomerServiceTest {
         assertThat(result.get().phone()).isEqualTo("0987654321");
 
         verify(customerRepository).save(customer);
+
+        verify(customerAuditService).recordUpdate(
+                eq("CUSTOMER"),
+                eq(3L),
+                anyMap(),
+                anyMap());
     }
 
     @Test
@@ -138,10 +151,14 @@ class CustomerServiceTest {
         Optional<CustomerResponse> result =
                 customerService.update(
                         999L,
-                        new CustomerRequest("Nguyen Van An", "0901234567"));
+                        new CustomerRequest(
+                                "Nguyen Van An",
+                                "0901234567"));
 
         assertThat(result).isEmpty();
-        verify(customerRepository, never()).save(any(Customer.class));
+
+        verify(customerRepository, never())
+                .save(any(Customer.class));
     }
 
     @Test
@@ -169,7 +186,8 @@ class CustomerServiceTest {
 
         assertThat(deleted).isFalse();
 
-        verify(customerRepository, never()).save(any(Customer.class));
+        verify(customerRepository, never())
+                .save(any(Customer.class));
     }
 
     private Customer customer(
@@ -178,7 +196,9 @@ class CustomerServiceTest {
             String phone) {
 
         Customer customer = new Customer(fullName, phone);
+
         ReflectionTestUtils.setField(customer, "id", id);
+
         return customer;
     }
 }

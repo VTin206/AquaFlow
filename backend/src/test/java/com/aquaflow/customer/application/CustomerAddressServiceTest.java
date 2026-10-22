@@ -18,6 +18,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,6 +32,9 @@ class CustomerAddressServiceTest {
 
     @Mock
     private CustomerRepository customerRepository;
+
+    @Mock
+    private CustomerAuditService customerAuditService;
 
     @InjectMocks
     private CustomerAddressService customerAddressService;
@@ -72,7 +77,8 @@ class CustomerAddressServiceTest {
         assertThat(response.area()).isEqualTo("Quan 5");
         assertThat(response.isDefault()).isTrue();
 
-        verify(customerAddressRepository).save(any(CustomerAddress.class));
+        verify(customerAddressRepository)
+                .save(any(CustomerAddress.class));
     }
 
     @Test
@@ -113,8 +119,11 @@ class CustomerAddressServiceTest {
         assertThat(response.isDefault()).isTrue();
         assertThat(previousDefault.isDefault()).isFalse();
 
-        verify(customerAddressRepository).saveAndFlush(previousDefault);
-        verify(customerAddressRepository).save(any(CustomerAddress.class));
+        verify(customerAddressRepository)
+                .saveAndFlush(previousDefault);
+
+        verify(customerAddressRepository)
+                .save(any(CustomerAddress.class));
     }
 
     @Test
@@ -141,7 +150,8 @@ class CustomerAddressServiceTest {
         assertThat(response.customerId()).isEqualTo(5L);
         assertThat(response.recipientName()).isEqualTo("Nguyen Van An");
 
-        verify(customerAddressRepository).findAllByCustomer_Id(5L);
+        verify(customerAddressRepository)
+                .findAllByCustomer_Id(5L);
     }
 
     @Test
@@ -231,6 +241,12 @@ class CustomerAddressServiceTest {
         assertThat(response.area()).isEqualTo("Quan 1");
 
         verify(customerAddressRepository).save(address);
+
+        verify(customerAuditService).recordUpdate(
+                eq("CUSTOMER_ADDRESS"),
+                eq(12L),
+                anyMap(),
+                anyMap());
     }
 
     @Test
@@ -295,8 +311,11 @@ class CustomerAddressServiceTest {
         assertThat(previousDefault.isDefault()).isFalse();
         assertThat(requestedDefault.isDefault()).isTrue();
 
-        verify(customerAddressRepository).saveAndFlush(previousDefault);
-        verify(customerAddressRepository).save(requestedDefault);
+        verify(customerAddressRepository)
+                .saveAndFlush(previousDefault);
+
+        verify(customerAddressRepository)
+                .save(requestedDefault);
     }
 
     @Test
@@ -341,8 +360,11 @@ class CustomerAddressServiceTest {
         assertThat(oldestRemaining.isDefault()).isTrue();
         assertThat(newerRemaining.isDefault()).isFalse();
 
-        verify(customerAddressRepository).saveAndFlush(currentDefault);
-        verify(customerAddressRepository).saveAndFlush(oldestRemaining);
+        verify(customerAddressRepository)
+                .saveAndFlush(currentDefault);
+
+        verify(customerAddressRepository)
+                .saveAndFlush(oldestRemaining);
     }
 
     @Test
@@ -356,7 +378,8 @@ class CustomerAddressServiceTest {
         when(customerAddressRepository.findByIdAndCustomer_Id(12L, 5L))
                 .thenReturn(Optional.of(address));
 
-        boolean deleted = customerAddressService.delete(5L, 12L);
+        boolean deleted =
+                customerAddressService.delete(5L, 12L);
 
         assertThat(deleted).isTrue();
 
@@ -382,7 +405,8 @@ class CustomerAddressServiceTest {
         when(customerAddressRepository.findAllByCustomer_IdOrderByIdAsc(5L))
                 .thenReturn(List.of(oldestRemaining, newerRemaining));
 
-        boolean deleted = customerAddressService.delete(5L, 12L);
+        boolean deleted =
+                customerAddressService.delete(5L, 12L);
 
         assertThat(deleted).isTrue();
 
@@ -404,7 +428,8 @@ class CustomerAddressServiceTest {
         when(customerAddressRepository.findByIdAndCustomer_Id(12L, 7L))
                 .thenReturn(Optional.empty());
 
-        boolean deleted = customerAddressService.delete(7L, 12L);
+        boolean deleted =
+                customerAddressService.delete(7L, 12L);
 
         assertThat(deleted).isFalse();
 
