@@ -3,6 +3,7 @@ package com.aquaflow.inventory.api;
 import com.aquaflow.customer.order.repository.OrderItemRepository;
 import com.aquaflow.customer.order.repository.OrderRepository;
 import com.aquaflow.customer.repository.CustomerAddressRepository;
+import com.aquaflow.customer.application.CustomerAuditService;
 import com.aquaflow.customer.repository.CustomerRepository;
 import com.aquaflow.auth.repository.UserRepository;
 import com.aquaflow.inventory.api.dto.SupplierRequest;
@@ -65,6 +66,9 @@ class SupplierControllerIntegrationTest {
 
     @MockitoBean
     private CustomerAddressRepository customerAddressRepository;
+
+    @MockitoBean
+    private CustomerAuditService customerAuditService;
 
     @MockitoBean
     private OrderRepository orderRepository;

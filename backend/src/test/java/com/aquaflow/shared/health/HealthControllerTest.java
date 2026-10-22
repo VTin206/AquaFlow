@@ -3,6 +3,7 @@ package com.aquaflow.shared.health;
 import com.aquaflow.customer.order.repository.OrderItemRepository;
 import com.aquaflow.customer.order.repository.OrderRepository;
 import com.aquaflow.customer.repository.CustomerAddressRepository;
+import com.aquaflow.customer.application.CustomerAuditService;
 import com.aquaflow.customer.repository.CustomerRepository;
 import com.aquaflow.auth.repository.UserRepository;
 import com.aquaflow.inventory.repository.BottleTypeRepository;
@@ -38,6 +39,9 @@ class HealthControllerTest {
 
     @MockBean
     private CustomerAddressRepository customerAddressRepository;
+
+    @MockBean
+    private CustomerAuditService customerAuditService;
 
     @MockBean
     private OrderRepository orderRepository;
