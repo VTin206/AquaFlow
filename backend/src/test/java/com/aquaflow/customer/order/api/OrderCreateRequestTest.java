@@ -1,5 +1,7 @@
-package com.aquaflow.customer.order.api.dto;
+package com.aquaflow.customer.order.api;
 
+import com.aquaflow.customer.order.api.dto.OrderCreateRequest;
+import com.aquaflow.customer.order.api.dto.OrderItemRequest;
 import com.aquaflow.customer.order.domain.FulfillmentType;
 import com.aquaflow.customer.order.domain.OrderChannel;
 import jakarta.validation.Validation;
