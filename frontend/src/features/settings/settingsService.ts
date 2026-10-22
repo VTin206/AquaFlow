@@ -27,7 +27,7 @@ export const settingsService = {
 
 export const settingsKeys = { all: ['settings'] as const }
 
-export const useSettings = () => useQuery({ queryKey: settingsKeys.all, queryFn: settingsService.get, staleTime: Infinity })
+export const useSettings = (enabled = true) => useQuery({ queryKey: settingsKeys.all, queryFn: settingsService.get, staleTime: Infinity, enabled })
 
 /** Ngưỡng cảnh báo hạn dùng hiện hành (mặc định khi chưa tải xong cài đặt). */
 export const useExpiryWarningDays = () => useSettings().data?.expiryWarningDays ?? EXPIRY_WARNING_DAYS

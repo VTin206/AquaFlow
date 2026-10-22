@@ -152,4 +152,15 @@ class AuthControllerIntegrationTest {
                 .andExpect(jsonPath("$.email").value("an@example.com"))
                 .andExpect(jsonPath("$.role").value("CUSTOMER"));
     }
+
+    @Test
+    void tokenForDeletedUserReturns401() throws Exception {
+        String token = jwtService.generateToken(activeUser);
+        when(userRepository.findByEmailIgnoreCase("an@example.com")).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/auth/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401));
+    }
 }

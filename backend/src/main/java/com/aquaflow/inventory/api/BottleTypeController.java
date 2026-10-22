@@ -4,6 +4,7 @@ import com.aquaflow.inventory.application.BottleTypeService;
 import com.aquaflow.inventory.api.dto.BottleTypeResponse;
 import com.aquaflow.inventory.api.dto.CreateBottleTypeRequest;
 import com.aquaflow.inventory.api.dto.UpdateBottleTypeRequest;
+import com.aquaflow.shared.api.NotFoundException;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -14,6 +15,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -32,8 +34,8 @@ public class BottleTypeController {
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "List of bottle types")
     })
-    public ResponseEntity<List<BottleTypeResponse>> getAllBottleTypes(@RequestParam(required = false) Boolean active) {
-        return ResponseEntity.ok(bottleTypeService.findAll(active));
+    public ResponseEntity<List<BottleTypeResponse>> getAllBottleTypes(@RequestParam(required = false) Boolean active, Authentication authentication) {
+        return ResponseEntity.ok(bottleTypeService.findAll(isAdmin(authentication) ? active : true));
     }
 
     @GetMapping("/{id}")
@@ -42,8 +44,12 @@ public class BottleTypeController {
         @ApiResponse(responseCode = "200", description = "Success retrieval of bottle type"),
         @ApiResponse(responseCode = "404", description = "Bottle type not found", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
     })
-    public ResponseEntity<BottleTypeResponse> getBottleTypeById(@PathVariable Long id) {
-        return ResponseEntity.ok(bottleTypeService.findById(id));
+    public ResponseEntity<BottleTypeResponse> getBottleTypeById(@PathVariable Long id, Authentication authentication) {
+        BottleTypeResponse bottleType = bottleTypeService.findById(id);
+        if (!bottleType.active() && !isAdmin(authentication)) {
+            throw new NotFoundException("Bottle type not found: " + id);
+        }
+        return ResponseEntity.ok(bottleType);
     }
 
     @PostMapping
@@ -86,5 +92,10 @@ public class BottleTypeController {
     public ResponseEntity<Void> deleteBottleType(@PathVariable Long id) {
         bottleTypeService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
     }
 }

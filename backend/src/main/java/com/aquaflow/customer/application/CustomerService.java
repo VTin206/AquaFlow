@@ -4,6 +4,7 @@ import com.aquaflow.customer.api.dto.CustomerRequest;
 import com.aquaflow.customer.api.dto.CustomerResponse;
 import com.aquaflow.customer.domain.Customer;
 import com.aquaflow.customer.repository.CustomerRepository;
+import com.aquaflow.shared.api.ConflictException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,9 +31,14 @@ public class CustomerService {
     @Transactional
     public CustomerResponse create(CustomerRequest request) {
 
+        String phone = normalizePhone(request.phone());
+        if (phone != null && customerRepository.existsByPhoneAndActiveTrue(phone)) {
+            throw new ConflictException("Customer phone already exists");
+        }
+
         Customer customer = new Customer(
                 request.fullName(),
-                request.phone());
+                phone);
 
         Customer savedCustomer =
                 customerRepository.save(customer);
@@ -62,12 +68,17 @@ public class CustomerService {
         return customerRepository.findByIdAndActiveTrue(id)
                 .map(customer -> {
 
+                    String phone = normalizePhone(request.phone());
+                    if (phone != null && customerRepository.existsByPhoneAndActiveTrueAndIdNot(phone, id)) {
+                        throw new ConflictException("Customer phone already exists");
+                    }
+
                     Map<String, Object> before =
                             snapshot(customer);
 
                     customer.updateDetails(
                             request.fullName(),
-                            request.phone());
+                            phone);
 
                     Customer savedCustomer =
                             customerRepository.save(customer);
@@ -105,6 +116,13 @@ public class CustomerService {
         data.put("phone", customer.getPhone());
 
         return data;
+    }
+
+    private String normalizePhone(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return null;
+        }
+        return phone.startsWith("+84") ? "0" + phone.substring(3) : phone;
     }
 
     private CustomerResponse toResponse(Customer customer) {

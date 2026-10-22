@@ -69,13 +69,15 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
         <TopbarClock />
       </div>
       <div className="af-topbar-right">
-        <span className="af-demo-label">Dữ liệu mẫu</span>
-        <Tooltip title="Trang khách đặt hàng (dùng chung dữ liệu mẫu trong tab này)">
-          <Link to="/shop" className="af-notification-link" aria-label="Mở trang khách đặt hàng">
-            <ShoppingCart size={19} aria-hidden />
-          </Link>
-        </Tooltip>
-        <NotificationPopover />
+        {staff?.isDemo && <>
+          <span className="af-demo-label">Dữ liệu mẫu</span>
+          <Tooltip title="Trang khách đặt hàng (dùng chung dữ liệu mẫu trong tab này)">
+            <Link to="/shop" className="af-notification-link" aria-label="Mở trang khách đặt hàng">
+              <ShoppingCart size={19} aria-hidden />
+            </Link>
+          </Tooltip>
+          <NotificationPopover />
+        </>}
         <Dropdown
           trigger={['click']}
           menu={{ items: menuItems }}

@@ -78,12 +78,31 @@ class ProductControllerIntegrationTest {
 
     @Test
     void anonymousUserCanListProducts() throws Exception {
-        when(productService.findAll(null)).thenReturn(List.of(sampleProduct()));
+        when(productService.findAll(true)).thenReturn(List.of(sampleProduct()));
 
         mockMvc.perform(get("/api/v1/products"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].sku").value("NUOC-19L"))
                 .andExpect(jsonPath("$[0].bottleTypeName").value("Bình 19L"));
+    }
+
+    @Test
+    void anonymousUserCannotListInactiveProducts() throws Exception {
+        when(productService.findAll(true)).thenReturn(List.of(sampleProduct()));
+
+        mockMvc.perform(get("/api/v1/products?active=false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].active").value(true));
+    }
+
+    @Test
+    void anonymousUserCannotReadInactiveProductById() throws Exception {
+        ProductResponse inactive = new ProductResponse(2L, "OLD-SKU", "Old water", null, "Bottle",
+                null, null, null, BigDecimal.TEN, false, Instant.now());
+        when(productService.findById(2L)).thenReturn(inactive);
+
+        mockMvc.perform(get("/api/v1/products/2"))
+                .andExpect(status().isNotFound());
     }
 
     @Test

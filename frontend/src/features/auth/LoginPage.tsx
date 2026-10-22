@@ -115,7 +115,7 @@ export function LoginPage() {
               <Button block size="large" onClick={openDemo}>Xem bản dùng thử</Button>
             </ConfigProvider>
             <div className="af-login-preview-note">
-              <Alert type="info" showIcon title="Đăng nhập cần Auth API đang hoạt động. Có thể vào bản dùng thử để khám phá giao diện." />
+              <Alert type="info" showIcon title="Tài khoản thật dùng API cho Sản phẩm, Nhà cung cấp và Khách hàng. Các màn còn lại đang ở bản dùng thử." />
             </div>
           </section>
         </div>
@@ -124,7 +124,7 @@ export function LoginPage() {
       <footer className="af-login-footer"><span>AquaFlow · Hệ thống quản lý cửa hàng nước</span><span>Một cửa hàng. Một không gian quản lý.</span></footer>
       <Modal title="Hỗ trợ đăng nhập" open={helpOpen} centered onCancel={() => setHelpOpen(false)} footer={<Button type="primary" onClick={() => setHelpOpen(false)}>Đã hiểu</Button>}>
         <p>Nếu bạn chưa có tài khoản hoặc quên mật khẩu, hãy liên hệ người quản trị cửa hàng để được hỗ trợ.</p>
-        <Alert type="info" showIcon title="Auth API" description="Đăng nhập gửi tên đăng nhập và mật khẩu tới /api/v1/auth/login. Nếu backend chưa triển khai endpoint này, hãy dùng bản xem thử." />
+        <Alert type="info" showIcon title="Auth API" description="Đăng nhập gửi email và mật khẩu tới /api/v1/auth/login. Người quản trị cấp tài khoản trên database trước khi sử dụng." />
       </Modal>
     </div>
   )

@@ -75,8 +75,8 @@ jobs:
         run: npm run typecheck
       - name: Build frontend
         run: npm run build
-      - name: Frontend tests (if configured)
-        run: npm run test --if-present
+      - name: Frontend tests
+        run: npm test
 
   prepare:
     name: Prepare image metadata

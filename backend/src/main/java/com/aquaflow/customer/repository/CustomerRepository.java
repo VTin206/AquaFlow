@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
     List<Customer> findAllByActiveTrue();
     Optional<Customer> findByIdAndActiveTrue(Long id);
+    boolean existsByPhoneAndActiveTrue(String phone);
+    boolean existsByPhoneAndActiveTrueAndIdNot(String phone, Long id);
 }

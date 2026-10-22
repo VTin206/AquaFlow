@@ -4,6 +4,7 @@ import com.aquaflow.customer.api.dto.CustomerRequest;
 import com.aquaflow.customer.api.dto.CustomerResponse;
 import com.aquaflow.customer.domain.Customer;
 import com.aquaflow.customer.repository.CustomerRepository;
+import com.aquaflow.shared.api.ConflictException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
@@ -63,6 +65,16 @@ class CustomerServiceTest {
                 .isEqualTo("Nguyen Van An");
         assertThat(captor.getValue().getPhone())
                 .isEqualTo("0901234567");
+    }
+
+    @Test
+    void createRejectsExistingActivePhoneAfterCountryCodeNormalization() {
+        when(customerRepository.existsByPhoneAndActiveTrue("0901234567")).thenReturn(true);
+
+        assertThatThrownBy(() -> customerService.create(new CustomerRequest("Nguyen Van An", "+84901234567")))
+                .isInstanceOf(ConflictException.class);
+
+        verify(customerRepository, never()).save(any(Customer.class));
     }
 
     @Test

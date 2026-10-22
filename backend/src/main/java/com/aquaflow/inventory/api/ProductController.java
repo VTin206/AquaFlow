@@ -14,6 +14,8 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import com.aquaflow.shared.api.NotFoundException;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -32,8 +34,8 @@ public class ProductController {
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "List of products")
     })
-    public ResponseEntity<List<ProductResponse>> getAllProducts(@RequestParam(required = false) Boolean active) {
-        return ResponseEntity.ok(productService.findAll(active));
+    public ResponseEntity<List<ProductResponse>> getAllProducts(@RequestParam(required = false) Boolean active, Authentication authentication) {
+        return ResponseEntity.ok(productService.findAll(isAdmin(authentication) ? active : true));
     }
 
     @GetMapping("/{id}")
@@ -42,8 +44,12 @@ public class ProductController {
         @ApiResponse(responseCode = "200", description = "Success retrieval of product"),
         @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
     })
-    public ResponseEntity<ProductResponse> getProductById(@PathVariable Long id) {
-        return ResponseEntity.ok(productService.findById(id));
+    public ResponseEntity<ProductResponse> getProductById(@PathVariable Long id, Authentication authentication) {
+        ProductResponse product = productService.findById(id);
+        if (!product.active() && !isAdmin(authentication)) {
+            throw new NotFoundException("Product not found: " + id);
+        }
+        return ResponseEntity.ok(product);
     }
 
     @PostMapping
@@ -87,5 +93,10 @@ public class ProductController {
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         productService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
     }
 }

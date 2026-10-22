@@ -6,7 +6,7 @@ import type { DeliveryResult, Order, PaymentDraft, RefundDraft, ReturnDraft } fr
 
 export const orderKeys = { all: ['orders'] as const }
 
-export const useOrders = () => useQuery({ queryKey: orderKeys.all, queryFn: orderService.list })
+export const useOrders = (enabled = true) => useQuery({ queryKey: orderKeys.all, queryFn: orderService.list, enabled })
 
 export function useCreateOrder() {
   const queryClient = useQueryClient()

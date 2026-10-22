@@ -12,11 +12,12 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation()
   const navigate = useNavigate()
   const { message } = App.useApp()
-  const { data: orders = [] } = useOrders()
-  const { data: settings } = useSettings()
   const staff = useStaff()
-  const allowed = (path: string) => !staff || canOpen(staff.role, path)
-  const pendingCount = orders.filter((order) => order.status === 'Chờ xác nhận').length
+  const { data: orders = [] } = useOrders(Boolean(staff?.isDemo))
+  const { data: settings } = useSettings(Boolean(staff?.isDemo))
+  const allowed = (path: string) => (!staff?.isDemo && !['/products', '/suppliers', '/customers'].includes(path))
+    ? false : !staff || canOpen(staff.role, path)
+  const pendingCount = staff?.isDemo ? orders.filter((order) => order.status === 'Chờ xác nhận').length : 0
 
   const items: MenuProps['items'] = navGroups
     .map((group) => ({ ...group, items: group.items.filter((item) => allowed(item.path)) }))
@@ -44,7 +45,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <Droplets size={20} />
         </span>
         <div>
-          <strong className="af-cell-truncate" title={settings?.storeName}>{settings?.storeName ?? 'Cửa hàng của bạn'}</strong>
+          <strong className="af-cell-truncate" title={staff?.isDemo ? settings?.storeName : undefined}>{staff?.isDemo ? settings?.storeName ?? 'Cửa hàng của bạn' : 'Cửa hàng của bạn'}</strong>
           <small>Quản lý đại lý nước</small>
         </div>
       </div>

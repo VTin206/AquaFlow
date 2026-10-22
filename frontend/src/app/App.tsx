@@ -1,8 +1,9 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 import { Spin } from 'antd'
 import { Navigate, Route, Routes } from 'react-router'
 import { AppLayout } from '../layouts/AppLayout'
 import { RequireAuth } from './RequireAuth'
+import { useAuth } from '../features/auth/useAuth'
 
 // Mỗi trang được tải khi người dùng mở tới, giúp lần tải đầu nhẹ hơn.
 const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })))
@@ -20,6 +21,20 @@ const ShopLayout = lazy(() => import('../features/shop/ShopLayout').then((m) => 
 const ShopPage = lazy(() => import('../features/shop/ShopPage').then((m) => ({ default: m.ShopPage })))
 const TrackPage = lazy(() => import('../features/shop/TrackPage').then((m) => ({ default: m.TrackPage })))
 const LoginPage = lazy(() => import('../features/auth/LoginPage').then((m) => ({ default: m.LoginPage })))
+const LivePages = lazy(() => import('../features/live/LiveSprintOnePages').then((m) => ({ default: m.LiveProductsPage })))
+const LiveSuppliersPage = lazy(() => import('../features/live/LiveSprintOnePages').then((m) => ({ default: m.LiveSuppliersPage })))
+const LiveCustomersPage = lazy(() => import('../features/live/LiveSprintOnePages').then((m) => ({ default: m.LiveCustomersPage })))
+const UnavailablePage = lazy(() => import('../features/live/UnavailablePage').then((m) => ({ default: m.UnavailablePage })))
+
+function SprintOneMode({ demo, live }: { demo: ReactNode; live: ReactNode }) {
+  const { user } = useAuth()
+  return user?.isDemo ? demo : live
+}
+
+function DemoOnly({ demo }: { demo: ReactNode }) {
+  const { user } = useAuth()
+  return user?.isDemo ? demo : <UnavailablePage />
+}
 
 const pageFallback = (
   <div className="af-page-loading">
@@ -41,17 +56,17 @@ export function App() {
         </Route>
         <Route element={<RequireAuth />}>
           <Route element={<AppLayout />}>
-            <Route index element={<DashboardPage />} />
-            <Route path="orders" element={<OrdersPage />} />
-            <Route path="inventory" element={<InventoryPage />} />
-            <Route path="products" element={<ProductsPage />} />
-            <Route path="customers" element={<CustomersPage />} />
-            <Route path="suppliers" element={<SuppliersPage />} />
-            <Route path="delivery" element={<DeliveryPage />} />
-            <Route path="driver" element={<DriverPage />} />
-            <Route path="reports" element={<ReportsPage />} />
-            <Route path="activity" element={<ActivityPage />} />
-            <Route path="settings" element={<SettingsPage />} />
+            <Route index element={<DemoOnly demo={<DashboardPage />} />} />
+            <Route path="orders" element={<DemoOnly demo={<OrdersPage />} />} />
+            <Route path="inventory" element={<DemoOnly demo={<InventoryPage />} />} />
+            <Route path="products" element={<SprintOneMode demo={<ProductsPage />} live={<LivePages />} />} />
+            <Route path="customers" element={<SprintOneMode demo={<CustomersPage />} live={<LiveCustomersPage />} />} />
+            <Route path="suppliers" element={<SprintOneMode demo={<SuppliersPage />} live={<LiveSuppliersPage />} />} />
+            <Route path="delivery" element={<DemoOnly demo={<DeliveryPage />} />} />
+            <Route path="driver" element={<DemoOnly demo={<DriverPage />} />} />
+            <Route path="reports" element={<DemoOnly demo={<ReportsPage />} />} />
+            <Route path="activity" element={<DemoOnly demo={<ActivityPage />} />} />
+            <Route path="settings" element={<DemoOnly demo={<SettingsPage />} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Route>
