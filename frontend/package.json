@@ -7,25 +7,37 @@
     "dev": "vite",
     "lint": "eslint .",
     "typecheck": "tsc -b",
+    "test": "npm run test:orders && npm run test:operations && npm run test:after-sales && npm run test:ux && npm run test:report-excel",
+    "test:orders": "node scripts/test-orders.mjs",
+    "test:operations": "node scripts/test-operations.mjs",
+    "test:after-sales": "node scripts/test-after-sales.mjs",
+    "test:ux": "node scripts/test-ux.mjs",
+    "test:report-excel": "node scripts/test-report-excel.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "latest",
-    "react-dom": "latest",
-    "lucide-react": "latest"
+    "@tanstack/react-query": "^5.104.0",
+    "antd": "^6.6.5",
+    "axios": "^1.20.0",
+    "dayjs": "^1.11.23",
+    "exceljs": "^4.4.0",
+    "lucide-react": "^1.57.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router": "^8.4.0"
   },
   "devDependencies": {
-    "@eslint/js": "latest",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "@vitejs/plugin-react": "latest",
-    "eslint": "latest",
-    "eslint-plugin-react-hooks": "latest",
-    "eslint-plugin-react-refresh": "latest",
-    "globals": "latest",
-    "typescript": "latest",
-    "typescript-eslint": "latest",
-    "vite": "latest"
+    "@eslint/js": "^10.0.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "eslint": "^10.12.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.13.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.2",
+    "vite": "^8.3.4"
   }
 }

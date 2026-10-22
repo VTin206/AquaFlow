@@ -1,9 +1,17 @@
 package com.aquaflow.auth.api;
 
+import com.aquaflow.customer.order.repository.OrderItemRepository;
+import com.aquaflow.customer.order.repository.OrderRepository;
+import com.aquaflow.customer.repository.CustomerAddressRepository;
+import com.aquaflow.customer.application.CustomerAuditService;
+import com.aquaflow.customer.repository.CustomerRepository;
 import com.aquaflow.auth.domain.Role;
 import com.aquaflow.auth.domain.User;
 import com.aquaflow.auth.domain.UserStatus;
 import com.aquaflow.auth.repository.UserRepository;
+import com.aquaflow.inventory.repository.BottleTypeRepository;
+import com.aquaflow.inventory.repository.ProductRepository;
+import com.aquaflow.inventory.repository.SupplierRepository;
 import com.aquaflow.auth.application.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,6 +50,31 @@ class AuthControllerIntegrationTest {
 
     @MockBean
     private UserRepository userRepository;
+
+    // Test này tắt JPA nên phải giả lập các repository của module inventory
+    @MockBean
+    private ProductRepository productRepository;
+
+    @MockBean
+    private SupplierRepository supplierRepository;
+
+    @MockBean
+    private BottleTypeRepository bottleTypeRepository;
+
+    @MockBean
+    private CustomerRepository customerRepository;
+
+    @MockBean
+    private CustomerAddressRepository customerAddressRepository;
+
+    @MockBean
+    private CustomerAuditService customerAuditService;
+
+    @MockBean
+    private OrderRepository orderRepository;
+
+    @MockBean
+    private OrderItemRepository orderItemRepository;
 
     private User activeUser;
 
@@ -118,5 +151,16 @@ class AuthControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("an@example.com"))
                 .andExpect(jsonPath("$.role").value("CUSTOMER"));
+    }
+
+    @Test
+    void tokenForDeletedUserReturns401() throws Exception {
+        String token = jwtService.generateToken(activeUser);
+        when(userRepository.findByEmailIgnoreCase("an@example.com")).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/auth/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401));
     }
 }

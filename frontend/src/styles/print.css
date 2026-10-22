@@ -1,0 +1,42 @@
+/* Chứng từ in (hóa đơn, phiếu giao, phiếu chuyến). Trên màn hình không hiển thị. */
+.af-print-root { display: none; }
+
+@media print {
+  @page { size: A5 portrait; margin: 10mm; }
+  @page landscape { size: A4 landscape; margin: 10mm; }
+
+  html, body { background: #fff !important; }
+  body > *:not(.af-print-root) { display: none !important; }
+  .af-print-root { display: block; color: #000; font-family: 'Be Vietnam Pro', Arial, sans-serif; font-size: 11pt; line-height: 1.4; }
+}
+
+.af-doc + .af-doc { break-before: page; }
+.af-doc-landscape { page: landscape; }
+.af-doc-header { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1.5px solid #000; }
+.af-doc-store { display: flex; flex-direction: column; font-size: 9.5pt; }
+.af-doc-store strong { font-size: 12pt; text-transform: uppercase; }
+.af-doc-title { flex: none; text-align: right; }
+.af-doc-store { min-width: 0; }
+.af-doc-title h1 { margin: 0; font-size: 15pt; letter-spacing: 0.5px; white-space: nowrap; }
+.af-doc-title span { font-size: 9.5pt; }
+.af-doc-meta { display: flex; flex-direction: column; gap: 2px; margin: 10px 0; }
+.af-doc-meta-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; }
+.af-doc-wide { grid-column: 1 / -1; }
+.af-doc-table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+.af-doc-table th, .af-doc-table td { padding: 4px 6px; border: 1px solid #555; text-align: left; vertical-align: top; }
+.af-doc-table th { background: #eee; }
+.af-doc-table .af-doc-num { text-align: right; white-space: nowrap; }
+.af-doc-table tfoot td { border: none; border-top: 1px solid #555; text-align: right; white-space: nowrap; }
+.af-doc-total td { font-weight: 700; }
+.af-doc-sign-cell { min-width: 90px; height: 42px; }
+.af-doc-note { margin: 8px 0 0; font-size: 9.5pt; }
+.af-doc-footer { margin-top: 12px; text-align: center; font-size: 9.5pt; }
+.af-doc-footer p { margin: 0 0 4px; font-style: italic; }
+.af-doc-checklist { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; margin: 12px 0; }
+.af-doc-checklist div { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dotted #555; padding-bottom: 2px; }
+.af-doc-blank { min-width: 70px; }
+.af-doc-signatures { display: grid; grid-template-columns: 1fr 1fr; margin-top: 18px; text-align: center; }
+.af-doc-signatures div { display: flex; flex-direction: column; min-height: 80px; }
+.af-doc-signatures small { font-size: 8.5pt; font-style: italic; }
+.af-doc-qr { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 9pt; break-inside: avoid; }
+.af-doc-qr > small { flex: 1; font-style: italic; }

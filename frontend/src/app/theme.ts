@@ -1,0 +1,63 @@
+import type { ThemeConfig } from 'antd'
+
+// Design token dùng chung cho Ant Design. Đổi màu/font toàn app tại đây.
+export const appTheme: ThemeConfig = {
+  token: {
+    fontFamily: "'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif",
+    fontSize: 14,
+    colorPrimary: '#087fad',
+    colorInfo: '#087fad',
+    colorSuccess: '#23856b',
+    colorWarning: '#b86b0a',
+    colorError: '#c34444',
+    colorText: '#263e53',
+    colorTextHeading: '#16324f',
+    colorTextSecondary: '#52687b',
+    colorTextTertiary: '#687d8e',
+    colorBorder: '#d6e2eb',
+    colorBorderSecondary: '#e7eef4',
+    colorBgLayout: '#f4f7fb',
+    borderRadius: 10,
+    borderRadiusLG: 14,
+    controlHeight: 40,
+    controlHeightSM: 30,
+  },
+  components: {
+    Breadcrumb: {
+      fontSize: 13,
+      linkColor: '#687d8e',
+      linkHoverColor: '#087fad',
+      lastItemColor: '#16324f',
+      separatorColor: '#687d8e',
+    },
+    Layout: { siderBg: '#ffffff', headerBg: '#ffffff', bodyBg: '#f4f7fb' },
+    Menu: {
+      itemBorderRadius: 9,
+      itemHeight: 44,
+      itemSelectedBg: '#eaf5fb',
+      itemSelectedColor: '#087fad',
+      itemColor: '#52687b',
+      itemHoverBg: '#f4f7fb',
+      groupTitleColor: '#687d8e',
+      iconSize: 18,
+      iconMarginInlineEnd: 12,
+    },
+    Card: { headerFontSize: 15, headerHeight: 50, bodyPadding: 18 },
+    Statistic: { titleFontSize: 13, contentFontSize: 'clamp(18px, 2vw, 28px)' },
+    Button: { fontWeight: 500, primaryShadow: '0 3px 8px rgba(8, 127, 173, 0.16)', defaultShadow: 'none' },
+    Table: {
+      headerBg: '#f8fafc',
+      headerColor: '#52687b',
+      headerSplitColor: 'transparent',
+      rowHoverBg: '#f2f9fc',
+      cellPaddingBlock: 10,
+      cellPaddingBlockMD: 10,
+      // Cùng lề với toolbar; bảng middle mặc định chỉ chừa 8px.
+      cellPaddingInline: 20,
+      cellPaddingInlineMD: 20,
+    },
+    Segmented: { trackBg: '#f0f4f8', itemSelectedColor: '#087fad', trackPadding: 4 },
+    Form: { labelColor: '#263e53', labelFontSize: 13, verticalLabelPadding: '0 0 8px' },
+    Modal: { titleFontSize: 18 },
+  },
+}

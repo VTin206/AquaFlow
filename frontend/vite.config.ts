@@ -9,4 +9,8 @@ export default defineConfig({
       '/api': 'http://localhost:8080',
     },
   },
+  build: {
+    // Phần lõi Ant Design dùng chung cho mọi trang (~580 kB, ~190 kB gzip); các trang đã được tách riêng bằng lazy().
+    chunkSizeWarningLimit: 700,
+  },
 })
