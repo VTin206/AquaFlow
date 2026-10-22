@@ -27,7 +27,10 @@ public final class OrderStatusPolicy {
                     ),
 
                     OrderStatus.OUT_FOR_DELIVERY,
-                    Set.of(OrderStatus.DELIVERED),
+                    Set.of(
+                            OrderStatus.DELIVERED,
+                            OrderStatus.CANCELLED
+                    ),
 
                     OrderStatus.DELIVERED,
                     Set.of(OrderStatus.COMPLETED),

@@ -56,6 +56,14 @@ class OrderStatusPolicyTest {
     }
 
     @Test
+    void allowsOutForDeliveryToCancelled() {
+        assertTrue(OrderStatusPolicy.canTransition(
+                OrderStatus.OUT_FOR_DELIVERY,
+                OrderStatus.CANCELLED,
+                FulfillmentType.DELIVERY));
+    }
+
+    @Test
     void allowsPreparingToDeliveredForCounterFulfillment() {
         assertTrue(OrderStatusPolicy.canTransition(
                 OrderStatus.PREPARING,
