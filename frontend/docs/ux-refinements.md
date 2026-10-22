@@ -14,6 +14,8 @@
 - Bộ lọc đơn hàng lưu trong `sessionStorage` của tab. Khi trình duyệt chặn
   lưu trữ, bộ lọc vẫn hoạt động trên trang hiện tại. Từ khóa không đưa lên URL.
 - Có số kết quả, nút xóa toàn bộ lọc và trở về trang kết quả đầu khi đổi bộ lọc.
+- Đổi từ khóa/bộ lọc đơn hàng giữ lựa chọn sắp xếp trên desktop và mobile;
+  desktop giữ cả số dòng mỗi trang. Chỉ phân trang được đặt về trang 1.
 - Form tạo đơn và nhập kho tự cuộn, focus vào trường không hợp lệ đầu tiên.
 
 ## Kiểm tra thủ công
@@ -22,6 +24,10 @@
 2. Chọn trạng thái/hình thức/thanh toán, sang Khách hàng rồi quay lại:
    từ khóa và lựa chọn phải được giữ. Tải lại trang cũng giữ bộ lọc.
 3. Bấm “Xóa bộ lọc”: cả từ khóa và ba lựa chọn được đặt lại.
+   Để kiểm tra sắp xếp: chọn tổng tiền cao trước, sang trang 2 rồi tìm kiếm,
+   đổi trạng thái hoặc xóa bộ lọc. Kết quả phải về trang 1 và vẫn cao trước.
+   Thử tìm từ khóa không có kết quả rồi xóa lọc trên cả desktop và mobile;
+   desktop chọn 20 dòng/trang và kiểm tra lựa chọn này vẫn giữ nguyên.
 4. Vào Kho hàng, so sánh “Sắp hết hạn” với “Đã hết hạn”; các nhóm không trùng
    nhau. Làm tương tự ở tab Lô hàng. Lô quá hạn còn tồn hiển thị “Không xuất”.
 5. Mở Tạo đơn/Tạo phiếu nhập, cuộn cuối form và xác nhận khi còn thiếu dữ liệu:
