@@ -11,6 +11,7 @@ import com.aquaflow.inventory.api.dto.ProductResponse;
 import com.aquaflow.inventory.application.BottleTypeService;
 import com.aquaflow.inventory.application.ProductService;
 import com.aquaflow.inventory.application.SupplierService;
+import com.aquaflow.customer.order.application.OrderService;
 import com.aquaflow.shared.api.ConflictException;
 import com.aquaflow.shared.api.NotFoundException;
 import org.junit.jupiter.api.Test;
@@ -76,6 +77,9 @@ class ProductControllerIntegrationTest {
     @MockitoBean
     private OrderItemRepository orderItemRepository;
 
+    @MockitoBean
+    private OrderService orderService;
+
     @Test
     void anonymousUserCanListProducts() throws Exception {
         when(productService.findAll(true)).thenReturn(List.of(sampleProduct()));
@@ -93,6 +97,32 @@ class ProductControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/products?active=false"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].active").value(true));
+    }
+
+    @Test
+    @WithMockUser(roles = "SALES_STAFF")
+    void salesStaffCanReadOnlyActiveProducts() throws Exception {
+        when(productService.findAll(true)).thenReturn(List.of(sampleProduct()));
+
+        mockMvc.perform(get("/api/v1/products?active=false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].active").value(true));
+
+        verify(productService).findAll(true);
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminCanRequestInactiveProducts() throws Exception {
+        ProductResponse inactive = new ProductResponse(2L, "OLD-SKU", "Old water", null, "Bottle",
+                null, null, null, BigDecimal.TEN, false, Instant.now());
+        when(productService.findAll(false)).thenReturn(List.of(inactive));
+
+        mockMvc.perform(get("/api/v1/products?active=false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].active").value(false));
+
+        verify(productService).findAll(false);
     }
 
     @Test
@@ -164,6 +194,22 @@ class ProductControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_BODY))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void guestCannotReadProtectedOrderList() throws Exception {
+        mockMvc.perform(get("/api/v1/sales/orders"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(roles = "SALES_STAFF")
+    void salesStaffCanReadOrderList() throws Exception {
+        when(orderService.findAll()).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/sales/orders"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
     }
 
     private ProductResponse sampleProduct() {
