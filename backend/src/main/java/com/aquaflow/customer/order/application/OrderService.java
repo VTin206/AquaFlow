@@ -6,6 +6,8 @@ import com.aquaflow.customer.order.domain.Order;
 import com.aquaflow.customer.order.domain.OrderItem;
 import com.aquaflow.customer.order.repository.OrderItemRepository;
 import com.aquaflow.customer.order.repository.OrderRepository;
+import com.aquaflow.inventory.application.ReservationLine;
+import com.aquaflow.inventory.application.StockReservationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,12 +20,15 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    private final StockReservationService stockReservationService;
 
     public OrderService(
             OrderRepository orderRepository,
-            OrderItemRepository orderItemRepository) {
+            OrderItemRepository orderItemRepository,
+            StockReservationService stockReservationService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
+        this.stockReservationService = stockReservationService;
     }
 
     public List<OrderResponse> findAll() {
@@ -38,9 +43,26 @@ public class OrderService {
             Long id,
             OrderStatus nextStatus) {
 
-        return orderRepository.findById(id)
+        return orderRepository.findForUpdateById(id)
                 .map(order -> {
+                    OrderStatus previousStatus = order.getStatus();
                     order.transitionTo(nextStatus);
+
+                    // Cùng transaction: giữ hàng thất bại (thiếu tồn) thì đơn không được xác nhận
+                    if (nextStatus == OrderStatus.CONFIRMED) {
+                        stockReservationService.reserve(
+                                orderItemRepository.findAllByOrder_Id(id).stream()
+                                        .map(item -> new ReservationLine(
+                                                item.getId(), item.getProductId(), item.getQuantity()))
+                                        .toList());
+                    }
+                    // Đơn PENDING chưa giữ hàng nên không có gì để trả
+                    if (nextStatus == OrderStatus.CANCELLED && previousStatus != OrderStatus.PENDING) {
+                        stockReservationService.release(
+                                orderItemRepository.findAllByOrder_Id(id).stream()
+                                        .map(OrderItem::getId)
+                                        .toList());
+                    }
 
                     Order savedOrder = orderRepository.save(order);
 
