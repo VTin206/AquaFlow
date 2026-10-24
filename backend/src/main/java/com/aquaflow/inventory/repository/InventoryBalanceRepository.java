@@ -9,8 +9,13 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface InventoryBalanceRepository extends JpaRepository<InventoryBalance, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select b from InventoryBalance b where b.batchId = :batchId")
+    Optional<InventoryBalance> findForUpdateByBatchId(@Param("batchId") Long batchId);
 
     /**
      * Khóa (SELECT ... FOR UPDATE) các lô còn hạn và còn hàng khả dụng của sản phẩm,

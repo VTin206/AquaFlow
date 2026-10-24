@@ -40,7 +40,7 @@ public class ProductBatch {
     }
 
     public ProductBatch(Product product, String lotCode, LocalDate manufacturedOn, LocalDate expiresOn) {
-        if (manufacturedOn != null && manufacturedOn.isAfter(expiresOn)) {
+        if (manufacturedOn != null && !expiresOn.isAfter(manufacturedOn)) {
             throw new IllegalArgumentException("Hạn sử dụng phải sau ngày sản xuất");
         }
         this.product = product;

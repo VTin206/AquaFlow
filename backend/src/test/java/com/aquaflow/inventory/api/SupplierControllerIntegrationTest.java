@@ -42,6 +42,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class SupplierControllerIntegrationTest {
 
+    @MockitoBean
+    private com.aquaflow.inventory.application.PurchaseReceiptService purchaseReceiptService;
+
     private static final String VALID_BODY = """
             {"name":"Aqua Supplier","phone":"0987654321","address":"123 Main St"}
             """;

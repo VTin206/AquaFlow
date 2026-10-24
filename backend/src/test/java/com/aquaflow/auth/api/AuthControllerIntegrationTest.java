@@ -39,6 +39,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class AuthControllerIntegrationTest {
 
+    @MockBean
+    private com.aquaflow.inventory.application.PurchaseReceiptService purchaseReceiptService;
+
     @Autowired
     private MockMvc mockMvc;
 
