@@ -69,6 +69,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/suppliers/**").hasAnyRole("ADMIN", "SALES_STAFF")
                         // Nhân viên lập/sửa phiếu nhập/xác nhận (cộng tồn)/hủy phiếu
                         .requestMatchers("/api/v1/purchase-receipts/**").hasAnyRole("ADMIN", "SALES_STAFF")
+                        .requestMatchers("/api/v1/inventory/**").hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers("/api/v1/products/**", "/api/v1/bottle-types/**", "/api/v1/suppliers/**").hasRole("ADMIN")
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

@@ -42,6 +42,12 @@ class AuthControllerIntegrationTest {
     @MockBean
     private com.aquaflow.inventory.application.PurchaseReceiptService purchaseReceiptService;
 
+    @MockBean
+    private com.aquaflow.inventory.application.StockService stockService;
+
+    @MockBean
+    private com.aquaflow.inventory.application.StockReservationService stockReservationService;
+
     @Autowired
     private MockMvc mockMvc;
 

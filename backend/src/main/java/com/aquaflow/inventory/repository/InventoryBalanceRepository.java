@@ -39,8 +39,8 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
     List<InventoryBalance> findByProductWithBatch(@Param("productId") Long productId);
 
     @Query("""
-            select b from InventoryBalance b join fetch b.batch pb
-            order by pb.product.id asc, pb.expiresOn asc
+            select b from InventoryBalance b join fetch b.batch pb join fetch pb.product p
+            order by p.id asc, pb.expiresOn asc
             """)
     List<InventoryBalance> findAllWithBatch();
 }
