@@ -1,5 +1,7 @@
 package com.aquaflow.inventory.application;
 
+import com.aquaflow.customer.order.application.OrderService;
+import com.aquaflow.customer.order.domain.OrderStatus;
 import com.aquaflow.shared.api.ConflictException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +22,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Chạy trên PostgreSQL thật (CI cung cấp DB_URL) để kiểm tra khóa dòng khi giữ hàng song song.
@@ -37,6 +40,9 @@ class StockReservationPostgresIntegrationTest {
 
     @Autowired
     private StockService stockService;
+
+    @Autowired
+    private OrderService orderService;
 
     private Long productId;
     private Long orderId;
@@ -118,6 +124,33 @@ class StockReservationPostgresIntegrationTest {
         reservationService.release(List.of(item));
 
         assertThat(stockService.findByProduct(productId).available()).isEqualTo(14);
+        assertThat(stockService.findByProduct(productId).reserved()).isZero();
+    }
+
+    @Test
+    void confirmingOrderReservesStockAndCancellingReleasesIt() {
+        addBatch("LOT-A", LocalDate.now().plusDays(30), 5);
+        addOrderItem(3);
+
+        orderService.transitionStatus(orderId, OrderStatus.CONFIRMED);
+        assertThat(stockService.findByProduct(productId).available()).isEqualTo(2);
+
+        orderService.transitionStatus(orderId, OrderStatus.CANCELLED);
+        assertThat(stockService.findByProduct(productId).available()).isEqualTo(5);
+        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id = ?", String.class, orderId))
+                .isEqualTo("CANCELLED");
+    }
+
+    @Test
+    void orderIsNotConfirmedWhenStockIsInsufficient() {
+        addBatch("LOT-A", LocalDate.now().plusDays(30), 2);
+        addOrderItem(3);
+
+        assertThatThrownBy(() -> orderService.transitionStatus(orderId, OrderStatus.CONFIRMED))
+                .isInstanceOf(ConflictException.class);
+
+        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id = ?", String.class, orderId))
+                .isEqualTo("PENDING");
         assertThat(stockService.findByProduct(productId).reserved()).isZero();
     }
 

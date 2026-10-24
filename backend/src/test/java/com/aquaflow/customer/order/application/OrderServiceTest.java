@@ -36,6 +36,9 @@ class OrderServiceTest {
     @Mock
     private OrderItemRepository orderItemRepository;
 
+    @Mock
+    private com.aquaflow.inventory.application.StockReservationService stockReservationService;
+
     @InjectMocks
     private OrderService orderService;
 
@@ -160,7 +163,7 @@ class OrderServiceTest {
     void transitionStatusUpdatesOrderAndReturnsResponse() {
         Order order = createOrder(3L);
 
-        when(orderRepository.findById(3L))
+        when(orderRepository.findForUpdateById(3L))
                 .thenReturn(Optional.of(order));
 
         when(orderRepository.save(order))
@@ -185,7 +188,7 @@ class OrderServiceTest {
 
     @Test
     void transitionStatusReturnsEmptyWhenOrderDoesNotExist() {
-        when(orderRepository.findById(999L))
+        when(orderRepository.findForUpdateById(999L))
                 .thenReturn(Optional.empty());
 
         Optional<OrderResponse> result =
@@ -212,7 +215,7 @@ class OrderServiceTest {
         order.transitionTo(OrderStatus.DELIVERED);
         order.transitionTo(OrderStatus.COMPLETED);
 
-        when(orderRepository.findById(4L))
+        when(orderRepository.findForUpdateById(4L))
                 .thenReturn(Optional.of(order));
 
         assertThatThrownBy(() ->
