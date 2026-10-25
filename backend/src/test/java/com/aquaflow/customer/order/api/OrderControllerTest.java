@@ -19,6 +19,7 @@ import com.aquaflow.auth.application.JwtService;
 import com.aquaflow.customer.order.api.dto.OrderResponse;
 import com.aquaflow.customer.order.application.OrderService;
 import com.aquaflow.customer.order.domain.FulfillmentType;
+import com.aquaflow.customer.order.domain.InvalidOrderStatusTransitionException;
 import com.aquaflow.customer.order.domain.OrderChannel;
 import com.aquaflow.customer.order.domain.OrderStatus;
 import com.aquaflow.customer.order.domain.PaymentStatus;
@@ -205,6 +206,25 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.id").value(1));
 
         verify(orderService).transitionStatus(1L, OrderStatus.CONFIRMED);
+    }
+
+    @Test
+    @WithMockUser(roles = "SALES_STAFF")
+    void updateStatusReturns409WhenTransitionIsInvalid() throws Exception {
+        String message = "Invalid order status transition from COMPLETED to PENDING";
+        when(orderService.transitionStatus(1L, OrderStatus.PENDING))
+                .thenThrow(new InvalidOrderStatusTransitionException(message));
+
+        mockMvc.perform(patch(ORDERS_URL + "/1/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "status": "PENDING"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.message").value(message));
     }
 
     @Test

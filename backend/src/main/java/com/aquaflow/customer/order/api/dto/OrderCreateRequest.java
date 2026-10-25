@@ -2,7 +2,9 @@ package com.aquaflow.customer.order.api.dto;
 
 import com.aquaflow.customer.order.domain.FulfillmentType;
 import com.aquaflow.customer.order.domain.OrderChannel;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -45,4 +47,16 @@ public record OrderCreateRequest(
         String note
 
 ) {
+
+    @JsonIgnore
+    @AssertTrue(message = "Recipient name, recipient phone, and delivery address are required for delivery orders")
+    public boolean isDeliveryDetailsComplete() {
+        if (fulfillmentType != FulfillmentType.DELIVERY) {
+            return true;
+        }
+
+        return recipientName != null && !recipientName.isBlank()
+                && recipientPhone != null && !recipientPhone.isBlank()
+                && deliveryAddress != null && !deliveryAddress.isBlank();
+    }
 }

@@ -44,6 +44,66 @@ class OrderCreateRequestTest {
     }
 
     @Test
+    void rejectsDeliveryRequestWithoutDeliveryAddress() {
+        OrderCreateRequest request = new OrderCreateRequest(
+                5L,
+                OrderChannel.WEB,
+                FulfillmentType.DELIVERY,
+                "Nguyen Van An",
+                "0901234567",
+                "   ",
+                "Quan 5",
+                OffsetDateTime.parse("2027-01-15T09:00:00+07:00"),
+                List.of(new OrderItemRequest(101L, 2)),
+                "Test order");
+
+        assertThat(validator.validate(request))
+                .anySatisfy(violation -> {
+                    assertThat(violation.getPropertyPath().toString())
+                            .isEqualTo("deliveryDetailsComplete");
+                    assertThat(violation.getMessage())
+                            .isEqualTo("Recipient name, recipient phone, and delivery address are required for delivery orders");
+                });
+    }
+
+    @Test
+    void rejectsDeliveryRequestWithoutRecipientName() {
+        OrderCreateRequest request = new OrderCreateRequest(
+                5L,
+                OrderChannel.WEB,
+                FulfillmentType.DELIVERY,
+                " ",
+                "0901234567",
+                "123 Nguyen Trai",
+                "Quan 5",
+                OffsetDateTime.parse("2027-01-15T09:00:00+07:00"),
+                List.of(new OrderItemRequest(101L, 2)),
+                "Test order");
+
+        assertThat(validator.validate(request))
+                .anySatisfy(violation ->
+                        assertThat(violation.getPropertyPath().toString())
+                                .isEqualTo("deliveryDetailsComplete"));
+    }
+
+    @Test
+    void allowsCounterFulfillmentWithoutDeliveryDetails() {
+        OrderCreateRequest request = new OrderCreateRequest(
+                5L,
+                OrderChannel.COUNTER,
+                FulfillmentType.COUNTER,
+                null,
+                null,
+                null,
+                null,
+                null,
+                List.of(new OrderItemRequest(101L, 2)),
+                "Counter pickup");
+
+        assertThat(validator.validate(request)).isEmpty();
+    }
+
+    @Test
     void rejectsInvalidRecipientPhone() {
         OrderCreateRequest request = new OrderCreateRequest(
                 5L,

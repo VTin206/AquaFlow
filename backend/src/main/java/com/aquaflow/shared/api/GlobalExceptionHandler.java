@@ -1,6 +1,7 @@
 package com.aquaflow.shared.api;
 
 import com.aquaflow.auth.application.InvalidCredentialsException;
+import com.aquaflow.customer.order.domain.InvalidOrderStatusTransitionException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,6 +42,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ConflictException.class)
     ResponseEntity<ApiError> handleConflict(ConflictException exception, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidOrderStatusTransitionException.class)
+    ResponseEntity<ApiError> handleInvalidOrderStatusTransition(
+            InvalidOrderStatusTransitionException exception,
+            HttpServletRequest request) {
         return error(HttpStatus.CONFLICT, exception.getMessage(), request);
     }
 
