@@ -15,17 +15,18 @@ type OrderCardsProps = {
   compact: boolean
   emptyText: string
   onDetails: (id: string) => void
+  filterKey?: string
 }
 type Sort = 'default' | 'total' | 'due'
 
-export function OrderCards({ orders, loading, compact, emptyText, onDetails }: OrderCardsProps) {
+export function OrderCards({ orders, loading, compact, emptyText, onDetails, filterKey }: OrderCardsProps) {
   const [sort, setSort] = useState<Sort>('default')
   const sorted = [...orders].sort((a, b) => sort === 'total' ? b.total - a.total
     : sort === 'due' ? (b.status === 'Đã hủy' ? 0 : amountDue(b)) - (a.status === 'Đã hủy' ? 0 : amountDue(a)) : 0)
 
   return (
     <MobileRecordList
-      key={sort}
+      key={JSON.stringify([sort, filterKey])}
       items={sorted}
       rowKey={(order) => order.id}
       loading={loading}

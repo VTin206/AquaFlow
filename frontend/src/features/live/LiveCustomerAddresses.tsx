@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Checkbox, Form, Input, Modal, Popconfirm, Table, Tag } from 'antd'
 import { api } from '../../shared/api/client'
 import { QueryError } from '../../shared/components/QueryError'
+import { invalidateLiveData } from './invalidateLiveData'
 
 type Address = {
   id: number; customerId: number; recipientName: string; recipientPhone: string
@@ -23,12 +24,12 @@ export function LiveCustomerAddresses({ customerId, customerName, onClose }: { c
       const input = { recipientName: draft.recipientName.trim(), recipientPhone: draft.recipientPhone.replace(/[\s().-]/g, ''), addressLine: draft.addressLine.trim(), area: draft.area?.trim() || null, isDefault: Boolean(draft.isDefault) }
       return editing ? api.put<Address>(`${path}/${editing.id}`, input) : api.post<Address>(path, input)
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: key }); setEditing(undefined); message.success('Đã lưu địa chỉ.') },
+    onSuccess: () => { void invalidateLiveData(queryClient); setEditing(undefined); message.success('Đã lưu địa chỉ.') },
     onError: (error: Error) => message.error(error.message),
   })
   const remove = useMutation({
     mutationFn: (id: number) => api.delete<void>(`${path}/${id}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: key }); message.success('Đã xóa địa chỉ.') },
+    onSuccess: () => { void invalidateLiveData(queryClient); message.success('Đã xóa địa chỉ.') },
     onError: (error: Error) => message.error(error.message),
   })
   const open = (address: Address | null) => {

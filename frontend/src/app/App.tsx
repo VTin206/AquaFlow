@@ -19,6 +19,10 @@ const SettingsPage = lazy(() => import('../features/settings/SettingsPage').then
 const ActivityPage = lazy(() => import('../features/activity/ActivityPage').then((m) => ({ default: m.ActivityPage })))
 const ShopLayout = lazy(() => import('../features/shop/ShopLayout').then((m) => ({ default: m.ShopLayout })))
 const ShopPage = lazy(() => import('../features/shop/ShopPage').then((m) => ({ default: m.ShopPage })))
+const ProductDetailPage = lazy(() => import('../features/shop/ProductDetailPage').then((m) => ({ default: m.ProductDetailPage })))
+const CheckoutPage = lazy(() => import('../features/shop/CheckoutPage').then((m) => ({ default: m.CheckoutPage })))
+const LiveOrdersPage = lazy(() => import('../features/live/LiveOrdersPage').then((m) => ({ default: m.LiveOrdersPage })))
+const LiveInventoryPage = lazy(() => import('../features/live/LiveInventoryPage').then((m) => ({ default: m.LiveInventoryPage })))
 const TrackPage = lazy(() => import('../features/shop/TrackPage').then((m) => ({ default: m.TrackPage })))
 const LoginPage = lazy(() => import('../features/auth/LoginPage').then((m) => ({ default: m.LoginPage })))
 const LivePages = lazy(() => import('../features/live/LiveSprintOnePages').then((m) => ({ default: m.LiveProductsPage })))
@@ -51,14 +55,16 @@ export function App() {
         {/* Trang công khai cho khách đặt hàng và tra cứu đơn, không cần đăng nhập. */}
         <Route element={<ShopLayout />}>
           <Route path="shop" element={<ShopPage />} />
+          <Route path="shop/products/:id" element={<ProductDetailPage />} />
+          <Route path="checkout" element={<CheckoutPage />} />
           <Route path="track" element={<TrackPage />} />
           <Route path="track/:token" element={<TrackPage />} />
         </Route>
         <Route element={<RequireAuth />}>
           <Route element={<AppLayout />}>
             <Route index element={<DemoOnly demo={<DashboardPage />} />} />
-            <Route path="orders" element={<DemoOnly demo={<OrdersPage />} />} />
-            <Route path="inventory" element={<DemoOnly demo={<InventoryPage />} />} />
+            <Route path="orders" element={<SprintOneMode demo={<OrdersPage />} live={<LiveOrdersPage />} />} />
+            <Route path="inventory" element={<SprintOneMode demo={<InventoryPage />} live={<LiveInventoryPage />} />} />
             <Route path="products" element={<SprintOneMode demo={<ProductsPage />} live={<LivePages />} />} />
             <Route path="customers" element={<SprintOneMode demo={<CustomersPage />} live={<LiveCustomersPage />} />} />
             <Route path="suppliers" element={<SprintOneMode demo={<SuppliersPage />} live={<LiveSuppliersPage />} />} />

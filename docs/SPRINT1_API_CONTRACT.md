@@ -14,7 +14,7 @@ Base path: `/api/v1`. JSON request/response. Lỗi dùng `{timestamp,status,erro
 | Customer address | Dưới `/sales/customers/{customerId}/addresses` | CRUD theo `CustomerAddressController` | `recipientName,recipientPhone,addressLine,area?,isDefault?` | Địa chỉ và cờ mặc định |
 | Order | `GET /sales/orders`, `GET /sales/orders/{id}`: ADMIN hoặc SALES_STAFF | Chưa có API ghi | — | `OrderResponse` gồm items |
 
-`DELETE` Product/Supplier/Customer là soft delete. Phone khách đang hoạt động là duy nhất khi không null; `+84` được chuẩn hóa về `0`. FE không gửi `stock`, `expiry`, `contactName`, `email`, `type`, `note`, `debt` vì API Sprint 1 chưa hỗ trợ các trường đó. Bản dùng thử vận hành độc lập với backend; phiên thật chỉ mở các màn Product/Supplier/Customer, các màn khác hiển thị trạng thái chưa kết nối.
+`DELETE` Product/Supplier/Customer là soft delete. Phone khách đang hoạt động là duy nhất khi không null; `+84` được chuẩn hóa về `0`. FE không gửi `stock`, `expiry`, `contactName`, `email`, `type`, `note`, `debt` vào các API danh mục vì API Sprint 1 chưa hỗ trợ các trường đó. Bản dùng thử vận hành độc lập với backend. Phiên thật mở Product/Supplier/Customer, đọc danh sách/chi tiết Order và chuẩn bị phiếu nhập từ danh mục thật. Cửa hàng công khai đọc danh sách/chi tiết Product; các thao tác ghi đơn, nhập kho và dữ liệu tồn/lô vẫn chờ backend. Xem [phạm vi Task 4/5](../frontend/docs/task4-task5-integration.md).
 
 ## Database relationship snapshot
 

@@ -97,7 +97,7 @@ export function buildReportWorkbook(report: PeriodReport) {
     { title: 'Mã sản phẩm', width: 20 }, { title: 'Sản phẩm', width: 42 }, { title: 'Đơn vị', width: 12 },
     count('Nhập đạt'), count('Nhập hỏng'), count('Đã bán (trừ trả)'), count('Trả lại'), count('Tồn hiện tại'),
     money('Doanh thu'), money('Giá vốn ước tính'), money('Lãi gộp ước tính'),
-  ], report.products.map((row) => [row.productId, row.name, row.unit, row.received, row.damaged, row.sold, row.returned, row.stock, row.revenue, row.cost, row.revenue - row.cost]),
+  ], report.products.map((row) => [row.sku ?? '', row.name, row.unit, row.received, row.damaged, row.sold, row.returned, row.stock, row.revenue, row.cost, row.revenue - row.cost]),
   'Tồn hiện tại là số tồn lúc xuất báo cáo, không phải tồn cuối kỳ. Nhập / bán / trả tính trong kỳ; giá vốn ước tính theo lô.')
   sheet('Kênh tiếp nhận', [{ title: 'Kênh', width: 26 }, count('Đơn tạo'), money('Doanh thu')],
     report.channels.map((row) => [row.channel, row.orders, row.revenue]))
