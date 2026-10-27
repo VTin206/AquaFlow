@@ -34,6 +34,11 @@ public class Customer {
     }
 
     public Customer(String fullName, String phone) {
+        this(null, fullName, phone);
+    }
+
+    public Customer(Long userId, String fullName, String phone) {
+        this.userId = userId;
         this.fullName = fullName;
         this.phone = phone;
         this.createdAt = Instant.now();

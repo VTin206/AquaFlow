@@ -1,5 +1,6 @@
 package com.aquaflow.inventory.api;
 
+import com.aquaflow.inventory.repository.ProductRepository;
 import com.aquaflow.customer.order.repository.OrderItemRepository;
 import com.aquaflow.customer.order.repository.OrderRepository;
 import com.aquaflow.customer.repository.CustomerAddressRepository;
@@ -41,6 +42,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 @AutoConfigureMockMvc
 class SupplierControllerIntegrationTest {
+
+    @MockitoBean
+    private ProductRepository productRepository;
 
     @MockitoBean
     private com.aquaflow.inventory.application.PurchaseReceiptService purchaseReceiptService;
