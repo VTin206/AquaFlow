@@ -12,8 +12,21 @@ export type LiveOrder = {
   createdAt: string; confirmedAt: string | null; cancelledAt: string | null; note: string | null
   items: { id: number; productId: number; quantity: number; unitPrice: number; lineTotal: number }[]
 }
+export type OrderStatus = LiveOrder['status']
+/** Theo OrderCreateRequest; nhân viên không tạo đơn kênh WEB (đơn web đi luồng khách hàng). */
+export type OrderInput = {
+  customerId: number | null; channel: Exclude<LiveOrder['channel'], 'WEB'>; fulfillmentType: LiveOrder['fulfillmentType']
+  recipientName: string | null; recipientPhone: string | null; deliveryAddress: string | null; deliveryArea: string | null
+  items: { productId: number; quantity: number }[]; note: string | null
+}
+
+/** Xác nhận/hủy theo OrderStatusPolicy; các bước giao hàng thuộc màn hình giao vận. */
+export const canConfirm = (order: Pick<LiveOrder, 'status'>) => order.status === 'PENDING'
+export const canCancel = (order: Pick<LiveOrder, 'status'>) => ['PENDING', 'CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY'].includes(order.status)
 
 export const orderApi = {
   list: () => api.get<LiveOrder[]>('/sales/orders'),
   detail: (id: number) => api.get<LiveOrder>(`/sales/orders/${id}`),
+  create: (input: OrderInput) => api.post<LiveOrder>('/sales/orders', input),
+  updateStatus: (id: number, status: OrderStatus) => api.patch<LiveOrder>(`/sales/orders/${id}/status`, { status }),
 }
