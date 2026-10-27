@@ -29,6 +29,49 @@ public class CustomerService {
     }
 
     @Transactional
+    public CustomerResponse findOrCreateForUser(
+            Long userId,
+            String fullName,
+            String phone) {
+
+        Optional<Customer> existingCustomer =
+                customerRepository.findByUserId(userId);
+
+        if (existingCustomer.isPresent()) {
+            Customer customer = existingCustomer.get();
+
+            if (!customer.isActive()) {
+                throw new ConflictException(
+                        "Customer profile is inactive");
+            }
+
+            return toResponse(customer);
+        }
+
+        String normalizedPhone = normalizePhone(phone);
+
+        if (normalizedPhone != null
+                && customerRepository.existsByPhoneAndActiveTrue(
+                        normalizedPhone)) {
+            throw new ConflictException(
+                    "An active customer profile already uses this phone. "
+                            + "Please contact sales staff to link your account.");
+        }
+
+        Customer customer = new Customer(
+                userId,
+                fullName,
+                normalizedPhone);
+
+        return toResponse(customerRepository.save(customer));
+    }
+
+    public Optional<CustomerResponse> findActiveByUserId(Long userId) {
+        return customerRepository.findByUserIdAndActiveTrue(userId)
+                .map(this::toResponse);
+    }
+
+    @Transactional
     public CustomerResponse create(CustomerRequest request) {
 
         String phone = normalizePhone(request.phone());

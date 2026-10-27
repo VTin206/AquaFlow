@@ -1,5 +1,13 @@
 package com.aquaflow.customer.order.application;
 
+import com.aquaflow.customer.order.api.dto.OrderCreateRequest;
+import com.aquaflow.customer.order.api.dto.OrderItemRequest;
+import com.aquaflow.inventory.domain.Product;
+import com.aquaflow.inventory.repository.ProductRepository;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import com.aquaflow.customer.order.api.dto.OrderResponse;
 import com.aquaflow.customer.order.domain.FulfillmentType;
 import com.aquaflow.customer.order.domain.Order;
@@ -29,6 +37,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @ExtendWith(MockitoExtension.class)
 class OrderServiceTest {
+
+    @Mock
+    private ProductRepository productRepository;
 
     @Mock
     private OrderRepository orderRepository;
@@ -228,5 +239,79 @@ class OrderServiceTest {
 
         verify(orderRepository, never())
                 .save(org.mockito.ArgumentMatchers.any(Order.class));
+    }
+
+    @Test
+    void createForStaffUsesDatabasePriceAndSavesOrderItems() {
+        Product product = new Product(
+                "SKU-101",
+                "Test Product",
+                null,
+                "bottle",
+                null,
+                null,
+                new BigDecimal("125.00"));
+
+        ReflectionTestUtils.setField(product, "id", 101L);
+
+        when(productRepository.findById(101L))
+                .thenReturn(Optional.of(product));
+
+        AtomicReference<List<OrderItem>> savedItems =
+                new AtomicReference<>(List.of());
+
+        when(orderRepository.save(any(Order.class)))
+                .thenAnswer(invocation -> {
+                    Order order = invocation.getArgument(0);
+                    ReflectionTestUtils.setField(order, "id", 25L);
+                    return order;
+                });
+
+        when(orderItemRepository.saveAll(anyList()))
+                .thenAnswer(invocation -> {
+                    List<OrderItem> items = invocation.getArgument(0);
+                    savedItems.set(items);
+                    return items;
+                });
+
+        when(orderItemRepository.findAllByOrder_Id(25L))
+                .thenAnswer(invocation -> savedItems.get());
+
+        OrderCreateRequest request = new OrderCreateRequest(
+                5L,
+                OrderChannel.COUNTER,
+                FulfillmentType.COUNTER,
+                "Nguyen Van An",
+                "0901234567",
+                null,
+                null,
+                null,
+                List.of(new OrderItemRequest(101L, 2)),
+                "Test create order");
+
+        OrderResponse response =
+                orderService.createForStaff(request, 7L);
+
+        assertThat(response.id()).isEqualTo(25L);
+        assertThat(response.customerId()).isEqualTo(5L);
+        assertThat(response.createdBy()).isEqualTo(7L);
+        assertThat(response.channel()).isEqualTo(OrderChannel.COUNTER);
+
+        assertThat(response.subtotal())
+                .isEqualByComparingTo("250.00");
+
+        assertThat(response.total())
+                .isEqualByComparingTo("250.00");
+
+        assertThat(savedItems.get()).hasSize(1);
+
+        assertThat(savedItems.get().get(0).getUnitPrice())
+                .isEqualByComparingTo("125.00");
+
+        assertThat(savedItems.get().get(0).getLineTotal())
+                .isEqualByComparingTo("250.00");
+
+        verify(orderRepository).save(any(Order.class));
+        verify(orderItemRepository).saveAll(anyList());
     }
 }
