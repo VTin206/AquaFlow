@@ -22,6 +22,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 class HealthControllerTest {
 
     @MockBean
+    private com.aquaflow.inventory.application.PurchaseReceiptService purchaseReceiptService;
+
+    @MockBean
+    private com.aquaflow.inventory.application.StockService stockService;
+
+    @MockBean
+    private com.aquaflow.inventory.application.StockReservationService stockReservationService;
+
+    @MockBean
     private UserRepository userRepository;
 
     // Test này tắt JPA nên phải giả lập các repository của module inventory

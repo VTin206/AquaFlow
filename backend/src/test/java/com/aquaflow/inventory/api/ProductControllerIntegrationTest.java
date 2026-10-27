@@ -43,6 +43,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class ProductControllerIntegrationTest {
 
+    @MockitoBean
+    private com.aquaflow.inventory.application.PurchaseReceiptService purchaseReceiptService;
+
+    @MockitoBean
+    private com.aquaflow.inventory.application.StockService stockService;
+
+    @MockitoBean
+    private com.aquaflow.inventory.application.StockReservationService stockReservationService;
+
     private static final String VALID_BODY = """
             {"sku":"NUOC-19L","name":"Nước 19L","brand":"Aqua","unit":"Bình","bottleTypeId":1,"salePrice":20000}
             """;
