@@ -1,16 +1,15 @@
-import { Alert, Button, Drawer, Empty, InputNumber, Skeleton } from 'antd'
+import { Button, Drawer, Empty, InputNumber, Skeleton } from 'antd'
 import { Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { currency } from '../../../shared/utils/format'
 import { QueryError } from '../../../shared/components/QueryError'
 import { useCartActions, useCart } from '../cart'
-import { useShopDemo, useShopProducts } from '../shopService'
+import { useShopProducts } from '../shopService'
 
 export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate()
   const cart = useCart()
   const actions = useCartActions()
-  const demo = useShopDemo()
   const products = useShopProducts()
   const lines = cart.map((line) => ({ ...line, product: products.data?.find((item) => item.id === line.productId) }))
   const subtotal = lines.reduce((sum, line) => sum + line.quantity * (line.product?.price ?? 0), 0)
@@ -27,7 +26,6 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
       </ul>
       <div className="af-order-summary"><span>Tiền hàng tạm tính</span><strong>{currency(subtotal)}</strong></div>
       <p className="af-form-hint">Chưa gồm phí giao và tiền cọc vỏ nếu có.</p>
-      {!demo && <Alert type="info" showIcon title="Chưa nhận đặt hàng trực tuyến" description="Bạn có thể chuẩn bị giỏ và thông tin giao hàng. Chưa có đơn hàng nào được gửi." />}
       <Button style={{ marginTop: 16 }} type="primary" block size="large" disabled={invalid} onClick={() => { onClose(); navigate('/checkout') }}>Tiếp tục đến Checkout</Button>
     </>}
   </Drawer>

@@ -7,7 +7,7 @@ const PROFILE_KEY = 'aquaflow.shop.profile'
 
 export type CartLine = { productId: string; quantity: number }
 /** Thông tin giao hàng khách tự chọn lưu lại cho lần đặt sau (không cần tài khoản). */
-export type ShopProfile = { customer: string; phone: string; address: string; floor?: number }
+export type ShopProfile = { customer: string; phone: string; address: string; area?: string; floor?: number }
 
 const read = <T,>(key: string, fallback: T): T => {
   try {
