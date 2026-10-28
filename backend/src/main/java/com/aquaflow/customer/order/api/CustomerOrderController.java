@@ -9,9 +9,11 @@ import com.aquaflow.customer.api.dto.CustomerResponse;
 import com.aquaflow.customer.application.CustomerService;
 import com.aquaflow.customer.order.api.dto.OrderCreateRequest;
 import com.aquaflow.customer.order.api.dto.OrderResponse;
+import com.aquaflow.customer.order.api.dto.GuestOrderCreateRequest;
 import com.aquaflow.customer.order.application.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -90,5 +92,16 @@ public class CustomerOrderController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(order);
+    }
+
+    @PostMapping("/guest")
+    @SecurityRequirements
+    @Operation(summary = "Create a guest delivery order")
+    public ResponseEntity<OrderResponse> createGuest(
+            @Valid @RequestBody GuestOrderCreateRequest request) {
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(orderService.createForGuest(request));
     }
 }

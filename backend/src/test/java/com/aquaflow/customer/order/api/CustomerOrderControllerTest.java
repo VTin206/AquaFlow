@@ -7,6 +7,7 @@ import com.aquaflow.customer.api.dto.CustomerResponse;
 import com.aquaflow.customer.application.CustomerService;
 import com.aquaflow.customer.order.api.dto.OrderCreateRequest;
 import com.aquaflow.customer.order.api.dto.OrderResponse;
+import com.aquaflow.customer.order.api.dto.GuestOrderCreateRequest;
 import com.aquaflow.customer.order.application.OrderService;
 import com.aquaflow.customer.order.domain.FulfillmentType;
 import com.aquaflow.customer.order.domain.OrderChannel;
@@ -109,6 +110,58 @@ class CustomerOrderControllerTest {
     }
 
     @Test
+    void anonymousUserCanCreateGuestOrder() throws Exception {
+        when(orderService.createForGuest(any(GuestOrderCreateRequest.class)))
+                .thenReturn(sampleGuestOrder());
+
+        mockMvc.perform(post(ORDERS_URL + "/guest")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "recipientName": "Nguyen Van An",
+                                    "recipientPhone": "0901234567",
+                                    "deliveryAddress": "123 Nguyen Trai",
+                                    "deliveryArea": "Quan 5",
+                                    "items": [
+                                        {
+                                            "productId": 101,
+                                            "quantity": 2
+                                        }
+                                    ],
+                                    "note": "Guest order"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.customerId").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.channel").value("WEB"));
+
+        verify(orderService).createForGuest(any(GuestOrderCreateRequest.class));
+    }
+
+    @Test
+    void guestOrderValidationRejectsInvalidQuantity() throws Exception {
+        mockMvc.perform(post(ORDERS_URL + "/guest")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "recipientName": "Nguyen Van An",
+                                    "recipientPhone": "0901234567",
+                                    "deliveryAddress": "123 Nguyen Trai",
+                                    "items": [
+                                        {
+                                            "productId": 101,
+                                            "quantity": 0
+                                        }
+                                    ]
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+
+        org.mockito.Mockito.verifyNoInteractions(orderService);
+    }
+
+    @Test
     void customerCanListOwnOrders() throws Exception {
         when(customerService.findActiveByUserId(7L))
                 .thenReturn(Optional.of(sampleCustomer()));
@@ -146,6 +199,12 @@ class CustomerOrderControllerTest {
         mockMvc.perform(post(ORDERS_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void anonymousUserCannotListCustomerOrders() throws Exception {
+        mockMvc.perform(get(ORDERS_URL))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -202,6 +261,32 @@ class CustomerOrderControllerTest {
                 null,
                 null,
                 "Online order test",
+                List.of());
+    }
+
+    private OrderResponse sampleGuestOrder() {
+        return new OrderResponse(
+                2L,
+                "AF-GUEST-1",
+                null,
+                null,
+                OrderChannel.WEB,
+                FulfillmentType.DELIVERY,
+                OrderStatus.PENDING,
+                PaymentStatus.UNPAID,
+                "Nguyen Van An",
+                "0901234567",
+                "123 Nguyen Trai",
+                "Quan 5",
+                null,
+                new BigDecimal("250.00"),
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                new BigDecimal("250.00"),
+                OffsetDateTime.parse("2026-10-25T09:00:00+07:00"),
+                null,
+                null,
+                "Guest order",
                 List.of());
     }
 }

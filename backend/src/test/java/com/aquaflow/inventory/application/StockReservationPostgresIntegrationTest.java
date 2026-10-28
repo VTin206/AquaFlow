@@ -154,6 +154,42 @@ class StockReservationPostgresIntegrationTest {
         assertThat(stockService.findByProduct(productId).reserved()).isZero();
     }
 
+    @Test
+    void confirmingOrderRollsBackAllReservationsWhenLaterLineIsInsufficient() {
+        addBatch("LOT-A", LocalDate.now().plusDays(30), 5);
+        addOrderItem(3);
+        addOrderItem(3);
+
+        assertThatThrownBy(() -> orderService.transitionStatus(orderId, OrderStatus.CONFIRMED))
+                .isInstanceOf(ConflictException.class);
+
+        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id = ?", String.class, orderId))
+                .isEqualTo("PENDING");
+        assertThat(stockService.findByProduct(productId).reserved()).isZero();
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM stock_reservations r JOIN order_items i ON i.id = r.order_item_id WHERE i.order_id = ?",
+                Integer.class,
+                orderId)).isZero();
+    }
+
+    @Test
+    void repeatedConfirmationDoesNotCreateAnotherReservation() {
+        addBatch("LOT-A", LocalDate.now().plusDays(30), 5);
+        addOrderItem(3);
+
+        orderService.transitionStatus(orderId, OrderStatus.CONFIRMED);
+
+        assertThatThrownBy(() -> orderService.transitionStatus(orderId, OrderStatus.CONFIRMED))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Invalid order status transition from CONFIRMED to CONFIRMED");
+
+        assertThat(stockService.findByProduct(productId).reserved()).isEqualTo(3);
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM stock_reservations r JOIN order_items i ON i.id = r.order_item_id WHERE i.order_id = ?",
+                Integer.class,
+                orderId)).isEqualTo(1);
+    }
+
     private void addBatch(String lot, LocalDate expiresOn, int onHand) {
         Long batchId = jdbc.queryForObject(
                 "INSERT INTO product_batches (product_id, lot_code, expires_on) VALUES (?, ?, ?) RETURNING id",

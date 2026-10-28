@@ -64,6 +64,12 @@ public class StockReservationService {
         List<StockReservation> reservations = reservationRepository.findByOrderItemIdIn(orderItemIds).stream()
                 .sorted(Comparator.comparing(r -> r.getBatch().getId()))
                 .toList();
+
+        if (reservations.stream().anyMatch(r -> r.getQuantityDispatched() > 0)) {
+            throw new ConflictException(
+                    "Không thể giải phóng reservation đã có hàng xuất kho");
+        }
+
         for (StockReservation reservation : reservations) {
             int released = reservation.releaseOutstanding();
             if (released == 0) {

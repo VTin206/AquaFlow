@@ -2,11 +2,13 @@
 package com.aquaflow.customer.order.application;
 
 import com.aquaflow.customer.order.api.dto.OrderCreateRequest;
+import com.aquaflow.customer.order.api.dto.GuestOrderCreateRequest;
 import com.aquaflow.customer.order.api.dto.OrderItemRequest;
 import com.aquaflow.customer.order.api.dto.OrderResponse;
 import com.aquaflow.customer.order.domain.OrderStatus;
 import com.aquaflow.customer.order.domain.Order;
 import com.aquaflow.customer.order.domain.OrderChannel;
+import com.aquaflow.customer.order.domain.FulfillmentType;
 import com.aquaflow.customer.order.domain.OrderItem;
 import com.aquaflow.customer.order.repository.OrderItemRepository;
 import com.aquaflow.customer.order.repository.OrderRepository;
@@ -80,30 +82,73 @@ public class OrderService {
                 OrderChannel.WEB);
     }
 
+    @Transactional
+    public OrderResponse createForGuest(GuestOrderCreateRequest request) {
+        return createOrder(
+                request.recipientName(),
+                request.recipientPhone(),
+                request.deliveryAddress(),
+                request.deliveryArea(),
+                request.requestedDeliveryAt(),
+                request.items(),
+                request.note(),
+                null,
+                null,
+                OrderChannel.WEB,
+                FulfillmentType.DELIVERY);
+    }
+
     private OrderResponse createOrder(
             OrderCreateRequest request,
             Long customerId,
             Long createdBy,
             OrderChannel channel) {
 
-        Order order = new Order(
-                generateOrderCode(),
-                customerId,
-                createdBy,
-                channel,
-                request.fulfillmentType(),
+        return createOrder(
                 request.recipientName(),
                 request.recipientPhone(),
                 request.deliveryAddress(),
                 request.deliveryArea(),
                 request.requestedDeliveryAt(),
+                request.items(),
+                request.note(),
+                customerId,
+                createdBy,
+                channel,
+                request.fulfillmentType());
+    }
+
+    private OrderResponse createOrder(
+            String recipientName,
+            String recipientPhone,
+            String deliveryAddress,
+            String deliveryArea,
+            java.time.OffsetDateTime requestedDeliveryAt,
+            List<OrderItemRequest> itemRequests,
+            String note,
+            Long customerId,
+            Long createdBy,
+            OrderChannel channel,
+            FulfillmentType fulfillmentType) {
+
+        Order order = new Order(
+                generateOrderCode(),
+                customerId,
+                createdBy,
+                channel,
+                fulfillmentType,
+                recipientName,
+                recipientPhone,
+                deliveryAddress,
+                deliveryArea,
+                requestedDeliveryAt,
                 BigDecimal.ZERO,
-                request.note());
+                note);
 
         BigDecimal subtotal = BigDecimal.ZERO;
         List<OrderItem> items = new java.util.ArrayList<>();
 
-        for (OrderItemRequest itemRequest : request.items()) {
+        for (OrderItemRequest itemRequest : itemRequests) {
             Product product = productRepository
                     .findById(itemRequest.productId())
                     .filter(Product::isActive)
