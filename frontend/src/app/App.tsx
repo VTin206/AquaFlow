@@ -24,6 +24,7 @@ const ProductDetailPage = lazy(() => import('../features/shop/ProductDetailPage'
 const CheckoutPage = lazy(() => import('../features/shop/CheckoutPage').then((m) => ({ default: m.CheckoutPage })))
 const TrackPage = lazy(() => import('../features/shop/TrackPage').then((m) => ({ default: m.TrackPage })))
 const LoginPage = lazy(() => import('../features/auth/LoginPage').then((m) => ({ default: m.LoginPage })))
+const RegisterPage = lazy(() => import('../features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })))
 const UnavailablePage = lazy(() => import('../features/live/UnavailablePage').then((m) => ({ default: m.UnavailablePage })))
 
 /** Trang chưa có API BE: tài khoản thật vẫn mở được nhưng thấy "Chưa hỗ trợ" thay cho dữ liệu mẫu. */
@@ -43,6 +44,7 @@ export function App() {
     <Suspense fallback={pageFallback}>
       <Routes>
         <Route path="login" element={<LoginPage />} />
+        <Route path="register" element={<RegisterPage />} />
         {/* Trang công khai cho khách đặt hàng và tra cứu đơn, không cần đăng nhập. */}
         <Route element={<ShopLayout />}>
           <Route path="shop" element={<ShopPage />} />

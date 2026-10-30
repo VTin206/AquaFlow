@@ -1169,22 +1169,11 @@ body {
 /* Trang khách đặt hàng */
 .af-shop { min-height: 100dvh; display: flex; flex-direction: column; background: var(--af-bg); }
 .af-shop-header { position: sticky; top: 0; z-index: 10; background: #fff; border-bottom: 1px solid var(--af-border); }
-.af-shop-topbar { background: var(--af-primary); color: #fff; font-size: 13px; }
-.af-shop-topbar-inner { max-width: 1180px; margin: 0 auto; padding: 7px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.af-shop-topbar-note { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.92; }
-.af-shop-topbar-links { display: flex; align-items: center; gap: 4px 18px; margin-left: auto; white-space: nowrap; }
-.af-shop-topbar-links a { display: inline-flex; align-items: center; gap: 6px; color: #fff; font-weight: 600; }
-.af-shop-topbar-links a:hover, .af-shop-topbar-links a:focus-visible, .af-shop-topbar-links a.active { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
-.af-shop-topbar-user { opacity: 0.85; }
 .af-shop-account { width: 260px; display: flex; flex-direction: column; gap: 10px; }
 .af-shop-account-head { display: flex; align-items: center; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--af-border); }
 .af-shop-account-head > div { display: flex; flex-direction: column; min-width: 0; }
 .af-shop-account-head strong { color: var(--af-text-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .af-shop-account-head small { color: var(--af-text-secondary); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.af-shop-account-profile { margin: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--af-text); }
-.af-shop-account-profile dt { color: var(--af-text-tertiary); font-size: 12px; }
-.af-shop-account-profile dd { margin: 0; display: flex; align-items: flex-start; gap: 6px; overflow-wrap: anywhere; }
-.af-shop-account-profile svg { flex: none; margin-top: 3px; color: var(--af-primary); }
 .af-shop-icons { display: flex; align-items: center; gap: 2px; }
 .af-shop-icons .ant-btn { color: var(--af-text-strong); }
 .af-shop-icons .ant-btn:hover { color: var(--af-primary); }
@@ -1271,7 +1260,7 @@ body {
 .af-shop-steps li strong { color: var(--af-text-strong); }
 .af-shop-steps li span { color: var(--af-text-secondary); font-size: 13px; }
 .af-shop-steps .ant-btn-link { margin-top: 8px; padding: 0; }
-.af-shop-catalog { scroll-margin-top: 112px; }
+.af-shop-catalog { scroll-margin-top: 72px; }
 @media (max-width: 900px) {
   .af-shop-top { grid-template-columns: 1fr; }
   .af-shop-banner { grid-template-columns: 1fr; padding: 28px 22px; min-height: 0; }
@@ -1341,6 +1330,5 @@ body {
   .af-shop-nav a { padding: 6px; }
   .af-shop-nav a:first-child { display: none; }
   .af-shop-nav-text { display: none; }
-  .af-shop-topbar-note, .af-shop-topbar-user { display: none; }
   .af-shop-hero ul { display: none; }
 }

@@ -115,6 +115,7 @@ export function LoginPage() {
                 </div>
                 <Button type="primary" size="large" htmlType="submit" loading={submitting} block icon={<ArrowRight size={18} />} iconPlacement="end">Đăng nhập</Button>
               </Form>
+              <p className="af-login-switch">Chưa có tài khoản? <Link to="/register">Tạo tài khoản</Link></p>
               {devAccounts.length > 0 && (
                 <div className="af-login-dev">
                   <Divider plain><span className="af-login-divider-text">Đăng nhập nhanh (dev)</span></Divider>
