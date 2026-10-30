@@ -1176,6 +1176,15 @@ body {
 .af-shop-topbar-links a { display: inline-flex; align-items: center; gap: 6px; color: #fff; font-weight: 600; }
 .af-shop-topbar-links a:hover, .af-shop-topbar-links a:focus-visible, .af-shop-topbar-links a.active { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
 .af-shop-topbar-user { opacity: 0.85; }
+.af-shop-account { width: 260px; display: flex; flex-direction: column; gap: 10px; }
+.af-shop-account-head { display: flex; align-items: center; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--af-border); }
+.af-shop-account-head > div { display: flex; flex-direction: column; min-width: 0; }
+.af-shop-account-head strong { color: var(--af-text-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.af-shop-account-head small { color: var(--af-text-secondary); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.af-shop-account-profile { margin: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--af-text); }
+.af-shop-account-profile dt { color: var(--af-text-tertiary); font-size: 12px; }
+.af-shop-account-profile dd { margin: 0; display: flex; align-items: flex-start; gap: 6px; overflow-wrap: anywhere; }
+.af-shop-account-profile svg { flex: none; margin-top: 3px; color: var(--af-primary); }
 .af-shop-icons { display: flex; align-items: center; gap: 2px; }
 .af-shop-icons .ant-btn { color: var(--af-text-strong); }
 .af-shop-icons .ant-btn:hover { color: var(--af-primary); }

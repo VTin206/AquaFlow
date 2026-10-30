@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Alert, Badge, Button } from 'antd'
-import { LayoutDashboard, LogIn, PackageSearch, Phone, Search, ShoppingCart, Truck, UserRound, Waves } from 'lucide-react'
+import { LayoutDashboard, LogIn, PackageSearch, Phone, Search, ShoppingCart, Truck, Waves } from 'lucide-react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { useSettings } from '../settings/settingsService'
 import { useCart } from './cart'
+import { AccountMenu } from './components/AccountMenu'
 import { CartDrawer } from './components/CartDrawer'
 import { useShopDemo } from './shopService'
 
@@ -33,7 +34,7 @@ export function ShopLayout() {
             <span className="af-shop-topbar-note">
               <Truck size={15} aria-hidden /> Giao nước tận nơi · Đặt hàng không cần tài khoản
             </span>
-            <nav className="af-shop-topbar-links" aria-label="Tài khoản">
+            <nav className="af-shop-topbar-links" aria-label="Đăng nhập và tra cứu đơn">
               {demo && <NavLink to="/track"><PackageSearch size={15} aria-hidden /> Tra cứu đơn</NavLink>}
               {isAuthenticated && user?.name && <span className="af-shop-topbar-user">Xin chào, {user.name}</span>}
               <Link to={account.to}>{account.icon} {account.label}</Link>
@@ -54,7 +55,7 @@ export function ShopLayout() {
           </nav>
           <div className="af-shop-icons">
             <Button type="text" shape="circle" icon={<Search size={20} />} aria-label="Tìm sản phẩm" title="Tìm sản phẩm" onClick={() => navigate('/shop', { state: { focusSearch: Date.now() } })} />
-            <Button type="text" shape="circle" icon={<UserRound size={20} />} aria-label={account.label} title={account.label} onClick={() => navigate(account.to)} />
+            <AccountMenu />
           </div>
           <Badge count={count} size="small" offset={[-4, 4]}>
             <Button type="primary" icon={<ShoppingCart size={17} />} onClick={() => setCartOpen(true)} aria-label={`Giỏ hàng, ${count} sản phẩm`}>
