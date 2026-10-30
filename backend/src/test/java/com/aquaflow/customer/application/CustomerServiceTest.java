@@ -213,4 +213,29 @@ class CustomerServiceTest {
 
         return customer;
     }
+
+    @Test
+    void profileFieldsDefaultToIndividualAndOlderClientsDoNotEraseThem() {
+        when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        CustomerResponse plain = customerService.create(new CustomerRequest("Nguyen Van An", "0901234567"));
+        assertThat(plain.customerType()).isEqualTo("Cá nhân");
+        assertThat(plain.area()).isNull();
+
+        Customer customer = customer(3L, "Cong ty Song Xanh", "0987654321");
+        when(customerRepository.findByIdAndActiveTrue(3L)).thenReturn(Optional.of(customer));
+        CustomerResponse updated = customerService.update(3L, new CustomerRequest(
+                "Cong ty Song Xanh", "0987654321", "Doanh nghiệp", " Quận 1 ", "Giao giờ hành chính")).orElseThrow();
+        assertThat(updated.customerType()).isEqualTo("Doanh nghiệp");
+        assertThat(updated.area()).isEqualTo("Quận 1");
+        assertThat(updated.note()).isEqualTo("Giao giờ hành chính");
+
+        CustomerResponse kept = customerService.update(3L, new CustomerRequest("Cong ty Song Xanh", "0987654321")).orElseThrow();
+        assertThat(kept.customerType()).isEqualTo("Doanh nghiệp");
+        assertThat(kept.area()).isEqualTo("Quận 1");
+
+        CustomerResponse cleared = customerService.update(3L, new CustomerRequest(
+                "Cong ty Song Xanh", "0987654321", null, "", "")).orElseThrow();
+        assertThat(cleared.area()).isNull();
+        assertThat(cleared.note()).isNull();
+    }
 }

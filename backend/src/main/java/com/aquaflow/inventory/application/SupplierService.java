@@ -35,6 +35,7 @@ public class SupplierService {
     @Transactional
     public SupplierResponse create(SupplierRequest request) {
         Supplier supplier = new Supplier(request.name(), request.phone(), request.address());
+        supplier.updateContact(request.contactName(), request.email());
         return toResponse(supplierRepository.save(supplier));
     }
 
@@ -42,6 +43,7 @@ public class SupplierService {
     public SupplierResponse update(Long id, SupplierRequest request) {
         Supplier supplier = getSupplier(id);
         supplier.update(request.name(), request.phone(), request.address());
+        supplier.updateContact(request.contactName(), request.email());
         return toResponse(supplier);          // không cần save(), @Transactional tự lưu
     }
 
@@ -61,6 +63,8 @@ public class SupplierService {
                 supplier.getName(),
                 supplier.getPhone(),
                 supplier.getAddress(),
-                supplier.isActive());
+                supplier.isActive(),
+                supplier.getContactName(),
+                supplier.getEmail());
     }
 }

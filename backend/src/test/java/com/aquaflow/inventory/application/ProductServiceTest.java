@@ -146,4 +146,16 @@ class ProductServiceTest {
         assertThat(productService.update(5L, new UpdateProductRequest(
                 "Water", "Aqua", "Bottle", null, null, BigDecimal.TEN, "")).image()).isNull();
     }
+
+    @Test
+    void lowStockThresholdDefaultsAndOlderClientsKeepIt() {
+        Product product = new Product("LOW", "Water", "Aqua", "Bottle", null, null, BigDecimal.TEN);
+        when(productRepository.findById(6L)).thenReturn(Optional.of(product));
+        assertThat(productService.findById(6L).lowStockThreshold()).isEqualTo(Product.DEFAULT_LOW_STOCK_THRESHOLD);
+
+        assertThat(productService.update(6L, new UpdateProductRequest(
+                "Water", "Aqua", "Bottle", null, null, BigDecimal.TEN, null, 25)).lowStockThreshold()).isEqualTo(25);
+        assertThat(productService.update(6L, new UpdateProductRequest(
+                "Water", "Aqua", "Bottle", null, null, BigDecimal.TEN, null)).lowStockThreshold()).isEqualTo(25);
+    }
 }

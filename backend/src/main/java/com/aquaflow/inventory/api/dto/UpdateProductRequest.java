@@ -33,5 +33,12 @@ public record UpdateProductRequest(
         BigDecimal salePrice,
 
         @Size(max = 7000000, message = "Image must not exceed 5 MB encoded as a data URL")
-        String image
-) {}
+        String image,
+
+        @PositiveOrZero(message = "Low stock threshold must be greater than or equal to 0")
+        Integer lowStockThreshold
+) {
+    public UpdateProductRequest(String name, String brand, String unit, Integer unitsPerCase, Long bottleTypeId, BigDecimal salePrice, String image) {
+        this(name, brand, unit, unitsPerCase, bottleTypeId, salePrice, image, null);
+    }
+}

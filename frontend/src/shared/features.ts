@@ -6,14 +6,14 @@ import { useAuth } from '../features/auth/useAuth'
  * không hiện dữ liệu giả. BE bổ sung field/API nào thì bật cờ đó.
  */
 export const backendFeatures = {
-  /** Người liên hệ của nhà cung cấp (SupplierResponse chưa có). */
-  supplierContactName: false,
-  /** Email nhà cung cấp (SupplierResponse chưa có). */
-  supplierEmail: false,
-  /** Loại khách cá nhân/doanh nghiệp (CustomerResponse chưa có). */
-  customerType: false,
-  /** Khu vực và ghi chú trên hồ sơ khách (BE chỉ có khu vực theo từng địa chỉ giao). */
-  customerProfileExtras: false,
+  /** Người liên hệ của nhà cung cấp (SupplierController). */
+  supplierContactName: true,
+  /** Email nhà cung cấp (SupplierController). */
+  supplierEmail: true,
+  /** Loại khách cá nhân/doanh nghiệp (CustomerController). */
+  customerType: true,
+  /** Khu vực và ghi chú trên hồ sơ khách (CustomerController). */
+  customerProfileExtras: true,
   /** Công nợ của khách (chưa có luồng thanh toán). */
   customerDebt: false,
   /** Sổ vỏ bình và tiền cọc (chưa có API). */
@@ -22,8 +22,8 @@ export const backendFeatures = {
   productImage: true,
   /** Loại nước, dung tích để lọc danh mục (ProductResponse chưa có). */
   productCatalogDetails: false,
-  /** Tồn kho tối thiểu để cảnh báo sắp hết (BE chưa có). */
-  lowStockThreshold: false,
+  /** Tồn kho tối thiểu để cảnh báo sắp hết (ProductController, mặc định 10). */
+  lowStockThreshold: true,
   /** Phiếu thu, số còn phải thu của đơn (BE chỉ có trạng thái thanh toán, chưa có luồng thu tiền). */
   orderPayments: false,
   /** Kiểm hàng hoàn sau giao thất bại và lịch sử xuất giao / nhập hàng hoàn (chờ API Dispatch, Return của BE). */
