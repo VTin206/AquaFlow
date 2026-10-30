@@ -79,17 +79,27 @@ try {
     assert.equal(stock('P-003'), before + 2)
   })
 
-  await test('cancel after failed delivery restocks; on-the-road orders cannot be cancelled', async () => {
+  await test('failed delivery: only inspected sellable goods return to stock; cancel waits for the inspection', async () => {
     const order = await orderService.create(draft())
     await orderService.advanceStatus(order.id)
     await orderService.advanceStatus(order.id)
     await assert.rejects(orderService.cancel(order.id, 'Khách không nhận'), /đang trên đường giao/)
     await orderService.receive(order.id, { success: false, reason: 'Không liên hệ được' })
     const before = stock('P-003')
+    await assert.rejects(orderService.cancel(order.id, 'Khách không nhận'), /Kiểm hàng/)
+    assert.equal(stock('P-003'), before)
+    await assert.rejects(orderService.inspectReturn(order.id, { sellable: [3] }), /từ 0 đến 2/)
+    await assert.rejects(orderService.inspectReturn(order.id, { sellable: [1] }), /hàng hỏng/)
+    setMockSession({ name: 'Tài xế', role: 'DELIVERY_STAFF' })
+    await assert.rejects(orderService.inspectReturn(order.id, { sellable: [1], note: 'Móp' }), /quyền/)
+    setMockSession({ name: 'Chủ cửa hàng', role: 'ADMIN' })
+    const inspected = await orderService.inspectReturn(order.id, { sellable: [1], note: 'Một bình móp' })
+    assert.deepEqual(inspected.returnInspections.at(-1).lines.map((line) => [line.sellable, line.damaged]), [[1, 1]])
+    assert.equal(stock('P-003'), before + 1)
     const cancelled = await orderService.cancel(order.id, 'Khách không nhận')
     assert.equal(cancelled.status, 'Đã hủy')
-    assert.equal(stock('P-003'), before + 2)
-    assert.match(cancelled.history.at(-1).message, /nhập lại kho/)
+    assert.equal(stock('P-003'), before + 1)
+    assert.match(cancelled.history.at(-1).message, /kiểm hàng hoàn/)
   })
 
   await test('returns reduce order value, refund only the overpaid part, restock is optional', async () => {

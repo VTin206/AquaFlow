@@ -1,5 +1,6 @@
 // Mô hình giao diện cho bản demo; chưa phải API contract của backend.
 export type TripStatus = 'Chờ xuất phát' | 'Đang giao' | 'Chờ đối soát' | 'Đã đối soát'
+// Chờ xuất phát: chưa xuất kho đơn nào (BE: CREATED). Đang giao: còn đơn chờ xuất hoặc đang giao (IN_PROGRESS).
 
 export type TripSettlement = {
   /** Tiền mặt tài xế thu trong chuyến theo phiếu thu đã ghi. */

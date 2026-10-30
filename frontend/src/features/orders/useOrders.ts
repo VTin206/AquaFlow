@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { customerKeys } from '../customers/useCustomers'
 import { productKeys } from '../inventory/useProducts'
 import { orderService } from './orderService'
-import type { DeliveryResult, Order, PaymentDraft, RefundDraft, ReturnDraft } from './types'
+import type { DeliveryResult, Order, PaymentDraft, RefundDraft, ReturnDraft, ReturnInspectionDraft } from './types'
 
 export const orderKeys = { all: ['orders'] as const }
 
@@ -48,6 +48,7 @@ type OrderAction =
   | { kind: 'pay'; id: string; payment: PaymentDraft }
   | { kind: 'cancel'; id: string; reason: string; refund?: RefundDraft }
   | { kind: 'return'; id: string; draft: ReturnDraft }
+  | { kind: 'inspectReturn'; id: string; draft: ReturnInspectionDraft }
 
 export function useOrderAction() {
   const queryClient = useQueryClient()
@@ -56,6 +57,7 @@ export function useOrderAction() {
       if (action.kind === 'receive') return orderService.receive(action.id, action.result)
       if (action.kind === 'pay') return orderService.pay(action.id, action.payment)
       if (action.kind === 'return') return orderService.returnItems(action.id, action.draft)
+      if (action.kind === 'inspectReturn') return orderService.inspectReturn(action.id, action.draft)
       return orderService.cancel(action.id, action.reason, action.refund)
     },
     onSuccess: (updated) => {

@@ -1,14 +1,19 @@
 import { useState } from 'react'
-import { Alert, Button, Card, Col, ConfigProvider, Input, Progress, Row, Segmented, Statistic, Table, Tag, Typography, type TableColumnsType } from 'antd'
+import { Alert, Badge, Button, Card, Col, ConfigProvider, Empty, Input, Progress, Row, Segmented, Statistic, Table, Tag, Typography, type TableColumnsType } from 'antd'
 import { FilePlus2, PackagePlus, Search } from 'lucide-react'
 import { CountLabel } from '../../shared/components/CountLabel'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
-import { Unsupported } from '../../shared/components/Unsupported'
+import { UNSUPPORTED_HINT, Unsupported } from '../../shared/components/Unsupported'
+import { useFeature } from '../../shared/features'
+import { awaitingReturnInspection } from '../orders/types'
+import { useOrders } from '../orders/useOrders'
 import { useColumnSort } from '../../shared/components/sortableColumn'
 import { currency } from '../../shared/utils/format'
 import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
 import { LotsPanel } from './components/LotsPanel'
+import { MovementsPanel } from './components/MovementsPanel'
+import { ReturnsPanel } from './components/ReturnsPanel'
 import { ReceiptsPanel } from './components/ReceiptsPanel'
 import { ReceiveStockModal } from './components/ReceiveStockModal'
 import { useExpiryWarningDays } from '../settings/settingsService'
@@ -17,7 +22,7 @@ import { matchesSearch } from '../../shared/utils/search'
 import { useReceiptViews, useStockItems, type ReceiptView, type StockItem } from './inventoryData'
 
 type Filter = 'all' | 'low' | 'expiring' | 'expired'
-type View = 'stock' | 'lots' | 'receipts'
+type View = 'stock' | 'lots' | 'receipts' | 'returns' | 'movements'
 
 /** Có ngưỡng tối thiểu thì so với ngưỡng; chưa có ngưỡng (BE) thì chỉ cảnh báo khi hết hàng bán được. */
 const isLow = (item: StockItem) => (item.threshold === undefined ? item.available === 0 : item.available <= item.threshold)
@@ -27,6 +32,8 @@ export function InventoryPage() {
   const stockQuery = useStockItems()
   const receiptsQuery = useReceiptViews()
   const warningDays = useExpiryWarningDays()
+  const showReturns = useFeature('deliveryReturns')
+  const returnsCount = (useOrders(showReturns).data ?? []).filter(awaitingReturnInspection).length
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const [view, setView] = useState<View>('stock')
@@ -185,9 +192,17 @@ export function InventoryPage() {
               { key: 'stock', label: 'Tồn kho' },
               { key: 'lots', label: 'Lô hàng' },
               { key: 'receipts', label: 'Phiếu nhập' },
+              { key: 'returns', label: <Badge count={returnsCount} size="small" offset={[8, -2]}>Hàng hoàn</Badge> },
+              { key: 'movements', label: 'Xuất / nhập kho' },
             ]}
           >
-            {view === 'lots' ? (
+            {(view === 'returns' || view === 'movements') && !showReturns ? (
+              <Empty className="af-unsupported-empty" description={<><strong>Chưa hỗ trợ</strong><div className="af-text-muted">{UNSUPPORTED_HINT}</div></>} />
+            ) : view === 'returns' ? (
+              <ReturnsPanel />
+            ) : view === 'movements' ? (
+              <MovementsPanel />
+            ) : view === 'lots' ? (
               <LotsPanel />
             ) : view === 'receipts' ? (
               <ReceiptsPanel onEdit={(receipt) => setReceiving({ receipt })} />

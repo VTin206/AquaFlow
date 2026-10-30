@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { App, Button, Card, Empty, Popconfirm, Progress, Select, Skeleton, Tag } from 'antd'
+import { Alert, Button, Card, Empty, Progress, Select, Skeleton, Tag } from 'antd'
 import { Clock3, Map, Package, Phone, Recycle, Wallet } from 'lucide-react'
 import { Page } from '../../shared/components/Page'
 import { useStaff } from '../auth/useStaff'
@@ -10,11 +10,12 @@ import { AdvanceStatusButton } from '../orders/components/AdvanceStatusButton'
 import { OrderDetailsModal } from '../orders/components/OrderDetailsModal'
 import { LateTag } from '../orders/components/LateTag'
 import { OrderStatusTag } from '../orders/components/OrderStatusTag'
-import { amountDue, jugCount, type Order } from '../orders/types'
+import { amountDue, deliveryAttempts, jugCount, type Order } from '../orders/types'
 import { useOrders } from '../orders/useOrders'
 import { TripStatusTag } from './components/TripStatusTag'
 import { drivers, type Trip } from './types'
-import { useTripAction, useTrips } from './useTrips'
+import { dispatchedIn, openIn } from './tripService'
+import { useTrips } from './useTrips'
 
 const DRIVER_KEY = 'aquaflow.driver'
 const readDriver = () => {
@@ -89,10 +90,9 @@ export function DriverPage() {
 }
 
 function DriverTrip({ trip, stops, onDetails }: { trip: Trip; stops: Order[]; onDetails: (id: string) => void }) {
-  const { message } = App.useApp()
-  const action = useTripAction()
-  const pending = stops.filter((order) => order.status === 'Đang giao' || !trip.departedAt)
-  const finished = stops.filter((order) => trip.departedAt && order.status !== 'Đang giao')
+  const pending = stops.filter((order) => openIn(trip, order))
+  const finished = stops.filter((order) => !openIn(trip, order))
+  const waiting = pending.filter((order) => !dispatchedIn(trip, order)).length
   const due = stops.reduce((sum, order) => sum + amountDue(order), 0)
   const jugs = stops.reduce((sum, order) => sum + jugCount(order), 0)
 
@@ -112,20 +112,8 @@ function DriverTrip({ trip, stops, onDetails }: { trip: Trip; stops: Order[]; on
             <Recycle size={16} /> Vỏ cần đổi <strong>{jugs}</strong>
           </span>
         </div>
-        {trip.status === 'Chờ xuất phát' && (
-          <Popconfirm
-            title={`Xuất phát với ${stops.length} đơn?`}
-            okText="Xuất phát"
-            cancelText="Chưa"
-            onConfirm={() =>
-              action.mutate({ kind: 'depart', id: trip.id }, { onSuccess: () => message.success('Đã xuất phát. Chúc chuyến đi thuận lợi!'), onError: (error) => message.error(error.message) })
-            }
-          >
-            <Button type="primary" size="large" block loading={action.isPending}>
-              Xuất phát
-            </Button>
-          </Popconfirm>
-        )}
+        {/* Tài xế không xuất kho: cửa hàng Dispatch ở trang Giao hàng, xong mới đi giao. */}
+        {waiting > 0 && <Alert type="info" showIcon title={`${waiting} đơn chờ cửa hàng xuất kho`} description="Nhận hàng tại cửa hàng sau khi nhân viên xuất kho cho chuyến." />}
         {trip.status === 'Chờ đối soát' && <p className="af-driver-done">Đã giao hết các điểm. Về cửa hàng bàn giao tiền và vỏ để đối soát.</p>}
       </Card>
 
@@ -135,7 +123,7 @@ function DriverTrip({ trip, stops, onDetails }: { trip: Trip; stops: Order[]; on
             <div className="af-trip-stop-top">
               <span className="af-trip-stop-index">{index + 1}</span>
               <strong className="af-driver-customer">{order.customer}</strong>
-              <OrderStatusTag status={order.status} method={order.method} />
+              {dispatchedIn(trip, order) ? <OrderStatusTag status={order.status} method={order.method} /> : <Tag>Chờ xuất kho</Tag>}
               <LateTag order={order} />
             </div>
             <p className="af-driver-address">
@@ -156,6 +144,11 @@ function DriverTrip({ trip, stops, onDetails }: { trip: Trip; stops: Order[]; on
                 {jugCount(order) ? ` · đổi ${jugCount(order)} vỏ` : ''}
               </li>
               {order.note && <li className="af-driver-note">{order.note}</li>}
+              {deliveryAttempts(order).filter((attempt) => !attempt.success).map((attempt) => (
+                <li key={attempt.at} className="af-text-danger">
+                  Lần trước thất bại ({new Date(attempt.at).toLocaleDateString('vi-VN')}): {attempt.reason}
+                </li>
+              ))}
             </ul>
             <div className="af-driver-actions">
               {order.phone && (

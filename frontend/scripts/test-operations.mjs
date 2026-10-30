@@ -13,6 +13,7 @@ const { orderService } = await load('/src/features/orders/orderService.ts')
 const { customerService } = await load('/src/features/customers/customerService.ts')
 const { productService } = await load('/src/features/inventory/productService.ts')
 const { tripService } = await load('/src/features/delivery/tripService.ts')
+const { setMockSession } = await load('/src/mocks/session.ts')
 const { DEPOSIT_PER_BOTTLE, PICKUP_FEE, suggestedDeliveryFee, stairsSurcharge } = await load('/src/shared/policy.ts')
 
 const original = globalThis.structuredClone(db)
@@ -166,11 +167,20 @@ try {
     await assert.rejects(tripService.create({ driver: 'Lê Minh Quân', orderIds: [first.id] }), /đã nằm trong chuyến/)
 
     await orderService.cancel(second.id, 'Khách hủy')
-    await assert.rejects(tripService.depart(trip.id), /AF-/)
+    await assert.rejects(tripService.dispatch(trip.id), /AF-/)
     assert.equal(db.orders.find((order) => order.id === first.id).status, 'Đang chuẩn bị')
     await tripService.removeOrder(trip.id, second.id)
-    const departed = await tripService.depart(trip.id)
+    setMockSession({ name: 'Tài xế', role: 'DELIVERY_STAFF' })
+    await assert.rejects(tripService.dispatch(trip.id), /quyền/)
+    setMockSession({ name: 'Chủ cửa hàng', role: 'ADMIN' })
+    const departed = await tripService.dispatch(trip.id)
     assert.equal(departed.status, 'Đang giao')
+    assert.equal(db.orders.find((order) => order.id === first.id).dispatches.at(-1).tripId, trip.id)
+    await assert.rejects(tripService.dispatch(trip.id), /Không còn đơn chờ xuất kho/)
+    await assert.rejects(tripService.removeOrder(trip.id, first.id), /đã xuất kho/)
+    const third = await orderService.create(delivery({ phone: '0903 000 333', customer: 'Khách 3' }))
+    await orderService.advanceStatus(third.id)
+    await assert.rejects(tripService.addOrders(trip.id, [third.id]), /đã xuất kho/)
     await assert.rejects(tripService.cancel(trip.id))
     await assert.rejects(tripService.settle(trip.id, { cashHandedOver: 0, bottlesHandedOver: 0 }), /kết quả giao/)
 
@@ -182,17 +192,43 @@ try {
     assert.deepEqual([settled.status, settled.settlement.cashExpected, settled.settlement.bottlesExpected], ['Đã đối soát', 100000, 2])
   })
 
-  await test('failed stop returns to the queue only after its trip is settled', async () => {
+  await test('failed stop goes back to the queue only after return inspection and redelivery; history is kept', async () => {
     const order = await orderService.create(delivery())
     await orderService.advanceStatus(order.id)
     const trip = await tripService.create({ driver: 'Phạm Đức Huy', orderIds: [order.id] })
-    await tripService.depart(trip.id)
+    const counter = await orderService.create(delivery({ method: 'Tại quầy', address: undefined }))
+    await orderService.advanceStatus(counter.id)
+    await assert.rejects(tripService.addOrders(trip.id, [counter.id]), /tại quầy/)
+    await tripService.dispatch(trip.id, order.id)
     await orderService.receive(order.id, { success: false, reason: 'Khách vắng nhà' })
-    await assert.rejects(tripService.create({ driver: 'Lê Minh Quân', orderIds: [order.id] }), /đã nằm trong chuyến/)
-    await tripService.settle(trip.id, { cashHandedOver: 0, bottlesHandedOver: 0 })
+    assert.equal((await tripService.list()).find((item) => item.id === trip.id).status, 'Chờ đối soát')
+    await assert.rejects(tripService.create({ driver: 'Lê Minh Quân', orderIds: [order.id] }), /không ở trạng thái chờ giao/)
+    await orderService.inspectReturn(order.id, { sellable: [2] })
+    await orderService.advanceStatus(order.id)
     const retry = await tripService.create({ driver: 'Lê Minh Quân', orderIds: [order.id] })
-    await tripService.depart(retry.id)
-    assert.match(db.orders[0].history.at(-1).message, /lần giao lại/)
+    await tripService.dispatch(retry.id)
+    const current = db.orders.find((item) => item.id === order.id)
+    assert.match(current.history.at(-1).message, /lần giao lại/)
+    assert.deepEqual(current.dispatches.map((dispatch) => dispatch.tripId), [trip.id, retry.id])
+    assert.equal((await tripService.list()).find((item) => item.id === trip.id).status, 'Chờ đối soát')
+  })
+
+  await test('dispatch records the FEFO lots that were reserved for the order', async () => {
+    db.products[0].stock = 0
+    const base = { supplierId: 'NCC-001', receivedAt: today(), receiver: 'Thủ kho' }
+    await productService.createReceipt({
+      ...base,
+      lines: [
+        { productId: 'P-001', lotCode: 'L-LATE', expiryDate: future(300), received: 5, damaged: 0, costPrice: 1 },
+        { productId: 'P-001', lotCode: 'L-EARLY', expiryDate: future(100), received: 4, damaged: 0, costPrice: 1 },
+      ],
+    })
+    const order = await orderService.create(delivery({ lines: [{ productId: 'P-001', quantity: 6 }] }))
+    await orderService.advanceStatus(order.id)
+    const trip = await tripService.create({ driver: 'Trần Văn Tài', orderIds: [order.id] })
+    await tripService.dispatch(trip.id)
+    const lines = db.orders.find((item) => item.id === order.id).dispatches.at(-1).lines
+    assert.deepEqual(lines.map((line) => [line.lotCode, line.quantity]), [['L-EARLY', 4], ['L-LATE', 2]])
   })
 
   await test('iWater-style policy: delivery fee, stairs surcharge, pickup fee taken from deposit', async () => {
