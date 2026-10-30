@@ -1,5 +1,5 @@
 import { Tooltip, type TableColumnType } from 'antd'
-import { ArrowDown01, ArrowDown10, ArrowDownAZ, ArrowDownZA, ArrowUpDown, ClockArrowDown, ClockArrowUp, type LucideIcon } from 'lucide-react'
+import { ArrowDown10, ArrowDownZA, ArrowUp01, ArrowUpAZ, ArrowUpDown, ClockArrowDown, ClockArrowUp, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 
 type SortKind = 'text' | 'number' | 'time' | 'stockRatio'
@@ -13,12 +13,12 @@ const labels: Record<SortKind, [string, string]> = {
   stockRatio: ['Tỷ lệ tồn: thấp → cao', 'Tỷ lệ tồn: cao → thấp'],
 }
 
-/** Icon cho từng chiều sắp xếp, theo loại dữ liệu của cột. */
+/** Icon cho từng chiều sắp xếp: tăng dần mũi tên lên, giảm dần mũi tên xuống, kèm ký hiệu theo loại dữ liệu. */
 const icons: Record<SortKind, [LucideIcon, LucideIcon]> = {
-  text: [ArrowDownAZ, ArrowDownZA],
-  number: [ArrowDown01, ArrowDown10],
+  text: [ArrowUpAZ, ArrowDownZA],
+  number: [ArrowUp01, ArrowDown10],
   time: [ClockArrowUp, ClockArrowDown],
-  stockRatio: [ArrowDown01, ArrowDown10],
+  stockRatio: [ArrowUp01, ArrowDown10],
 }
 
 /** Mỗi lần bấm: tăng dần → giảm dần → bỏ sắp xếp. */
