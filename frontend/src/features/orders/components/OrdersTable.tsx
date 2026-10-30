@@ -6,7 +6,7 @@ import { tablePagination, tableScrollHeight } from '../../../shared/utils/table'
 import { useColumnSort } from '../../../shared/components/sortableColumn'
 import { useFeature, useIsDemo } from '../../../shared/features'
 import { LiveOrderDetails } from '../../live/LiveOrderDetails'
-import { amountDue, createdAtOf, paymentLabel, type Order } from '../types'
+import { amountDue, createdAtOf, orderedAtOf, paymentLabel, type Order } from '../types'
 import { AdvanceStatusButton } from './AdvanceStatusButton'
 import { LateTag } from './LateTag'
 import { OrderStatusTag } from './OrderStatusTag'
@@ -35,7 +35,7 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
   const longestCode = Math.max(0, ...orders.map((order) => (order.code ?? order.id).length))
   const codeWidth = Math.max(compact ? 110 : 150, longestCode * 9 + (compact ? 24 : 64))
   // Độ rộng tối thiểu của bảng = tổng các cột, để không tự giãn rồi che cột cố định bên phải.
-  const tableMinWidth = codeWidth + (compact ? 180 + 150 + 170 + 80 : 220 + 110 + 160 + 170 + 112)
+  const tableMinWidth = codeWidth + (compact ? 180 + 150 + 170 + 80 : 220 + 130 + 160 + 170 + 112)
   const columns: TableColumnsType<Order> = [
     {
       title: 'Mã đơn',
@@ -64,7 +64,7 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
         </div>
       ),
     },
-    ...(compact ? [] : [{ ...sort.column('Giờ đặt', 'time', 'time'), dataIndex: 'time', width: 110, sorter: (a: Order, b: Order) => (createdAtOf(a) ?? a.time).localeCompare(createdAtOf(b) ?? b.time) }]),
+    ...(compact ? [] : [{ ...sort.column('Đặt lúc', 'time', 'time'), dataIndex: 'time', width: 130, sorter: (a: Order, b: Order) => (createdAtOf(a) ?? a.time).localeCompare(createdAtOf(b) ?? b.time), render: (_: string, order: Order) => { const at = orderedAtOf(order); return <span title={at.full}>{at.label}</span> } }]),
     {
       title: 'Tổng tiền',
       ...(!compact && sort.column('Tổng tiền', 'total', 'number')),

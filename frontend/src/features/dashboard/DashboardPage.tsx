@@ -18,7 +18,7 @@ import { AdvanceStatusButton } from '../orders/components/AdvanceStatusButton'
 import { CreateOrderModal } from '../orders/components/CreateOrderModal'
 import { OrdersTable } from '../orders/components/OrdersTable'
 import { useOrderList } from '../orders/orderData'
-import { amountDue, createdAtOf, type Order } from '../orders/types'
+import { amountDue, createdAtOf, orderedAtOf, type Order } from '../orders/types'
 import { dayFromToday, localDay, useDailyRevenue } from '../reports/reportService'
 
 type LowStockRow = { id: string; name: string; unit: string; stock: number; threshold?: number }
@@ -90,7 +90,7 @@ export function DashboardPage() {
   // Gấp nhất lên trước: giao lỗi cần hẹn lại, đơn mới chờ khách, tiền chưa thu, rồi mới tới nhập hàng.
   const tasks: Task[] = [
     ...failed.map((order) => orderTask(order, 'failed', order.items, <Link to="/delivery"><Button size="small" type="primary">Xử lý</Button></Link>)),
-    ...pending.map((order) => orderTask(order, 'pending', `${order.time} · ${order.items}`, demo ? <AdvanceStatusButton order={order} /> : <Button size="small" type="primary" onClick={() => setOpenedOrder(Number(order.id))}>Xem đơn</Button>)),
+    ...pending.map((order) => orderTask(order, 'pending', `${orderedAtOf(order).label} · ${order.items}`, demo ? <AdvanceStatusButton order={order} /> : <Button size="small" type="primary" onClick={() => setOpenedOrder(Number(order.id))}>Xem đơn</Button>)),
     ...unpaid.map((order) => orderTask(order, 'unpaid', demo ? `Đã thu ${currency(order.total - amountDue(order))} / ${currency(order.total)}` : order.paymentStatusLabel, openButton(order, 'Thu tiền'))),
     ...lowStock.map((product): Task => ({
       key: `stock:${product.id}`, kind: 'stock', title: product.name,

@@ -1,3 +1,4 @@
+import { relativeDateTime } from '../../shared/utils/format'
 export type OrderStatus = 'Chờ xác nhận' | 'Đã xác nhận' | 'Đang chuẩn bị' | 'Đang giao' | 'Đã giao' | 'Giao thất bại' | 'Đã hoàn tất' | 'Đã hủy'
 
 export type OrderLine = { productId: string; name: string; unit: string; quantity: number; unitPrice: number }
@@ -111,6 +112,12 @@ export const paymentLabel = (order: Order) =>
 export const jugCount = (order: Pick<Order, 'lines'>) => order.lines.filter((line) => line.unit === 'Bình').reduce((sum, line) => sum + line.quantity, 0)
 
 export const createdAtOf = (order: Pick<Order, 'history'>) => order.history[0]?.at
+
+/** Lúc đặt đơn: nhãn ngắn theo ngày ("Hôm qua 13:10") và ngày giờ đầy đủ cho tooltip; thiếu thời điểm thì dùng giờ có sẵn. */
+export const orderedAtOf = (order: Pick<Order, 'history' | 'time'>) => {
+  const at = createdAtOf(order)
+  return at ? { label: relativeDateTime(at), full: new Date(at).toLocaleString('vi-VN') } : { label: order.time, full: order.time }
+}
 
 /** Hàng đang ở ngoài kho chờ kiểm: lần xuất gần nhất (hoặc cả đơn với dữ liệu cũ chưa ghi lần xuất). */
 export const returnLinesOf = (order: Order): LotLine[] =>

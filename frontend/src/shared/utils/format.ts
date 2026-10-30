@@ -16,3 +16,15 @@ export const shortDate = (isoDate: string) => {
 /** Ngày giờ in trên chứng từ: "16/10/2026 20:30". */
 export const printDate = (value = new Date()) =>
   value.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+
+const timeOf = (date: Date) => date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+
+/** Giờ kèm ngày khi cần: "13:10" hôm nay, "Hôm qua 13:10", "28/10 13:10" trong năm, "28/10/2025" năm khác. */
+export const relativeDateTime = (iso: string, now = new Date()) => {
+  const date = new Date(iso)
+  const dayDiff = Math.round((new Date(now.toDateString()).getTime() - new Date(date.toDateString()).getTime()) / 86_400_000)
+  if (dayDiff === 0) return timeOf(date)
+  if (dayDiff === 1) return `Hôm qua ${timeOf(date)}`
+  const day = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`
+  return date.getFullYear() === now.getFullYear() ? `${day} ${timeOf(date)}` : `${day}/${date.getFullYear()}`
+}
