@@ -1264,9 +1264,15 @@ body {
 .af-shop-why-grid svg { color: var(--af-primary); }
 .af-shop-why-grid strong { color: var(--af-text-strong); }
 .af-shop-why-grid span { color: var(--af-text-secondary); font-size: 13px; line-height: 1.5; }
-.af-shop-brands > div { display: flex; flex-wrap: wrap; gap: 10px; }
-.af-shop-brands button { padding: 10px 20px; border: 1px solid var(--af-border); border-radius: 12px; background: #fff; color: var(--af-text-strong); font: inherit; font-weight: 600; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
-.af-shop-brands button:hover, .af-shop-brands button:focus-visible { border-color: var(--af-primary); color: var(--af-primary); }
+.af-shop-buy { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; }
+.af-shop-buy-qty .ant-btn, .af-shop-buy-qty .ant-input-number { height: 40px; }
+.af-shop-buy-qty .ant-btn { width: 40px; }
+.af-shop-buy-qty .ant-input-number { width: 56px; }
+.af-shop-buy-qty .ant-input-number-input { height: 38px; text-align: center; }
+.af-shop-buy > .ant-btn { flex: 1 1 150px; }
+.af-shop-filters { margin-bottom: 18px; padding: 18px; border: 1px solid var(--af-border); border-radius: 16px; background: #fff; }
+.af-shop-filters .af-catalog-filters { grid-template-columns: minmax(220px, 2fr) repeat(2, minmax(160px, 1fr)); }
+.af-shop-filters .af-catalog-results { margin: 14px 0 0; }
 .af-shop-steps { padding: 22px 24px; border-radius: 16px; background: var(--af-primary-soft); }
 .af-shop-steps ol { list-style: none; counter-reset: step; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; }
 .af-shop-steps li { counter-increment: step; position: relative; display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 48px; border-radius: 12px; background: #fff; }
@@ -1288,6 +1294,8 @@ body {
   .af-shop-banner-art { display: none; }
   .af-shop-article article { padding: 18px; }
   .af-shop-why-grid { grid-template-columns: 1fr; }
+  .af-shop-filters { padding: 14px; }
+  .af-shop-filters .af-catalog-filters { grid-template-columns: minmax(0, 1fr); }
 }
 .af-shop-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .af-shop-groups { display: flex; flex-wrap: wrap; gap: 8px; }

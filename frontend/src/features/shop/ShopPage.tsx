@@ -1,17 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { App, Button, Card, Col, Empty, Input, Row, Select, Skeleton, Tag, Typography, type InputRef } from 'antd'
-import { Droplets, Search, ShoppingCart } from 'lucide-react'
+import { Button, Card, Col, Empty, Pagination, Row, Skeleton, Tag, Typography, type InputRef } from 'antd'
+import { Droplets, ShoppingCart } from 'lucide-react'
 import { Link, useLocation, useOutletContext } from 'react-router'
 import { QueryError } from '../../shared/components/QueryError'
 import { currency } from '../../shared/utils/format'
-import { normalizeSearch } from '../inventory/catalog'
 import { useSettings } from '../settings/settingsService'
 import { useCartActions, useCart } from './cart'
+import { ShopFilters } from './components/ShopFilters'
 import { ShopIntro } from './components/ShopIntro'
-import { shopGroups } from './shopGroups'
+import { emptyFilters, filterProducts, type ShopFilterState } from './shopGroups'
 import { useShopDemo, useShopProducts, type ShopProduct } from './shopService'
-
-const ALL = 'Tất cả'
 
 function ShopImage({ product }: { product: ShopProduct }) {
   const [failed, setFailed] = useState(false)
@@ -25,16 +23,17 @@ function ShopImage({ product }: { product: ShopProduct }) {
 }
 
 export function ShopPage() {
-  const { message } = App.useApp()
   const { openCart } = useOutletContext<{ openCart: () => void }>()
   const productsQuery = useShopProducts()
   const demo = useShopDemo()
   const { data: settings } = useSettings(demo)
   const cartActions = useCartActions()
   const cart = useCart()
-  const [group, setGroup] = useState<string>(ALL)
-  const [category, setCategory] = useState(ALL)
-  const [query, setQuery] = useState('')
+  const [filters, setFilters] = useState<ShopFilterState>(emptyFilters)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(12)
+  // Đổi bộ lọc thì về trang 1 để không rơi vào trang trống.
+  const updateFilters = (next: Partial<ShopFilterState>) => { setFilters((current) => ({ ...current, ...next })); setPage(1) }
   const catalogRef = useRef<HTMLElement>(null)
   const searchRef = useRef<InputRef>(null)
   const goToCatalog = () => catalogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -51,24 +50,9 @@ export function ShopPage() {
   }, [demo, settings?.storeName])
 
   const products = productsQuery.data ?? []
-  const categories = [...new Set(products.map((product) => product.catalog?.category ?? 'Khác'))]
-  const inGroup = (product: ShopProduct, key: string) => key === ALL || shopGroups.find((item) => item.key === key)?.match(product)
-  const groupOptions = [
-    { value: ALL, label: `Tất cả (${products.length})` },
-    ...shopGroups
-      .map((item) => ({ value: item.key, label: item.label, count: products.filter(item.match).length }))
-      .filter((item) => item.count > 0)
-      .map((item) => ({ value: item.value, label: `${item.label} (${item.count})` })),
-  ]
-  const keyword = normalizeSearch(query.trim())
-  const visible = products
-    .filter(
-      (product) =>
-        inGroup(product, group) &&
-        (category === ALL || (product.catalog?.category ?? 'Khác') === category) &&
-        normalizeSearch(`${product.name} ${product.brand}`).includes(keyword),
-    )
-    .sort((a, b) => Number(b.available) - Number(a.available))
+  const visible = filterProducts(products, filters)
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(visible.length / pageSize)))
+  const pageItems = visible.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   return (
     <div className="af-shop-page">
@@ -78,7 +62,6 @@ export function ShopPage() {
         phone={demo ? settings?.phone : undefined}
         products={products}
         onShop={goToCatalog}
-        onBrand={(brand) => { setGroup(ALL); setCategory(ALL); setQuery(brand); goToCatalog() }}
       />
 
       <section ref={catalogRef} className="af-shop-catalog" aria-labelledby="af-shop-catalog-title">
@@ -89,25 +72,7 @@ export function ShopPage() {
           </div>
         </div>
 
-        <div className="af-shop-toolbar">
-          <div className="af-shop-groups" role="group" aria-label="Loại bình, chai">
-            {groupOptions.map((option) => (
-              <Tag.CheckableTag key={option.value} checked={group === option.value} onChange={() => setGroup(option.value)}>
-                {option.label}
-              </Tag.CheckableTag>
-            ))}
-          </div>
-        </div>
-        <div className="af-shop-toolbar">
-          <Select
-            aria-label="Dòng nước"
-            value={category}
-            onChange={setCategory}
-            style={{ minWidth: 200 }}
-            options={[{ value: ALL, label: 'Mọi dòng nước' }, ...categories.map((value) => ({ value, label: value }))]}
-          />
-          <Input ref={searchRef} allowClear prefix={<Search size={16} className="af-input-icon" />} placeholder="Tìm sản phẩm, thương hiệu..." value={query} onChange={(event) => setQuery(event.target.value)} className="af-search" />
-        </div>
+        <ShopFilters products={products} filters={filters} visibleCount={visible.length} onChange={updateFilters} searchRef={searchRef} />
 
         {productsQuery.isError ? (
           <Card>
@@ -119,7 +84,7 @@ export function ShopPage() {
           <Empty description="Không có sản phẩm phù hợp." />
         ) : (
           <Row gutter={[16, 16]}>
-            {visible.map((product) => {
+            {pageItems.map((product) => {
               const inCart = cart.find((line) => line.productId === product.id)?.quantity ?? 0
               return (
                 <Col key={product.id} xs={12} md={8} xl={6}>
@@ -141,18 +106,9 @@ export function ShopPage() {
                         icon={<ShoppingCart size={15} />}
                         disabled={product.available === false}
                         onClick={() => {
+                          // Thêm xong mở giỏ để khách thấy ngay và chỉnh số lượng.
                           cartActions.add(product.id)
-                          message.open({
-                            type: 'success',
-                            content: (
-                              <span>
-                                Đã thêm {product.name}.{' '}
-                                <Button type="link" size="small" onClick={openCart}>
-                                  Xem giỏ
-                                </Button>
-                              </span>
-                            ),
-                          })
+                          openCart()
                         }}
                       >
                         {inCart ? `Thêm (${inCart})` : 'Thêm'}
@@ -163,6 +119,18 @@ export function ShopPage() {
               )
             })}
           </Row>
+        )}
+        {visible.length > pageSize && (
+          <Pagination
+            className="af-catalog-pagination"
+            current={currentPage}
+            pageSize={pageSize}
+            total={visible.length}
+            pageSizeOptions={[12, 24, 48]}
+            showSizeChanger
+            responsive
+            onChange={(next, size) => { setPage(size !== pageSize ? 1 : next); setPageSize(size); goToCatalog() }}
+          />
         )}
       </section>
     </div>

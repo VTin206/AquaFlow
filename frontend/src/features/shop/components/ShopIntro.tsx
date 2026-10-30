@@ -12,16 +12,14 @@ type Props = {
   phone?: string
   products: ShopProduct[]
   onShop: () => void
-  onBrand: (brand: string) => void
 }
 
 /**
- * Phần giới thiệu trước danh mục: banner kèm tin mới, ưu đãi, lý do chọn, thương hiệu và cách đặt hàng.
+ * Phần giới thiệu trước danh mục: banner kèm tin mới, ưu đãi, lý do chọn và cách đặt hàng.
  * Con số chính sách (miễn phí giao, cọc vỏ) chỉ hiện ở bản dùng thử vì BE chưa có cấu hình cửa hàng.
  */
-export function ShopIntro({ demo, storeName, phone, products, onShop, onBrand }: Props) {
+export function ShopIntro({ demo, storeName, phone, products, onShop }: Props) {
   const showcase = products.filter((product) => product.image && product.available !== false).slice(0, 3)
-  const brands = [...new Set(products.map((product) => product.brand).filter(Boolean))].slice(0, 8)
   const tel = phone?.replace(/\s/g, '')
 
   const promos = demo
@@ -104,17 +102,6 @@ export function ShopIntro({ demo, storeName, phone, products, onShop, onBrand }:
           <div><Recycle size={22} aria-hidden /><strong>Đổi vỏ tiện lợi</strong><span>Giao bình mới, thu vỏ cũ trong cùng lần giao.</span></div>
         </div>
       </section>
-
-      {brands.length > 1 && (
-        <section className="af-shop-brands" aria-labelledby="af-shop-brands-title">
-          <h2 id="af-shop-brands-title">Thương hiệu đang bán</h2>
-          <div>
-            {brands.map((brand) => (
-              <button key={brand} type="button" onClick={() => onBrand(brand)}>{brand}</button>
-            ))}
-          </div>
-        </section>
-      )}
 
       <section className="af-shop-steps" aria-labelledby="af-shop-steps-title">
         <h2 id="af-shop-steps-title">Đặt hàng trong 3 bước</h2>
