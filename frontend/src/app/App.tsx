@@ -50,6 +50,7 @@ export function App() {
           <Route path="shop" element={<ShopPage />} />
           <Route path="shop/products/:id" element={<ProductDetailPage />} />
           <Route path="shop/news/:slug" element={<ArticlePage />} />
+          <Route path="shop/policy/:slug" element={<ArticlePage key="policy" kind="policy" />} />
           <Route path="checkout" element={<CheckoutPage />} />
           <Route path="track" element={<TrackPage />} />
           <Route path="track/:token" element={<TrackPage />} />

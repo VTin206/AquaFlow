@@ -73,7 +73,7 @@ export function ShopIntro({ demo, storeName, phone, products, onShop, onBrand }:
                     <span className="af-shop-news-thumb" aria-hidden><Icon size={24} /></span>
                     <span className="af-shop-news-text">
                       <strong>{article.title}</strong>
-                      <small>{articleDate(article.publishedOn)}</small>
+                      {article.publishedOn && <small>{articleDate(article.publishedOn)}</small>}
                     </span>
                   </Link>
                 </li>

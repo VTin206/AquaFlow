@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Alert, Badge, Button } from 'antd'
-import { PackageSearch, Phone, Search, ShoppingCart, Waves } from 'lucide-react'
+import { PackageSearch, Search, ShoppingCart, Waves } from 'lucide-react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 import { useSettings } from '../settings/settingsService'
 import { useCart } from './cart'
 import { AccountMenu } from './components/AccountMenu'
 import { CartDrawer } from './components/CartDrawer'
+import { ShopFooter } from './components/ShopFooter'
 import { useShopDemo } from './shopService'
 
 /**
@@ -55,16 +56,7 @@ export function ShopLayout() {
         {demo && <Alert type="warning" showIcon title="Bản dùng thử — dữ liệu mẫu, không gửi đơn tới cửa hàng" style={{ marginBottom: 16 }} />}
         <Outlet context={{ openCart: () => setCartOpen(true) }} />
       </main>
-      <footer className="af-shop-footer">
-        <strong>{settings?.storeName}</strong>
-        <span>{settings?.address}</span>
-        {settings?.phone && (
-          <a href={`tel:${settings.phone.replace(/\s/g, '')}`}>
-            <Phone size={14} aria-hidden /> {settings.phone}
-          </a>
-        )}
-        <small>{demo ? 'Đơn dùng thử chỉ lưu trong tab hiện tại và mất khi tải lại trang.' : 'AquaFlow · Danh mục sản phẩm'}</small>
-      </footer>
+      <ShopFooter demo={demo} contact={settings} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </div>
   )
