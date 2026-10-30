@@ -1,18 +1,11 @@
-import { useState } from 'react'
 import { Button, Drawer, Empty, InputNumber, Popconfirm, Skeleton, Space } from 'antd'
-import { Droplets, Minus, Plus } from 'lucide-react'
+import { Minus, Plus } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { currency } from '../../../shared/utils/format'
 import { QueryError } from '../../../shared/components/QueryError'
 import { useCartActions, useCart } from '../cart'
-import { useShopProducts, type ShopProduct } from '../shopService'
-
-function CartThumb({ product }: { product?: ShopProduct }) {
-  const [failed, setFailed] = useState(false)
-  return <span className="af-shop-cart-thumb">
-    {product?.image && !failed ? <img src={product.image} alt="" loading="lazy" onError={() => setFailed(true)} /> : <Droplets size={22} strokeWidth={1.5} aria-hidden />}
-  </span>
-}
+import { useShopProducts } from '../shopService'
+import { CartThumb } from './CartThumb'
 
 export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate()

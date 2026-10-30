@@ -1264,6 +1264,19 @@ body {
 .af-shop-why-grid svg { color: var(--af-primary); }
 .af-shop-why-grid strong { color: var(--af-text-strong); }
 .af-shop-why-grid span { color: var(--af-text-secondary); font-size: 13px; line-height: 1.5; }
+.af-checkout-lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.af-checkout-lines li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--af-border); }
+.af-checkout-lines li:first-child { padding-top: 0; }
+.af-checkout-lines li > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.af-checkout-lines strong { color: var(--af-text-strong); font-weight: 600; line-height: 1.4; }
+.af-checkout-lines small { color: var(--af-text-secondary); font-size: 13px; }
+.af-checkout-line-total { color: var(--af-text-strong); }
+.af-checkout-totals { margin: 12px 0 0; display: flex; flex-direction: column; gap: 6px; }
+.af-checkout-totals > div { display: flex; justify-content: space-between; gap: 12px; color: var(--af-text-secondary); }
+.af-checkout-totals dt, .af-checkout-totals dd { margin: 0; }
+.af-checkout-totals dd { color: var(--af-text-strong); text-align: right; }
+.af-checkout-totals .is-total { align-items: center; margin-top: 6px; padding: 12px 16px; border-radius: 10px; background: var(--af-primary-soft); color: var(--af-text-strong); font-weight: 600; }
+.af-checkout-totals .is-total .af-money { font-size: 20px; font-weight: 700; }
 .af-shop-buy { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; }
 .af-shop-buy-qty .ant-btn, .af-shop-buy-qty .ant-input-number { height: 40px; }
 .af-shop-buy-qty .ant-btn { width: 40px; }
