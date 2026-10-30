@@ -26,7 +26,7 @@ export function ShopLayout() {
             <span className="af-brand-mark">
               <Waves size={20} strokeWidth={2.2} />
             </span>
-            <strong>{settings?.storeName ?? 'Cửa hàng nước'}</strong>
+            <strong>AquaFlow</strong>
           </Link>
           <nav className="af-shop-nav" aria-label="Điều hướng cửa hàng">
             <NavLink to="/shop" end>
