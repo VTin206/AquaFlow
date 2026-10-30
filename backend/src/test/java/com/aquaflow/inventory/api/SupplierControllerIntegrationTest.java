@@ -43,11 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class SupplierControllerIntegrationTest {
 
-    @org.springframework.test.context.bean.override.mockito.MockitoBean
-    private com.aquaflow.operations.application.WorkspaceQueries workspaceQueries;
 
-    @org.springframework.test.context.bean.override.mockito.MockitoBean
-    private com.aquaflow.operations.application.WorkspaceCommands workspaceCommands;
 
     @MockitoBean
     private ProductRepository productRepository;
