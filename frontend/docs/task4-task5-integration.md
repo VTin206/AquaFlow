@@ -49,6 +49,8 @@
 2. Tạo, xác nhận và hủy đơn của nhân viên; kiểm tồn/giữ hàng và quyền ở backend.
 3. Tổng hợp tồn theo sản phẩm/lô: tồn thực tế, đã giữ, khả dụng, đơn vị và hạn dùng.
 4. Danh sách/chi tiết/tạo/xác nhận phiếu nhập, cùng quy tắc mã lô và hạn sử dụng.
+5. Số liệu trong ngày cho trang Tổng quan: doanh thu thuần, tiền đã thu, tổng còn phải thu (theo số tiền, không chỉ trạng thái thanh toán). Hiện tài khoản thật chỉ hiện số đơn tạo hôm nay và đếm đơn chưa thu đủ theo `paymentStatus`.
+6. Trạng thái giao thất bại: BE chưa có nên mục "Giao thất bại" trong Việc cần làm chỉ có ở bản dùng thử.
 
 Không dự đoán URL hoặc tự gửi request vào endpoint chưa có.
 
