@@ -32,11 +32,13 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [pageSize, setPageSize] = useState(tablePagination.defaultPageSize ?? 10)
   const sort = useColumnSort<Order>()
+  // Mã của BE (AF- + 20 ký tự) dài hơn mã mẫu nhiều, nên cột rộng theo mã dài nhất để không bị cắt.
+  const longestCode = Math.max(0, ...orders.map((order) => (order.code ?? order.id).length))
   const columns: TableColumnsType<Order> = [
     {
       title: 'Mã đơn',
       dataIndex: 'id',
-      width: compact ? 110 : 150,
+      width: Math.max(compact ? 110 : 150, longestCode * 9 + (compact ? 24 : 64)),
       render: (id: string, order) => (
         <span className="af-order-id">
           <Button type="link" size="small" onClick={() => setSelectedId(id)} aria-label={`Xem đơn ${order.code ?? id}`}>
