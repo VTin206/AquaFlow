@@ -29,6 +29,9 @@ public class Product {
     @Column(length = 150)
     private String brand;
 
+    @Column(columnDefinition = "text")
+    private String image;
+
     @Column(nullable = false, length = 40)
     private String unit;
 
@@ -80,6 +83,8 @@ public class Product {
     public String getSku() { return sku; }
     public String getName() { return name; }
     public String getBrand() { return brand; }
+    public String getImage() { return image; }
+    public void setImage(String image) { this.image = image; }
     public String getUnit() { return unit; }
     public Integer getUnitsPerCase() { return unitsPerCase; }
     public BottleType getBottleType() { return bottleType; }

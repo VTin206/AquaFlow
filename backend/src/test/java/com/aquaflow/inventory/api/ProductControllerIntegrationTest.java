@@ -28,6 +28,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -96,6 +97,7 @@ class ProductControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/products"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].sku").value("NUOC-19L"))
+                .andExpect(jsonPath("$[0].image").value("/images/test.png"))
                 .andExpect(jsonPath("$[0].bottleTypeName").value("Bình 19L"));
     }
 
@@ -124,7 +126,7 @@ class ProductControllerIntegrationTest {
     @WithMockUser(roles = "ADMIN")
     void adminCanRequestInactiveProducts() throws Exception {
         ProductResponse inactive = new ProductResponse(2L, "OLD-SKU", "Old water", null, "Bottle",
-                null, null, null, BigDecimal.TEN, false, Instant.now());
+                null, null, null, BigDecimal.TEN, false, Instant.now(), null);
         when(productService.findAll(false)).thenReturn(List.of(inactive));
 
         mockMvc.perform(get("/api/v1/products?active=false"))
@@ -137,7 +139,7 @@ class ProductControllerIntegrationTest {
     @Test
     void anonymousUserCannotReadInactiveProductById() throws Exception {
         ProductResponse inactive = new ProductResponse(2L, "OLD-SKU", "Old water", null, "Bottle",
-                null, null, null, BigDecimal.TEN, false, Instant.now());
+                null, null, null, BigDecimal.TEN, false, Instant.now(), null);
         when(productService.findById(2L)).thenReturn(inactive);
 
         mockMvc.perform(get("/api/v1/products/2"))
@@ -163,6 +165,18 @@ class ProductControllerIntegrationTest {
                         .content(VALID_BODY))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminCanSendImageAndReadItInResponse() throws Exception {
+        when(productService.create(any(CreateProductRequest.class))).thenReturn(sampleProduct());
+        mockMvc.perform(post("/api/v1/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_BODY.replace("\"salePrice\":20000", "\"salePrice\":20000,\"image\":\"/images/test.png\"")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.image").value("/images/test.png"));
+        verify(productService).create(argThat(request -> "/images/test.png".equals(request.image())));
     }
 
     @Test
@@ -223,6 +237,6 @@ class ProductControllerIntegrationTest {
 
     private ProductResponse sampleProduct() {
         return new ProductResponse(1L, "NUOC-19L", "Nước 19L", "Aqua", "Bình", null,
-                1L, "Bình 19L", new BigDecimal("20000"), true, Instant.now());
+                1L, "Bình 19L", new BigDecimal("20000"), true, Instant.now(), "/images/test.png");
     }
 }

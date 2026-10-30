@@ -33,6 +33,7 @@ public class ProductService {
         Product product = new Product(
                 request.sku(), request.name(), request.brand(), request.unit(),
                 request.unitsPerCase(), bottleType, request.salePrice());
+        product.setImage(request.image());
         return toResponse(productRepository.save(product));
     }
 
@@ -60,7 +61,7 @@ public class ProductService {
                 bottleType == null ? null : bottleType.getName(),
                 product.getSalePrice(),
                 product.isActive(),
-                product.getCreatedAt());
+                product.getCreatedAt(), product.getImage());
     }
 
     @Transactional(readOnly = true)
@@ -82,6 +83,8 @@ public class ProductService {
         product.update(
                 request.name(), request.brand(), request.unit(),
                 request.unitsPerCase(), findBottleType(request.bottleTypeId()), request.salePrice());
+        // Older clients may omit image; preserve the existing photo in that case.
+        if (request.image() != null) product.setImage(request.image().isBlank() ? null : request.image());
         return toResponse(product);
     }
 

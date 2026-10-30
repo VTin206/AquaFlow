@@ -18,8 +18,8 @@ export const backendFeatures = {
   customerDebt: false,
   /** Sổ vỏ bình và tiền cọc (chưa có API). */
   bottleLedger: false,
-  /** Ảnh sản phẩm (ProductResponse chưa có). */
-  productImage: false,
+  /** Ảnh sản phẩm được lưu và trả về qua ProductController. */
+  productImage: true,
   /** Loại nước, dung tích để lọc danh mục (ProductResponse chưa có). */
   productCatalogDetails: false,
   /** Tồn kho tối thiểu để cảnh báo sắp hết (BE chưa có). */

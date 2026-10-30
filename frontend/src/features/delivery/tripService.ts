@@ -21,12 +21,12 @@ export const dispatchedIn = (trip: TripRecord, order: Order) =>
 export const openIn = (trip: TripRecord, order: Order) =>
   dispatchedIn(trip, order) ? order.status === 'Đang giao' && (order.dispatches?.at(-1)?.tripId ?? trip.id) === trip.id : order.status === 'Đang chuẩn bị'
 
-const statusOf = (trip: TripRecord): Trip['status'] => {
+export const tripStatus = (trip: TripRecord): Trip['status'] => {
   if (trip.settlement) return 'Đã đối soát'
   if (!trip.departedAt) return 'Chờ xuất phát'
   return ordersOf(trip).some((order) => openIn(trip, order)) ? 'Đang giao' : 'Chờ đối soát'
 }
-const toView = (trip: TripRecord): Trip => ({ ...trip, status: statusOf(trip) })
+const toView = (trip: TripRecord): Trip => ({ ...trip, status: tripStatus(trip) })
 
 /** Chuyến chưa đối soát mà đơn này còn việc. Đơn đã có kết quả (kể cả giao thất bại) được xếp vào chuyến khác khi giao lại. */
 export const activeTripOf = (orderId: string) => {
@@ -138,7 +138,7 @@ export const tripService = {
     mockRequest(() => {
       const trip = findTrip(id)
       requireRole([...STAFF], 'đối soát chuyến')
-      if (statusOf(trip) !== 'Chờ đối soát') throw mockError(400, 'Chỉ đối soát khi mọi đơn trong chuyến đã có kết quả giao.')
+      if (tripStatus(trip) !== 'Chờ đối soát') throw mockError(400, 'Chỉ đối soát khi mọi đơn trong chuyến đã có kết quả giao.')
       const { cashHandedOver, bottlesHandedOver } = draft
       if (!Number.isSafeInteger(cashHandedOver) || cashHandedOver < 0) throw mockError(400, 'Tiền mặt bàn giao phải là số nguyên không âm.')
       if (!Number.isSafeInteger(bottlesHandedOver) || bottlesHandedOver < 0) throw mockError(400, 'Số vỏ bàn giao phải là số nguyên không âm.')
