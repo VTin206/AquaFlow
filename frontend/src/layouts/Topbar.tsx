@@ -35,7 +35,7 @@ function TopbarClock() {
 
 /** Thanh ứng dụng và các thao tác nhanh. */
 export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
-  const { logout, login, enterDemo } = useAuth()
+  const { user, logout, login, enterDemo } = useAuth()
   const { message } = App.useApp()
   const queryClient = useQueryClient()
   const staff = useStaff()
@@ -55,7 +55,8 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
     ...(staff && !staff.isDemo
       ? [{ key: 'switch:demo', label: 'Bản dùng thử', onClick: () => { enterDemo(); queryClient.clear(); navigate('/', { replace: true }) } }]
       : []),
-    ...devAccounts.map((account) => ({
+    // Không liệt kê tài khoản đang đăng nhập.
+    ...devAccounts.filter((account) => account.email.toLowerCase() !== user?.email?.toLowerCase()).map((account) => ({
       key: `switch:${account.email}`,
       label: account.label,
       title: account.email,

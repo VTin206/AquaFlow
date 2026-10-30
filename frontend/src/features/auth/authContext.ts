@@ -1,7 +1,7 @@
 import { createContext } from 'react'
 import type { LoginCredentials } from './authService'
 
-export type AuthUser = { name: string; role: string; isDemo?: boolean }
+export type AuthUser = { name: string; role: string; email?: string; isDemo?: boolean }
 
 export type AuthContextValue = {
   user: AuthUser | null
