@@ -21,7 +21,6 @@ export function AppLayout() {
 
   // Mở trang không thuộc vai trò (gõ đường dẫn, đổi vai trò) thì về trang chính của vai trò đó.
   if (staff && !canOpen(staff.role, pathname)) return <Navigate to={homeOf(staff.role)} replace />
-  if (staff && !staff.isDemo && pathname === '/' && staff.role !== 'DELIVERY_STAFF') return <Navigate to="/products" replace />
 
   return (
     <Layout className="af-shell">

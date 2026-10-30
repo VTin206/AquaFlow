@@ -260,6 +260,12 @@ body {
   justify-content: space-between;
   width: 100%;
 }
+.af-menu-soon {
+  color: var(--af-text-tertiary);
+  font-size: 11px;
+  margin-left: auto;
+  white-space: nowrap;
+}
 .af-sider-footer {
   border-top: 1px solid var(--af-border);
   padding: 12px 16px;

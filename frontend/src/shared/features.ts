@@ -26,11 +26,21 @@ export const backendFeatures = {
   lowStockThreshold: false,
   /** Phiếu thu, số còn phải thu của đơn (BE chỉ có trạng thái thanh toán, chưa có luồng thu tiền). */
   orderPayments: false,
+  /** Thông báo trên thanh trên cùng (chưa có API). */
+  notifications: false,
 } satisfies Record<string, boolean>
 
 export type BackendFeature = keyof typeof backendFeatures
 
 export const useIsDemo = () => useAuth().user?.isDemo ?? false
+
+/** Trang chưa có API BE: tài khoản thật vẫn thấy trên menu, mở ra là trang "Chưa hỗ trợ". */
+const unsupportedPages = new Set(['/', '/delivery', '/driver', '/reports', '/activity', '/settings'])
+
+export function usePageSupported() {
+  const demo = useIsDemo()
+  return (path: string) => demo || !unsupportedPages.has(path)
+}
 
 export function useFeature(feature: BackendFeature) {
   return useIsDemo() || backendFeatures[feature]

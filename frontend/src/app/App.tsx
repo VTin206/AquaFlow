@@ -3,7 +3,7 @@ import { Spin } from 'antd'
 import { Navigate, Route, Routes } from 'react-router'
 import { AppLayout } from '../layouts/AppLayout'
 import { RequireAuth } from './RequireAuth'
-import { useAuth } from '../features/auth/useAuth'
+import { usePageSupported } from '../shared/features'
 
 // Mỗi trang được tải khi người dùng mở tới, giúp lần tải đầu nhẹ hơn.
 const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })))
@@ -25,9 +25,9 @@ const TrackPage = lazy(() => import('../features/shop/TrackPage').then((m) => ({
 const LoginPage = lazy(() => import('../features/auth/LoginPage').then((m) => ({ default: m.LoginPage })))
 const UnavailablePage = lazy(() => import('../features/live/UnavailablePage').then((m) => ({ default: m.UnavailablePage })))
 
-function DemoOnly({ demo }: { demo: ReactNode }) {
-  const { user } = useAuth()
-  return user?.isDemo ? demo : <UnavailablePage />
+/** Trang chưa có API BE: tài khoản thật vẫn mở được nhưng thấy "Chưa hỗ trợ" thay cho dữ liệu mẫu. */
+function BackendPage({ path, title, children }: { path: string; title: string; children: ReactNode }) {
+  return usePageSupported()(path) ? children : <UnavailablePage title={title} />
 }
 
 const pageFallback = (
@@ -52,17 +52,17 @@ export function App() {
         </Route>
         <Route element={<RequireAuth />}>
           <Route element={<AppLayout />}>
-            <Route index element={<DemoOnly demo={<DashboardPage />} />} />
+            <Route index element={<BackendPage path="/" title="Tổng quan"><DashboardPage /></BackendPage>} />
             <Route path="orders" element={<OrdersPage />} />
             <Route path="inventory" element={<InventoryPage />} />
             <Route path="products" element={<ProductsPage />} />
             <Route path="customers" element={<CustomersPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
-            <Route path="delivery" element={<DemoOnly demo={<DeliveryPage />} />} />
-            <Route path="driver" element={<DemoOnly demo={<DriverPage />} />} />
-            <Route path="reports" element={<DemoOnly demo={<ReportsPage />} />} />
-            <Route path="activity" element={<DemoOnly demo={<ActivityPage />} />} />
-            <Route path="settings" element={<DemoOnly demo={<SettingsPage />} />} />
+            <Route path="delivery" element={<BackendPage path="/delivery" title="Giao hàng"><DeliveryPage /></BackendPage>} />
+            <Route path="driver" element={<BackendPage path="/driver" title="Chuyến của tôi"><DriverPage /></BackendPage>} />
+            <Route path="reports" element={<BackendPage path="/reports" title="Báo cáo"><ReportsPage /></BackendPage>} />
+            <Route path="activity" element={<BackendPage path="/activity" title="Nhật ký"><ActivityPage /></BackendPage>} />
+            <Route path="settings" element={<BackendPage path="/settings" title="Cài đặt"><SettingsPage /></BackendPage>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Route>

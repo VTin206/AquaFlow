@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Avatar, Button, Dropdown, Tooltip, type MenuProps } from 'antd'
-import { Check, ChevronDown, Clock3, LogOut, Menu as MenuIcon, ShoppingCart, Waves } from 'lucide-react'
+import { Bell, Check, ChevronDown, Clock3, LogOut, Menu as MenuIcon, ShoppingCart, Waves } from 'lucide-react'
 import { Link, useNavigate } from 'react-router'
 import { roleNames, type RoleCode } from '../features/auth/permissions'
 import { useAuth } from '../features/auth/useAuth'
 import { setDemoRole, useStaff } from '../features/auth/useStaff'
+import { useFeature } from '../shared/features'
 import { NotificationPopover } from './NotificationPopover'
 
 const dateFormatter = new Intl.DateTimeFormat('vi-VN', {
@@ -35,6 +36,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
   const { logout } = useAuth()
   const staff = useStaff()
   const navigate = useNavigate()
+  const showNotifications = useFeature('notifications')
   const logoutItem = { key: 'logout', danger: true, icon: <LogOut size={16} />, label: 'Đăng xuất', onClick: () => { logout(); navigate('/login', { replace: true }) } }
   // Bản dùng thử: đổi vai trò để xem menu và quyền của từng nhân viên.
   const menuItems: MenuProps['items'] = staff?.isDemo
@@ -69,15 +71,17 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
         <TopbarClock />
       </div>
       <div className="af-topbar-right">
-        {staff?.isDemo && <>
-          <span className="af-demo-label">Dữ liệu mẫu</span>
-          <Tooltip title="Trang khách đặt hàng (dùng chung dữ liệu mẫu trong tab này)">
-            <Link to="/shop" className="af-notification-link" aria-label="Mở trang khách đặt hàng">
-              <ShoppingCart size={19} aria-hidden />
-            </Link>
+        {staff?.isDemo && <span className="af-demo-label">Dữ liệu mẫu</span>}
+        <Tooltip title={staff?.isDemo ? 'Trang khách đặt hàng (dùng chung dữ liệu mẫu trong tab này)' : 'Trang khách đặt hàng'}>
+          <Link to="/shop" className="af-notification-link" aria-label="Mở trang khách đặt hàng">
+            <ShoppingCart size={19} aria-hidden />
+          </Link>
+        </Tooltip>
+        {showNotifications ? <NotificationPopover /> : (
+          <Tooltip title="Thông báo: backend chưa hỗ trợ">
+            <Button type="text" className="af-topbar-icon" aria-label="Thông báo (chưa hỗ trợ)" icon={<Bell size={19} />} disabled />
           </Tooltip>
-          <NotificationPopover />
-        </>}
+        )}
         <Dropdown
           trigger={['click']}
           menu={{ items: menuItems }}
