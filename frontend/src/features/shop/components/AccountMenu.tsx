@@ -5,8 +5,8 @@ import { useNavigate } from 'react-router'
 import { useAuth } from '../../auth/useAuth'
 import { useStaff } from '../../auth/useStaff'
 
-/** Icon tài khoản trên đầu trang khách: chưa đăng nhập thì sang trang đăng nhập, đã đăng nhập thì xem thông tin tài khoản. */
-export function AccountMenu() {
+/** Icon tài khoản trên đầu trang khách: chưa đăng nhập thì mở khung đăng nhập, đã đăng nhập thì xem thông tin tài khoản. */
+export function AccountMenu({ onLogin }: { onLogin: () => void }) {
   const { isAuthenticated, user, logout } = useAuth()
   // Tên vai trò lấy giống thanh trên của trang quản lý.
   const staff = useStaff()
@@ -16,7 +16,7 @@ export function AccountMenu() {
   const icon = <UserRound size={20} />
 
   if (!isAuthenticated || !user) {
-    return <Button type="text" shape="circle" icon={icon} aria-label="Đăng nhập" title="Đăng nhập" onClick={() => navigate('/login')} />
+    return <Button type="text" shape="circle" icon={icon} aria-label="Đăng nhập" title="Đăng nhập" onClick={onLogin} />
   }
 
   const content = (

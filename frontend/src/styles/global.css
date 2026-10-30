@@ -1191,7 +1191,12 @@ body {
 .af-shop-footer h2 { margin: 4px 0 14px; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--af-primary); }
 .af-shop-footer ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
 .af-shop-footer a { color: var(--af-text); }
-.af-shop-footer a:hover, .af-shop-footer a:focus-visible { color: var(--af-primary); }
+.af-shop-footer .af-link-button { padding: 0; border: 0; background: none; color: var(--af-text); font: inherit; cursor: pointer; text-align: left; }
+.af-shop-footer a:hover, .af-shop-footer a:focus-visible, .af-shop-footer .af-link-button:hover, .af-shop-footer .af-link-button:focus-visible { color: var(--af-primary); }
+.af-auth-modal-brand { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 4px 0 8px; font-size: 18px; color: var(--af-text-strong); }
+.af-auth-modal-brand .af-brand-mark { width: 34px; height: 34px; }
+.af-auth-modal-switch { margin: 14px 0 0; text-align: center; color: var(--af-text-secondary); }
+.af-auth-modal-switch .ant-btn { padding: 0 4px; font-weight: 600; }
 .af-shop-footer-about p { margin: 12px 0 0; max-width: 340px; line-height: 1.7; }
 .af-shop-footer-contact li { display: flex; align-items: flex-start; gap: 8px; overflow-wrap: anywhere; }
 .af-shop-footer-contact svg { flex: none; margin-top: 3px; color: var(--af-primary); }

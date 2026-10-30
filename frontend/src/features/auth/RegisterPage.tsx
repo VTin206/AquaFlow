@@ -1,18 +1,11 @@
-import { Alert, Button, Checkbox, ConfigProvider, Form, Input, Tooltip } from 'antd'
-import { ArrowLeft, CircleCheck, History, LockKeyhole, Mail, MapPin, Phone, UserRound, UserRoundPlus, Waves } from 'lucide-react'
+import { Button, ConfigProvider } from 'antd'
+import { ArrowLeft, CircleCheck, History, MapPin, UserRoundPlus, Waves } from 'lucide-react'
 import { Link } from 'react-router'
-import { UNSUPPORTED_HINT } from '../../shared/components/Unsupported'
+import { RegisterForm } from './RegisterForm'
 import './login.css'
 
-type RegisterForm = { fullName: string; phone: string; email: string; password: string; confirm: string; agree: boolean }
-
-/**
- * Đăng ký tài khoản khách hàng. BE chưa có API đăng ký (AuthController chỉ có login, me) nên
- * form giữ bố cục và kiểm tra dữ liệu, còn nút gửi bị khóa "Chưa hỗ trợ". Khi có API thì nối vào `onFinish`.
- */
+/** Trang đăng ký tài khoản khách hàng; form và trạng thái "Chưa hỗ trợ" nằm trong `RegisterForm`. */
 export function RegisterPage() {
-  const [form] = Form.useForm<RegisterForm>()
-
   return (
     <div className="af-login-page">
       <header className="af-login-header">
@@ -55,44 +48,8 @@ export function RegisterPage() {
             </div>
 
             <ConfigProvider theme={{ components: { Input: { controlHeightLG: 48, fontSizeLG: 14 }, Button: { controlHeightLG: 48, fontSizeLG: 14 } } }}>
-              <Form form={form} name="register" layout="vertical" requiredMark={false} autoComplete="on">
-                <Form.Item label="Họ và tên" name="fullName" rules={[{ required: true, whitespace: true, message: 'Nhập họ và tên.' }, { max: 150, message: 'Tối đa 150 ký tự.' }]}>
-                  <Input size="large" prefix={<UserRound size={17} aria-hidden />} placeholder="Nguyễn Văn An" autoComplete="name" />
-                </Form.Item>
-                <Form.Item label="Số điện thoại" name="phone" rules={[{ required: true, message: 'Nhập số điện thoại.' }, { pattern: /^(?:0\d{9,10}|\+?84\d{9,10})$/, message: 'Số điện thoại không hợp lệ.' }]}>
-                  <Input size="large" prefix={<Phone size={17} aria-hidden />} placeholder="0901 234 567" autoComplete="tel" inputMode="tel" />
-                </Form.Item>
-                <Form.Item label="Email" name="email" rules={[{ required: true, type: 'email', whitespace: true, message: 'Nhập email hợp lệ.' }]}>
-                  <Input type="email" size="large" prefix={<Mail size={17} aria-hidden />} placeholder="name@example.com" autoComplete="email" autoCapitalize="none" spellCheck={false} />
-                </Form.Item>
-                <Form.Item label="Mật khẩu" name="password" rules={[{ required: true, message: 'Nhập mật khẩu.' }, { min: 8, max: 128, message: 'Mật khẩu có từ 8 đến 128 ký tự.' }]}>
-                  <Input.Password size="large" prefix={<LockKeyhole size={17} aria-hidden />} placeholder="Ít nhất 8 ký tự" autoComplete="new-password" />
-                </Form.Item>
-                <Form.Item
-                  label="Nhập lại mật khẩu"
-                  name="confirm"
-                  dependencies={['password']}
-                  rules={[
-                    { required: true, message: 'Nhập lại mật khẩu.' },
-                    ({ getFieldValue }) => ({ validator: (_, value) => (!value || value === getFieldValue('password') ? Promise.resolve() : Promise.reject(new Error('Mật khẩu nhập lại không khớp.'))) }),
-                  ]}
-                >
-                  <Input.Password size="large" prefix={<LockKeyhole size={17} aria-hidden />} placeholder="Nhập lại mật khẩu" autoComplete="new-password" />
-                </Form.Item>
-                <Form.Item name="agree" valuePropName="checked" rules={[{ validator: (_, value) => (value ? Promise.resolve() : Promise.reject(new Error('Vui lòng đồng ý với điều khoản.'))) }]}>
-                  <Checkbox>Tôi đồng ý với điều khoản sử dụng của cửa hàng</Checkbox>
-                </Form.Item>
-                <Tooltip title={UNSUPPORTED_HINT}>
-                  {/* span giữ tooltip khi nút bị khóa */}
-                  <span style={{ display: 'block' }}>
-                    <Button type="primary" size="large" htmlType="submit" block disabled icon={<UserRoundPlus size={18} />}>Tạo tài khoản (chưa hỗ trợ)</Button>
-                  </span>
-                </Tooltip>
-              </Form>
+              <RegisterForm />
             </ConfigProvider>
-            <div className="af-login-preview-note">
-              <Alert type="info" showIcon title="Đăng ký tài khoản khách hàng chưa hỗ trợ: backend chưa có API đăng ký. Bạn vẫn đặt hàng được mà không cần tài khoản." />
-            </div>
             <p className="af-login-switch">Đã có tài khoản? <Link to="/login">Đăng nhập</Link></p>
           </section>
         </div>

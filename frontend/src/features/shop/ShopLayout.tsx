@@ -5,6 +5,7 @@ import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 import { useSettings } from '../settings/settingsService'
 import { useCart } from './cart'
 import { AccountMenu } from './components/AccountMenu'
+import { AuthModal, type AuthTab } from './components/AuthModal'
 import { CartDrawer } from './components/CartDrawer'
 import { ShopFooter } from './components/ShopFooter'
 import { useShopDemo } from './shopService'
@@ -20,6 +21,7 @@ export function ShopLayout() {
   const navigate = useNavigate()
   const cart = useCart()
   const [cartOpen, setCartOpen] = useState(false)
+  const [authTab, setAuthTab] = useState<AuthTab | null>(null)
   const count = cart.reduce((sum, line) => sum + line.quantity, 0)
 
   return (
@@ -43,7 +45,7 @@ export function ShopLayout() {
           </nav>
           <div className="af-shop-icons">
             <Button type="text" shape="circle" icon={<Search size={20} />} aria-label="Tìm sản phẩm" title="Tìm sản phẩm" onClick={() => navigate('/shop', { state: { focusSearch: Date.now() } })} />
-            <AccountMenu />
+            <AccountMenu onLogin={() => setAuthTab('login')} />
           </div>
           <Badge count={count} size="small" offset={[-4, 4]}>
             <Button type="primary" icon={<ShoppingCart size={17} />} onClick={() => setCartOpen(true)} aria-label={`Giỏ hàng, ${count} sản phẩm`}>
@@ -56,7 +58,8 @@ export function ShopLayout() {
         {demo && <Alert type="warning" showIcon title="Bản dùng thử — dữ liệu mẫu, không gửi đơn tới cửa hàng" style={{ marginBottom: 16 }} />}
         <Outlet context={{ openCart: () => setCartOpen(true) }} />
       </main>
-      <ShopFooter demo={demo} contact={settings} />
+      <ShopFooter demo={demo} contact={settings} onAccount={setAuthTab} />
+      <AuthModal tab={authTab} onTabChange={setAuthTab} onClose={() => setAuthTab(null)} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </div>
   )

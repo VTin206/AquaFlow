@@ -1,14 +1,16 @@
 import { Mail, MapPin, Phone, Waves } from 'lucide-react'
 import { Link } from 'react-router'
 import { shopArticles, shopPolicies } from '../shopNews'
+import type { AuthTab } from './AuthModal'
 
 type Props = {
   demo: boolean
   /** Cài đặt cửa hàng chỉ có ở bản dùng thử; tài khoản thật chưa có API nên ẩn phần liên hệ. */
   contact?: { storeName?: string; phone?: string; address?: string; email?: string }
+  onAccount: (tab: AuthTab) => void
 }
 
-export function ShopFooter({ demo, contact }: Props) {
+export function ShopFooter({ demo, contact, onAccount }: Props) {
   const tel = contact?.phone?.replace(/\s/g, '')
   const hasContact = Boolean(contact?.phone || contact?.address || contact?.email)
   const latest = shopArticles[0]
@@ -29,8 +31,9 @@ export function ShopFooter({ demo, contact }: Props) {
             <li><Link to="/shop">Sản phẩm</Link></li>
             {latest && <li><Link to={`/shop/news/${latest.slug}`}>Tin tức</Link></li>}
             {demo && <li><Link to="/track">Tra cứu đơn</Link></li>}
-            <li><Link to="/login">Đăng nhập</Link></li>
-            <li><Link to="/register">Tạo tài khoản</Link></li>
+            <li><button type="button" className="af-link-button" onClick={() => onAccount('login')}>Đăng nhập</button></li>
+            <li><button type="button" className="af-link-button" onClick={() => onAccount('register')}>Tạo tài khoản</button></li>
+            <li><Link to="/login">Đăng nhập cho nhân viên</Link></li>
           </ul>
         </nav>
         <nav aria-labelledby="af-footer-policy">
