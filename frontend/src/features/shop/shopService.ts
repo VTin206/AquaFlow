@@ -6,6 +6,7 @@ import { catalogApi, type CatalogProduct } from '../live/catalogApi'
 import { guestOrderApi, type GuestOrderInput } from '../live/guestOrderApi'
 import { daysUntilExpiry } from '../inventory/expiry'
 import type { Product } from '../inventory/types'
+import { resolveProductImage } from '../inventory/productImages'
 import { orderService } from '../orders/orderService'
 import type { PublicOrder } from '../orders/types'
 
@@ -19,7 +20,7 @@ export const useShopDemo = () => Boolean(useAuth().user?.isDemo)
 export const toShopProduct = (product: CatalogProduct): ShopProduct => ({
   id: String(product.id), sku: product.sku, name: product.name, brand: product.brand ?? '',
   unit: product.unit, price: product.salePrice, available: product.active ? null : false,
-  unitsPerCase: product.unitsPerCase, bottleTypeName: product.bottleTypeName,
+  unitsPerCase: product.unitsPerCase, bottleTypeName: product.bottleTypeName, image: resolveProductImage(product),
 })
 
 export const shopService = {

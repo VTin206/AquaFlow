@@ -14,5 +14,6 @@ public record ProductResponse(
         String bottleTypeName,
         BigDecimal salePrice,
         boolean active,
-        Instant createdAt
+        Instant createdAt,
+        String image
 ) {}

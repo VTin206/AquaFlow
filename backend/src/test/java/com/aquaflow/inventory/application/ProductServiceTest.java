@@ -1,6 +1,7 @@
 package com.aquaflow.inventory.application;
 
 import com.aquaflow.inventory.api.dto.CreateProductRequest;
+import com.aquaflow.inventory.api.dto.UpdateProductRequest;
 import com.aquaflow.inventory.api.dto.ProductResponse;
 import com.aquaflow.inventory.domain.BottleType;
 import com.aquaflow.inventory.domain.Product;
@@ -113,6 +114,36 @@ class ProductServiceTest {
     }
 
     private CreateProductRequest request(String sku, Long bottleTypeId) {
-        return new CreateProductRequest(sku, "Nước 19L", "Aqua", "Bình", null, bottleTypeId, new BigDecimal("20000"));
+        return new CreateProductRequest(sku, "Nước 19L", "Aqua", "Bình", null, bottleTypeId, new BigDecimal("20000"), null);
+    }
+
+    @Test
+    void imageIsSavedAndReturnedOnRead() {
+        String image = "data:image/png;base64,aGVsbG8=";
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> {
+            Product saved = invocation.getArgument(0);
+            when(productRepository.findById(5L)).thenReturn(Optional.of(saved));
+            return saved;
+        });
+        ProductResponse created = productService.create(new CreateProductRequest(
+                "PHOTO", "Water", "Aqua", "Bottle", null, null, BigDecimal.TEN, image));
+        assertThat(created.image()).isEqualTo(image);
+        assertThat(productService.findById(5L).image()).isEqualTo(image);
+    }
+
+    @Test
+    void updateReplacesImageAndPreservesItForOlderClients() {
+        Product product = new Product("PHOTO", "Water", "Aqua", "Bottle", null, null, BigDecimal.TEN);
+        product.setImage("/images/old.png");
+        when(productRepository.findById(5L)).thenReturn(Optional.of(product));
+
+        assertThat(productService.update(5L, new UpdateProductRequest(
+                "Water", "Aqua", "Bottle", null, null, BigDecimal.TEN, "/images/new.png")).image())
+                .isEqualTo("/images/new.png");
+        assertThat(productService.update(5L, new UpdateProductRequest(
+                "Water", "Aqua", "Bottle", null, null, BigDecimal.TEN, null)).image())
+                .isEqualTo("/images/new.png");
+        assertThat(productService.update(5L, new UpdateProductRequest(
+                "Water", "Aqua", "Bottle", null, null, BigDecimal.TEN, "")).image()).isNull();
     }
 }
