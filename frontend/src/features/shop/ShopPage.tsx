@@ -98,7 +98,7 @@ export function ShopPage() {
                     </Typography.Title>
                     <div className="af-shop-card-footer">
                       <span>
-                        <strong className="af-money">{currency(product.price)}</strong>
+                        <strong className="af-money af-shop-price">{currency(product.price)}</strong>
                         <small> / {product.unit.toLowerCase()}</small>
                       </span>
                       <Button

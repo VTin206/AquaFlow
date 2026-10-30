@@ -1264,6 +1264,10 @@ body {
 .af-shop-why-grid svg { color: var(--af-primary); }
 .af-shop-why-grid strong { color: var(--af-text-strong); }
 .af-shop-why-grid span { color: var(--af-text-secondary); font-size: 13px; line-height: 1.5; }
+/* Giá bán trên trang khách cùng màu với số tiền khách phải trả ở trang thanh toán. */
+.af-shop-price { color: var(--af-money-due); }
+.af-shop-detail-price { margin: 4px 0 12px; color: var(--af-text-secondary); }
+.af-shop-detail-price .af-shop-price { font-size: 28px; font-weight: 700; }
 .af-checkout-lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .af-checkout-lines li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--af-border); }
 .af-checkout-lines li:first-child { padding-top: 0; }

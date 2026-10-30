@@ -21,7 +21,7 @@ export function ProductDetailPage() {
       {query.isPending ? <Skeleton active /> : query.isError ? <QueryError error={query.error} onRetry={query.refetch} /> : !product ? <Empty description="Không tìm thấy sản phẩm." /> : <>
         {product.image && <img src={product.image} alt={product.name} style={{ width: '100%', maxHeight: 260, objectFit: 'contain' }} />}
         <Typography.Title level={2}>{product.name}</Typography.Title>
-        <Typography.Title level={3}>{currency(product.price)} / {product.unit}</Typography.Title>
+        <p className="af-shop-detail-price"><span className="af-money af-shop-price">{currency(product.price)}</span> <small>/ {product.unit.toLowerCase()}</small></p>
         <Descriptions column={1} items={[
           { key: 'sku', label: 'Mã sản phẩm', children: product.sku },
           { key: 'brand', label: 'Thương hiệu', children: product.brand || 'Chưa cập nhật' },
