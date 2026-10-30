@@ -1,5 +1,5 @@
-import { Dropdown, type TableColumnType } from 'antd'
-import { ArrowDown, ArrowDown01, ArrowDown10, ArrowDownAZ, ArrowDownZA, ArrowUp, ArrowUpDown, Check, ClockArrowDown, ClockArrowUp, ListX, type LucideIcon } from 'lucide-react'
+import { Tooltip, type TableColumnType } from 'antd'
+import { ArrowDown01, ArrowDown10, ArrowDownAZ, ArrowDownZA, ArrowUpDown, ClockArrowDown, ClockArrowUp, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 
 type SortKind = 'text' | 'number' | 'time' | 'stockRatio'
@@ -21,10 +21,13 @@ const icons: Record<SortKind, [LucideIcon, LucideIcon]> = {
   stockRatio: [ArrowDown01, ArrowDown10],
 }
 
+/** Mỗi lần bấm: tăng dần → giảm dần → bỏ sắp xếp. */
+const nextOrder = (order: Order | null): Order | null => (order === null ? 'ascend' : order === 'ascend' ? 'descend' : null)
+
 type SortableProps<T> = Pick<TableColumnType<T>, 'key' | 'title' | 'sortOrder' | 'sortIcon' | 'sortDirections' | 'showSorterTooltip'>
 
 /**
- * Sắp xếp bằng menu trên tiêu đề cột: người dùng chọn rõ chiều thay vì bấm xoay vòng.
+ * Sắp xếp bằng cách bấm tiêu đề cột, xoay vòng tăng → giảm → bỏ; icon cho biết chiều hiện tại theo loại dữ liệu.
  * `sortOrder` được điều khiển ở đây nên cú bấm vào ô tiêu đề của AntD không đổi thứ tự.
  */
 export function useColumnSort<T>(initial: SortState = null) {
@@ -32,15 +35,11 @@ export function useColumnSort<T>(initial: SortState = null) {
 
   const column = (label: string, key: string, kind: SortKind): SortableProps<T> => {
     const order = sort?.key === key ? sort.order : null
-    const Icon = order === 'ascend' ? ArrowUp : order === 'descend' ? ArrowDown : ArrowUpDown
     const [ascLabel, descLabel] = labels[kind]
     const [AscIcon, DescIcon] = icons[kind]
-    // Icon bên trái cho biết kiểu sắp xếp; dấu ✓ bên phải đánh dấu lựa chọn hiện tại.
-    const item = (value: Order | 'none', text: string, ItemIcon: LucideIcon) => ({
-      key: value,
-      icon: <ItemIcon size={15} aria-hidden />,
-      label: <span className="af-sort-option">{text}{(order ?? 'none') === value && <Check size={14} aria-hidden />}</span>,
-    })
+    const Icon = order === 'ascend' ? AscIcon : order === 'descend' ? DescIcon : ArrowUpDown
+    const textOf = (value: Order | null) => (value === 'ascend' ? ascLabel : value === 'descend' ? descLabel : 'Bỏ sắp xếp')
+    const next = nextOrder(order)
 
     return {
       key,
@@ -49,31 +48,20 @@ export function useColumnSort<T>(initial: SortState = null) {
       showSorterTooltip: false,
       sortIcon: () => null,
       title: (
-        <Dropdown
-          trigger={['click']}
-          menu={{
-            items: [
-              item('ascend', ascLabel, AscIcon),
-              item('descend', descLabel, DescIcon),
-              { type: 'divider' },
-              { ...item('none', 'Bỏ sắp xếp', ListX), disabled: !order },
-            ],
-            onClick: ({ key: value, domEvent }) => {
-              domEvent.stopPropagation()
-              setSort(value === 'none' ? null : { key, order: value as Order })
-            },
-          }}
-        >
+        <Tooltip title={`Bấm để ${next ? `sắp xếp ${textOf(next)}` : 'bỏ sắp xếp'}`} mouseEnterDelay={0.4}>
           <button
             type="button"
             className={`af-sort-trigger${order ? ' is-active' : ''}`}
-            aria-label={`${label}: ${order ? (order === 'ascend' ? ascLabel : descLabel) : 'chưa sắp xếp'}. Mở tùy chọn sắp xếp`}
-            onClick={(event) => event.stopPropagation()}
+            aria-label={`${label}: ${order ? textOf(order) : 'chưa sắp xếp'}. Bấm để ${next ? textOf(next) : 'bỏ sắp xếp'}`}
+            onClick={(event) => {
+              event.stopPropagation()
+              setSort(next ? { key, order: next } : null)
+            }}
           >
             {label}
             <Icon size={14} aria-hidden className="af-sort-icon" />
           </button>
-        </Dropdown>
+        </Tooltip>
       ),
     }
   }
