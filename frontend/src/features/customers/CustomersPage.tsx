@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Button, Card, Col, Grid, Input, Row, Statistic, Table, Tag, type TableColumnsType } from 'antd'
-import { Plus, Search } from 'lucide-react'
+import { Button, Card, Col, Grid, Input, Row, Statistic, Table, Tag, Tooltip, type TableColumnsType } from 'antd'
+import { Plus, Search, UserRound } from 'lucide-react'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
 import { useColumnSort } from '../../shared/components/sortableColumn'
@@ -83,12 +83,12 @@ export function CustomersPage() {
     {
       title: 'Thao tác',
       key: 'action',
-      width: 160,
+      width: 130,
       render: (_, customer) => (
         <span className="af-row-actions">
-          <Button size="small" onClick={() => setProfileId(customer.id)}>
-            Hồ sơ
-          </Button>
+          <Tooltip title="Hồ sơ">
+            <Button size="small" icon={<UserRound size={15} />} aria-label={`Hồ sơ ${customer.name}`} onClick={() => setProfileId(customer.id)} />
+          </Tooltip>
           <Button size="small" onClick={() => setOrderFor(customer)}>
             Tạo đơn
           </Button>

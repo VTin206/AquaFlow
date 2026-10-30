@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { App, Button, Card, Col, Empty, Input, Pagination, Popconfirm, Row, Segmented, Select, Skeleton, Space, Tag, Tooltip, Typography } from 'antd'
-import { Droplets, FunnelX, LayoutGrid, Plus, Search } from 'lucide-react'
+import { Droplets, FunnelX, LayoutGrid, Pencil, Plus, Search } from 'lucide-react'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
 import { useFeature, useIsDemo } from '../../shared/features'
@@ -102,7 +102,7 @@ export function ProductsPage() {
                   className="af-product-card"
                   cover={<ProductImage key={product.image ?? product.id} product={product} />}
                   actions={canManage ? [
-                    <Button key="edit" type="link" size="small" onClick={() => setEditing(product)}>Sửa</Button>,
+                    <Tooltip key="edit" title="Sửa"><Button type="link" size="small" icon={<Pencil size={15} />} aria-label={`Sửa ${product.name}`} onClick={() => setEditing(product)} /></Tooltip>,
                     ...(product.active ? [
                       <Popconfirm key="stop" title={`Ngừng bán ${product.name}?`} description="Sản phẩm không còn để bán hoặc nhập kho. Đơn và phiếu nhập cũ vẫn giữ nguyên." okText="Ngừng bán" okButtonProps={{ danger: true }} cancelText="Không" onConfirm={() => stopSelling(product)}>
                         <Button type="link" size="small" danger disabled={deactivate.isPending}>Ngừng bán</Button>

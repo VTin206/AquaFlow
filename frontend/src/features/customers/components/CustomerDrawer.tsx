@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { App, Avatar, Button, Descriptions, Drawer, Empty, Popconfirm, Space, Table, Tabs, Tag, Typography } from 'antd'
+import { App, Avatar, Button, Descriptions, Drawer, Empty, Popconfirm, Space, Table, Tabs, Tag, Tooltip, Typography } from 'antd'
 import { Pencil, Phone, ShoppingBag } from 'lucide-react'
 import { Money } from '../../../shared/components/Money'
 import { useFeature, useIsDemo } from '../../../shared/features'
@@ -115,9 +115,9 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
             <Popconfirm title={`Ngừng dùng hồ sơ ${customer.name}?`} description="Khách không còn trong danh sách. Đơn và lịch sử cũ vẫn giữ nguyên." okText="Ngừng dùng" okButtonProps={{ danger: true }} cancelText="Không" onConfirm={remove}>
               <Button danger type="text" loading={deactivate.isPending}>Ngừng dùng</Button>
             </Popconfirm>
-            <Button icon={<Pencil size={15} />} aria-label="Sửa hồ sơ" onClick={() => onEdit(customer)}>
-              Sửa
-            </Button>
+            <Tooltip title="Sửa hồ sơ">
+              <Button icon={<Pencil size={15} />} aria-label="Sửa hồ sơ" onClick={() => onEdit(customer)} />
+            </Tooltip>
             <Button type="primary" icon={<ShoppingBag size={15} />} aria-label="Tạo đơn" onClick={() => onCreateOrder(customer)}>
               Tạo đơn
             </Button>

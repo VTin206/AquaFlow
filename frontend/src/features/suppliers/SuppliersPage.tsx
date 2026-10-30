@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { App, Button, Card, Empty, Input, Popconfirm, Segmented, Space, Table, Tag, type TableColumnsType } from 'antd'
-import { Plus, Search } from 'lucide-react'
+import { App, Button, Card, Empty, Input, Popconfirm, Segmented, Space, Table, Tag, Tooltip, type TableColumnsType } from 'antd'
+import { Pencil, Plus, Search } from 'lucide-react'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
 import { CountLabel } from '../../shared/components/CountLabel'
@@ -59,10 +59,10 @@ export function SuppliersPage() {
     ...(canManage ? [
       { title: 'Trạng thái', dataIndex: 'active', width: 130, render: (active: boolean) => <Tag color={active ? 'green' : 'default'}>{active ? 'Đang dùng' : 'Đã ngừng dùng'}</Tag> },
       {
-        title: 'Thao tác', key: 'actions', width: 170, fixed: 'right' as const,
+        title: 'Thao tác', key: 'actions', width: 150, fixed: 'right' as const,
         render: (_: unknown, supplier: Supplier) => (
           <Space size={4}>
-            <Button size="small" onClick={() => setEditing(supplier)}>Sửa</Button>
+            <Tooltip title="Sửa"><Button size="small" icon={<Pencil size={15} />} aria-label={`Sửa ${supplier.name}`} onClick={() => setEditing(supplier)} /></Tooltip>
             {supplier.active && (
               <Popconfirm title={`Ngừng dùng ${supplier.name}?`} description="Nhà cung cấp sẽ không còn trong danh sách chọn khi nhập kho. Phiếu nhập cũ vẫn giữ nguyên." okText="Ngừng dùng" okButtonProps={{ danger: true }} cancelText="Không"
                 onConfirm={() => deactivate.mutateAsync(supplier.id).then(() => { message.success(`Đã ngừng dùng ${supplier.name}.`) }, (error: Error) => { message.error(error.message) })}>
