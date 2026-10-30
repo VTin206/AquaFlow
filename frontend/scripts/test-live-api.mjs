@@ -10,9 +10,11 @@ const supplier = { id: 4, name: 'Nhà cung cấp thử', phone: null, address: n
 const customer = { id: 3, fullName: 'Khách thử', phone: '0901234567', createdAt: '2026-10-22T00:00:00Z' }
 const address = { id: 5, customerId: 3, recipientName: 'Người nhận', recipientPhone: '0901234568', addressLine: '15 Đường B', area: null, isDefault: true }
 const order = { id: 8, orderCode: 'DH-008', customerId: null, createdBy: 1, channel: 'PHONE', fulfillmentType: 'DELIVERY', status: 'CONFIRMED', paymentStatus: 'PARTIALLY_PAID', recipientName: 'Khách thử', recipientPhone: '0901234567', deliveryAddress: '12 Đường A', deliveryArea: null, requestedDeliveryAt: null, subtotal: 140000, discountAmount: 10000, deliveryFee: 20000, total: 150000, createdAt: '2026-10-22T00:00:00Z', confirmedAt: null, cancelledAt: null, note: null, items: [{ id: 9, productId: 12, quantity: 2, unitPrice: 70000, lineTotal: 140000 }] }
+const guestOrder = { ...order, id: 10, orderCode: 'WEB-010', channel: 'WEB', status: 'PENDING', paymentStatus: 'UNPAID', customerId: null, createdBy: null, confirmedAt: null }
 const routes = new Map([
   ['/api/v1/products?active=true', [product]], ['/api/v1/products/12', product],
   ['/api/v1/suppliers?active=true', [supplier]], ['/api/v1/sales/orders', [order]], ['/api/v1/sales/orders/8', order],
+  ['/api/v1/customer/orders/guest', guestOrder],
   ['/api/v1/sales/customers', [customer]], ['/api/v1/sales/customers/3/addresses', [address]],
 ])
 const requests = []
@@ -21,8 +23,15 @@ const http = createHttpServer(async (request, response) => {
   let rawBody = ''
   for await (const chunk of request) rawBody += chunk
   const body = rawBody ? JSON.parse(rawBody) : undefined
-  requests.push({ method: request.method, url: request.url, body })
+  const requestRecord = { method: request.method, url: request.url, body }
+  requests.push(requestRecord)
   response.setHeader('Content-Type', 'application/json')
+  if (request.url === '/api/v1/customer/orders/guest' && body?.recipientName === 'Lỗi kiểm tra') {
+    requestRecord.responseStatus = 400
+    response.writeHead(400)
+    response.end(JSON.stringify({ status: 400, error: 'Bad Request', message: 'Số điện thoại không hợp lệ.' }))
+    return
+  }
   if (request.url.startsWith('/api/v1/bottle-types')) {
     if (request.method === 'POST') {
       if (body.name === 'Trùng tên') {
@@ -43,9 +52,10 @@ const http = createHttpServer(async (request, response) => {
     response.end(JSON.stringify(request.method === 'GET' ? [bottleType] : bottleType))
     return
   }
-  const status = request.url === '/api/v1/sales/orders/403' ? 403 : routes.has(request.url) ? 200 : 404
+  const status = request.url === '/api/v1/sales/orders/403' ? 403 : routes.has(request.url) ? request.method === 'POST' && request.url === '/api/v1/customer/orders/guest' ? 201 : 200 : 404
+  requestRecord.responseStatus = status
   response.writeHead(status)
-  response.end(JSON.stringify(status === 200 ? routes.get(request.url) : { status, error: 'Error', message: status === 403 ? 'Không có quyền xem đơn.' : 'Không tìm thấy dữ liệu.' }))
+  response.end(JSON.stringify(status >= 200 && status < 300 ? routes.get(request.url) : { status, error: 'Error', message: status === 403 ? 'Không có quyền xem đơn.' : 'Không tìm thấy dữ liệu.' }))
 })
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
 try {
@@ -53,9 +63,10 @@ try {
   const { httpClient, ApiError } = await vite.ssrLoadModule('/src/shared/api/client.ts')
   httpClient.defaults.baseURL = `http://127.0.0.1:${http.address().port}/api/v1`
   const { catalogApi } = await vite.ssrLoadModule('/src/features/live/catalogApi.ts')
+  const { guestOrderApi } = await vite.ssrLoadModule('/src/features/live/guestOrderApi.ts')
   const { customerApi } = await vite.ssrLoadModule('/src/features/live/customerApi.ts')
-  const { orderApi, orderStatusLabels, paymentStatusLabels } = await vite.ssrLoadModule('/src/features/live/orderApi.ts')
-  const { toShopProduct } = await vite.ssrLoadModule('/src/features/shop/shopService.ts')
+  const { canCancel, orderApi, orderStatusLabels, paymentStatusLabels } = await vite.ssrLoadModule('/src/features/live/orderApi.ts')
+  const { toGuestOrderInput, toShopProduct } = await vite.ssrLoadModule('/src/features/shop/shopService.ts')
 
   assert.deepEqual(await catalogApi.products(), [product])
   assert.deepEqual(await catalogApi.product('12'), product)
@@ -77,12 +88,25 @@ try {
   assert.equal(orderStatusLabels.CONFIRMED, 'Đã xác nhận')
   assert.equal(paymentStatusLabels.REFUND_PENDING, 'Chờ hoàn tiền')
   assert.equal(paymentStatusLabels.PARTIALLY_PAID, 'Thanh toán một phần')
+  for (const status of ['PENDING', 'CONFIRMED', 'PREPARING']) assert.equal(canCancel({ status }), true)
+  for (const status of ['OUT_FOR_DELIVERY', 'DELIVERED', 'COMPLETED', 'CANCELLED']) assert.equal(canCancel({ status }), false)
   console.log('PASS order list/detail preserve backend status, item prices, discount and total')
+  console.log('PASS live cancel action matches backend policy and stays unavailable after dispatch')
+
+  const guestInput = toGuestOrderInput({ customer: 'Nguyen Van An', phone: '0901234567', address: '123 Nguyen Trai', area: 'Quan 5', lines: [{ productId: '12', quantity: 2 }], note: 'Giao buổi sáng', floor: 4, appointment: '2026-10-29T08:00:00Z' })
+  const createdGuestOrder = await guestOrderApi.create(guestInput)
+  assert.equal(createdGuestOrder.status, 'PENDING')
+  assert.equal(createdGuestOrder.orderCode, 'WEB-010')
+  assert.deepEqual(requests.at(-1), { method: 'POST', url: '/api/v1/customer/orders/guest', body: guestInput, responseStatus: 201 })
+  assert.equal('customerId' in requests.at(-1).body, false)
+  assert.equal('unitPrice' in requests.at(-1).body.items[0], false)
+  await assert.rejects(guestOrderApi.create({ ...guestInput, recipientName: 'Lỗi kiểm tra' }), (error) => error instanceof ApiError && error.status === 400 && error.message === 'Số điện thoại không hợp lệ.')
+  console.log('PASS guest checkout uses public endpoint, sends contact/items only, preserves PENDING response and server-side price contract')
 
   await assert.rejects(catalogApi.product('999'), (error) => error instanceof ApiError && error.status === 404)
   await assert.rejects(orderApi.detail(403), (error) => error instanceof ApiError && error.status === 403 && error.message === 'Không có quyền xem đơn.')
-  assert.ok(requests.every((request) => request.method === 'GET'), 'No writes for unavailable operations')
-  console.log('PASS HTTP errors propagate without falling back to demo data; adapters only read supported endpoints')
+  assert.ok(requests.filter((request) => request.url !== '/api/v1/customer/orders/guest').every((request) => request.method === 'GET'), 'Other live adapters do not issue unsupported writes')
+  console.log('PASS HTTP errors propagate without falling back to demo data; guest errors remain visible to checkout')
 
   const { bottleTypeApi } = await vite.ssrLoadModule('/src/features/live/bottleTypeApi.ts')
   await bottleTypeApi.list(true)

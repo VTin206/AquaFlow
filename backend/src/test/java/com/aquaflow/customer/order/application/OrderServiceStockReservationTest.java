@@ -70,6 +70,21 @@ class OrderServiceStockReservationTest {
     }
 
     @Test
+    void repeatedConfirmationDoesNotReserveAgain() {
+        Order order = order(1L);
+        order.transitionTo(OrderStatus.CONFIRMED);
+        when(orderRepository.findForUpdateById(1L)).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> orderService.transitionStatus(1L, OrderStatus.CONFIRMED))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Invalid order status transition from CONFIRMED to CONFIRMED");
+
+        verify(stockReservationService, never()).reserve(anyCollection());
+        verify(stockReservationService, never()).release(anyCollection());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
     void cancelConfirmedOrderReleasesReservedStock() {
         Order order = order(1L);
         order.transitionTo(OrderStatus.CONFIRMED);

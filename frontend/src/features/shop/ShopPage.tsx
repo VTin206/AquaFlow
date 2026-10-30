@@ -65,7 +65,7 @@ export function ShopPage() {
       <section className="af-shop-hero">
         <div>
           <Typography.Title level={2}>Đặt nước giao tận nơi</Typography.Title>
-          <p>{demo ? 'Bản dùng thử: đặt đơn không cần tài khoản khách hàng và xem trạng thái mô phỏng.' : 'Xem sản phẩm và chuẩn bị giỏ hàng không cần tài khoản. Đặt hàng trực tuyến đang được hoàn thiện.'}</p>
+          <p>{demo ? 'Bản dùng thử: đặt đơn không cần tài khoản khách hàng và xem trạng thái mô phỏng.' : 'Xem sản phẩm và đặt hàng không cần tài khoản.'}</p>
         </div>
         {demo && <ul>
           <li>

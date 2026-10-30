@@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -108,6 +109,22 @@ class StockReservationServiceTest {
         assertThat(balance.getReserved()).isZero();
         assertThat(balance.getAvailable()).isEqualTo(10);
         assertThat(reservation.getQuantityReleased()).isEqualTo(4);
+    }
+
+    @Test
+    void releaseRejectsReservationsWithDispatchedQuantityWithoutChangingBalance() {
+        InventoryBalance balance = balance(100L, "A", TODAY.plusDays(5), 10, 4);
+        StockReservation reservation = new StockReservation(1L, balance.getBatch(), 4);
+        ReflectionTestUtils.setField(reservation, "quantityDispatched", 1);
+        when(reservationRepository.findByOrderItemIdIn(List.of(1L))).thenReturn(List.of(reservation));
+
+        assertThatThrownBy(() -> service.release(List.of(1L)))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Không thể giải phóng reservation đã có hàng xuất kho");
+
+        assertThat(balance.getReserved()).isEqualTo(4);
+        assertThat(reservation.getQuantityReleased()).isZero();
+        verifyNoInteractions(balanceRepository);
     }
 
     private InventoryBalance balance(Long batchId, String lot, LocalDate expiresOn, int onHand, int reserved) {

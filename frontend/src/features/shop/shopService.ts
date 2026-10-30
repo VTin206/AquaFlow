@@ -3,11 +3,13 @@ import { db } from '../../mocks/db'
 import { mockError, mockRequest } from '../../mocks/mockRequest'
 import { useAuth } from '../auth/useAuth'
 import { catalogApi, type CatalogProduct } from '../live/catalogApi'
+import { guestOrderApi, type GuestOrderInput } from '../live/guestOrderApi'
 import { daysUntilExpiry } from '../inventory/expiry'
 import type { Product } from '../inventory/types'
 import { orderService } from '../orders/orderService'
+import type { PublicOrder } from '../orders/types'
 
-// Kênh công khai cho khách, không cần đăng nhập. Backend thật cần API public riêng, giới hạn tần suất đặt đơn.
+// Kênh công khai cho khách; live checkout gửi đơn qua guest order API.
 
 /** Thông tin sản phẩm khách được xem: không lộ số tồn hay giá vốn. */
 export type ShopProduct = Pick<Product, 'id' | 'name' | 'brand' | 'unit' | 'price' | 'image' | 'catalog'> & { sku: string; available: boolean | null; unitsPerCase?: number | null; bottleTypeName?: string | null }
@@ -49,6 +51,26 @@ export const useShopProducts = () => {
   })
 }
 
+export type WebOrderDraft = {
+  customer: string
+  phone: string
+  address: string
+  area: string
+  floor?: number
+  appointment?: string
+  note?: string
+  lines: { productId: string; quantity: number }[]
+}
+
+export const toGuestOrderInput = (draft: WebOrderDraft): GuestOrderInput => ({
+  recipientName: draft.customer,
+  recipientPhone: draft.phone,
+  deliveryAddress: draft.address,
+  deliveryArea: draft.area,
+  items: draft.lines.map((line) => ({ productId: Number(line.productId), quantity: line.quantity })),
+  ...(draft.note ? { note: draft.note } : {}),
+})
+
 export function useShopProduct(id: string) {
   const demo = useShopDemo()
   return useQuery<ShopProduct>({
@@ -66,14 +88,18 @@ export function useShopProduct(id: string) {
 export function usePlaceWebOrder() {
   const demo = useShopDemo()
   const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (draft: Parameters<typeof orderService.placeWebOrder>[0]) => {
-      if (!demo) return Promise.reject(new Error('Đặt hàng trực tuyến chưa khả dụng. Đơn chưa được gửi.'))
-      return orderService.placeWebOrder(draft)
+  return useMutation<PublicOrder | Awaited<ReturnType<typeof guestOrderApi.create>>, Error, WebOrderDraft>({
+    mutationFn: (draft) => {
+      if (demo) return orderService.placeWebOrder(draft)
+      return guestOrderApi.create(toGuestOrderInput(draft))
     },
     onSuccess: () => {
-      // Đơn website hiện ngay ở trang quản lý (cùng dữ liệu mẫu trong tab).
-      for (const key of [['orders'], ['customers'], ['products'], ['activity'], shopKeys.products]) queryClient.invalidateQueries({ queryKey: key })
+      if (demo) {
+        // Làm mới các màn quản lý dùng chung dữ liệu mẫu.
+        for (const key of [['orders'], ['customers'], ['products'], ['activity'], shopKeys.products]) queryClient.invalidateQueries({ queryKey: key })
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['live', 'orders'] })
+      }
     },
   })
 }

@@ -20,20 +20,13 @@ public final class OrderStatusPolicy {
                     ),
 
                     OrderStatus.PREPARING,
-                    Set.of(
-                            OrderStatus.OUT_FOR_DELIVERY,
-                            OrderStatus.DELIVERED,
-                            OrderStatus.CANCELLED
-                    ),
+                    Set.of(OrderStatus.CANCELLED),
 
                     OrderStatus.OUT_FOR_DELIVERY,
-                    Set.of(
-                            OrderStatus.DELIVERED,
-                            OrderStatus.CANCELLED
-                    ),
+                    Set.of(),
 
                     OrderStatus.DELIVERED,
-                    Set.of(OrderStatus.COMPLETED),
+                    Set.of(),
 
                     OrderStatus.COMPLETED,
                     Set.of(),
@@ -56,23 +49,9 @@ public final class OrderStatusPolicy {
             return false;
         }
 
-        if (currentStatus == OrderStatus.PREPARING) {
-            if (nextStatus == OrderStatus.OUT_FOR_DELIVERY
-                    && fulfillmentType != FulfillmentType.DELIVERY) {
-                return false;
-            }
-
-            if (nextStatus == OrderStatus.DELIVERED
-                    && fulfillmentType != FulfillmentType.COUNTER) {
-                return false;
-            }
-        }
-
-        if (currentStatus == OrderStatus.OUT_FOR_DELIVERY
-                && fulfillmentType != FulfillmentType.DELIVERY) {
-            return false;
-        }
-
+        // Delivery, dispatch and completion are intentionally blocked in Sprint 2.
+        // Sprint 3 must introduce the inventory movement and delivery workflow before
+        // these states can be enabled again.
         return ALLOWED_TRANSITIONS
                 .getOrDefault(currentStatus, Set.of())
                 .contains(nextStatus);
