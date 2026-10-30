@@ -286,6 +286,12 @@ body {
 .af-sider-link:hover {
   background: #f2f4f7;
 }
+/* Sidebar thu gọn: chỉ còn icon, nhãn hiện ở tooltip. */
+.af-nav.is-collapsed .af-workspace { justify-content: center; margin: 0 12px 20px; padding: 10px 0; }
+.af-nav.is-collapsed .af-menu { padding: 0 8px; }
+.af-nav.is-collapsed .af-menu .ant-menu-item-divider { margin: 8px 12px; }
+.af-nav.is-collapsed .af-sider-footer { padding: 12px 8px; }
+.af-nav.is-collapsed .af-sider-link { justify-content: center; padding: 8px 0; }
 
 /* Nhãn đếm dạng viên thuốc và nhãn "Mới" */
 .af-count-label {

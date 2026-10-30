@@ -7,8 +7,29 @@ import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 import { useMockSession } from './useAccountMenu'
 
+// Ghi nhớ sidebar thu gọn giữa các lần mở app.
+const COLLAPSED_KEY = 'aquaflow.sider-collapsed'
+const readCollapsed = () => {
+  try {
+    return localStorage.getItem(COLLAPSED_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
 export function AppLayout() {
   const [navOpen, setNavOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(readCollapsed)
+  const toggleCollapsed = () => {
+    setCollapsed((value) => {
+      try {
+        localStorage.setItem(COLLAPSED_KEY, value ? '0' : '1')
+      } catch {
+        // Không lưu được thì lần sau mở rộng như mặc định.
+      }
+      return !value
+    })
+  }
   const staff = useStaff()
   const { pathname } = useLocation()
 
@@ -22,8 +43,8 @@ export function AppLayout() {
       <Topbar onOpenNav={() => setNavOpen(true)} />
       <Layout>
         {/* Máy tính: menu cố định bên trái. Điện thoại/tablet (< 992px): ẩn, mở bằng nút ☰ trên thanh trên cùng. */}
-        <Layout.Sider width={224} className="af-sider">
-          <Sidebar />
+        <Layout.Sider width={224} collapsedWidth={72} collapsed={collapsed} trigger={null} className="af-sider">
+          <Sidebar collapsed={collapsed} onToggleCollapse={toggleCollapsed} />
         </Layout.Sider>
         <Drawer open={navOpen} onClose={() => setNavOpen(false)} placement="left" size={260} title="AquaFlow" styles={{ body: { padding: 0 } }}>
           <Sidebar onNavigate={() => setNavOpen(false)} />
