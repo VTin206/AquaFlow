@@ -1145,6 +1145,7 @@ body {
 .af-invoice-preview { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border: 1px dashed var(--af-border); border-radius: 8px; background: var(--af-image-bg); text-align: center; font-size: 13px; color: var(--af-text-secondary); }
 .af-invoice-preview strong { font-size: 16px; color: var(--af-text-strong); text-transform: uppercase; }
 .af-invoice-preview em { margin-top: 6px; font-size: 12px; }
+:root[data-theme="dark"] .af-invoice-preview { background: var(--af-surface-muted); }
 .af-sider-link.is-active { color: var(--af-primary); background: var(--af-primary-soft); }
 
 /* ---------- Màn hình tài xế (ưu tiên điện thoại) ---------- */
