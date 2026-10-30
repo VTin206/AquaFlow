@@ -33,6 +33,9 @@ class HealthControllerTest {
     private com.aquaflow.inventory.application.StockReservationService stockReservationService;
 
     @MockBean
+    private com.aquaflow.inventory.application.InventoryDispatchService inventoryDispatchService;
+
+    @MockBean
     private UserRepository userRepository;
 
     // Test này tắt JPA nên phải giả lập các repository của module inventory

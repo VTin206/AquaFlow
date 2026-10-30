@@ -127,6 +127,58 @@ class StockReservationServiceTest {
         verifyNoInteractions(balanceRepository);
     }
 
+    @Test
+    void reserveForRedeliveryCreatesNewReservationAndKeepsDispatchHistory() {
+        InventoryBalance balance = balance(100L, "A", TODAY.plusDays(5), 10, 0);
+        StockReservation old = new StockReservation(1L, balance.getBatch(), 3);
+        old.dispatchAll();
+        old.recordReturn(3, 0);
+        when(reservationRepository.findByOrderItemIdIn(List.of(1L))).thenReturn(List.of(old));
+        when(balanceRepository.lockSellableByProductFefo(10L, TODAY)).thenReturn(List.of(balance));
+        when(reservationRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
+
+        List<StockReservation> result = service.reserveForRedelivery(List.of(new ReservationLine(1L, 10L, 3)));
+
+        assertThat(result).singleElement().extracting(StockReservation::getQuantityReserved).isEqualTo(3);
+        assertThat(balance.getReserved()).isEqualTo(3);
+        assertThat(old.getQuantityDispatched()).isEqualTo(3);
+    }
+
+    @Test
+    void reserveForRedeliveryRequiresReturnToBeInspected() {
+        StockReservation old = new StockReservation(1L, batch(100L, "A", TODAY.plusDays(5)), 3);
+        old.dispatchAll();
+        when(reservationRepository.findByOrderItemIdIn(List.of(1L))).thenReturn(List.of(old));
+
+        assertThatThrownBy(() -> service.reserveForRedelivery(List.of(new ReservationLine(1L, 10L, 3))))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("chưa hoàn tất xử lý hàng hoàn");
+        verify(balanceRepository, never()).lockSellableByProductFefo(any(), any());
+    }
+
+    @Test
+    void reserveForRedeliveryRejectsItemNeverDispatched() {
+        when(reservationRepository.findByOrderItemIdIn(List.of(1L))).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.reserveForRedelivery(List.of(new ReservationLine(1L, 10L, 3))))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("chưa từng xuất kho");
+    }
+
+    @Test
+    void releaseIsAllowedAfterDispatchedGoodsWereFullyReturned() {
+        InventoryBalance balance = balance(100L, "A", TODAY.plusDays(5), 10, 0);
+        StockReservation old = new StockReservation(1L, balance.getBatch(), 3);
+        old.dispatchAll();
+        old.recordReturn(2, 1);
+        when(reservationRepository.findByOrderItemIdIn(List.of(1L))).thenReturn(List.of(old));
+
+        service.release(List.of(1L));
+
+        assertThat(old.getQuantityReleased()).isZero();
+        verifyNoInteractions(balanceRepository);
+    }
+
     private InventoryBalance balance(Long batchId, String lot, LocalDate expiresOn, int onHand, int reserved) {
         InventoryBalance balance = new InventoryBalance(batch(batchId, lot, expiresOn));
         balance.receive(onHand);
