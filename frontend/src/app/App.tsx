@@ -21,15 +21,9 @@ const ShopLayout = lazy(() => import('../features/shop/ShopLayout').then((m) => 
 const ShopPage = lazy(() => import('../features/shop/ShopPage').then((m) => ({ default: m.ShopPage })))
 const ProductDetailPage = lazy(() => import('../features/shop/ProductDetailPage').then((m) => ({ default: m.ProductDetailPage })))
 const CheckoutPage = lazy(() => import('../features/shop/CheckoutPage').then((m) => ({ default: m.CheckoutPage })))
-const LiveInventoryPage = lazy(() => import('../features/live/LiveInventoryPage').then((m) => ({ default: m.LiveInventoryPage })))
 const TrackPage = lazy(() => import('../features/shop/TrackPage').then((m) => ({ default: m.TrackPage })))
 const LoginPage = lazy(() => import('../features/auth/LoginPage').then((m) => ({ default: m.LoginPage })))
 const UnavailablePage = lazy(() => import('../features/live/UnavailablePage').then((m) => ({ default: m.UnavailablePage })))
-
-function SprintOneMode({ demo, live }: { demo: ReactNode; live: ReactNode }) {
-  const { user } = useAuth()
-  return user?.isDemo ? demo : live
-}
 
 function DemoOnly({ demo }: { demo: ReactNode }) {
   const { user } = useAuth()
@@ -60,7 +54,7 @@ export function App() {
           <Route element={<AppLayout />}>
             <Route index element={<DemoOnly demo={<DashboardPage />} />} />
             <Route path="orders" element={<OrdersPage />} />
-            <Route path="inventory" element={<SprintOneMode demo={<InventoryPage />} live={<LiveInventoryPage />} />} />
+            <Route path="inventory" element={<InventoryPage />} />
             <Route path="products" element={<ProductsPage />} />
             <Route path="customers" element={<CustomersPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
