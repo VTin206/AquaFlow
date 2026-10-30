@@ -443,7 +443,8 @@ body {
 .af-sort-trigger:focus-visible { outline: 2px solid var(--af-primary); outline-offset: 2px; border-radius: 4px; }
 .af-sort-icon { flex-shrink: 0; color: var(--af-text-tertiary); }
 .af-sort-trigger:hover .af-sort-icon, .af-sort-trigger.is-active .af-sort-icon { color: var(--af-primary); }
-.af-sort-check-space { display: inline-block; width: 14px; }
+.af-sort-option { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.af-sort-option svg { color: var(--af-primary); }
 .af-data-table .af-cell-stack { line-height: 20px; }
 .af-data-table .af-cell-stack > small { font-size: 12px; }
 .af-cell-stack > .af-cell-truncate {

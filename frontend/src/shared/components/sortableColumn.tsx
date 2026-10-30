@@ -1,5 +1,5 @@
 import { Dropdown, type TableColumnType } from 'antd'
-import { ArrowDown, ArrowUp, ArrowUpDown, Check } from 'lucide-react'
+import { ArrowDown, ArrowDown01, ArrowDown10, ArrowDownAZ, ArrowDownZA, ArrowUp, ArrowUpDown, Check, ClockArrowDown, ClockArrowUp, ListX, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 
 type SortKind = 'text' | 'number' | 'time' | 'stockRatio'
@@ -11,6 +11,14 @@ const labels: Record<SortKind, [string, string]> = {
   number: ['Thấp → Cao', 'Cao → Thấp'],
   time: ['Sớm → Muộn', 'Muộn → Sớm'],
   stockRatio: ['Tỷ lệ tồn: thấp → cao', 'Tỷ lệ tồn: cao → thấp'],
+}
+
+/** Icon cho từng chiều sắp xếp, theo loại dữ liệu của cột. */
+const icons: Record<SortKind, [LucideIcon, LucideIcon]> = {
+  text: [ArrowDownAZ, ArrowDownZA],
+  number: [ArrowDown01, ArrowDown10],
+  time: [ClockArrowUp, ClockArrowDown],
+  stockRatio: [ArrowDown01, ArrowDown10],
 }
 
 type SortableProps<T> = Pick<TableColumnType<T>, 'key' | 'title' | 'sortOrder' | 'sortIcon' | 'sortDirections' | 'showSorterTooltip'>
@@ -26,7 +34,13 @@ export function useColumnSort<T>(initial: SortState = null) {
     const order = sort?.key === key ? sort.order : null
     const Icon = order === 'ascend' ? ArrowUp : order === 'descend' ? ArrowDown : ArrowUpDown
     const [ascLabel, descLabel] = labels[kind]
-    const check = (value: Order | 'none') => ((order ?? 'none') === value ? <Check size={14} aria-hidden /> : <span className="af-sort-check-space" />)
+    const [AscIcon, DescIcon] = icons[kind]
+    // Icon bên trái cho biết kiểu sắp xếp; dấu ✓ bên phải đánh dấu lựa chọn hiện tại.
+    const item = (value: Order | 'none', text: string, ItemIcon: LucideIcon) => ({
+      key: value,
+      icon: <ItemIcon size={15} aria-hidden />,
+      label: <span className="af-sort-option">{text}{(order ?? 'none') === value && <Check size={14} aria-hidden />}</span>,
+    })
 
     return {
       key,
@@ -39,10 +53,10 @@ export function useColumnSort<T>(initial: SortState = null) {
           trigger={['click']}
           menu={{
             items: [
-              { key: 'ascend', label: ascLabel, icon: check('ascend') },
-              { key: 'descend', label: descLabel, icon: check('descend') },
+              item('ascend', ascLabel, AscIcon),
+              item('descend', descLabel, DescIcon),
               { type: 'divider' },
-              { key: 'none', label: 'Bỏ sắp xếp', icon: check('none'), disabled: !order },
+              { ...item('none', 'Bỏ sắp xếp', ListX), disabled: !order },
             ],
             onClick: ({ key: value, domEvent }) => {
               domEvent.stopPropagation()
