@@ -1291,6 +1291,11 @@ body {
 .af-shop-account-card strong { font-size: 18px; color: var(--af-text-strong); }
 .af-shop-account-card small { color: var(--af-text-secondary); }
 .af-shop-account-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.af-shop-account-divider { color: var(--af-text-tertiary); font-size: 11px; }
+.af-shop-account-dev { display: flex; flex-wrap: wrap; gap: 8px; }
+.af-shop-account-dev > .ant-btn { flex: 1 1 120px; }
+.af-shop-account-switch { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-top: 1px solid var(--af-border); border-bottom: 1px solid var(--af-border); }
+.af-shop-account-switch small { color: var(--af-text-tertiary); font-size: 11px; }
 @media (max-width: 800px) {
   .af-shop-account-grid { grid-template-columns: 1fr; gap: 20px; }
   .af-shop-account-grid > section { padding: 18px; }

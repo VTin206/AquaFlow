@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Alert, App, Avatar, Button, Form, Input } from 'antd'
-import { ArrowRight, History, LayoutDashboard, LockKeyhole, LogOut, MapPin, PackageSearch, ShoppingBag, UserRound, UserRoundPlus } from 'lucide-react'
+import { Alert, App, Avatar, Button, Divider, Form, Input } from 'antd'
+import { ArrowRight, FlaskConical, History, LayoutDashboard, LockKeyhole, LogOut, MapPin, PackageSearch, ShoppingBag, UserRound, UserRoundPlus } from 'lucide-react'
 import { Link, useNavigate } from 'react-router'
 import { focusNextOnEnter } from '../../shared/utils/forms'
 import type { LoginCredentials } from '../auth/authService'
+import { devAccounts } from '../auth/devAccounts'
 import { RegisterForm } from '../auth/RegisterForm'
 import { useAuth } from '../auth/useAuth'
 import { useStaff } from '../auth/useStaff'
@@ -13,7 +14,7 @@ import { useStaff } from '../auth/useStaff'
  * BE mới có tài khoản nhân viên nên đăng nhập xong vào trang quản lý; tài khoản khách còn chờ API.
  */
 export function ShopAccountPage() {
-  const { login, logout, isAuthenticated, user } = useAuth()
+  const { login, logout, enterDemo, isAuthenticated, user } = useAuth()
   const staff = useStaff()
   const { message, modal } = App.useApp()
   const navigate = useNavigate()
@@ -73,6 +74,16 @@ export function ShopAccountPage() {
             <Button type="link" className="af-shop-account-forgot" onClick={() => modal.info({ title: 'Quên mật khẩu', content: 'Liên hệ người quản trị cửa hàng để được cấp lại mật khẩu.', okText: 'Đã hiểu' })}>Quên mật khẩu?</Button>
             <Button type="primary" size="large" htmlType="submit" loading={submitting} icon={<ArrowRight size={18} />} iconPlacement="end" className="af-shop-account-submit">Đăng nhập</Button>
           </Form>
+          {devAccounts.length > 0 && (
+            <>
+              <Divider plain><span className="af-shop-account-divider">Đăng nhập nhanh (dev)</span></Divider>
+              <div className="af-shop-account-dev">
+                {devAccounts.map((account) => (
+                  <Button key={account.email} disabled={submitting} title={account.email} onClick={() => submit(account)}>{account.label}</Button>
+                ))}
+              </div>
+            </>
+          )}
         </section>
 
         <section className="af-shop-account-side" aria-label="Chưa có tài khoản">
@@ -86,6 +97,8 @@ export function ShopAccountPage() {
           <p>Chỉ cần tên, số điện thoại và địa chỉ giao khi thanh toán.</p>
           <Link to="/track"><Button size="large" block icon={<PackageSearch size={18} />}>Tra cứu đơn không cần tài khoản</Button></Link>
           <p>Xem trạng thái đơn bằng mã đơn và số điện thoại đặt hàng.</p>
+          <Button size="large" block icon={<FlaskConical size={18} />} onClick={() => { enterDemo(); navigate('/') }}>Xem bản dùng thử</Button>
+          <p>Trang quản lý với dữ liệu mẫu, không cần tài khoản.</p>
         </section>
       </div>
     </div>
