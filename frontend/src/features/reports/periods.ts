@@ -20,9 +20,9 @@ const weekStart = (isoDate: string) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-export type RevenueBucket = { key: string; label: string; title: string; revenue: number }
+export type RevenueBucket = { key: string; label: string; title: string; revenue: number; collected: number }
 
-/** Gom doanh thu theo ngày thành từng tuần hoặc tháng. Tuần/tháng đầu và cuối có thể không đủ ngày. */
+/** Gom doanh thu và tiền thu theo ngày thành từng tuần hoặc tháng. Tuần/tháng đầu và cuối có thể không đủ ngày. */
 export function groupRevenue(days: DailyRevenue[], granularity: Granularity): RevenueBucket[] {
   const buckets = new Map<string, RevenueBucket>()
   for (const day of days) {
@@ -30,8 +30,9 @@ export function groupRevenue(days: DailyRevenue[], granularity: Granularity): Re
     const [year, month] = key.split('-')
     const label = granularity === 'day' ? shortDate(day.date).slice(3) : granularity === 'week' ? shortDate(key).slice(3) : `T${Number(month)}/${year}`
     const title = granularity === 'day' ? shortDate(day.date) : granularity === 'week' ? `Tuần từ ${shortDate(key)}` : `Tháng ${Number(month)}/${year}`
-    const bucket = buckets.get(key) ?? { key, label, title, revenue: 0 }
+    const bucket = buckets.get(key) ?? { key, label, title, revenue: 0, collected: 0 }
     bucket.revenue += day.revenue
+    bucket.collected += day.collected
     buckets.set(key, bucket)
   }
   return [...buckets.values()]

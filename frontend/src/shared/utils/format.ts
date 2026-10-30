@@ -4,7 +4,11 @@ export const currency = (amount: number) => `${numberFormat.format(amount)} ₫`
 
 /** 2_600_000 → "2,6 tr" — dùng cho trục biểu đồ, nhãn ngắn. */
 export const compactCurrency = (amount: number) =>
-  amount >= 1_000_000 ? `${(amount / 1_000_000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} tr` : `${numberFormat.format(Math.round(amount / 1000))} k`
+  amount === 0
+    ? '0'
+    : Math.abs(amount) >= 1_000_000
+      ? `${(amount / 1_000_000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} tr`
+      : `${numberFormat.format(Math.round(amount / 1000))} k`
 
 /** "2026-10-16" → "T6 16/10" */
 export const shortDate = (isoDate: string) => {

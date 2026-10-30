@@ -3,7 +3,6 @@ import { App, Button, Card, Col, DatePicker, Descriptions, Empty, Progress, Row,
 import dayjs, { type Dayjs } from 'dayjs'
 import { useSearchParams } from 'react-router'
 import { ArrowDownRight, ArrowUpRight, Download } from 'lucide-react'
-import { BarChart } from '../../shared/components/BarChart'
 import { Money } from '../../shared/components/Money'
 import { OrderTotals } from '../../shared/components/OrderTotals'
 import { Page } from '../../shared/components/Page'
@@ -11,6 +10,7 @@ import { PanelHeading } from '../../shared/components/PanelHeading'
 import { QueryError } from '../../shared/components/QueryError'
 import { compactCurrency, currency, shortDate } from '../../shared/utils/format'
 import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
+import { DriverDeliveryChart, InlineBar, RevenueChart, ShareBar, TopProductsChart } from './charts'
 import { autoGranularity, granularityLabels, groupRevenue, type Granularity } from './periods'
 import { previousRange, reportChannels, useReport, type CustomerReportRow, type DriverReportRow, type InventoryReportRow, type ProductReportRow, type ReportFilters, type ReportRange } from './reportService'
 
@@ -284,7 +284,7 @@ export function ReportsPage() {
                   </Col>
                   <Col xs={24} xl={16}>
                     <Card
-                      title={<PanelHeading title={`Doanh thu thuần theo ${granularityLabels[unit].toLowerCase()}`} extra={
+                      title={<PanelHeading title={`Doanh thu và tiền thu theo ${granularityLabels[unit].toLowerCase()}`} extra={
                         <Segmented<Granularity>
                           size="small"
                           aria-label="Gom biểu đồ theo"
@@ -296,9 +296,9 @@ export function ReportsPage() {
                       className="af-card af-fill"
                       loading={loading}
                     >
-                      {buckets.some((bucket) => bucket.revenue > 0) ? (
+                      {buckets.some((bucket) => bucket.revenue || bucket.collected) ? (
                         <>
-                          <BarChart data={buckets.map((bucket) => ({ label: bucket.label, title: bucket.title, value: bucket.revenue }))} formatValue={compactCurrency} height={240} />
+                          <RevenueChart data={buckets} />
                           {best && <Typography.Text type="secondary">Cao nhất {best.title.toLowerCase()}: {compactCurrency(best.revenue)}</Typography.Text>}
                         </>
                       ) : (
@@ -311,6 +311,13 @@ export function ReportsPage() {
                   <Col xs={24} lg={12} xl={8}>
                     <Card title="Tiền thu" className="af-card af-fill" loading={loading}>
                       {report && (
+                        <>
+                        <ShareBar
+                          parts={[
+                            { label: 'Tiền mặt', value: report.cash.cash, color: 'var(--af-money-paid)' },
+                            { label: 'Chuyển khoản', value: report.cash.transfer, color: 'var(--af-money-deposit)' },
+                          ]}
+                        />
                         <Descriptions
                           size="small"
                           column={1}
@@ -322,6 +329,7 @@ export function ReportsPage() {
                             { key: 'receipts', label: 'Chi nhập hàng', children: `${report.receipts.count} phiếu · ${currency(report.receipts.value)}` },
                           ]}
                         />
+                        </>
                       )}
                     </Card>
                   </Col>
@@ -378,7 +386,7 @@ export function ReportsPage() {
                           columns={[
                             { title: 'Kênh', dataIndex: 'channel', ellipsis: true },
                             { title: 'Đơn tạo', dataIndex: 'orders', align: 'right', width: 76 },
-                            { title: 'Doanh thu thuần', dataIndex: 'revenue', align: 'right', width: 132, render: (value: number) => compactCurrency(value) },
+                            { title: 'Doanh thu thuần', dataIndex: 'revenue', align: 'right', width: 132, render: (value: number) => <InlineBar value={value} max={Math.max(...report.channels.map((row) => row.revenue))}>{compactCurrency(value)}</InlineBar> },
                           ]}
                         />
                       )}
@@ -410,6 +418,7 @@ export function ReportsPage() {
                               <Progress percent={onTime ?? 100} size="small" status={onTime !== null && onTime < 85 ? 'exception' : 'normal'} format={(value) => (onTime === null ? '—' : `${value}%`)} />
                             </div>
                           </div>
+                          {report.delivery.drivers.length > 0 && <DriverDeliveryChart rows={report.delivery.drivers} />}
                           <Table<DriverReportRow>
                             rowKey="driver"
                             size="small"
@@ -438,6 +447,11 @@ export function ReportsPage() {
                 label: 'Sản phẩm và kho',
                 children: (
                   <>
+                {report?.products.some((row) => row.revenue > 0) && (
+                  <Card title="Sản phẩm doanh thu cao nhất" className="af-card">
+                    <TopProductsChart rows={report.products} />
+                  </Card>
+                )}
                 <Card title="Bán hàng theo sản phẩm" className="af-card" styles={{ body: { padding: 0 } }}>
                   <Table<ProductReportRow>
                     locale={{ emptyText: 'Không bán sản phẩm nào trong kỳ.' }}
