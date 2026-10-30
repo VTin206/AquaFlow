@@ -3,11 +3,14 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { useRef, useState } from 'react'
 import { Link, useNavigate, useOutletContext } from 'react-router'
 import type { LiveOrder } from '../live/orderApi'
+import { Money } from '../../shared/components/Money'
 import { QueryError } from '../../shared/components/QueryError'
 import { currency } from '../../shared/utils/format'
+import { focusNextOnEnter } from '../../shared/utils/forms'
 import { DEPOSIT_PER_BOTTLE, suggestedDeliveryFee } from '../../shared/policy'
 import { readProfile, saveProfile, useCart, useCartActions } from './cart'
 import { submitCheckoutOnce } from './checkoutSubmit'
+import { CartThumb } from './components/CartThumb'
 import { usePlaceWebOrder, useShopDemo, useShopProducts } from './shopService'
 
 type CheckoutForm = { customer: string; phone: string; address: string; area: string; floor?: number; appointment?: Dayjs; note?: string; remember: boolean }
@@ -53,18 +56,30 @@ export function CheckoutPage() {
   </div>
 
   return <div className="af-shop-page af-shop-narrow">
-    <Typography.Title level={2}>Checkout — Thông tin giao hàng</Typography.Title>
+    <Typography.Title level={2}>Thanh toán</Typography.Title>
     {products.isPending ? <Skeleton active /> : products.isError ? <QueryError error={products.error} onRetry={products.refetch} /> : !cart.length ? <Empty description="Giỏ hàng đang trống."><Link to="/shop">Chọn sản phẩm</Link></Empty> : <>
       {invalid && <Alert style={{ marginTop: 12 }} type="warning" showIcon title="Có sản phẩm không còn đặt được" action={<Button onClick={openCart}>Sửa giỏ hàng</Button>} />}
       {submitError && <Alert style={{ marginTop: 12 }} type="error" showIcon title="Không thể tạo đơn" description={submitError} />}
-      <Card style={{ marginTop: 16 }} title="Giỏ hàng" extra={<Button onClick={openCart}>Chỉnh sửa</Button>}>
-        {lines.map((line) => <div className="af-order-summary" key={line.productId}><span>{line.product?.name ?? `Sản phẩm ${line.productId}`} × {line.quantity}</span><span>{line.product ? currency(line.product.price * line.quantity) : 'Không còn trong danh mục'}</span></div>)}
-        <div className="af-order-summary"><span>Phí giao</span><span>{fee === null ? 'Chưa xác định' : currency(fee)}</span></div>
-        <div className="af-order-summary af-order-summary-highlight"><span>{demo ? 'Tạm tính' : 'Tiền hàng tạm tính'}</span><strong>{currency(subtotal + (fee ?? 0))}</strong></div>
+      <Card style={{ marginTop: 16 }} title={`Đơn hàng (${units} sản phẩm)`} extra={<Button onClick={openCart}>Chỉnh sửa</Button>}>
+        <ul className="af-checkout-lines">
+          {lines.map((line) => <li key={line.productId}>
+            <CartThumb product={line.product} />
+            <div>
+              <strong>{line.product?.name ?? `Sản phẩm ${line.productId}`}</strong>
+              <small>{line.product ? `${currency(line.product.price)} / ${line.product.unit.toLowerCase()} × ${line.quantity}` : 'Không còn trong danh mục'}</small>
+            </div>
+            {line.product && <span className="af-money af-checkout-line-total">{currency(line.product.price * line.quantity)}</span>}
+          </li>)}
+        </ul>
+        <dl className="af-checkout-totals">
+          <div><dt>Tiền hàng</dt><dd className="af-money">{currency(subtotal)}</dd></div>
+          <div><dt>Phí giao</dt><dd>{fee === null ? 'Cửa hàng báo khi xác nhận' : fee === 0 ? 'Miễn phí' : <span className="af-money">{currency(fee)}</span>}</dd></div>
+          <div className="is-total"><dt>{fee === null ? 'Tạm tính' : 'Tổng cộng'}</dt><dd><Money value={subtotal + (fee ?? 0)} tone="due" /></dd></div>
+        </dl>
         <p className="af-form-hint">Chưa gồm tiền cọc vỏ.{demo && jugs > 0 ? ` Nếu thiếu vỏ để đổi, cọc ${currency(DEPOSIT_PER_BOTTLE)}/vỏ khi nhận hàng.` : ''}</p>
       </Card>
       <Card style={{ marginTop: 16 }}>
-        <Form form={form} name="checkout" layout="vertical" scrollToFirstError={{ focus: true }} initialValues={{ ...profile, floor: profile?.floor ?? 0, remember: Boolean(profile) }} onFinish={submit}>
+        <Form form={form} name="checkout" layout="vertical" scrollToFirstError={{ focus: true }} initialValues={{ ...profile, floor: profile?.floor ?? 0, remember: Boolean(profile) }} onFinish={submit} onKeyDown={focusNextOnEnter}>
           <Form.Item name="customer" label="Tên người nhận" rules={[{ required: true, whitespace: true, message: 'Nhập tên người nhận.' }, { max: 150 }]}><Input autoComplete="name" /></Form.Item>
           <Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, message: 'Nhập số điện thoại.' }, { pattern: /^(?:0\d{9,10}|\+84\d{9,10})$/, transform: (value?: string) => value?.replace(/[\s().-]/g, ''), message: 'Số điện thoại không hợp lệ.' }]}><Input inputMode="tel" autoComplete="tel" /></Form.Item>
           <Form.Item name="address" label="Địa chỉ giao" rules={[{ required: true, whitespace: true, message: 'Nhập địa chỉ giao.' }, { max: 255 }]}><Input.TextArea autoComplete="street-address" rows={2} /></Form.Item>

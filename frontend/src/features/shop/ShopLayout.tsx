@@ -1,19 +1,23 @@
 import { useState } from 'react'
 import { Alert, Badge, Button } from 'antd'
-import { LayoutDashboard, PackageSearch, Phone, ShoppingCart, Waves } from 'lucide-react'
-import { Link, NavLink, Outlet } from 'react-router'
-import { useAuth } from '../auth/useAuth'
+import { PackageSearch, Search, ShoppingCart, Waves } from 'lucide-react'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 import { useSettings } from '../settings/settingsService'
 import { useCart } from './cart'
+import { AccountMenu } from './components/AccountMenu'
 import { CartDrawer } from './components/CartDrawer'
+import { ShopFooter } from './components/ShopFooter'
 import { useShopDemo } from './shopService'
 
-/** Khung trang công khai cho khách: không cần đăng nhập, dùng chung dữ liệu mẫu với trang quản lý trong cùng tab. */
+/**
+ * Khung trang công khai cho khách, cũng là trang chủ khi chưa đăng nhập.
+ * Bấm icon tài khoản để đăng nhập vào trang quản lý; dùng chung dữ liệu mẫu với trang quản lý trong cùng tab.
+ */
 export function ShopLayout() {
   const demo = useShopDemo()
   const settingsQuery = useSettings(demo)
   const settings = demo ? settingsQuery.data : undefined
-  const { isAuthenticated } = useAuth()
+  const navigate = useNavigate()
   const cart = useCart()
   const [cartOpen, setCartOpen] = useState(false)
   const count = cart.reduce((sum, line) => sum + line.quantity, 0)
@@ -26,23 +30,18 @@ export function ShopLayout() {
             <span className="af-brand-mark">
               <Waves size={20} strokeWidth={2.2} />
             </span>
-            <strong>{settings?.storeName ?? 'Cửa hàng nước'}</strong>
+            <strong>AquaFlow</strong>
           </Link>
-          <nav className="af-shop-nav" aria-label="Điều hướng cửa hàng">
-            <NavLink to="/shop" end>
-              Sản phẩm
-            </NavLink>
-            {demo && <NavLink to="/track" aria-label="Tra cứu đơn">
+          {demo && <nav className="af-shop-nav" aria-label="Điều hướng cửa hàng">
+            <NavLink to="/track" aria-label="Tra cứu đơn">
               <PackageSearch size={16} aria-hidden />
               <span className="af-shop-nav-text">Tra cứu đơn</span>
-            </NavLink>}
-            {isAuthenticated && (
-              <Link to="/" title="Về trang quản lý cửa hàng" aria-label="Về trang quản lý">
-                <LayoutDashboard size={16} aria-hidden />
-                <span className="af-shop-nav-text">Quản lý</span>
-              </Link>
-            )}
-          </nav>
+            </NavLink>
+          </nav>}
+          <div className="af-shop-icons">
+            <Button type="text" shape="circle" icon={<Search size={20} />} aria-label="Tìm sản phẩm" title="Tìm sản phẩm" onClick={() => navigate('/shop', { state: { focusSearch: Date.now() } })} />
+            <AccountMenu />
+          </div>
           <Badge count={count} size="small" offset={[-4, 4]}>
             <Button type="primary" icon={<ShoppingCart size={17} />} onClick={() => setCartOpen(true)} aria-label={`Giỏ hàng, ${count} sản phẩm`}>
               <span className="af-shop-cart-label">Giỏ hàng</span>
@@ -54,16 +53,7 @@ export function ShopLayout() {
         {demo && <Alert type="warning" showIcon title="Bản dùng thử — dữ liệu mẫu, không gửi đơn tới cửa hàng" style={{ marginBottom: 16 }} />}
         <Outlet context={{ openCart: () => setCartOpen(true) }} />
       </main>
-      <footer className="af-shop-footer">
-        <strong>{settings?.storeName}</strong>
-        <span>{settings?.address}</span>
-        {settings?.phone && (
-          <a href={`tel:${settings.phone.replace(/\s/g, '')}`}>
-            <Phone size={14} aria-hidden /> {settings.phone}
-          </a>
-        )}
-        <small>{demo ? 'Đơn dùng thử chỉ lưu trong tab hiện tại và mất khi tải lại trang.' : 'AquaFlow · Danh mục sản phẩm'}</small>
-      </footer>
+      <ShopFooter demo={demo} contact={settings} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </div>
   )

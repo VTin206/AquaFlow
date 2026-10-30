@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Alert, App, Button, Card, Form, Input, Result, Skeleton, Steps, Typography } from 'antd'
-import { Copy, Phone, RefreshCw } from 'lucide-react'
+import { Alert, App, Button, Card, Form, Input, Result, Skeleton, Steps, Tooltip, Typography } from 'antd'
+import { Copy, Hash, LogIn, Phone, RefreshCw, Search, ShoppingBag } from 'lucide-react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { Money } from '../../shared/components/Money'
+import { UNSUPPORTED_HINT } from '../../shared/components/Unsupported'
+import { focusNextOnEnter } from '../../shared/utils/forms'
 import { TransferQr } from '../../shared/payment/TransferQr'
 import { dueTone } from '../../shared/utils/money'
 import { currency } from '../../shared/utils/format'
@@ -21,40 +23,63 @@ const stepOf: Record<PublicOrder['status'], number> = {
   'Đã hủy': 0,
 }
 
-/** Tra cứu bằng mã đơn và số điện thoại khi khách không còn giữ liên kết. */
-function LookupForm() {
+/**
+ * Tra cứu đơn không cần tài khoản (bố cục như trang tài khoản): mã đơn + số điện thoại đặt hàng.
+ * Tài khoản thật: BE chưa có API công khai tra đơn theo mã + số điện thoại nên nút tra cứu bị khóa.
+ */
+function LookupForm({ supported }: { supported: boolean }) {
   const navigate = useNavigate()
   const [error, setError] = useState<string>()
   const [loading, setLoading] = useState(false)
+  const submit = (
+    <Button type="primary" size="large" htmlType="submit" loading={loading} disabled={!supported} icon={<Search size={18} />} className="af-shop-account-submit">
+      {supported ? 'Tra cứu' : 'Tra cứu (chưa hỗ trợ)'}
+    </Button>
+  )
   return (
-    <Card className="af-shop-track-card" title="Tra cứu đơn hàng">
-      <Form
-        layout="vertical"
-        onFinish={async ({ id, phone }: { id: string; phone: string }) => {
-          setLoading(true)
-          setError(undefined)
-          try {
-            const order = await lookupOrder(id, phone)
-            navigate(`/track/${order.trackingToken}`)
-          } catch (caught) {
-            setError(caught instanceof Error ? caught.message : 'Không tra cứu được đơn.')
-          } finally {
-            setLoading(false)
-          }
-        }}
-      >
-        <Form.Item name="id" label="Mã đơn" rules={[{ required: true, whitespace: true, message: 'Nhập mã đơn, ví dụ AF-1070.' }]}>
-          <Input placeholder="AF-1070" autoCapitalize="characters" />
-        </Form.Item>
-        <Form.Item name="phone" label="Số điện thoại đặt hàng" rules={[{ required: true, message: 'Nhập số điện thoại đã dùng khi đặt.' }]}>
-          <Input inputMode="tel" />
-        </Form.Item>
-        {error && <Alert type="error" showIcon title={error} style={{ marginBottom: 16 }} />}
-        <Button type="primary" htmlType="submit" loading={loading} block>
-          Tra cứu
-        </Button>
-      </Form>
-    </Card>
+    <div className="af-shop-page af-shop-account-page">
+      <header>
+        <h1>Tra cứu đơn không cần tài khoản</h1>
+        <p>Nhập mã đơn và số điện thoại bạn đã dùng khi đặt hàng để xem trạng thái đơn.</p>
+      </header>
+      <div className="af-shop-account-grid">
+        <section aria-label="Tra cứu đơn">
+          {!supported && <Alert type="info" showIcon style={{ marginBottom: 20 }} title="Tra cứu đơn trực tuyến chưa hỗ trợ: backend chưa có API tra đơn theo mã đơn và số điện thoại. Vui lòng gọi cửa hàng để hỏi tình trạng đơn." />}
+          <Form
+            layout="vertical"
+            requiredMark={false}
+            onKeyDown={focusNextOnEnter}
+            onFinish={async ({ id, phone }: { id: string; phone: string }) => {
+              setLoading(true)
+              setError(undefined)
+              try {
+                const order = await lookupOrder(id, phone)
+                navigate(`/track/${order.trackingToken}`)
+              } catch (caught) {
+                setError(caught instanceof Error ? caught.message : 'Không tra cứu được đơn.')
+              } finally {
+                setLoading(false)
+              }
+            }}
+          >
+            <Form.Item name="id" label="Mã đơn" extra="Mã đơn có trong màn hình đặt hàng thành công, ví dụ AF-1070." rules={[{ required: true, whitespace: true, message: 'Nhập mã đơn, ví dụ AF-1070.' }]}>
+              <Input size="large" prefix={<Hash size={17} aria-hidden />} placeholder="AF-1070" autoCapitalize="characters" />
+            </Form.Item>
+            <Form.Item name="phone" label="Số điện thoại đặt hàng" rules={[{ required: true, message: 'Nhập số điện thoại đã dùng khi đặt.' }]}>
+              <Input size="large" prefix={<Phone size={17} aria-hidden />} inputMode="tel" placeholder="0901 234 567" />
+            </Form.Item>
+            {error && <Alert type="error" showIcon title={error} style={{ marginBottom: 16 }} />}
+            {supported ? submit : <Tooltip title={UNSUPPORTED_HINT}><span style={{ display: 'inline-block' }}>{submit}</span></Tooltip>}
+          </Form>
+        </section>
+        <section className="af-shop-account-side" aria-label="Lựa chọn khác">
+          <p>Có tài khoản? Đăng nhập để xem mọi đơn đã đặt.</p>
+          <Link to="/shop/account"><Button size="large" block icon={<LogIn size={18} />}>Đăng nhập</Button></Link>
+          <p>Chưa đặt đơn nào?</p>
+          <Link to="/shop"><Button size="large" block icon={<ShoppingBag size={18} />}>Mua hàng không cần tài khoản</Button></Link>
+        </section>
+      </div>
+    </div>
   )
 }
 
@@ -212,5 +237,6 @@ export function TrackPage() {
   useEffect(() => {
     if (!token) document.title = 'Tra cứu đơn hàng'
   }, [token])
-  return <div className="af-shop-page af-shop-narrow">{!demo ? <Result status="info" title="Tra cứu đơn trực tuyến chưa khả dụng" subTitle="Chức năng này đang được hoàn thiện." extra={<Link to="/shop">Về cửa hàng</Link>} /> : token ? <TrackedOrder token={token} /> : <LookupForm />}</div>
+  if (!token) return <LookupForm supported={demo} />
+  return <div className="af-shop-page af-shop-narrow">{demo ? <TrackedOrder token={token} /> : <Result status="info" title="Tra cứu đơn trực tuyến chưa hỗ trợ" subTitle="Backend chưa có API tra đơn công khai." extra={<Link to="/track">Về trang tra cứu</Link>} />}</div>
 }

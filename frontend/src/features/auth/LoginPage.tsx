@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Alert, App, Button, Checkbox, ConfigProvider, Divider, Form, Input, Modal } from 'antd'
-import { ArrowRight, CircleCheck, Headphones, LockKeyhole, Package, Store, Truck, UserRound, Waves } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CircleCheck, Headphones, LockKeyhole, Package, Store, Truck, UserRound, Waves } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router'
+import { focusNextOnEnter } from '../../shared/utils/forms'
 import { useAuth } from './useAuth'
 import type { LoginCredentials } from './authService'
 import { devAccounts } from './devAccounts'
@@ -47,11 +48,14 @@ export function LoginPage() {
   return (
     <div className="af-login-page">
       <header className="af-login-header">
-        <Link to="/" className="af-topbar-brand" aria-label="AquaFlow — Trang chủ">
+        <Link to="/shop" className="af-topbar-brand" aria-label="AquaFlow — Về cửa hàng">
           <span className="af-brand-mark"><Waves size={22} strokeWidth={2.2} /></span>
           <strong>AquaFlow</strong>
         </Link>
-        <Button type="text" icon={<Headphones size={17} />} onClick={() => setHelpOpen(true)}>Hỗ trợ</Button>
+        <div className="af-login-header-actions">
+          <Link to="/shop"><Button type="text" icon={<ArrowLeft size={17} />}>Về cửa hàng</Button></Link>
+          <Button type="text" icon={<Headphones size={17} />} onClick={() => setHelpOpen(true)}>Hỗ trợ</Button>
+        </div>
       </header>
 
       <main className="af-login-main">
@@ -97,6 +101,7 @@ export function LoginPage() {
                 layout="vertical"
                 requiredMark={false}
                 onFinish={submitLogin}
+                onKeyDown={focusNextOnEnter}
               >
                 <Form.Item label="Email" name="email" rules={[{ required: true, type: 'email', whitespace: true, message: 'Nhập email hợp lệ.' }]}>
                   <Input type="email" size="large" prefix={<UserRound size={17} aria-hidden />} placeholder="name@example.com" autoComplete="email" autoCapitalize="none" spellCheck={false} />
@@ -112,6 +117,7 @@ export function LoginPage() {
                 </div>
                 <Button type="primary" size="large" htmlType="submit" loading={submitting} block icon={<ArrowRight size={18} />} iconPlacement="end">Đăng nhập</Button>
               </Form>
+              <p className="af-login-switch">Chưa có tài khoản? <Link to="/register">Tạo tài khoản</Link></p>
               {devAccounts.length > 0 && (
                 <div className="af-login-dev">
                   <Divider plain><span className="af-login-divider-text">Đăng nhập nhanh (dev)</span></Divider>

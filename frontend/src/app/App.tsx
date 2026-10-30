@@ -19,11 +19,14 @@ const SettingsPage = lazy(() => import('../features/settings/SettingsPage').then
 const ActivityPage = lazy(() => import('../features/activity/ActivityPage').then((m) => ({ default: m.ActivityPage })))
 const ShopLayout = lazy(() => import('../features/shop/ShopLayout').then((m) => ({ default: m.ShopLayout })))
 const ArticlePage = lazy(() => import('../features/shop/ArticlePage').then((m) => ({ default: m.ArticlePage })))
+const ShopAccountPage = lazy(() => import('../features/shop/ShopAccountPage').then((m) => ({ default: m.ShopAccountPage })))
+const ShopRegisterPage = lazy(() => import('../features/shop/ShopAccountPage').then((m) => ({ default: m.ShopRegisterPage })))
 const ShopPage = lazy(() => import('../features/shop/ShopPage').then((m) => ({ default: m.ShopPage })))
 const ProductDetailPage = lazy(() => import('../features/shop/ProductDetailPage').then((m) => ({ default: m.ProductDetailPage })))
 const CheckoutPage = lazy(() => import('../features/shop/CheckoutPage').then((m) => ({ default: m.CheckoutPage })))
 const TrackPage = lazy(() => import('../features/shop/TrackPage').then((m) => ({ default: m.TrackPage })))
 const LoginPage = lazy(() => import('../features/auth/LoginPage').then((m) => ({ default: m.LoginPage })))
+const RegisterPage = lazy(() => import('../features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })))
 const UnavailablePage = lazy(() => import('../features/live/UnavailablePage').then((m) => ({ default: m.UnavailablePage })))
 
 /** Trang chưa có API BE: tài khoản thật vẫn mở được nhưng thấy "Chưa hỗ trợ" thay cho dữ liệu mẫu. */
@@ -43,11 +46,15 @@ export function App() {
     <Suspense fallback={pageFallback}>
       <Routes>
         <Route path="login" element={<LoginPage />} />
+        <Route path="register" element={<RegisterPage />} />
         {/* Trang công khai cho khách đặt hàng và tra cứu đơn, không cần đăng nhập. */}
         <Route element={<ShopLayout />}>
           <Route path="shop" element={<ShopPage />} />
           <Route path="shop/products/:id" element={<ProductDetailPage />} />
           <Route path="shop/news/:slug" element={<ArticlePage />} />
+          <Route path="shop/account" element={<ShopAccountPage />} />
+          <Route path="shop/register" element={<ShopRegisterPage />} />
+          <Route path="shop/policy/:slug" element={<ArticlePage key="policy" kind="policy" />} />
           <Route path="checkout" element={<CheckoutPage />} />
           <Route path="track" element={<TrackPage />} />
           <Route path="track/:token" element={<TrackPage />} />

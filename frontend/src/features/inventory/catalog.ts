@@ -31,4 +31,32 @@ export const getCatalogDetails = (product: Pick<Product, 'catalog' | 'sku' | 'un
   ? { category: 'Vỏ bình & phụ kiện', packaging: 'Vỏ bình', capacity: '18,5–20L', volumeMl: 20000 }
   : { category: 'Chưa phân loại', packaging: product.unit, capacity: 'Chưa có dung tích', volumeMl: 0 })
 
+const capacityOf = (ml: number) =>
+  ml <= 0 ? 'Chưa có dung tích' : ml <= 355 ? '250–355ml' : ml <= 520 ? '390–520ml' : ml <= 900 ? '750–900ml' : ml <= 1500 ? '1–1,5L' : ml <= 6000 ? '4,5–5L' : '18,5–20L'
+
+/**
+ * Đoán loại nước, quy cách, dung tích từ tên sản phẩm khi BE chưa trả `catalog` (ProductResponse chưa có),
+ * để trang khách vẫn lọc được theo nhóm. Có dữ liệu từ BE thì dùng dữ liệu đó.
+ */
+export function inferCatalog(name: string, unit: string): CatalogDetails {
+  const text = name.toLowerCase()
+  if (unit.toLowerCase() === 'vỏ' || /^vỏ /.test(text)) return { category: 'Vỏ bình & phụ kiện', packaging: 'Vỏ bình', capacity: '18,5–20L', volumeMl: 20000 }
+  const size = text.match(/(\d+(?:[.,]\d+)?)\s*(ml|lít|l)(?![a-z])/)
+  const volumeMl = size ? Math.round(Number(size[1].replace(',', '.')) * (size[2] === 'ml' ? 1 : 1000)) : 0
+  const category = /có ga|có gas|soda/.test(text) ? 'Nước có ga'
+    : /pocari|revive|bù khoáng|muối khoáng|bổ sung ion/.test(text) ? 'Bù khoáng & điện giải'
+    : /hoàn lưu/.test(text) ? 'Hoàn lưu khoáng'
+    : /kiềm/.test(text) ? 'Ion kiềm'
+    : /khoáng/.test(text) ? 'Nước khoáng'
+    : /tinh khiết/.test(text) ? 'Tinh khiết'
+    : 'Chưa phân loại'
+  const packaging = /\(vòi\)/.test(text) ? 'Bình có vòi'
+    : /\(úp\)/.test(text) || unit.toLowerCase() === 'bình' ? 'Bình úp máy'
+    : /(^|\s)lon(\s|$)/.test(text) ? 'Thùng lon'
+    : /glass|thủy tinh/.test(text) ? 'Thùng chai thủy tinh'
+    : unit.toLowerCase() === 'lốc' ? 'Lốc chai'
+    : 'Thùng chai'
+  return { category, packaging, capacity: capacityOf(volumeMl), volumeMl }
+}
+
 export { normalizeSearch } from '../../shared/utils/search'
