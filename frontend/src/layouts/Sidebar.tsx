@@ -47,16 +47,14 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: Sid
       ),
     }
   }
-  // Tiêu đề nhóm không có chỗ khi thu gọn nên thay bằng đường kẻ giữa các nhóm.
-  const items: MenuProps['items'] = collapsed
-    ? groups.flatMap((group, index) => [...(index ? [{ type: 'divider' as const, key: `divider:${group.label}` }] : []), ...group.items.map(toItem)])
-    : groups.map((group) => ({ type: 'group' as const, key: group.label, label: group.label, children: group.items.map(toItem) }))
+  // Giữ nguyên nhóm ở cả hai chế độ để menu không vẽ lại khi thu gọn/mở rộng; tiêu đề nhóm co lại bằng CSS.
+  const items: MenuProps['items'] = groups.map((group) => ({ type: 'group' as const, key: group.label, label: group.label, children: group.items.map(toItem) }))
 
   const footerLink = (label: string, icon: ReactNode, onClick: () => void, extra?: ReactNode, active = false) => (
     <Tooltip title={collapsed ? label : undefined} placement="right">
       <button className={`af-sider-link${active ? ' is-active' : ''}`} aria-current={active ? 'page' : undefined} aria-label={collapsed ? label : undefined} onClick={onClick}>
         {icon}
-        {!collapsed && <>{label}{extra}</>}
+        {!collapsed && <span className="af-sider-link-text">{label}{extra}</span>}
       </button>
     </Tooltip>
   )

@@ -297,9 +297,20 @@ body {
 .af-nav.is-collapsed .af-menu { padding: 0; scrollbar-width: none; }
 .af-nav.is-collapsed .af-menu::-webkit-scrollbar { display: none; }
 .af-nav.is-collapsed .af-menu .ant-menu-item { display: flex; align-items: center; justify-content: center; width: 44px; height: 40px; margin: 2px auto; padding: 0 !important; }
-.af-nav.is-collapsed .af-menu .ant-menu-item .ant-menu-title-content { display: none; }
+.af-nav.is-collapsed .af-menu .ant-menu-item .ant-menu-title-content { width: 0; opacity: 0; transition: none; }
 .af-nav.is-collapsed .af-menu .ant-menu-item .ant-menu-item-icon { margin: 0; }
-.af-nav.is-collapsed .af-menu .ant-menu-item-divider { margin: 6px 16px; }
+.af-nav.is-collapsed .af-menu .ant-menu-item-group-title { max-height: 0; padding-block: 0 !important; opacity: 0; }
+.af-nav.is-collapsed .af-menu .ant-menu-item-group + .ant-menu-item-group::before { content: ''; display: block; height: 1px; margin: 6px 16px; background: var(--af-border); }
+/* Mở rộng: chữ không xuống dòng khi khung còn hẹp và mờ dần hiện ra sau khi khung gần giãn xong. */
+.af-menu .ant-menu-item-group-title { max-height: 40px; overflow: hidden; white-space: nowrap; transition: max-height .2s ease, padding .2s ease, opacity .15s ease .1s; }
+.af-menu .ant-menu-title-content { overflow: hidden; white-space: nowrap; transition: opacity .15s ease .1s; }
+.af-workspace-text, .af-sider-link-text { overflow: hidden; white-space: nowrap; animation: af-fade-in .15s ease .1s both; }
+.af-sider-link-text { display: flex; flex: 1; align-items: center; gap: 10px; min-width: 0; }
+@keyframes af-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .af-menu .ant-menu-item-group-title, .af-menu .ant-menu-title-content { transition: none; }
+  .af-workspace-text, .af-sider-link-text { animation: none; }
+}
 .af-nav.is-collapsed .af-sider-footer { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0; }
 .af-nav.is-collapsed .af-sider-link { justify-content: center; width: 44px; height: 40px; padding: 0; }
 
