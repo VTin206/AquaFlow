@@ -1,10 +1,18 @@
-import { Button, Drawer, Empty, InputNumber, Skeleton } from 'antd'
-import { Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { Button, Drawer, Empty, InputNumber, Skeleton, Space } from 'antd'
+import { Droplets, Minus, Plus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { currency } from '../../../shared/utils/format'
 import { QueryError } from '../../../shared/components/QueryError'
 import { useCartActions, useCart } from '../cart'
-import { useShopProducts } from '../shopService'
+import { useShopProducts, type ShopProduct } from '../shopService'
+
+function CartThumb({ product }: { product?: ShopProduct }) {
+  const [failed, setFailed] = useState(false)
+  return <span className="af-shop-cart-thumb">
+    {product?.image && !failed ? <img src={product.image} alt="" loading="lazy" onError={() => setFailed(true)} /> : <Droplets size={22} strokeWidth={1.5} aria-hidden />}
+  </span>
+}
 
 export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate()
@@ -18,11 +26,27 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
   return <Drawer open={open} onClose={onClose} title="Giỏ hàng" size={440}>
     {products.isPending ? <Skeleton active /> : products.isError ? <QueryError error={products.error} onRetry={products.refetch} /> : !cart.length ? <Empty description="Giỏ hàng đang trống." /> : <>
       <ul className="af-shop-cart">
-        {lines.map(({ productId, quantity, product }) => <li key={productId}>
-          <div><strong>{product?.name ?? `Sản phẩm ${productId}`}</strong><small>{product ? `${currency(product.price)} / ${product.unit}` : 'Sản phẩm không còn trong danh mục. Vui lòng bỏ khỏi giỏ.'}{product?.available === false && ' · Tạm hết hàng'}</small></div>
-          <InputNumber aria-label={`Số lượng ${product?.name ?? productId}`} min={1} max={99} precision={0} value={quantity} onChange={(value) => value && actions.set(productId, value)} style={{ width: 72 }} />
-          <Button type="text" danger icon={<Trash2 size={16} />} aria-label={`Bỏ ${product?.name ?? productId}`} onClick={() => actions.remove(productId)} />
-        </li>)}
+        {lines.map(({ productId, quantity, product }) => {
+          const name = product?.name ?? `Sản phẩm ${productId}`
+          return <li key={productId}>
+            <CartThumb product={product} />
+            <div className="af-shop-cart-body">
+              <div className="af-shop-cart-head">
+                <strong>{name}</strong>
+                <Button type="text" size="small" danger icon={<Trash2 size={15} />} aria-label={`Bỏ ${name}`} onClick={() => actions.remove(productId)} />
+              </div>
+              <small>{product ? `${currency(product.price)} / ${product.unit.toLowerCase()}` : 'Sản phẩm không còn trong danh mục. Vui lòng bỏ khỏi giỏ.'}{product?.available === false && ' · Tạm hết hàng'}</small>
+              <div className="af-shop-cart-foot">
+                <Space.Compact size="small">
+                  <Button icon={<Minus size={13} />} aria-label={`Bớt ${name}`} disabled={quantity <= 1} onClick={() => actions.set(productId, quantity - 1)} />
+                  <InputNumber aria-label={`Số lượng ${name}`} min={1} max={99} precision={0} controls={false} value={quantity} onChange={(value) => value && actions.set(productId, value)} className="af-shop-cart-qty" />
+                  <Button icon={<Plus size={13} />} aria-label={`Thêm ${name}`} disabled={quantity >= 99} onClick={() => actions.set(productId, quantity + 1)} />
+                </Space.Compact>
+                {product && <strong className="af-money">{currency(product.price * quantity)}</strong>}
+              </div>
+            </div>
+          </li>
+        })}
       </ul>
       <div className="af-order-summary"><span>Tiền hàng tạm tính</span><strong>{currency(subtotal)}</strong></div>
       <p className="af-form-hint">Chưa gồm phí giao và tiền cọc vỏ nếu có.</p>
