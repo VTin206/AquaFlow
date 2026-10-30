@@ -47,7 +47,7 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
     title: 'Ngừng lưu hành?',
     content: <div className="af-confirm-body"><p><strong>{item.name}</strong> sẽ không chọn được cho sản phẩm mới.</p><p>Sản phẩm, sổ vỏ và tiền cọc cũ vẫn giữ nguyên.</p></div>,
     centered: true,
-    okText: 'Ngừng lưu hành',
+    okText: 'Ngừng lưu hành', okButtonProps: { danger: true },
     cancelText: 'Không',
     onOk: () => deactivate.mutateAsync(item.id).catch(() => undefined),
   })

@@ -46,7 +46,7 @@ export function SuppliersPage() {
     title: 'Ngừng hợp tác?',
     content: <div className="af-confirm-body"><p><strong>{supplier.name}</strong> sẽ không chọn được khi tạo phiếu nhập mới.</p><p>Phiếu nhập cũ vẫn giữ nguyên.</p></div>,
     centered: true,
-    okText: 'Ngừng hợp tác',
+    okText: 'Ngừng hợp tác', okButtonProps: { danger: true },
     cancelText: 'Không',
     onOk: () => deactivate.mutateAsync(supplier.id).then(() => { message.success(`Đã ngừng hợp tác với ${supplier.name}.`) }, (error: Error) => { message.error(error.message) }),
   })

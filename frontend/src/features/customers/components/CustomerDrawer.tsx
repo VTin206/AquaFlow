@@ -60,7 +60,7 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
       title: 'Lưu trữ hồ sơ?',
       content: <div className="af-confirm-body"><p><strong>{customer.name}</strong> sẽ không còn trong danh sách và ô chọn khách khi tạo đơn.</p><p>Đơn, công nợ và sổ vỏ cũ vẫn giữ nguyên.</p></div>,
       centered: true,
-      okText: 'Lưu trữ',
+      okText: 'Lưu trữ', okButtonProps: { danger: true },
       cancelText: 'Không',
       onOk: () =>
         deactivate.mutateAsync(customer.id).then(

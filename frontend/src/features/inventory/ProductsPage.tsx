@@ -86,7 +86,7 @@ export function ProductsPage() {
       </div>
     ),
     centered: true,
-    okText: 'Ngừng bán',
+    okText: 'Ngừng bán', okButtonProps: { danger: true },
     cancelText: 'Không',
     onOk: () => deactivate.mutateAsync(product.id).then(
       () => { message.success(`Đã ngừng bán ${product.name}.`) },
