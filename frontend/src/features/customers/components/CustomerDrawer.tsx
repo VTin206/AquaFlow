@@ -3,6 +3,7 @@ import { App, Avatar, Button, Descriptions, Drawer, Empty, Popconfirm, Space, Ta
 import { Pencil, Phone, ShoppingBag } from 'lucide-react'
 import { Money } from '../../../shared/components/Money'
 import { useFeature, useIsDemo } from '../../../shared/features'
+import { Unsupported } from '../../../shared/components/Unsupported'
 import { currency } from '../../../shared/utils/format'
 import { can } from '../../auth/permissions'
 import { useStaff } from '../../auth/useStaff'
@@ -52,7 +53,7 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
     { label: 'Còn phải thu', value: currency(customer.debt), tone: customer.debt > 0 ? 'due' : 'paid', show: showDebt },
     { label: 'Vỏ đang giữ', value: `${customer.bottlesHeld} vỏ`, tone: customer.bottlesHeld > 0 ? 'warning' : undefined, show: showBottles },
     { label: 'Cọc đang giữ', value: currency(customer.depositHeld), tone: 'deposit', show: showBottles },
-  ].filter((item) => item.show)
+  ].map((item) => (item.show ? item : { ...item, value: <Unsupported />, tone: undefined }))
 
   const remove = () =>
     deactivate.mutateAsync(customer.id).then(
@@ -104,7 +105,7 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
               <span className="af-profile-name">{customer.name}</span>
               <small>
                 {customerCode(customer)}
-                {showType && <> · <Tag className="af-inline-tag">{customer.type}</Tag></>}
+                {' · '}{showType ? <Tag className="af-inline-tag">{customer.type}</Tag> : <Unsupported label="Loại khách: chưa hỗ trợ" />}
               </small>
             </div>
           </div>
@@ -151,9 +152,9 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
                         </a>
                       ) : '—',
                     },
-                    ...(showExtras ? [{ key: 'area', label: 'Khu vực', children: customer.area }] : []),
+                    { key: 'area', label: 'Khu vực', children: showExtras ? customer.area : <Unsupported /> },
                     { key: 'addresses', label: 'Địa chỉ giao', children: addressView },
-                    ...(showExtras ? [{ key: 'note', label: 'Ghi chú', children: customer.note || '—' }] : []),
+                    { key: 'note', label: 'Ghi chú', children: showExtras ? customer.note || '—' : <Unsupported /> },
                   ]}
                 />
               ),
@@ -217,10 +218,10 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
                 />
               ),
             },
-            ...(showBottles ? [{
+            {
               key: 'bottles',
               label: 'Vỏ & cọc',
-              children: (
+              children: !showBottles ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Tính năng đang phát triển — chờ backend bổ sung." /> : (
                 <>
                   <div className="af-bottle-balance">
                     <span>
@@ -278,7 +279,7 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
                   </Typography.Paragraph>
                 </>
               ),
-            }] : []),
+            },
           ]}
         />
       </Drawer>

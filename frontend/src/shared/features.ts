@@ -2,7 +2,8 @@ import { useAuth } from '../features/auth/useAuth'
 
 /**
  * Phần giao diện đã có API BE hỗ trợ. Bản dùng thử bật hết để giới thiệu đủ thiết kế;
- * tài khoản thật chỉ hiện phần BE trả dữ liệu thật. BE bổ sung field/API nào thì bật cờ đó.
+ * tài khoản thật vẫn giữ bố cục nhưng phần cờ tắt bị khóa và ghi "Chưa hỗ trợ" (`Unsupported`),
+ * không hiện dữ liệu giả. BE bổ sung field/API nào thì bật cờ đó.
  */
 export const backendFeatures = {
   /** Người liên hệ của nhà cung cấp (SupplierResponse chưa có). */

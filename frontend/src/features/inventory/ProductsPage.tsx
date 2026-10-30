@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { App, Button, Card, Col, Empty, Input, Pagination, Popconfirm, Row, Segmented, Select, Skeleton, Space, Tag, Typography } from 'antd'
+import { App, Button, Card, Col, Empty, Input, Pagination, Popconfirm, Row, Segmented, Select, Skeleton, Space, Tag, Tooltip, Typography } from 'antd'
 import { Droplets, LayoutGrid, Plus, RotateCcw, Search } from 'lucide-react'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
@@ -35,7 +35,6 @@ export function ProductsPage() {
   const { message } = App.useApp()
   const demo = useIsDemo()
   const canManage = useCanManageProducts()
-  const showImage = useFeature('productImage')
   const showDetails = useFeature('productCatalogDetails')
   const [status, setStatus] = useState<ProductStatus>('active')
   // Nhân viên không quản lý chỉ xem sản phẩm đang bán (BE cũng giới hạn như vậy).
@@ -101,7 +100,7 @@ export function ProductsPage() {
               <Col key={product.id} xs={24} sm={12} lg={8} xl={6}>
                 <Card
                   className="af-product-card"
-                  cover={showImage ? <ProductImage key={product.image ?? product.id} product={product} /> : undefined}
+                  cover={<ProductImage key={product.image ?? product.id} product={product} />}
                   actions={canManage ? [
                     <Button key="edit" type="link" size="small" onClick={() => setEditing(product)}>Sửa</Button>,
                     ...(product.active ? [
@@ -111,7 +110,7 @@ export function ProductsPage() {
                     ] : []),
                   ] : undefined}
                 >
-                  <div className="af-product-brand-line"><span>{brandName(product)}</span>{showDetails && <Tag>{details.category}</Tag>}</div>
+                  <div className="af-product-brand-line"><span>{brandName(product)}</span><Tag>{details.category}</Tag></div>
                   <Typography.Title level={5} className="af-product-name">{product.name}</Typography.Title>
                   {spec && <p className="af-product-spec">{spec}</p>}
                   <Typography.Text type="secondary" className="af-product-sku">{product.sku}</Typography.Text>
@@ -132,7 +131,7 @@ export function ProductsPage() {
   return (
     <Page
       title="Sản phẩm"
-      description={showDetails ? 'Tra cứu theo thương hiệu, loại nước và quy cách đóng gói.' : 'Tra cứu theo thương hiệu, mã hàng và đơn vị bán.'}
+      description="Tra cứu theo thương hiệu, loại nước và quy cách đóng gói."
       actions={
         <Space wrap>
           {!demo && <Button onClick={() => setBottlesOpen(true)}>Loại vỏ bình</Button>}
@@ -156,9 +155,13 @@ export function ProductsPage() {
         </div>
         <div className="af-catalog-filters">
           <Input aria-label="Tìm sản phẩm" allowClear prefix={<Search size={16} className="af-input-icon" />} placeholder="Tìm tên, mã hàng, thương hiệu..." value={query} onChange={(event) => { setQuery(event.target.value); setPage(1) }} />
-          {showDetails && <Select aria-label="Loại nước" allowClear placeholder="Tất cả loại nước" value={category} options={catalogCategories.map((value) => ({ value, label: value }))} onChange={(value) => { setCategory(value); setPage(1) }} />}
-          <Select aria-label={showDetails ? 'Quy cách' : 'Đơn vị'} allowClear placeholder={showDetails ? 'Tất cả quy cách' : 'Tất cả đơn vị'} value={packaging} options={filterOptions('packaging')} onChange={(value) => { setPackaging(value); setPage(1) }} />
-          {showDetails && <Select aria-label="Dung tích" allowClear placeholder="Tất cả dung tích" value={capacity} options={filterOptions('capacity')} onChange={(value) => { setCapacity(value); setPage(1) }} />}
+          <Tooltip title={showDetails ? undefined : 'Backend chưa hỗ trợ loại nước'}>
+            <Select aria-label="Loại nước" allowClear disabled={!showDetails} placeholder={showDetails ? 'Tất cả loại nước' : 'Loại nước (chưa hỗ trợ)'} value={category} options={catalogCategories.map((value) => ({ value, label: value }))} onChange={(value) => { setCategory(value); setPage(1) }} />
+          </Tooltip>
+          <Select aria-label="Quy cách" allowClear placeholder="Tất cả quy cách" value={packaging} options={filterOptions('packaging')} onChange={(value) => { setPackaging(value); setPage(1) }} />
+          <Tooltip title={showDetails ? undefined : 'Backend chưa hỗ trợ dung tích'}>
+            <Select aria-label="Dung tích" allowClear disabled={!showDetails} placeholder={showDetails ? 'Tất cả dung tích' : 'Dung tích (chưa hỗ trợ)'} value={capacity} options={filterOptions('capacity')} onChange={(value) => { setCapacity(value); setPage(1) }} />
+          </Tooltip>
         </div>
         <div className="af-catalog-results">
           {canManage && <Segmented<ProductStatus> value={status} onChange={(next) => { setStatus(next); setPage(1) }} options={statusOptions} />}

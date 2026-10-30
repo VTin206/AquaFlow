@@ -3,6 +3,7 @@ import type { Supplier, SupplierDraft } from '../types'
 import { useSaveSupplier } from '../useSuppliers'
 import { useConfirmDiscard } from '../../../shared/hooks/useConfirmDiscard'
 import { useFeature } from '../../../shared/features'
+import { UNSUPPORTED_HINT } from '../../../shared/components/Unsupported'
 
 /** Thêm mới khi không có `supplier`; sửa khi có. */
 export function SupplierFormModal({ supplier, onClose, onSaved }: { supplier?: Supplier; onClose: () => void; onSaved: () => void }) {
@@ -44,14 +45,12 @@ export function SupplierFormModal({ supplier, onClose, onSaved }: { supplier?: S
           <Input autoFocus placeholder="Ví dụ: Công ty phân phối nước Minh An" maxLength={150} />
         </Form.Item>
         <Row gutter={16}>
-          {showContact && (
-            <Col xs={24} sm={12}>
-              <Form.Item name="contactName" label="Người liên hệ" rules={[{ max: 100, message: 'Tên người liên hệ tối đa 100 ký tự.' }]}>
-                <Input placeholder="Họ và tên người liên hệ" maxLength={100} />
-              </Form.Item>
-            </Col>
-          )}
-          <Col xs={24} sm={showContact ? 12 : 24}>
+          <Col xs={24} sm={12}>
+            <Form.Item name="contactName" label="Người liên hệ" extra={showContact ? undefined : UNSUPPORTED_HINT} rules={[{ max: 100, message: 'Tên người liên hệ tối đa 100 ký tự.' }]}>
+              <Input placeholder="Họ và tên người liên hệ" maxLength={100} disabled={!showContact} />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={12}>
             <Form.Item name="phone" label="Số điện thoại" rules={[
               { required: true, whitespace: true, message: 'Nhập số điện thoại.' },
               { transform: (value: string) => value?.replace(/[\s().-]/g, ''), pattern: /^(?:0\d{9,10}|\+84\d{9,10})$/, message: 'Nhập số điện thoại hợp lệ, bắt đầu bằng 0 hoặc +84.' },
@@ -60,11 +59,9 @@ export function SupplierFormModal({ supplier, onClose, onSaved }: { supplier?: S
             </Form.Item>
           </Col>
         </Row>
-        {showEmail && (
-          <Form.Item name="email" label="Email" rules={[{ type: 'email', transform: (value: string) => value?.trim(), message: 'Email không đúng định dạng.' }, { max: 254, message: 'Email tối đa 254 ký tự.' }]}>
-            <Input placeholder="Ví dụ: lienhe@congty.vn" maxLength={254} />
-          </Form.Item>
-        )}
+        <Form.Item name="email" label="Email" extra={showEmail ? undefined : UNSUPPORTED_HINT} rules={[{ type: 'email', transform: (value: string) => value?.trim(), message: 'Email không đúng định dạng.' }, { max: 254, message: 'Email tối đa 254 ký tự.' }]}>
+          <Input placeholder="Ví dụ: lienhe@congty.vn" maxLength={254} disabled={!showEmail} />
+        </Form.Item>
         <Form.Item name="address" label="Địa chỉ" rules={[{ required: true, whitespace: true, message: 'Nhập địa chỉ nhà cung cấp.' }, { max: 300, message: 'Địa chỉ tối đa 300 ký tự.' }]}>
           <Input.TextArea rows={2} placeholder="Số nhà, đường, phường/xã, tỉnh/thành phố" maxLength={300} />
         </Form.Item>

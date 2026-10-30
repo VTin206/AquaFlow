@@ -4,6 +4,7 @@ import { Eye } from 'lucide-react'
 import { MobileRecordList } from '../../../shared/components/MobileRecordList'
 import { Money } from '../../../shared/components/Money'
 import { useFeature, useIsDemo } from '../../../shared/features'
+import { Unsupported } from '../../../shared/components/Unsupported'
 import { amountDue, paymentLabel, type Order } from '../types'
 import { nextActionLabel } from '../orderStatus'
 import { AdvanceStatusButton } from './AdvanceStatusButton'
@@ -54,7 +55,7 @@ export function OrderCards({ orders, loading, compact, emptyText, onDetails, fil
           <Space size={[4, 4]} wrap><OrderStatusTag status={order.status} method={order.method} /><LateTag order={order} /></Space>
           <dl className="af-record-facts">
             <dt>Tổng tiền</dt><dd><Money value={order.total} /></dd>
-            {showPayments && order.status !== 'Đã hủy' && <><dt>Còn phải thu</dt><dd><Money value={amountDue(order)} tone={amountDue(order) > 0 ? 'due' : 'paid'} /></dd></>}
+            {order.status !== 'Đã hủy' && <><dt>Còn phải thu</dt><dd>{showPayments ? <Money value={amountDue(order)} tone={amountDue(order) > 0 ? 'due' : 'paid'} /> : <Unsupported />}</dd></>}
           </dl>
           <p className="af-record-meta">{paymentLabel(order)}</p>
           <div className="af-record-actions">

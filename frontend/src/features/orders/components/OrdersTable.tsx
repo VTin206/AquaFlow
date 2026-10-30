@@ -5,6 +5,7 @@ import { Money } from '../../../shared/components/Money'
 import { tablePagination, tableScrollHeight } from '../../../shared/utils/table'
 import { useColumnSort } from '../../../shared/components/sortableColumn'
 import { useFeature, useIsDemo } from '../../../shared/features'
+import { Unsupported } from '../../../shared/components/Unsupported'
 import { LiveOrderDetails } from '../../live/LiveOrderDetails'
 import { amountDue, createdAtOf, paidAmount, paymentLabel, type Order } from '../types'
 import { AdvanceStatusButton } from './AdvanceStatusButton'
@@ -69,8 +70,8 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
       render: (total: number, order) => (
         <div className="af-cell-stack af-money-stack">
           <Money value={total} />
-          {!compact && showPayments && order.status !== 'Đã hủy' && (
-            <small>{amountDue(order) > 0 ? <Money value={amountDue(order)} tone="due" prefix="Còn " /> : <span className="af-money is-paid">Đã thu đủ</span>}</small>
+          {!compact && order.status !== 'Đã hủy' && (
+            <small>{!showPayments ? <Unsupported label="Còn phải thu: chưa hỗ trợ" /> : amountDue(order) > 0 ? <Money value={amountDue(order)} tone="due" prefix="Còn " /> : <span className="af-money is-paid">Đã thu đủ</span>}</small>
           )}
         </div>
       ),

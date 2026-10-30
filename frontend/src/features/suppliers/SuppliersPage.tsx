@@ -6,6 +6,7 @@ import { QueryError } from '../../shared/components/QueryError'
 import { CountLabel } from '../../shared/components/CountLabel'
 import { useColumnSort } from '../../shared/components/sortableColumn'
 import { useFeature } from '../../shared/features'
+import { Unsupported } from '../../shared/components/Unsupported'
 import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
 import { SupplierFormModal } from './components/SupplierFormModal'
 import type { SupplierStatus } from './supplierService'
@@ -46,11 +47,14 @@ export function SuppliersPage() {
     },
     {
       title: 'Liên hệ', dataIndex: 'phone', width: 200,
-      render: (_, supplier) => showContact
-        ? <div className="af-cell-stack"><span className="af-cell-truncate" title={supplier.contactName}>{supplier.contactName || 'Chưa có người liên hệ'}</span><small>{supplier.phone ? <a href={`tel:${supplier.phone}`}>{supplier.phone}</a> : '—'}</small></div>
-        : supplier.phone ? <a href={`tel:${supplier.phone}`}>{supplier.phone}</a> : '—',
+      render: (_, supplier) => (
+        <div className="af-cell-stack">
+          {showContact ? <span className="af-cell-truncate" title={supplier.contactName}>{supplier.contactName || 'Chưa có người liên hệ'}</span> : <Unsupported label="Người liên hệ: chưa hỗ trợ" />}
+          <small>{supplier.phone ? <a href={`tel:${supplier.phone}`}>{supplier.phone}</a> : '—'}</small>
+        </div>
+      ),
     },
-    ...(showEmail ? [{ title: 'Email', dataIndex: 'email', width: 230, ellipsis: true, render: (email?: string) => email ? <a href={`mailto:${email}`}>{email}</a> : '—' }] : []),
+    { title: 'Email', dataIndex: 'email', width: 230, ellipsis: true, render: (email?: string) => (!showEmail ? <Unsupported /> : email ? <a href={`mailto:${email}`}>{email}</a> : '—') },
     { title: 'Địa chỉ', dataIndex: 'address', width: 300, ellipsis: true, render: (address?: string) => address || '—' },
     ...(canManage ? [
       { title: 'Trạng thái', dataIndex: 'active', width: 130, render: (active: boolean) => <Tag color={active ? 'green' : 'default'}>{active ? 'Đang dùng' : 'Đã ngừng dùng'}</Tag> },

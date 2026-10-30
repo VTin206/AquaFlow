@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, Button, Card, Input, Select } from 'antd'
+import { Alert, Button, Card, Input, Select, Tooltip } from 'antd'
 import { Plus, RotateCcw, Search } from 'lucide-react'
 import { CountLabel } from '../../shared/components/CountLabel'
 import { Page } from '../../shared/components/Page'
@@ -41,7 +41,7 @@ export function OrdersPage() {
   return (
     <Page
       title="Đơn hàng"
-      description={showPayments ? 'Tiếp nhận tại quầy, điện thoại hoặc tin nhắn; theo dõi giao nhận và thanh toán riêng.' : 'Tiếp nhận tại quầy, điện thoại, tin nhắn và website; xác nhận để giữ hàng trong kho.'}
+      description="Tiếp nhận tại quầy, điện thoại hoặc tin nhắn; theo dõi giao nhận và thanh toán riêng."
       actions={
         <Button type="primary" icon={<Plus size={16} />} onClick={() => setCreating(true)}>
           Tạo đơn hàng
@@ -81,15 +81,16 @@ export function OrdersPage() {
                   style={{ minWidth: 160 }}
                   options={[{ value: ALL, label: 'Mọi hình thức nhận' }, ...['Tại quầy', 'Giao tận nơi'].map((value) => ({ value, label: value }))]}
                 />
-                {showPayments && (
+                <Tooltip title={showPayments ? undefined : 'Backend chưa hỗ trợ phiếu thu'}>
                   <Select
                     aria-label="Lọc thanh toán"
-                    value={payment}
+                    value={paymentFilter}
+                    disabled={!showPayments}
                     onChange={(value) => updateFilters({ payment: value })}
                     style={{ minWidth: 165 }}
-                    options={[{ value: ALL, label: 'Mọi thanh toán' }, ...['Còn phải thu', 'Đã thanh toán'].map((value) => ({ value, label: value }))]}
+                    options={[{ value: ALL, label: showPayments ? 'Mọi thanh toán' : 'Thanh toán (chưa hỗ trợ)' }, ...['Còn phải thu', 'Đã thanh toán'].map((value) => ({ value, label: value }))]}
                   />
-                )}
+                </Tooltip>
               </div>
               <Input
                 allowClear

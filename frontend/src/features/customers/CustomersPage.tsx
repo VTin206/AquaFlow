@@ -8,6 +8,7 @@ import { Money } from '../../shared/components/Money'
 import { currency } from '../../shared/utils/format'
 import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
 import { useFeature, useIsDemo } from '../../shared/features'
+import { Unsupported } from '../../shared/components/Unsupported'
 import { LiveOrderDraftModal } from '../live/LiveOrderDraftModal'
 import { CreateOrderModal } from '../orders/components/CreateOrderModal'
 import { CustomerDrawer } from './components/CustomerDrawer'
@@ -16,9 +17,6 @@ import { CustomerCards } from './components/CustomerCards'
 import { customerCode, type Customer } from './types'
 import { useCustomers } from './useCustomers'
 import { matchesSearch } from '../../shared/utils/search'
-
-/** Cột chỉ hiện khi tính năng được bật; giữ đúng kiểu cột của bảng. */
-const optional = <T,>(show: boolean, column: TableColumnsType<T>[number]): TableColumnsType<T> => (show ? [column] : [])
 
 export function CustomersPage() {
   const screens = Grid.useBreakpoint()
@@ -40,12 +38,13 @@ export function CustomersPage() {
   const totalDebt = customers.reduce((sum, customer) => sum + customer.debt, 0)
 
   const sort = useColumnSort<Customer>({ key: 'orders', order: 'descend' })
+  const unsupported = (title: string) => <Statistic title={title} valueRender={() => <Unsupported />} />
   const stats = [
-    { key: 'count', show: true, node: <Statistic title="Khách hàng" value={customers.length} /> },
-    { key: 'debt', show: showDebt, node: <Statistic className={totalDebt > 0 ? 'af-stat-due' : 'af-stat-paid'} title="Còn phải thu" value={totalDebt} formatter={(value) => currency(Number(value))} /> },
-    { key: 'bottles', show: showBottles, node: <Statistic title="Vỏ khách đang giữ" value={totalBottles} suffix="vỏ" /> },
-    { key: 'deposit', show: showBottles, node: <Statistic className="af-stat-deposit" title="Tiền cọc đang giữ" value={totalDeposit} formatter={(value) => currency(Number(value))} /> },
-  ].filter((stat) => stat.show)
+    { key: 'count', node: <Statistic title="Khách hàng" value={customers.length} /> },
+    { key: 'debt', node: showDebt ? <Statistic className={totalDebt > 0 ? 'af-stat-due' : 'af-stat-paid'} title="Còn phải thu" value={totalDebt} formatter={(value) => currency(Number(value))} /> : unsupported('Còn phải thu') },
+    { key: 'bottles', node: showBottles ? <Statistic title="Vỏ khách đang giữ" value={totalBottles} suffix="vỏ" /> : unsupported('Vỏ khách đang giữ') },
+    { key: 'deposit', node: showBottles ? <Statistic className="af-stat-deposit" title="Tiền cọc đang giữ" value={totalDeposit} formatter={(value) => currency(Number(value))} /> : unsupported('Tiền cọc đang giữ') },
+  ]
 
   const columns: TableColumnsType<Customer> = [
     {
@@ -64,23 +63,23 @@ export function CustomersPage() {
         </div>
       ),
     },
-    ...optional<Customer>(showArea, { title: 'Khu vực', dataIndex: 'area', ellipsis: true }),
+    { title: 'Khu vực', dataIndex: 'area', ellipsis: true, render: (area: string) => (showArea ? area : <Unsupported />) },
     { ...sort.column('Số đơn', 'orders', 'number'), dataIndex: 'orders', align: 'right', width: 100, sorter: (a, b) => a.orders - b.orders },
-    ...optional<Customer>(showDebt, {
+    showDebt ? {
       ...sort.column('Còn phải thu', 'debt', 'number'),
       dataIndex: 'debt',
       align: 'right',
       width: 140,
       sorter: (a, b) => a.debt - b.debt,
       render: (debt: number) => (debt > 0 ? <Money value={debt} tone="due" /> : <span className="af-text-muted">—</span>),
-    }),
-    ...optional<Customer>(showBottles, {
+    } : { title: 'Còn phải thu', key: 'debt', align: 'right', width: 140, render: () => <Unsupported /> },
+    showBottles ? {
       ...sort.column('Vỏ đang giữ', 'bottlesHeld', 'number'),
       dataIndex: 'bottlesHeld',
       width: 130,
       sorter: (a, b) => a.bottlesHeld - b.bottlesHeld,
       render: (count: number) => (count > 0 ? <Tag color="orange">{count} vỏ</Tag> : <Tag>Không</Tag>),
-    }),
+    } : { title: 'Vỏ đang giữ', key: 'bottlesHeld', width: 130, render: () => <Unsupported /> },
     {
       title: 'Thao tác',
       key: 'action',
@@ -101,7 +100,7 @@ export function CustomersPage() {
   return (
     <Page
       title="Khách hàng"
-      description={showDebt || showBottles ? 'Hồ sơ liên hệ, lịch sử mua, công nợ và sổ vỏ bình của từng khách.' : 'Hồ sơ liên hệ, địa chỉ giao và lịch sử mua của từng khách.'}
+      description="Hồ sơ liên hệ, lịch sử mua, công nợ và sổ vỏ bình của từng khách."
       actions={
         <Button type="primary" icon={<Plus size={16} />} onClick={() => setEditing(null)}>
           Thêm khách hàng
@@ -116,7 +115,7 @@ export function CustomersPage() {
         <>
           <Row gutter={[12, 12]} className="af-stat-row">
             {stats.map((stat) => (
-              <Col key={stat.key} xs={24} sm={12} lg={stats.length > 1 ? 6 : 8}>
+              <Col key={stat.key} xs={24} sm={12} lg={6}>
                 <Card loading={customersQuery.isPending}>{stat.node}</Card>
               </Col>
             ))}

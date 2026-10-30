@@ -4,6 +4,7 @@ import { Plus, UserRound } from 'lucide-react'
 import { MobileRecordList } from '../../../shared/components/MobileRecordList'
 import { Money } from '../../../shared/components/Money'
 import { useFeature } from '../../../shared/features'
+import { Unsupported } from '../../../shared/components/Unsupported'
 import { customerCode, type Customer } from '../types'
 
 type CustomerCardsProps = {
@@ -44,12 +45,10 @@ export function CustomerCards({ customers, loading, emptyText, onProfile, onCrea
             {customer.phone && <a href={`tel:${customer.phone.replace(/[\s().-]/g, '')}`}>{customer.phone}</a>}
             {customer.area && <span>{customer.area}</span>}
           </p>
-          {(showDebt || showBottles) && (
-            <dl className="af-record-facts">
-              {showDebt && <><dt>Còn phải thu</dt><dd><Money value={customer.debt} tone={customer.debt > 0 ? 'due' : 'paid'} /></dd></>}
-              {showBottles && <><dt>Vỏ đang giữ</dt><dd>{customer.bottlesHeld} vỏ</dd></>}
-            </dl>
-          )}
+          <dl className="af-record-facts">
+            <dt>Còn phải thu</dt><dd>{showDebt ? <Money value={customer.debt} tone={customer.debt > 0 ? 'due' : 'paid'} /> : <Unsupported />}</dd>
+            <dt>Vỏ đang giữ</dt><dd>{showBottles ? `${customer.bottlesHeld} vỏ` : <Unsupported />}</dd>
+          </dl>
           <div className="af-record-actions">
             <Button icon={<UserRound size={16} />} onClick={() => onProfile(customer.id)} aria-label={`Hồ sơ ${customer.name}`}>Hồ sơ</Button>
             <Button icon={<Plus size={16} />} onClick={() => onCreateOrder(customer)} aria-label={`Tạo đơn cho ${customer.name}`}>Tạo đơn</Button>

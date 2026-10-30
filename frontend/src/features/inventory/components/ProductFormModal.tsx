@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { App, Col, Form, Input, InputNumber, Modal, Row, Select, Upload } from 'antd'
 import { ImagePlus } from 'lucide-react'
 import { useFeature, useIsDemo } from '../../../shared/features'
+import { UNSUPPORTED_HINT } from '../../../shared/components/Unsupported'
 import { bottleTypeApi } from '../../live/bottleTypeApi'
 import { useSaveProduct, type CatalogItem, type ProductForm } from '../productCatalog'
 import { useConfirmDiscard } from '../../../shared/hooks/useConfirmDiscard'
@@ -81,9 +82,8 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
         onFinish={submit}
         preserve={false}
       >
-        {showImage && (
-          <Form.Item label="Ảnh sản phẩm" extra={`PNG, JPG hoặc WEBP, tối đa ${MAX_IMAGE_MB} MB.`}>
-            <Upload accept="image/*" listType="picture-card" maxCount={1} showUploadList={false} beforeUpload={readImage}>
+        <Form.Item label="Ảnh sản phẩm" extra={showImage ? `PNG, JPG hoặc WEBP, tối đa ${MAX_IMAGE_MB} MB.` : UNSUPPORTED_HINT}>
+            <Upload accept="image/*" listType="picture-card" maxCount={1} showUploadList={false} beforeUpload={readImage} disabled={!showImage}>
               {image ? (
                 <img src={image} alt="Ảnh xem trước" className="af-upload-preview" />
               ) : (
@@ -94,7 +94,6 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
               )}
             </Upload>
           </Form.Item>
-        )}
         <Row gutter={16}>
           <Col xs={24} sm={14}>
             <Form.Item name="name" label="Tên sản phẩm" rules={[{ required: true, whitespace: true, message: 'Nhập tên sản phẩm.' }, { max: 200, message: 'Tên tối đa 200 ký tự.' }]}>
