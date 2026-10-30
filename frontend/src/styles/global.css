@@ -291,11 +291,17 @@ body {
 .af-sider-toggle { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 28px; height: 28px; padding: 0; border: 1px solid var(--af-border); border-radius: 6px; background: #fff; color: var(--af-text-secondary); cursor: pointer; }
 .af-sider-toggle:hover { color: var(--af-primary); border-color: var(--af-primary); }
 .af-sider-toggle:focus-visible { outline: 2px solid var(--af-primary); outline-offset: 2px; }
-.af-nav.is-collapsed .af-workspace { flex-direction: column; justify-content: center; gap: 12px; margin: 0 12px 20px; padding: 10px 0; }
-.af-nav.is-collapsed .af-menu { padding: 0 8px; }
-.af-nav.is-collapsed .af-menu .ant-menu-item-divider { margin: 8px 12px; }
-.af-nav.is-collapsed .af-sider-footer { padding: 12px 8px; }
-.af-nav.is-collapsed .af-sider-link { justify-content: center; padding: 8px 0; }
+/* Mọi icon cùng một trục giữa: ô 44px căn giữa trong cột 72px, thanh cuộn ẩn để không đẩy lệch. */
+.af-nav.is-collapsed { padding-top: 12px; }
+.af-nav.is-collapsed .af-workspace { flex-direction: column; justify-content: center; gap: 8px; margin: 0 auto 12px; padding: 8px 0; width: 48px; border: 0; background: none; }
+.af-nav.is-collapsed .af-menu { padding: 0; scrollbar-width: none; }
+.af-nav.is-collapsed .af-menu::-webkit-scrollbar { display: none; }
+.af-nav.is-collapsed .af-menu .ant-menu-item { display: flex; align-items: center; justify-content: center; width: 44px; height: 40px; margin: 2px auto; padding: 0 !important; }
+.af-nav.is-collapsed .af-menu .ant-menu-item .ant-menu-title-content { display: none; }
+.af-nav.is-collapsed .af-menu .ant-menu-item .ant-menu-item-icon { margin: 0; }
+.af-nav.is-collapsed .af-menu .ant-menu-item-divider { margin: 6px 16px; }
+.af-nav.is-collapsed .af-sider-footer { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0; }
+.af-nav.is-collapsed .af-sider-link { justify-content: center; width: 44px; height: 40px; padding: 0; }
 
 /* Nhãn đếm dạng viên thuốc và nhãn "Mới" */
 .af-count-label {
