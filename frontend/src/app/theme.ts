@@ -1,4 +1,4 @@
-import type { ThemeConfig } from 'antd'
+import { theme, type ThemeConfig } from 'antd'
 
 // Design token dùng chung cho Ant Design. Đổi màu/font toàn app tại đây.
 export const appTheme: ThemeConfig = {
@@ -59,5 +59,38 @@ export const appTheme: ThemeConfig = {
     Segmented: { trackBg: '#f0f4f8', itemSelectedColor: '#087fad', trackPadding: 4 },
     Form: { labelColor: '#263e53', labelFontSize: 13, verticalLabelPadding: '0 0 8px' },
     Modal: { titleFontSize: 18 },
+  },
+}
+
+// Chế độ tối: thuật toán tối của AntD + các màu ghi đè theo bảng màu tối trong global.css (:root[data-theme="dark"]).
+export const darkTheme: ThemeConfig = {
+  ...appTheme,
+  algorithm: theme.darkAlgorithm,
+  token: {
+    ...appTheme.token,
+    colorPrimary: '#3aa6d6',
+    colorInfo: '#3aa6d6',
+    colorSuccess: '#4cc39a',
+    colorWarning: '#e2a03f',
+    colorError: '#f07171',
+    colorText: '#d5e1ec',
+    colorTextHeading: '#eef4fa',
+    colorTextSecondary: '#9fb3c5',
+    colorTextTertiary: '#7f94a7',
+    colorBorder: '#2f4256',
+    colorBorderSecondary: '#243445',
+    colorBgLayout: '#0e1620',
+    colorBgContainer: '#141f2b',
+    colorBgElevated: '#182533',
+  },
+  components: {
+    ...appTheme.components,
+    Breadcrumb: { ...appTheme.components?.Breadcrumb, linkColor: '#7f94a7', linkHoverColor: '#3aa6d6', lastItemColor: '#eef4fa', separatorColor: '#7f94a7' },
+    Layout: { siderBg: '#141f2b', headerBg: '#141f2b', bodyBg: '#0e1620' },
+    Menu: { ...appTheme.components?.Menu, itemSelectedBg: '#12324a', itemSelectedColor: '#5bb8e3', itemColor: '#9fb3c5', itemHoverBg: '#1c2a39', groupTitleColor: '#7f94a7', itemBg: 'transparent' },
+    Button: { ...appTheme.components?.Button, primaryShadow: 'none' },
+    Table: { ...appTheme.components?.Table, headerBg: '#182533', headerColor: '#9fb3c5', rowHoverBg: '#1a2a3a' },
+    Segmented: { ...appTheme.components?.Segmented, trackBg: '#1a2734', itemSelectedColor: '#5bb8e3', itemSelectedBg: '#243445' },
+    Form: { ...appTheme.components?.Form, labelColor: '#d5e1ec' },
   },
 }

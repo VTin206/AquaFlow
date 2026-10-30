@@ -3,6 +3,7 @@ import { Spin } from 'antd'
 import { Navigate, Route, Routes } from 'react-router'
 import { AppLayout } from '../layouts/AppLayout'
 import { DriverLayout } from '../layouts/DriverLayout'
+import { ThemedArea } from '../layouts/ThemedArea'
 import { RequireAuth } from './RequireAuth'
 import { usePageSupported } from '../shared/features'
 
@@ -61,7 +62,7 @@ export function App() {
           <Route path="track/:token" element={<TrackPage />} />
         </Route>
         <Route element={<RequireAuth />}>
-          <Route element={<AppLayout />}>
+          <Route element={<ThemedArea><AppLayout /></ThemedArea>}>
             <Route index element={<BackendPage path="/" title="Tổng quan"><DashboardPage /></BackendPage>} />
             <Route path="orders" element={<OrdersPage />} />
             <Route path="inventory" element={<InventoryPage />} />
@@ -75,7 +76,7 @@ export function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
           {/* Nhân viên giao hàng dùng khung riêng, không vào trang quản lý. */}
-          <Route element={<DriverLayout />}>
+          <Route element={<ThemedArea><DriverLayout /></ThemedArea>}>
             <Route path="driver" element={<BackendPage path="/driver" title="Chuyến của tôi"><DriverPage /></BackendPage>} />
           </Route>
         </Route>
