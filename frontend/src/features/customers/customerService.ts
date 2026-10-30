@@ -124,6 +124,18 @@ export const customerService = {
       logActivity('Khách hàng', record.id, `Lưu trữ hồ sơ ${record.name}`)
     }),
 
+  archived: () => mockRequest(() => db.customers.filter((customer) => customer.active === false).map(toView)),
+
+  /** Khôi phục hồ sơ đã lưu trữ: khách hiện lại trong danh sách và ô chọn khách. */
+  activate: (id: string) =>
+    mockRequest(() => {
+      const record = db.customers.find((customer) => customer.id === id)
+      if (!record) throw mockError(404, 'Không tìm thấy khách hàng.')
+      requireRole(['ADMIN', 'SALES_STAFF'], 'khôi phục hồ sơ khách')
+      record.active = true
+      logActivity('Khách hàng', record.id, `Khôi phục hồ sơ ${record.name}`)
+    }),
+
   ledger: (customerId: string) =>
     mockRequest(() => db.bottleLedger.filter((entry) => entry.customerId === customerId).sort((a, b) => b.at.localeCompare(a.at))),
 

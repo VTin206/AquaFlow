@@ -44,6 +44,12 @@ export const supplierService = {
     record.active = false
     logActivity('Nhà cung cấp', id, `Ngừng hợp tác với ${record.name}`)
   }),
+  activate: (id: string) => mockRequest(() => {
+    requireRole(['ADMIN', 'SALES_STAFF'], 'hợp tác lại với nhà cung cấp')
+    const record = findRecord(id)
+    record.active = true
+    logActivity('Nhà cung cấp', id, `Hợp tác lại với ${record.name}`)
+  }),
 }
 
 // Tài khoản thật: SupplierController (BE2). Chỉ ADMIN được ghi; nhân viên chỉ thấy nhà cung cấp đang dùng.

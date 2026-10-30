@@ -103,6 +103,16 @@ export function useDeactivateCustomer() {
   })
 }
 
+/** Khách đã lưu trữ; BE chưa có API nên chỉ bản dùng thử (cờ `reactivate`). */
+export function useArchivedCustomers(enabled: boolean) {
+  return useQuery({ queryKey: [...customerKeys.all, 'archived'], queryFn: customerService.archived, enabled })
+}
+
+export function useActivateCustomer() {
+  const invalidate = useInvalidateCustomers()
+  return useMutation({ mutationFn: customerService.activate, onSuccess: () => void invalidate() })
+}
+
 export function useRecordBottles() {
   const queryClient = useQueryClient()
   return useMutation({

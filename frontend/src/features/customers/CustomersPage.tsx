@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Button, Card, Col, Grid, Input, Row, Statistic, Table, Tag, Tooltip, type TableColumnsType } from 'antd'
-import { Plus, Search, UserRound } from 'lucide-react'
+import { App, Button, Card, Col, Dropdown, Grid, Input, Row, Segmented, Statistic, Table, Tag, Tooltip, type TableColumnsType } from 'antd'
+import { Ellipsis, Plus, Search, UserRound } from 'lucide-react'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
 import { useColumnSort } from '../../shared/components/sortableColumn'
@@ -15,7 +15,7 @@ import { CustomerDrawer } from './components/CustomerDrawer'
 import { CustomerFormModal } from './components/CustomerFormModal'
 import { CustomerCards } from './components/CustomerCards'
 import { customerCode, type Customer } from './types'
-import { useCustomers } from './useCustomers'
+import { useActivateCustomer, useArchivedCustomers, useCustomers } from './useCustomers'
 import { matchesSearch } from '../../shared/utils/search'
 
 export function CustomersPage() {
@@ -25,6 +25,12 @@ export function CustomersPage() {
   const showDebt = useFeature('customerDebt')
   const showBottles = useFeature('bottleLedger')
   const customersQuery = useCustomers()
+  const { message } = App.useApp()
+  const canReactivate = useFeature('reactivate')
+  // Khách đã lưu trữ chỉ xem được khi BE có API (bản dùng thử thì luôn có).
+  const [view, setView] = useState<'active' | 'archived'>('active')
+  const archivedQuery = useArchivedCustomers(canReactivate && view === 'archived')
+  const activate = useActivateCustomer()
   const [query, setQuery] = useState('')
   const [profileId, setProfileId] = useState<string | null>(null)
   // undefined: đóng; null: thêm mới; Customer: sửa.
@@ -36,6 +42,31 @@ export function CustomersPage() {
   const totalBottles = customers.reduce((sum, customer) => sum + customer.bottlesHeld, 0)
   const totalDeposit = customers.reduce((sum, customer) => sum + customer.depositHeld, 0)
   const totalDebt = customers.reduce((sum, customer) => sum + customer.debt, 0)
+
+  const archived = (archivedQuery.data ?? []).filter((customer) => matchesSearch(query, `${customerCode(customer)} ${customer.name} ${customer.phone} ${customer.area}`, customer.phone))
+  const restore = (customer: Customer) =>
+    activate.mutateAsync(customer.id).then(() => { message.success(`Đã khôi phục hồ sơ ${customer.name}.`) }, (error: Error) => { message.error(error.message) })
+  const archivedColumns: TableColumnsType<Customer> = [
+    {
+      title: 'Khách hàng', dataIndex: 'name', width: 260,
+      render: (_, customer) => (
+        <div className="af-cell-stack">
+          <span className="af-name-with-tag"><span className="af-cell-truncate">{customer.name}</span><Tag className="af-inactive-tag">Đã lưu trữ</Tag></span>
+          <small>{customerCode(customer)}</small>
+        </div>
+      ),
+    },
+    { title: 'Số điện thoại', dataIndex: 'phone', width: 160, render: (phone: string) => phone || '—' },
+    { title: 'Khu vực', dataIndex: 'area', width: 160, render: (area: string) => area || '—' },
+    {
+      title: 'Thao tác', key: 'action', width: 90,
+      render: (_, customer) => (
+        <Dropdown trigger={['click']} menu={{ items: [{ key: 'restore', label: 'Khôi phục hồ sơ', disabled: activate.isPending, onClick: () => void restore(customer) }] }}>
+          <Button size="small" type="text" icon={<Ellipsis size={16} />} aria-label={`Thao tác khác với ${customer.name}`} />
+        </Dropdown>
+      ),
+    },
+  ]
 
   const sort = useColumnSort<Customer>({ key: 'orders', order: 'descend' })
   const unsupported = (title: string) => <Statistic title={title} valueRender={() => <Unsupported />} />
@@ -122,7 +153,14 @@ export function CustomersPage() {
           </Row>
           <Card className="af-card" styles={{ body: { padding: 0 } }}>
             <div className="af-toolbar">
-              <span className="af-toolbar-title">Danh sách khách hàng</span>
+              <Segmented<'active' | 'archived'>
+                value={view}
+                onChange={setView}
+                options={[
+                  { value: 'active', label: 'Đang hoạt động' },
+                  { value: 'archived', label: canReactivate ? 'Đã lưu trữ' : <Tooltip title="Backend chưa hỗ trợ xem khách đã lưu trữ">Đã lưu trữ</Tooltip>, disabled: !canReactivate },
+                ]}
+              />
               <Input
                 allowClear
                 prefix={<Search size={16} className="af-input-icon" />}
@@ -132,7 +170,22 @@ export function CustomersPage() {
                 className="af-search"
               />
             </div>
-            {screens.md === false ? (
+            {view === 'archived' ? (
+              archivedQuery.isError ? <QueryError error={archivedQuery.error} onRetry={archivedQuery.refetch} /> : (
+                <Table<Customer>
+                  className="af-data-table af-table-flush"
+                  size="middle"
+                  rowKey="id"
+                  rowClassName="af-row-inactive"
+                  columns={archivedColumns}
+                  dataSource={archived}
+                  loading={archivedQuery.isPending}
+                  pagination={tablePagination}
+                  locale={{ emptyText: query.trim() ? 'Không tìm thấy khách hàng phù hợp.' : 'Không có hồ sơ nào đã lưu trữ.' }}
+                  scroll={{ x: 670 }}
+                />
+              )
+            ) : screens.md === false ? (
               <CustomerCards
                 key={query}
                 customers={visible}

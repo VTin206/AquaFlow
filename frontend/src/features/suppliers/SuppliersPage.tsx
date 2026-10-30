@@ -10,7 +10,7 @@ import { Unsupported } from '../../shared/components/Unsupported'
 import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
 import { SupplierFormModal } from './components/SupplierFormModal'
 import type { SupplierStatus } from './supplierService'
-import { useCanManageSuppliers, useDeactivateSupplier, useSuppliers } from './useSuppliers'
+import { useActivateSupplier, useCanManageSuppliers, useDeactivateSupplier, useSuppliers } from './useSuppliers'
 import type { Supplier } from './types'
 import { matchesSearch } from '../../shared/utils/search'
 
@@ -30,6 +30,8 @@ export function SuppliersPage() {
   const effectiveStatus = canManage ? status : 'active'
   const suppliersQuery = useSuppliers(effectiveStatus)
   const deactivate = useDeactivateSupplier()
+  const activate = useActivateSupplier()
+  const canReactivate = useFeature('reactivate')
   const sort = useColumnSort<Supplier>()
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
@@ -48,6 +50,12 @@ export function SuppliersPage() {
     cancelText: 'Không',
     onOk: () => deactivate.mutateAsync(supplier.id).then(() => { message.success(`Đã ngừng hợp tác với ${supplier.name}.`) }, (error: Error) => { message.error(error.message) }),
   })
+
+  const reactivate = (supplier: Supplier) =>
+    activate.mutateAsync(supplier.id).then(() => { message.success(`Đã hợp tác lại với ${supplier.name}.`) }, (error: Error) => { message.error(error.message) })
+  const rowMenu = (supplier: Supplier) => supplier.active
+    ? [{ key: 'stop', label: 'Ngừng hợp tác', disabled: deactivate.isPending, onClick: () => confirmStop(supplier) }]
+    : [{ key: 'resume', label: 'Hợp tác lại', disabled: !canReactivate || activate.isPending, extra: canReactivate ? undefined : 'Chưa hỗ trợ', onClick: () => void reactivate(supplier) }]
 
   const columns: TableColumnsType<Supplier> = [
     {
@@ -77,11 +85,9 @@ export function SuppliersPage() {
         render: (_: unknown, supplier: Supplier) => (
           <Space size={4}>
             <Tooltip title="Sửa"><Button size="small" icon={<Pencil size={15} />} aria-label={`Sửa ${supplier.name}`} onClick={() => setEditing(supplier)} /></Tooltip>
-            {supplier.active && (
-              <Dropdown trigger={['click']} menu={{ items: [{ key: 'stop', label: 'Ngừng hợp tác', disabled: deactivate.isPending, onClick: () => confirmStop(supplier) }] }}>
-                <Button size="small" type="text" icon={<Ellipsis size={16} />} aria-label={`Thao tác khác với ${supplier.name}`} />
-              </Dropdown>
-            )}
+            <Dropdown trigger={['click']} menu={{ items: rowMenu(supplier) }}>
+              <Button size="small" type="text" icon={<Ellipsis size={16} />} aria-label={`Thao tác khác với ${supplier.name}`} />
+            </Dropdown>
           </Space>
         ),
       },

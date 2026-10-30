@@ -28,6 +28,8 @@ export const backendFeatures = {
   orderPayments: false,
   /** Kiểm hàng hoàn sau giao thất bại và lịch sử xuất giao / nhập hàng hoàn (chờ API Dispatch, Return của BE). */
   deliveryReturns: false,
+  /** Bật lại nhà cung cấp, loại vỏ đã ngừng và xem/khôi phục khách đã lưu trữ (BE mới có chiều ngừng). */
+  reactivate: false,
   /** Thông báo trên thanh trên cùng (chưa có API). */
   notifications: false,
 } satisfies Record<string, boolean>

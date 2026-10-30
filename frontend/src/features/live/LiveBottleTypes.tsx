@@ -53,7 +53,7 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
   })
   return <>
     <Modal open title="Loại vỏ bình" width={850} onCancel={onClose} footer={<Button onClick={onClose}>Đóng</Button>}>
-      <Alert type="info" showIcon title="Quản lý loại vỏ và tiền cọc" description="Loại vỏ ngừng lưu hành vẫn giữ lịch sử nhưng không chọn được cho sản phẩm mới; hiện chưa hỗ trợ lưu hành lại." style={{ marginBottom: 16 }} />
+      <Alert type="info" showIcon title="Quản lý loại vỏ và tiền cọc" description="Loại vỏ ngừng lưu hành vẫn giữ lịch sử nhưng không chọn được cho sản phẩm mới; lưu hành lại đang chờ backend hỗ trợ." style={{ marginBottom: 16 }} />
       <Space wrap style={{ marginBottom: 16 }}>
         <Input aria-label="Tìm loại vỏ" placeholder="Tìm tên loại vỏ" value={search} allowClear onChange={(event) => setSearch(event.target.value)} />
         {admin && <Select aria-label="Trạng thái loại vỏ" value={status} onChange={setStatus} options={[{ value: 'active', label: 'Đang lưu hành' }, { value: 'inactive', label: 'Ngừng lưu hành' }, { value: 'all', label: 'Tất cả' }]} />}
@@ -68,7 +68,12 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
           <Dropdown trigger={['click']} menu={{ items: [{ key: 'stop', label: 'Ngừng lưu hành', disabled: deactivate.isPending, onClick: () => confirmStop(item) }] }}>
             <Button size="small" type="text" icon={<Ellipsis size={16} />} aria-label={`Thao tác khác với ${item.name}`} />
           </Dropdown>
-        </Space> : null }] : []),
+        </Space> : (
+          // BE chưa có API lưu hành lại; giữ chỗ để người dùng biết thao tác sẽ có.
+          <Dropdown trigger={['click']} menu={{ items: [{ key: 'resume', label: 'Lưu hành lại', disabled: true, extra: 'Chưa hỗ trợ' }] }}>
+            <Button size="small" type="text" icon={<Ellipsis size={16} />} aria-label={`Thao tác khác với ${item.name}`} />
+          </Dropdown>
+        ) }] : []),
       ]} />}
     </Modal>
     {editing !== undefined && <BottleTypeForm item={editing} onClose={() => setEditing(undefined)} />}
