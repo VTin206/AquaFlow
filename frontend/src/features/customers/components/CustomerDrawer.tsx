@@ -127,7 +127,7 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
               <Button icon={<Pencil size={15} />} aria-label="Sửa hồ sơ" onClick={() => onEdit(customer)} />
             </Tooltip>
             {/* Lưu trữ ít khi dùng nên nằm trong menu ⋯, không tô đỏ vì lịch sử vẫn giữ. */}
-            <Dropdown trigger={['click']} menu={{ items: [{ key: 'archive', label: 'Lưu trữ hồ sơ', disabled: deactivate.isPending, onClick: archive }] }}>
+            <Dropdown trigger={['click']} menu={{ items: [{ key: 'archive', label: 'Lưu trữ hồ sơ', danger: true, disabled: deactivate.isPending, onClick: archive }] }}>
               <Button icon={<Ellipsis size={16} />} aria-label="Thao tác khác" />
             </Dropdown>
           </Space>

@@ -54,7 +54,7 @@ export function SuppliersPage() {
   const reactivate = (supplier: Supplier) =>
     activate.mutateAsync(supplier.id).then(() => { message.success(`Đã hợp tác lại với ${supplier.name}.`) }, (error: Error) => { message.error(error.message) })
   const rowMenu = (supplier: Supplier) => supplier.active
-    ? [{ key: 'stop', label: 'Ngừng hợp tác', disabled: deactivate.isPending, onClick: () => confirmStop(supplier) }]
+    ? [{ key: 'stop', label: 'Ngừng hợp tác', danger: true, disabled: deactivate.isPending, onClick: () => confirmStop(supplier) }]
     : [{ key: 'resume', label: 'Hợp tác lại', disabled: !canReactivate || activate.isPending, extra: canReactivate ? undefined : 'Chưa hỗ trợ', onClick: () => void reactivate(supplier) }]
 
   const columns: TableColumnsType<Supplier> = [

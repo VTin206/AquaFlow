@@ -100,8 +100,10 @@ export function ProductsPage() {
     )
   const cardMenu = (product: CatalogItem): MenuProps['items'] => [
     { key: 'edit', label: 'Sửa thông tin', onClick: () => setEditing(product) },
+    { type: 'divider' },
+    // Thao tác ngừng tô đỏ để tách khỏi thao tác thường; hộp xác nhận nói rõ hậu quả.
     product.active
-      ? { key: 'stop', label: 'Ngừng bán', disabled: deactivate.isPending, onClick: () => confirmStop(product) }
+      ? { key: 'stop', label: 'Ngừng bán', danger: true, disabled: deactivate.isPending, onClick: () => confirmStop(product) }
       : { key: 'resume', label: 'Bán lại', disabled: !canReactivate || activate.isPending, extra: canReactivate ? undefined : 'Chưa hỗ trợ', onClick: () => void resumeSelling(product) },
   ]
 

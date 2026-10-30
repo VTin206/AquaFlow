@@ -65,7 +65,7 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
         { title: 'Tiền cọc / vỏ', dataIndex: 'depositUnitAmount', render: currency },
         ...(admin ? [{ title: 'Thao tác', key: 'actions', width: 100, render: (_: unknown, item: BottleType) => item.active ? <Space size={4}>
           <Tooltip title="Sửa tiền cọc"><Button size="small" icon={<Pencil size={15} />} aria-label={`Sửa tiền cọc ${item.name}`} disabled={deactivate.isPending} onClick={() => setEditing(item)} /></Tooltip>
-          <Dropdown trigger={['click']} menu={{ items: [{ key: 'stop', label: 'Ngừng lưu hành', disabled: deactivate.isPending, onClick: () => confirmStop(item) }] }}>
+          <Dropdown trigger={['click']} menu={{ items: [{ key: 'stop', label: 'Ngừng lưu hành', danger: true, disabled: deactivate.isPending, onClick: () => confirmStop(item) }] }}>
             <Button size="small" type="text" icon={<Ellipsis size={16} />} aria-label={`Thao tác khác với ${item.name}`} />
           </Dropdown>
         </Space> : (
