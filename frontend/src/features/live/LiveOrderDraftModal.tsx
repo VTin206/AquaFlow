@@ -30,7 +30,7 @@ const toInput = (draft: Draft): OrderInput => {
 }
 
 /** Nhân viên tạo đơn (điện thoại, tại quầy, tin nhắn); đơn mới ở trạng thái chờ xác nhận, chưa giữ hàng. */
-export function LiveOrderDraftModal({ onClose, onCreated }: { onClose: () => void; onCreated: (order: LiveOrder) => void }) {
+export function LiveOrderDraftModal({ onClose, onCreated, defaultCustomer }: { onClose: () => void; onCreated: (order: LiveOrder) => void; defaultCustomer?: { id: number; name: string; phone?: string } }) {
   const [form] = Form.useForm<Draft>()
   const cancel = useConfirmDiscard(form, onClose)
   const { message } = App.useApp()
@@ -53,7 +53,7 @@ export function LiveOrderDraftModal({ onClose, onCreated }: { onClose: () => voi
     onError: (error: Error) => message.error(error.message),
   })
   return <Modal open title="Tạo đơn hàng" width={740} onCancel={create.isPending ? undefined : cancel} maskClosable={!create.isPending} footer={null}>
-    {products.isError ? <QueryError error={products.error} onRetry={products.refetch} /> : <Form form={form} name="live-order" layout="vertical" scrollToFirstError={{ focus: true }} disabled={create.isPending} initialValues={{ fulfillmentType: 'DELIVERY', channel: 'PHONE', items: [{ quantity: 1 }] }} onFinish={(draft) => create.mutate(draft)}>
+    {products.isError ? <QueryError error={products.error} onRetry={products.refetch} /> : <Form form={form} name="live-order" layout="vertical" scrollToFirstError={{ focus: true }} disabled={create.isPending} initialValues={{ fulfillmentType: 'DELIVERY', channel: 'PHONE', items: [{ quantity: 1 }], ...(defaultCustomer && { customerId: defaultCustomer.id, recipientName: defaultCustomer.name, recipientPhone: defaultCustomer.phone }) }} onFinish={(draft) => create.mutate(draft)}>
       <Form.Item name="fulfillmentType" label="Hình thức nhận" rules={[{ required: true }]}><Select options={[{ value: 'DELIVERY', label: 'Giao tận nơi' }, { value: 'COUNTER', label: 'Tại quầy' }]} /></Form.Item>
       <Form.Item name="channel" label="Kênh tiếp nhận" rules={[{ required: true }]}><Select options={[{ value: 'PHONE', label: 'Điện thoại' }, { value: 'COUNTER', label: 'Tại quầy' }, { value: 'MESSAGE', label: 'Tin nhắn' }]} /></Form.Item>
       {customers.isError && <Alert type="warning" title="Không tải được hồ sơ khách hàng. Bạn vẫn có thể điền thông tin bên dưới." action={<Button onClick={() => void customers.refetch()}>Thử lại</Button>} />}

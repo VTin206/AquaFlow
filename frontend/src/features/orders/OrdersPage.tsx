@@ -1,31 +1,41 @@
 import { useState } from 'react'
-import { Button, Card, Input, Select } from 'antd'
+import { Alert, Button, Card, Input, Select, Tooltip } from 'antd'
 import { Plus, RotateCcw, Search } from 'lucide-react'
 import { CountLabel } from '../../shared/components/CountLabel'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
+import { useFeature, useIsDemo } from '../../shared/features'
+import { LiveOrderDetails } from '../live/LiveOrderDetails'
+import { LiveOrderDraftModal } from '../live/LiveOrderDraftModal'
 import { CreateOrderModal } from './components/CreateOrderModal'
 import { OrdersTable } from './components/OrdersTable'
-import { orderStatuses } from './orderStatus'
-import { useOrders } from './useOrders'
+import { statusesFor } from './orderStatus'
+import { useOrderList } from './orderData'
 import { amountDue } from './types'
 import { ALL_ORDERS as ALL, useOrderFilters } from './useOrderFilters'
 import { matchesSearch } from '../../shared/utils/search'
 
 export function OrdersPage() {
-  const ordersQuery = useOrders()
+  const demo = useIsDemo()
+  const showPayments = useFeature('orderPayments')
+  const ordersQuery = useOrderList()
   const { filters: { query, status, method, payment }, updateFilters, resetFilters } = useOrderFilters()
   const [creating, setCreating] = useState(false)
+  const [created, setCreated] = useState<number | null>(null)
 
   const orders = ordersQuery.data ?? []
+  const statuses = statusesFor(demo)
   const countOf = (value: string) => (value === ALL ? orders.length : orders.filter((order) => order.status === value).length)
-  const hasFilters = Boolean(query.trim() || status !== ALL || method !== ALL || payment !== ALL)
+  const pending = countOf('Chờ xác nhận')
+  // Bộ lọc thanh toán đã lưu từ bản dùng thử bị bỏ qua khi BE chưa có phiếu thu.
+  const paymentFilter = showPayments ? payment : ALL
+  const hasFilters = Boolean(query.trim() || status !== ALL || method !== ALL || paymentFilter !== ALL)
   const visible = orders.filter(
     (order) =>
       (status === ALL || order.status === status) &&
       (method === ALL || order.method === method) &&
-      (payment === ALL || (order.status !== 'Đã hủy' && (payment === 'Còn phải thu' ? amountDue(order) > 0 : amountDue(order) === 0))) &&
-      matchesSearch(query, `${order.id} ${order.customer} ${order.phone} ${order.items}`, order.phone),
+      (paymentFilter === ALL || (order.status !== 'Đã hủy' && (paymentFilter === 'Còn phải thu' ? amountDue(order) > 0 : amountDue(order) === 0))) &&
+      matchesSearch(query, `${order.code ?? order.id} ${order.customer} ${order.phone} ${order.items}`, order.phone),
   )
 
   return (
@@ -38,6 +48,15 @@ export function OrdersPage() {
         </Button>
       }
     >
+      {!demo && pending > 0 && status !== 'Chờ xác nhận' && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 12 }}
+          title={`Có ${pending} đơn đang chờ xác nhận.`}
+          action={<Button size="small" onClick={() => updateFilters({ status: 'Chờ xác nhận' })}>Xem đơn chờ</Button>}
+        />
+      )}
       <Card className="af-card" styles={{ body: { padding: 0 } }}>
         {ordersQuery.isError ? (
           <QueryError error={ordersQuery.error} onRetry={ordersQuery.refetch} />
@@ -48,9 +67,9 @@ export function OrdersPage() {
                 <Select
                   aria-label="Lọc trạng thái đơn"
                   style={{ minWidth: 205 }}
-                  value={status}
+                  value={statuses.includes(status as never) ? status : ALL}
                   onChange={(value) => updateFilters({ status: String(value) })}
-                  options={[ALL, ...orderStatuses].map((value) => ({
+                  options={[ALL, ...statuses].map((value) => ({
                     value,
                     label: <CountLabel label={value} count={countOf(value)} urgent={value === 'Chờ xác nhận'} />,
                   }))}
@@ -62,13 +81,16 @@ export function OrdersPage() {
                   style={{ minWidth: 160 }}
                   options={[{ value: ALL, label: 'Mọi hình thức nhận' }, ...['Tại quầy', 'Giao tận nơi'].map((value) => ({ value, label: value }))]}
                 />
-                <Select
-                  aria-label="Lọc thanh toán"
-                  value={payment}
-                  onChange={(value) => updateFilters({ payment: value })}
-                  style={{ minWidth: 165 }}
-                  options={[{ value: ALL, label: 'Mọi thanh toán' }, ...['Còn phải thu', 'Đã thanh toán'].map((value) => ({ value, label: value }))]}
-                />
+                <Tooltip title={showPayments ? undefined : 'Backend chưa hỗ trợ phiếu thu'}>
+                  <Select
+                    aria-label="Lọc thanh toán"
+                    value={paymentFilter}
+                    disabled={!showPayments}
+                    onChange={(value) => updateFilters({ payment: value })}
+                    style={{ minWidth: 165 }}
+                    options={[{ value: ALL, label: showPayments ? 'Mọi thanh toán' : 'Thanh toán (chưa hỗ trợ)' }, ...['Còn phải thu', 'Đã thanh toán'].map((value) => ({ value, label: value }))]}
+                  />
+                </Tooltip>
               </div>
               <Input
                 allowClear
@@ -85,7 +107,7 @@ export function OrdersPage() {
               {hasFilters && <Button type="link" size="small" icon={<RotateCcw size={14} />} onClick={resetFilters}>Xóa bộ lọc</Button>}
             </div>
             <OrdersTable
-              filterKey={JSON.stringify([query, status, method, payment])}
+              filterKey={JSON.stringify([query, status, method, paymentFilter])}
               orders={visible}
               loading={ordersQuery.isPending}
               emptyText={
@@ -95,7 +117,12 @@ export function OrdersPage() {
           </>
         )}
       </Card>
-      <CreateOrderModal open={creating} onClose={() => setCreating(false)} />
+      {demo ? (
+        <CreateOrderModal open={creating} onClose={() => setCreating(false)} />
+      ) : (
+        creating && <LiveOrderDraftModal onClose={() => setCreating(false)} onCreated={(order) => { setCreating(false); setCreated(order.id) }} />
+      )}
+      {created !== null && <LiveOrderDetails key={created} id={created} onClose={() => setCreated(null)} />}
     </Page>
   )
 }

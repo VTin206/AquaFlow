@@ -11,11 +11,40 @@ const nextProductId = () => {
   return `P-${String(max + 1).padStart(3, '0')}`
 }
 
+/** Sản phẩm đang bán; đã ngừng kinh doanh thì không còn để bán, nhập hay tạo đơn. */
+const isActive = (product: Product) => product.active !== false
+
 export const productService = {
   list: () =>
     mockRequest(() => {
       syncExpiry()
-      return db.products
+      return db.products.filter(isActive)
+    }),
+
+  /** Danh mục cho trang Sản phẩm, gồm cả sản phẩm đã ngừng kinh doanh. */
+  listAll: () =>
+    mockRequest(() => {
+      syncExpiry()
+      return [...db.products]
+    }),
+
+  update: (id: string, draft: Omit<ProductDraft, 'sku' | 'stock'>) =>
+    mockRequest(() => {
+      requireRole(['ADMIN', 'SALES_STAFF'], 'sửa sản phẩm')
+      const product = db.products.find((item) => item.id === id)
+      if (!product) throw mockError(404, 'Không tìm thấy sản phẩm.')
+      Object.assign(product, { name: draft.name.trim(), brand: draft.brand?.trim() || 'Chưa có thương hiệu', unit: draft.unit, price: draft.price, ...(draft.image && { image: draft.image }) })
+      logActivity('Kho hàng', product.id, `Sửa sản phẩm ${product.name}`)
+      return product
+    }),
+
+  deactivate: (id: string) =>
+    mockRequest(() => {
+      requireRole(['ADMIN', 'SALES_STAFF'], 'ngừng kinh doanh sản phẩm')
+      const product = db.products.find((item) => item.id === id)
+      if (!product) throw mockError(404, 'Không tìm thấy sản phẩm.')
+      product.active = false
+      logActivity('Kho hàng', product.id, `Ngừng kinh doanh ${product.name}`)
     }),
 
   create: (draft: ProductDraft) =>

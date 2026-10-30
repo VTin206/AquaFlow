@@ -4,6 +4,7 @@ import { ArrowRight, CircleCheck, Headphones, LockKeyhole, Package, Store, Truck
 import { Link, useLocation, useNavigate } from 'react-router'
 import { useAuth } from './useAuth'
 import type { LoginCredentials } from './authService'
+import { devAccounts } from './devAccounts'
 import './login.css'
 
 const REMEMBERED_EMAIL_KEY = 'aquaflow.auth.remembered-email'
@@ -111,6 +112,16 @@ export function LoginPage() {
                 </div>
                 <Button type="primary" size="large" htmlType="submit" loading={submitting} block icon={<ArrowRight size={18} />} iconPlacement="end">Đăng nhập</Button>
               </Form>
+              {devAccounts.length > 0 && (
+                <div className="af-login-dev">
+                  <Divider plain><span className="af-login-divider-text">Đăng nhập nhanh (dev)</span></Divider>
+                  <div className="af-login-dev-list">
+                    {devAccounts.map((account) => (
+                      <Button key={account.email} disabled={submitting} title={account.email} onClick={() => submitLogin(account)}>{account.label}</Button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <Divider plain><span className="af-login-divider-text">Khám phá AquaFlow</span></Divider>
               <Button block size="large" onClick={openDemo}>Xem bản dùng thử</Button>
             </ConfigProvider>

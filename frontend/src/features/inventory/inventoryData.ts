@@ -189,7 +189,7 @@ export function useReceiptOptions() {
   const suppliers = useQuery({
     queryKey: demo ? ['suppliers', 'receipt-options'] : ['live', 'receipt-suppliers', ...who],
     queryFn: async () => demo
-      ? (await supplierService.list()).map((supplier) => ({ id: supplier.id, name: `${supplier.name} (${supplier.id})` }))
+      ? (await supplierService.list()).filter((supplier) => supplier.active).map((supplier) => ({ id: supplier.id, name: `${supplier.name} (${supplier.id})` }))
       : (await catalogApi.suppliers()).map((supplier) => ({ id: String(supplier.id), name: supplier.name })),
   })
   const products: ReceiptOption[] = (stock.data ?? []).map((item) => ({ id: item.id, name: item.name, sku: item.sku, unit: item.unit, onHand: item.onHand }))

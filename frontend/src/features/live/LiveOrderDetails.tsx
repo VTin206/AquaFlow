@@ -1,21 +1,17 @@
-import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, App, Button, Card, Descriptions, Input, Modal, Popconfirm, Select, Space, Table, Tag } from 'antd'
-import { Page } from '../../shared/components/Page'
+import { Alert, App, Button, Card, Descriptions, Modal, Popconfirm, Space, Table, Tag } from 'antd'
 import { QueryError } from '../../shared/components/QueryError'
 import { currency } from '../../shared/utils/format'
-import { matchesSearch } from '../../shared/utils/search'
-import { tablePagination } from '../../shared/utils/table'
 import { useStaff } from '../auth/useStaff'
 import { catalogApi } from './catalogApi'
-import { canCancel, canConfirm, orderApi, orderStatusLabels, paymentStatusLabels, channelLabels, type LiveOrder, type OrderStatus } from './orderApi'
+import { canCancel, canConfirm, orderApi, orderStatusLabels, paymentStatusLabels, channelLabels, type OrderStatus } from './orderApi'
 import { invalidateLiveData } from './invalidateLiveData'
-import { LiveOrderDraftModal } from './LiveOrderDraftModal'
 
 const dateTime = (value: string | null) => value ? new Date(value).toLocaleString('vi-VN') : '—'
 const statusColors: Record<OrderStatus, string> = { PENDING: 'gold', CONFIRMED: 'blue', PREPARING: 'blue', OUT_FOR_DELIVERY: 'cyan', DELIVERED: 'green', COMPLETED: 'green', CANCELLED: 'default' }
 
-function OrderDetails({ id, onClose }: { id: number; onClose: () => void }) {
+/** Chi tiết đơn của BE: xác nhận (giữ hàng) và hủy theo OrderStatusPolicy. */
+export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => void }) {
   const staff = useStaff()
   const { message } = App.useApp()
   const queryClient = useQueryClient()
@@ -70,37 +66,4 @@ function OrderDetails({ id, onClose }: { id: number; onClose: () => void }) {
       </>}
     </Card>}
   </Modal>
-}
-
-export function LiveOrdersPage() {
-  const staff = useStaff()
-  const orders = useQuery({ queryKey: ['live', 'orders', staff?.name, staff?.role], queryFn: orderApi.list })
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('all')
-  const [selected, setSelected] = useState<number | null>(null)
-  const [creating, setCreating] = useState(false)
-  const visible = (orders.data ?? []).filter((order) => (status === 'all' || order.status === status) && matchesSearch(search, `${order.orderCode} ${order.recipientName ?? ''} ${order.recipientPhone ?? ''}`, order.recipientPhone ?? ''))
-  const pending = (orders.data ?? []).filter(canConfirm).length
-  return <Page title="Đơn hàng" description="Tạo, xác nhận và hủy đơn hàng." actions={<Button type="primary" onClick={() => setCreating(true)}>Tạo đơn hàng</Button>}>
-    {pending > 0 && status !== 'PENDING' && <Alert type="warning" showIcon title={`Có ${pending} đơn đang chờ xác nhận.`} action={<Button size="small" onClick={() => setStatus('PENDING')}>Xem đơn chờ</Button>} style={{ marginBottom: 16 }} />}
-    <Card>
-      <Space wrap style={{ marginBottom: 16 }}>
-        <Input aria-label="Tìm đơn hàng" placeholder="Mã đơn, người nhận, điện thoại" allowClear value={search} onChange={(event) => setSearch(event.target.value)} />
-        <Select aria-label="Trạng thái đơn" value={status} onChange={setStatus} style={{ minWidth: 180 }} options={[{ value: 'all', label: 'Mọi trạng thái' }, ...Object.entries(orderStatusLabels).map(([value, label]) => ({ value, label }))]} />
-        <Button onClick={() => void orders.refetch()} loading={orders.isFetching}>Làm mới</Button>
-      </Space>
-      {orders.isError ? <QueryError error={orders.error} onRetry={orders.refetch} /> : <Table<LiveOrder> key={JSON.stringify([search, status])} rowKey="id" loading={orders.isPending} dataSource={visible} pagination={tablePagination} scroll={{ x: 900 }} locale={{ emptyText: 'Không có đơn hàng phù hợp.' }} columns={[
-        { title: 'Mã đơn', dataIndex: 'orderCode', render: (value, order) => <Button type="link" onClick={() => setSelected(order.id)}>{value}</Button> },
-        { title: 'Người nhận', dataIndex: 'recipientName', render: (value) => value || 'Khách tại quầy' },
-        { title: 'Điện thoại', dataIndex: 'recipientPhone' },
-        { title: 'Ngày tạo', dataIndex: 'createdAt', render: dateTime },
-        { title: 'Trạng thái', dataIndex: 'status', render: (value: LiveOrder['status']) => <Tag color={statusColors[value]}>{orderStatusLabels[value] ?? value}</Tag> },
-        { title: 'Thanh toán', dataIndex: 'paymentStatus', render: (value: LiveOrder['paymentStatus']) => paymentStatusLabels[value] ?? value },
-        { title: 'Tổng tiền', dataIndex: 'total', render: currency },
-        { title: 'Thao tác', render: (_, order) => <Button type={canConfirm(order) ? 'primary' : 'default'} ghost={canConfirm(order)} onClick={() => setSelected(order.id)}>{canConfirm(order) ? 'Xem & xác nhận' : 'Chi tiết'}</Button> },
-      ]} />}
-    </Card>
-    {selected !== null && <OrderDetails key={selected} id={selected} onClose={() => setSelected(null)} />}
-    {creating && <LiveOrderDraftModal onClose={() => setCreating(false)} onCreated={(order) => { setCreating(false); setSelected(order.id) }} />}
-  </Page>
 }

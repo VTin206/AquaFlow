@@ -3,6 +3,8 @@ import { Plus, Trash2 } from 'lucide-react'
 import type { Customer, CustomerDraft } from '../types'
 import { useSaveCustomer } from '../useCustomers'
 import { useConfirmDiscard } from '../../../shared/hooks/useConfirmDiscard'
+import { useFeature, useIsDemo } from '../../../shared/features'
+import { UNSUPPORTED_HINT } from '../../../shared/components/Unsupported'
 
 type CustomerFormModalProps = { open: boolean; customer?: Customer; onClose: () => void; onSaved?: (customer: Customer) => void }
 
@@ -11,11 +13,15 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
   const [form] = Form.useForm<CustomerDraft>()
   const cancel = useConfirmDiscard(form, onClose)
   const save = useSaveCustomer()
+  const showType = useFeature('customerType')
+  const showExtras = useFeature('customerProfileExtras')
+  // Tài khoản thật quản lý địa chỉ giao (người nhận, khu vực, mặc định) trong hồ sơ khách.
+  const inlineAddresses = useIsDemo()
 
   return (
     <Modal
       open={open}
-      title={customer ? `Sửa hồ sơ ${customer.id}` : 'Thêm khách hàng'}
+      title={customer ? `Sửa hồ sơ ${customer.name}` : 'Thêm khách hàng'}
       okText={customer ? 'Lưu thay đổi' : 'Thêm khách hàng'}
       cancelText="Hủy"
       width={620}
@@ -37,7 +43,7 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
             { id: customer?.id, draft },
             {
               onSuccess: (saved) => {
-                message.success(customer ? 'Đã cập nhật hồ sơ khách hàng.' : `Đã thêm khách hàng ${saved.id}.`)
+                message.success(customer ? 'Đã cập nhật hồ sơ khách hàng.' : `Đã thêm khách hàng ${saved.name}.`)
                 onClose()
                 onSaved?.(saved)
               },
@@ -46,8 +52,8 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
           )
         }
       >
-        <Form.Item name="type" label="Loại khách">
-          <Segmented options={['Cá nhân', 'Doanh nghiệp']} />
+        <Form.Item name="type" label="Loại khách" extra={showType ? undefined : UNSUPPORTED_HINT}>
+          <Segmented options={['Cá nhân', 'Doanh nghiệp']} disabled={!showType} />
         </Form.Item>
         <Row gutter={16}>
           <Col xs={24} sm={14}>
@@ -63,7 +69,7 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
                 { required: true, message: 'Nhập số điện thoại.' },
                 {
                   validator: (_, value?: string) =>
-                    !value || /^(?:0\d{9,10}|84\d{9,10})$/.test(value.replace(/\D/g, '')) ? Promise.resolve() : Promise.reject(new Error('Số điện thoại không hợp lệ.')),
+                    !value || /^(?:0\d{9,10}|\+84\d{9,10})$/.test(value.replace(/[\s().-]/g, '')) ? Promise.resolve() : Promise.reject(new Error('Số điện thoại không hợp lệ.')),
                 },
               ]}
             >
@@ -71,10 +77,10 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
             </Form.Item>
           </Col>
         </Row>
-        <Form.Item name="area" label="Khu vực" tooltip="Dùng để lọc và xếp chuyến giao." rules={[{ max: 80 }]}>
-          <Input placeholder="Ví dụ: Bình Thạnh" />
+        <Form.Item name="area" label="Khu vực" tooltip="Dùng để lọc và xếp chuyến giao." extra={showExtras ? undefined : UNSUPPORTED_HINT} rules={[{ max: 80 }]}>
+          <Input placeholder="Ví dụ: Bình Thạnh" disabled={!showExtras} />
         </Form.Item>
-        <Form.List name="addresses">
+        {inlineAddresses && <Form.List name="addresses">
           {(fields, { add, remove }) => (
             <div className="af-address-list">
               <div className="af-form-label">Địa chỉ giao hàng</div>
@@ -91,10 +97,11 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
               </Button>
             </div>
           )}
-        </Form.List>
-        <Form.Item name="note" label="Ghi chú" rules={[{ max: 500 }]}>
-          <Input.TextArea rows={2} placeholder="Giờ nhận hàng thuận tiện, người liên hệ, lưu ý giao nhận..." />
+        </Form.List>}
+        <Form.Item name="note" label="Ghi chú" extra={showExtras ? undefined : UNSUPPORTED_HINT} rules={[{ max: 500 }]}>
+          <Input.TextArea rows={2} placeholder="Giờ nhận hàng thuận tiện, người liên hệ, lưu ý giao nhận..." disabled={!showExtras} />
         </Form.Item>
+        {!inlineAddresses && !customer && <p className="af-form-hint">Thêm địa chỉ giao trong hồ sơ khách sau khi lưu.</p>}
       </Form>
     </Modal>
   )

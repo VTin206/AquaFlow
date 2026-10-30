@@ -4,6 +4,7 @@ import { FilePlus2, PackagePlus, Search } from 'lucide-react'
 import { CountLabel } from '../../shared/components/CountLabel'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
+import { Unsupported } from '../../shared/components/Unsupported'
 import { useColumnSort } from '../../shared/components/sortableColumn'
 import { currency } from '../../shared/utils/format'
 import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
@@ -68,18 +69,17 @@ export function InventoryPage() {
               {product.onHand} <Typography.Text type="secondary">{product.unit?.toLowerCase()}</Typography.Text>
             </span>
             <small>
-              {product.threshold !== undefined ? `Tối thiểu ${product.threshold}` : `Khả dụng ${product.available}`}
+              {product.threshold !== undefined ? `Tối thiểu ${product.threshold}` : <>Khả dụng {product.available} · <Unsupported label="tối thiểu: chưa hỗ trợ" /></>}
               {product.reserved > 0 && ` · giữ ${product.reserved}`}
             </small>
           </div>
-          {product.threshold !== undefined && (
-            <Progress
-              percent={Math.min(100, (product.available / Math.max(1, product.threshold * 2)) * 100)}
-              showInfo={false}
-              size="small"
-              status={isLow(product) ? 'exception' : 'normal'}
-            />
-          )}
+          {/* Không có ngưỡng tối thiểu thì thanh tiến độ để trống, không tự đặt ngưỡng giả. */}
+          <Progress
+            percent={product.threshold === undefined ? 0 : Math.min(100, (product.available / Math.max(1, product.threshold * 2)) * 100)}
+            showInfo={false}
+            size="small"
+            status={product.threshold !== undefined && isLow(product) ? 'exception' : 'normal'}
+          />
         </div>
       ),
     },

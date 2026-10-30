@@ -15,6 +15,8 @@ export type CustomerRecord = {
   note?: string
   /** Số đơn trước khi có hệ thống (dữ liệu chuyển đổi). */
   legacyOrders: number
+  /** false khi đã ngừng dùng hồ sơ; thiếu nghĩa là đang dùng. */
+  active?: boolean
 }
 
 export type Customer = CustomerRecord & {
@@ -56,6 +58,9 @@ export type BottleAction = {
 }
 
 export { DEPOSIT_PER_BOTTLE }
+
+/** Mã hiển thị: bản dùng thử đã có dạng KH-001, tài khoản thật là số. */
+export const customerCode = (customer: Pick<Customer, 'id'>) => (customer.id.startsWith('KH-') ? customer.id : `KH-${customer.id.padStart(3, '0')}`)
 
 export const normalizePhone = (phone: string) => phone.replace(/\D/g, '')
 

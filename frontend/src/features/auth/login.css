@@ -135,3 +135,12 @@
   .af-login-form-panel { padding: 28px 20px; }
   .af-login-form-heading h1 { font-size: 23px; }
 }
+
+.af-login-dev-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.af-login-dev-list > .ant-btn {
+  flex: 1 1 120px;
+}
