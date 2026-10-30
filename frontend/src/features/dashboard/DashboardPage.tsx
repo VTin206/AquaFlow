@@ -6,30 +6,53 @@ import { BarChart } from '../../shared/components/BarChart'
 import { Page } from '../../shared/components/Page'
 import { PanelHeading } from '../../shared/components/PanelHeading'
 import { QueryError } from '../../shared/components/QueryError'
+import { Unsupported } from '../../shared/components/Unsupported'
+import { useIsDemo } from '../../shared/features'
 import { compactCurrency, currency, shortDate } from '../../shared/utils/format'
 import { ReceiveStockModal } from '../inventory/components/ReceiveStockModal'
+import { useStockItems } from '../inventory/inventoryData'
 import { isLowStock } from '../inventory/types'
 import { useProducts } from '../inventory/useProducts'
+import { LiveOrderDetails } from '../live/LiveOrderDetails'
+import { LiveOrderDraftModal } from '../live/LiveOrderDraftModal'
 import { AdvanceStatusButton } from '../orders/components/AdvanceStatusButton'
 import { CreateOrderModal } from '../orders/components/CreateOrderModal'
 import { OrdersTable } from '../orders/components/OrdersTable'
-import { useOrders } from '../orders/useOrders'
+import { useOrderList } from '../orders/orderData'
 import { useDailyRevenue } from '../reports/reportService'
 
+type LowStockRow = { id: string; name: string; unit: string; stock: number; threshold?: number }
+
+/** Sắp hết theo trang Kho của tài khoản thật: khả dụng chạm ngưỡng tối thiểu (chưa có ngưỡng thì hết hàng). */
+function useLowStock(demo: boolean) {
+  const products = useProducts(demo)
+  const stock = useStockItems(!demo)
+  if (demo) {
+    const rows = (products.data ?? []).filter(isLowStock).map((product): LowStockRow => ({ id: product.id, name: product.name, unit: product.unit, stock: product.stock, threshold: product.threshold }))
+    return { ...products, rows }
+  }
+  const rows = (stock.data ?? [])
+    .filter((item) => (item.threshold === undefined ? item.available === 0 : item.available <= item.threshold))
+    .map((item): LowStockRow => ({ id: item.id, name: item.name, unit: item.unit ?? '', stock: item.available, threshold: item.threshold }))
+  return { ...stock, rows }
+}
+
 export function DashboardPage() {
-  const ordersQuery = useOrders()
-  const productsQuery = useProducts()
-  const revenueQuery = useDailyRevenue()
+  const demo = useIsDemo()
+  const ordersQuery = useOrderList()
+  const productsQuery = useLowStock(demo)
+  // Báo cáo doanh thu chỉ có trong bản dùng thử; tài khoản thật chờ API báo cáo.
+  const revenueQuery = useDailyRevenue(demo)
   const [creatingOrder, setCreatingOrder] = useState(false)
   const [receiving, setReceiving] = useState<{ productId?: string } | null>(null)
+  const [openedOrder, setOpenedOrder] = useState<number | null>(null)
 
   const orders = ordersQuery.data ?? []
-  const products = productsQuery.data ?? []
   const pending = orders.filter((order) => order.status === 'Chờ xác nhận')
   const shipping = orders.filter((order) => order.status === 'Đang giao')
   const completed = orders.filter((order) => order.status === 'Đã hoàn tất')
   const completedRevenue = completed.reduce((sum, order) => sum + order.total, 0)
-  const lowStock = products.filter(isLowStock)
+  const lowStock = productsQuery.rows
   const lastWeek = (revenueQuery.data ?? []).slice(-7)
 
   return (
@@ -148,7 +171,7 @@ export function DashboardPage() {
                     <div className="af-cell-stack">
                       <span>{order.customer}</span>
                       <small>
-                        {order.id} · {order.items}
+                        {order.code ?? order.id} · {order.items}
                       </small>
                     </div>
                     <div className="af-pending-total">
@@ -157,7 +180,7 @@ export function DashboardPage() {
                         <Clock3 size={12} /> {order.time}
                       </small>
                     </div>
-                    <AdvanceStatusButton order={order} />
+                    {demo ? <AdvanceStatusButton order={order} /> : <Button size="small" type="primary" onClick={() => setOpenedOrder(Number(order.id))}>Xem đơn</Button>}
                   </div>
                 ))}
                 {pending.length > 4 && (
@@ -197,8 +220,8 @@ export function DashboardPage() {
                         Còn{' '}
                         <strong className="af-text-warning">
                           {product.stock} {product.unit.toLowerCase()}
-                        </strong>{' '}
-                        · tối thiểu {product.threshold}
+                        </strong>
+                        {product.threshold !== undefined && ` · tối thiểu ${product.threshold}`}
                       </small>
                     </div>
                     <Button size="small" icon={<PackagePlus size={15} />} onClick={() => setReceiving({ productId: product.id })}>
@@ -225,8 +248,10 @@ export function DashboardPage() {
       </div>
       <Row gutter={[20, 20]}>
         <Col xs={24} xl={9}>
-          <Card title={<PanelHeading title="Doanh thu 7 ngày" extra={<Tag variant="filled">Dữ liệu mẫu</Tag>} />} className="af-card af-fill" loading={revenueQuery.isPending}>
-            {revenueQuery.isError ? (
+          <Card title={<PanelHeading title="Doanh thu 7 ngày" extra={demo && <Tag variant="filled">Dữ liệu mẫu</Tag>} />} className="af-card af-fill" loading={demo && revenueQuery.isPending}>
+            {!demo ? (
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<Unsupported label="Biểu đồ doanh thu: chưa hỗ trợ" />} />
+            ) : revenueQuery.isError ? (
               <QueryError error={revenueQuery.error} onRetry={revenueQuery.refetch} />
             ) : lastWeek.length === 0 ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có dữ liệu doanh thu." />
@@ -262,7 +287,12 @@ export function DashboardPage() {
         </Col>
       </Row>
 
-      <CreateOrderModal open={creatingOrder} onClose={() => setCreatingOrder(false)} />
+      {demo ? (
+        <CreateOrderModal open={creatingOrder} onClose={() => setCreatingOrder(false)} />
+      ) : (
+        creatingOrder && <LiveOrderDraftModal onClose={() => setCreatingOrder(false)} onCreated={(order) => { setCreatingOrder(false); setOpenedOrder(order.id) }} />
+      )}
+      {openedOrder !== null && <LiveOrderDetails key={openedOrder} id={openedOrder} onClose={() => setOpenedOrder(null)} />}
       <ReceiveStockModal open={receiving !== null} defaultProductId={receiving?.productId} onClose={() => setReceiving(null)} />
     </Page>
   )
