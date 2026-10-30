@@ -1,3 +1,4 @@
+import type { TripRecord } from '../features/delivery/types'
 import type { Order, OrderLine } from '../features/orders/types'
 import type { CustomerRecord } from '../features/customers/types'
 import type { Product } from '../features/inventory/types'
@@ -132,6 +133,46 @@ export function archivedOrders(products: Product[], customers: CustomerRecord[])
     }
   }
   return orders.reverse()
+}
+
+/**
+ * Mỗi tài xế một chuyến mỗi ngày cho các đơn giao tận nơi đã đóng, đối soát lúc cuối ngày.
+ * Thỉnh thoảng tài xế nộp thiếu để báo cáo đối soát có số liệu minh họa.
+ */
+export function archivedTrips(orders: Order[]): TripRecord[] {
+  const next = random(20261020)
+  const groups = new Map<string, Order[]>()
+  for (const order of orders.filter((item) => item.method === 'Giao tận nơi' && item.deliveredAt)) {
+    const driver = order.history.find((event) => event.message.startsWith('Bắt đầu giao'))?.by
+    if (!driver) continue
+    const key = `${new Date(order.deliveredAt!).toLocaleDateString('sv-SE')}|${driver}`
+    groups.set(key, [...(groups.get(key) ?? []), order])
+  }
+  return [...groups.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, list], index) => {
+      const [, driver] = key.split('|')
+      const departures = list.map((order) => order.history.find((event) => event.message.startsWith('Bắt đầu giao'))!.at).sort()
+      const last = list.map((order) => order.deliveredAt!).sort().at(-1)!
+      const cash = list.flatMap((order) => order.payments).filter((payment) => payment.method === 'Tiền mặt' && !payment.refund).reduce((sum, payment) => sum + payment.amount, 0)
+      const short = cash > 0 && next() < 0.08 ? Math.min(cash, (1 + Math.floor(next() * 5)) * 10_000) : 0
+      return {
+        id: `CG-L${String(index + 1).padStart(4, '0')}`,
+        driver,
+        orderIds: list.map((order) => order.id),
+        createdAt: departures[0],
+        departedAt: departures[0],
+        settlement: {
+          cashExpected: cash,
+          cashHandedOver: cash - short,
+          bottlesExpected: 0,
+          bottlesHandedOver: 0,
+          note: short ? 'Tài xế báo thối nhầm tiền cho khách.' : undefined,
+          settledAt: addMinutes(last, 60),
+          settledBy: ADMIN,
+        },
+      }
+    })
 }
 
 const areaOf = (message: string): ActivityArea => (/^(Ghi nhận|Hoàn)/.test(message) ? 'Thanh toán' : 'Đơn hàng')

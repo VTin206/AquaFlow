@@ -13,6 +13,8 @@ const { db } = await load('/src/mocks/db.ts')
 const { setMockSession } = await load('/src/mocks/session.ts')
 const { amountDue, paidAmount, minutesLate, isOverdue } = await load('/src/features/orders/types.ts')
 const { vietQrPayload, transferNote } = await load('/src/shared/payment/vietqr.ts')
+const { previousRange } = await load('/src/features/reports/reportService.ts')
+const { groupRevenue, autoGranularity } = await load('/src/features/reports/periods.ts')
 
 const seed = globalThis.structuredClone(db)
 seed.products = [
@@ -25,6 +27,7 @@ seed.activity = []
 seed.lots = []
 seed.receipts = []
 seed.trips = []
+seed.archivedTrips = []
 seed.bottleLedger = []
 
 let passed = 0
@@ -167,7 +170,11 @@ try {
     await orderService.pay(order.id, { amount: 190000, method: 'Chuyển khoản', reference: 'FT1' })
     await orderService.returnItems(order.id, { lines: [{ productId: 'P-003', quantity: 1 }], reason: 'Hỏng', restock: false, refundMethod: 'Tiền mặt' })
     const report = await reportService.summary({ from: today, to: today })
-    assert.equal(report.sales.revenue, 100000)
+    assert.equal(report.sales.goods, 180000)
+    assert.equal(report.sales.deliveryFees, 10000)
+    assert.equal(report.sales.returnsValue, 90000)
+    assert.equal(report.sales.net, 100000)
+    assert.equal(report.days[0].revenue, 100000)
     assert.equal(report.cash.transfer, 190000)
     assert.equal(report.cash.refunds, 90000)
     assert.equal(report.cash.collected, 100000)
@@ -177,6 +184,130 @@ try {
     assert.equal(report.profit.cost, 60000)
     assert.equal(report.days.length, 1)
     await assert.rejects(reportService.summary({ from: today, to: '2000-01-01' }), /không hợp lệ/)
+  })
+
+  await test('period report: a later return counts in the return period, not the delivery period', async () => {
+    const today = new Date().toLocaleDateString('sv-SE')
+    const order = await deliveredOrder()
+    await orderService.pay(order.id, { amount: 190000, method: 'Tiền mặt' })
+    await orderService.returnItems(order.id, { lines: [{ productId: 'P-003', quantity: 1 }], reason: 'Hỏng', restock: false, refundMethod: 'Tiền mặt' })
+    // Đẩy ngày trả sang hôm sau: kỳ giao hàng phải giữ nguyên doanh thu.
+    const stored = db.orders.find((item) => item.id === order.id)
+    const tomorrow = new Date(Date.now() + 86_400_000)
+    stored.returns[0].at = tomorrow.toISOString()
+    const deliveryDay = await reportService.summary({ from: today, to: today })
+    assert.equal(deliveryDay.sales.net, 190000)
+    assert.equal(deliveryDay.sales.returnsValue, 0)
+    const returnDay = tomorrow.toLocaleDateString('sv-SE')
+    const later = await reportService.summary({ from: returnDay, to: returnDay })
+    assert.equal(later.sales.net, -90000)
+    assert.equal(later.sales.returnsValue, 90000)
+  })
+
+  await test('period report: bottles and deposit held are balances up to the period end', async () => {
+    db.customers = [{ id: 'KH-1', name: 'Khách giữ vỏ', phone: '0901234567', type: 'Cá nhân', area: 'Q1', addresses: [], legacyOrders: 0 }]
+    db.bottleLedger = [
+      { id: 'S1', customerId: 'KH-1', at: '2026-09-01T08:00:00+07:00', kind: 'Số dư đầu kỳ', bottles: 3, deposit: 100000 },
+      { id: 'S2', customerId: 'KH-1', at: '2026-09-10T08:00:00+07:00', kind: 'Giao kèm đơn', bottles: 2, deposit: 0 },
+      { id: 'S3', customerId: 'KH-1', at: '2026-09-20T08:00:00+07:00', kind: 'Thu vỏ', bottles: -4, deposit: 0 },
+    ]
+    const mid = await reportService.summary({ from: '2026-09-05', to: '2026-09-15' })
+    assert.equal(mid.deposits.bottlesOut, 2)
+    assert.equal(mid.deposits.held.bottles, 5)
+    assert.equal(mid.deposits.held.deposit, 100000)
+    // 5 vỏ, cọc đủ cho 2 vỏ (50.000 ₫/vỏ) nên thiếu cọc 3 vỏ.
+    assert.equal(mid.deposits.held.uncoveredBottles, 3)
+    assert.equal(mid.deposits.held.top[0].name, 'Khách giữ vỏ')
+    const end = await reportService.summary({ from: '2026-09-16', to: '2026-09-30' })
+    assert.equal(end.deposits.bottlesBack, 4)
+    assert.equal(end.deposits.held.bottles, 1)
+    assert.equal(end.deposits.held.uncoveredBottles, 0)
+  })
+
+  await test('period report: stock movement balances opening + in - out = closing, counting reserved goods', async () => {
+    const today = new Date().toLocaleDateString('sv-SE')
+    db.receipts = [{ id: 'PN-1', supplierId: 'NCC-1', supplierName: 'NCC', receivedAt: today, receiver: 'Kho', total: 600000, lines: [{ productId: 'P-003', productName: 'Thùng', unit: 'Thùng', received: 12, damaged: 2, costPrice: 60000 }] }]
+    db.products.find((product) => product.id === 'P-003').stock += 10
+    const order = await deliveredOrder()
+    await orderService.returnItems(order.id, { lines: [{ productId: 'P-003', quantity: 1 }], reason: 'Đổi ý', restock: true, refundMethod: 'Tiền mặt' })
+    // Đơn đã xác nhận nhưng chưa giao: tồn bán được giảm, hàng vẫn nằm trong kho.
+    const open = await orderService.create(draft({ lines: [{ productId: 'P-003', quantity: 3 }] }))
+    await orderService.advanceStatus(open.id)
+    const row = (await reportService.summary({ from: today, to: today })).inventory.rows.find((item) => item.productId === 'P-003')
+    assert.equal(row.received, 10)
+    assert.equal(row.damaged, 2)
+    assert.equal(row.issued, 2)
+    assert.equal(row.restocked, 1)
+    assert.equal(row.closing, stock('P-003') + 3)
+    assert.equal(row.opening, 30)
+    assert.equal(row.opening + row.received + row.restocked - row.issued, row.closing)
+  })
+
+  await test('period report: channel and method filters apply to order figures only', async () => {
+    const today = new Date().toLocaleDateString('sv-SE')
+    db.receipts = [{ id: 'PN-1', supplierId: 'NCC-1', supplierName: 'NCC', receivedAt: today, receiver: 'Kho', total: 600000, lines: [{ productId: 'P-003', productName: 'Thùng', unit: 'Thùng', received: 10, damaged: 0, costPrice: 60000 }] }]
+    await deliveredOrder({ channel: 'Điện thoại' })
+    await deliveredOrder({ channel: 'Website' })
+    const all = await reportService.summary({ from: today, to: today })
+    const phone = await reportService.summary({ from: today, to: today }, { channels: ['Điện thoại'] })
+    const counter = await reportService.summary({ from: today, to: today }, { method: 'Tại quầy' })
+    assert.equal(all.sales.net, 380000)
+    assert.equal(phone.sales.net, 190000)
+    assert.deepEqual(phone.channels.map((row) => row.channel), ['Điện thoại'])
+    assert.equal(counter.sales.delivered, 0)
+    // Tồn kho và nhập hàng không đổi theo bộ lọc.
+    assert.equal(phone.receipts.count, 1)
+    assert.deepEqual(phone.inventory.rows, all.inventory.rows)
+  })
+
+  await test('period helpers: previous period has the same length; revenue groups by week and month', async () => {
+    assert.deepEqual(previousRange({ from: '2026-10-01', to: '2026-10-31' }), { from: '2026-08-31', to: '2026-09-30' })
+    assert.deepEqual(previousRange({ from: '2026-10-20', to: '2026-10-20' }), { from: '2026-10-19', to: '2026-10-19' })
+    assert.equal(autoGranularity({ from: '2026-10-01', to: '2026-10-31' }), 'day')
+    assert.equal(autoGranularity({ from: '2026-08-01', to: '2026-10-31' }), 'week')
+    assert.equal(autoGranularity({ from: '2026-01-01', to: '2026-10-31' }), 'month')
+    const days = ['2026-09-30', '2026-10-01', '2026-10-04', '2026-10-05'].map((date, index) => ({ date, revenue: (index + 1) * 1000, collected: 0, orders: 0 }))
+    // 30/9 (T4) tới 4/10 (CN) cùng một tuần bắt đầu 28/9; 5/10 là thứ Hai tuần sau.
+    assert.deepEqual(groupRevenue(days, 'week').map((bucket) => [bucket.key, bucket.revenue]), [['2026-09-28', 6000], ['2026-10-05', 4000]])
+    assert.deepEqual(groupRevenue(days, 'month').map((bucket) => [bucket.label, bucket.revenue]), [['T9/2026', 1000], ['T10/2026', 9000]])
+  })
+
+  await test('period report: driver cash settlement counts trips by settlement day', async () => {
+    const today = new Date().toLocaleDateString('sv-SE')
+    const at = `${today}T09:00:00+07:00`
+    db.archivedTrips = [
+      { id: 'CG-L1', driver: 'Tài xế A', orderIds: [], createdAt: at, departedAt: at, settlement: { cashExpected: 500000, cashHandedOver: 450000, bottlesExpected: 0, bottlesHandedOver: 0, settledAt: at } },
+      { id: 'CG-L2', driver: 'Tài xế A', orderIds: [], createdAt: '2020-01-01T09:00:00+07:00', departedAt: '2020-01-01T09:00:00+07:00', settlement: { cashExpected: 900000, cashHandedOver: 0, bottlesExpected: 0, bottlesHandedOver: 0, settledAt: '2020-01-01T18:00:00+07:00' } },
+    ]
+    const report = await reportService.summary({ from: today, to: today })
+    const row = report.delivery.drivers.find((item) => item.driver === 'Tài xế A')
+    assert.equal(row.settledTrips, 1)
+    assert.equal(row.cashExpected, 500000)
+    assert.equal(row.cashHandedOver, 450000)
+    assert.equal(row.cashShort, 50000)
+    assert.equal(report.delivery.cashShort, 50000)
+  })
+
+  await test('period report: customers ranked by net revenue; repeat buyers without recent orders are lapsed', async () => {
+    const today = new Date().toLocaleDateString('sv-SE')
+    db.customers = [
+      { id: 'KH-1', name: 'Khách đều', phone: '0901234567', type: 'Cá nhân', area: 'Q1', addresses: [], legacyOrders: 0 },
+      { id: 'KH-2', name: 'Khách cũ', phone: '0902345678', type: 'Cá nhân', area: 'Q1', addresses: [], legacyOrders: 3 },
+    ]
+    const old = new Date(Date.now() - 45 * 86_400_000).toISOString()
+    db.archivedOrders = [
+      { id: 'AF-1', customerId: 'KH-2', customer: 'Khách cũ', phone: '0902345678', address: 'A', items: '', total: 90000, time: '', status: 'Đã hoàn tất', method: 'Tại quầy', channel: 'Tại quầy', lines: [{ productId: 'P-003', name: 'Thùng', unit: 'Thùng', quantity: 1, unitPrice: 90000 }], deliveryFee: 0, payments: [], history: [{ at: old, message: 'Tiếp nhận yêu cầu.' }], stockReserved: false, deliveredAt: old },
+    ]
+    await deliveredOrder({ customer: 'Khách đều', phone: '0901234567' })
+    db.orders.forEach((order) => { order.customerId = 'KH-1' })
+    const report = await reportService.summary({ from: today, to: today })
+    assert.equal(report.customers.active, 1)
+    assert.equal(report.customers.new, 1)
+    assert.equal(report.customers.top[0].name, 'Khách đều')
+    assert.equal(report.customers.top[0].revenue, 190000)
+    assert.equal(report.customers.lapsed.length, 1)
+    assert.equal(report.customers.lapsed[0].name, 'Khách cũ')
+    assert.ok(report.customers.lapsed[0].daysSince >= 44)
   })
 
   await test('VietQR payload: EMVCo fields, amount, ASCII note and CRC', async () => {

@@ -44,7 +44,17 @@ export function ActivityPage() {
   const openable = new Set(orders.map((order) => order.id))
 
   const columns: TableColumnsType<ActivityEntry> = [
-    { title: 'Thời điểm', dataIndex: 'at', width: 170, render: (at: string) => new Date(at).toLocaleString('vi-VN') },
+    {
+      title: 'Thời điểm',
+      dataIndex: 'at',
+      width: 170,
+      render: (at: string) => (
+        <div className="af-cell-stack">
+          <span>{new Date(at).toLocaleTimeString('vi-VN')}</span>
+          <small>{new Date(at).toLocaleDateString('vi-VN')}</small>
+        </div>
+      ),
+    },
     { title: 'Người thực hiện', dataIndex: 'by', width: 200, ellipsis: true },
     { title: 'Khu vực', dataIndex: 'area', width: 130, render: (value: ActivityArea) => <Tag color={areaColors[value]}>{value}</Tag> },
     {
@@ -107,7 +117,7 @@ export function ActivityPage() {
               />
             </div>
             <Table<ActivityEntry>
-              className="af-data-table"
+              className="af-data-table af-table-flush"
               rowKey="id"
               size="middle"
               columns={columns}

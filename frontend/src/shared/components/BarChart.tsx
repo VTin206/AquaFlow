@@ -1,7 +1,8 @@
 import { Tooltip } from 'antd'
 
 type BarChartProps = {
-  data: { label: string; value: number }[]
+  /** `title` là nhãn đầy đủ cho tooltip; mặc định dùng `label`. */
+  data: { label: string; value: number; title?: string }[]
   formatValue: (value: number) => string
   height?: number
 }
@@ -15,12 +16,12 @@ export function BarChart({ data, formatValue, height = 200 }: BarChartProps) {
         className="af-bar-chart"
         style={{ height, minWidth: data.length * 44 }}
         role="img"
-        aria-label={`Biểu đồ cột. ${data.map((item) => `${item.label}: ${formatValue(item.value)}`).join('; ')}`}
+        aria-label={`Biểu đồ cột. ${data.map((item) => `${item.title ?? item.label}: ${formatValue(item.value)}`).join('; ')}`}
       >
         {data.map((item, index) => (
-          <Tooltip key={item.label} title={`${item.label}: ${formatValue(item.value)}`}>
+          <Tooltip key={item.label} title={`${item.title ?? item.label}: ${formatValue(item.value)}`}>
             <div className="af-bar-column">
-              <div className={`af-bar ${index === data.length - 1 ? 'is-latest' : ''}`} style={{ height: `${(item.value / max) * 100}%` }} />
+              <div className={`af-bar ${index === data.length - 1 ? 'is-latest' : ''}`} style={{ height: `${(Math.max(0, item.value) / max) * 100}%` }} />
               <span className="af-bar-label">{item.label}</span>
             </div>
           </Tooltip>
