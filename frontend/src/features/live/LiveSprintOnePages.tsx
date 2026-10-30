@@ -5,7 +5,6 @@ import { api } from '../../shared/api/client'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
 import { useStaff } from '../auth/useStaff'
-import { LiveCustomerAddresses } from './LiveCustomerAddresses'
 import { LiveBottleTypes } from './LiveBottleTypes'
 import { bottleTypeApi } from './bottleTypeApi'
 import { invalidateLiveData } from './invalidateLiveData'
@@ -16,13 +15,10 @@ type ProductDto = {
   unitsPerCase: number | null; bottleTypeId: number | null; salePrice: number; active: boolean
 }
 type ProductDraft = Omit<ProductDto, 'id' | 'active'>
-type CustomerDto = { id: number; fullName: string; phone: string | null; createdAt: string }
-type CustomerDraft = Pick<CustomerDto, 'fullName' | 'phone'>
 type CatalogFilter = 'active' | 'inactive' | 'all'
 const filterOptions = [{ value: 'active', label: 'Đang hoạt động' }, { value: 'inactive', label: 'Đã ngừng dùng' }, { value: 'all', label: 'Tất cả' }]
 const activeQuery = (filter: CatalogFilter) => filter === 'all' ? '' : `?active=${filter === 'active'}`
 
-const phone = (value: string | null | undefined) => value?.replace(/[\s().-]/g, '') || null
 
 export function LiveProductsPage() {
   const { message } = App.useApp()
@@ -86,44 +82,5 @@ export function LiveProductsPage() {
       </Form>
     </Modal>
     {bottlesOpen && <LiveBottleTypes onClose={() => setBottlesOpen(false)} />}
-  </Page>
-}
-
-export function LiveCustomersPage() {
-  const { message } = App.useApp()
-  const queryClient = useQueryClient()
-  const [form] = Form.useForm<CustomerDraft>()
-  const [editing, setEditing] = useState<CustomerDto | null | undefined>()
-  const [addressCustomer, setAddressCustomer] = useState<CustomerDto | null>(null)
-  const customers = useQuery({ queryKey: ['live', 'customers'], queryFn: () => api.get<CustomerDto[]>('/sales/customers') })
-  const save = useMutation({
-    mutationFn: (draft: CustomerDraft) => {
-      const input = { fullName: draft.fullName.trim(), phone: phone(draft.phone) }
-      return editing ? api.put<CustomerDto>(`/sales/customers/${editing.id}`, input) : api.post<CustomerDto>('/sales/customers', input)
-    },
-    onSuccess: () => { void invalidateLiveData(queryClient); setEditing(undefined); message.success('Đã lưu khách hàng.') },
-    onError: (error: Error) => message.error(error.message),
-  })
-  const deactivate = useMutation({
-    mutationFn: (id: number) => api.delete<void>(`/sales/customers/${id}`),
-    onSuccess: () => { void invalidateLiveData(queryClient); message.success('Đã ngừng sử dụng hồ sơ khách hàng.') },
-    onError: (error: Error) => message.error(error.message),
-  })
-  const open = (customer: CustomerDto | null) => { setEditing(customer); form.setFieldsValue(customer ?? { fullName: '', phone: null }) }
-
-  return <Page title="Khách hàng" description="Hồ sơ khách hàng từ backend."><Button type="primary" onClick={() => open(null)} style={{ marginBottom: 16 }}>Thêm khách hàng</Button>
-    <Alert type="info" showIcon title="Công nợ, sổ vỏ và số đơn chưa được backend đồng bộ trong Sprint 1." style={{ marginBottom: 16 }} />
-    {customers.isError ? <QueryError error={customers.error} onRetry={customers.refetch} /> : <Table<CustomerDto> rowKey="id" loading={customers.isPending} dataSource={customers.data ?? []} pagination={{ pageSize: 10 }} scroll={{ x: 600 }} columns={[
-      { title: 'Mã', dataIndex: 'id' }, { title: 'Họ tên', dataIndex: 'fullName' }, { title: 'Số điện thoại', dataIndex: 'phone', render: (v: string | null) => v || '—' },
-      { title: 'Trạng thái', render: () => <Tag color="green">Đang hoạt động</Tag> },
-      { title: 'Thao tác', key: 'actions', render: (_: unknown, item: CustomerDto) => <><Button type="link" onClick={() => setAddressCustomer(item)}>Địa chỉ</Button><Button type="link" onClick={() => open(item)}>Sửa</Button><Popconfirm title="Ngừng sử dụng hồ sơ khách hàng?" onConfirm={() => deactivate.mutate(item.id)}><Button type="link" danger>Ngừng dùng</Button></Popconfirm></> },
-    ]} />}
-    <Modal title={editing ? 'Sửa khách hàng' : 'Thêm khách hàng'} open={editing !== undefined} onCancel={() => setEditing(undefined)} onOk={() => form.submit()} confirmLoading={save.isPending} destroyOnHidden>
-      <Form form={form} layout="vertical" onFinish={(draft) => save.mutate(draft)}>
-        <Form.Item label="Họ tên" name="fullName" rules={[{ required: true, max: 150 }]}><Input /></Form.Item>
-        <Form.Item label="Số điện thoại" name="phone" rules={[{ pattern: /^(0|\+84)[0-9]{9,10}$/, message: 'Số điện thoại không hợp lệ.' }]}><Input /></Form.Item>
-      </Form>
-    </Modal>
-    {addressCustomer && <LiveCustomerAddresses customerId={addressCustomer.id} customerName={addressCustomer.fullName} onClose={() => setAddressCustomer(null)} />}
   </Page>
 }

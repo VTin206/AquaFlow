@@ -7,16 +7,25 @@ import { useColumnSort } from '../../shared/components/sortableColumn'
 import { Money } from '../../shared/components/Money'
 import { currency } from '../../shared/utils/format'
 import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
+import { useFeature, useIsDemo } from '../../shared/features'
+import { LiveOrderDraftModal } from '../live/LiveOrderDraftModal'
 import { CreateOrderModal } from '../orders/components/CreateOrderModal'
 import { CustomerDrawer } from './components/CustomerDrawer'
 import { CustomerFormModal } from './components/CustomerFormModal'
 import { CustomerCards } from './components/CustomerCards'
-import type { Customer } from './types'
+import { customerCode, type Customer } from './types'
 import { useCustomers } from './useCustomers'
 import { matchesSearch } from '../../shared/utils/search'
 
+/** Cột chỉ hiện khi tính năng được bật; giữ đúng kiểu cột của bảng. */
+const optional = <T,>(show: boolean, column: TableColumnsType<T>[number]): TableColumnsType<T> => (show ? [column] : [])
+
 export function CustomersPage() {
   const screens = Grid.useBreakpoint()
+  const demo = useIsDemo()
+  const showArea = useFeature('customerProfileExtras')
+  const showDebt = useFeature('customerDebt')
+  const showBottles = useFeature('bottleLedger')
   const customersQuery = useCustomers()
   const [query, setQuery] = useState('')
   const [profileId, setProfileId] = useState<string | null>(null)
@@ -25,12 +34,19 @@ export function CustomersPage() {
   const [orderFor, setOrderFor] = useState<Customer | null>(null)
 
   const customers = customersQuery.data ?? []
-  const visible = customers.filter((customer) => matchesSearch(query, `${customer.id} ${customer.name} ${customer.phone} ${customer.area}`, customer.phone))
+  const visible = customers.filter((customer) => matchesSearch(query, `${customerCode(customer)} ${customer.name} ${customer.phone} ${customer.area}`, customer.phone))
   const totalBottles = customers.reduce((sum, customer) => sum + customer.bottlesHeld, 0)
   const totalDeposit = customers.reduce((sum, customer) => sum + customer.depositHeld, 0)
   const totalDebt = customers.reduce((sum, customer) => sum + customer.debt, 0)
 
   const sort = useColumnSort<Customer>({ key: 'orders', order: 'descend' })
+  const stats = [
+    { key: 'count', show: true, node: <Statistic title="Khách hàng" value={customers.length} /> },
+    { key: 'debt', show: showDebt, node: <Statistic className={totalDebt > 0 ? 'af-stat-due' : 'af-stat-paid'} title="Còn phải thu" value={totalDebt} formatter={(value) => currency(Number(value))} /> },
+    { key: 'bottles', show: showBottles, node: <Statistic title="Vỏ khách đang giữ" value={totalBottles} suffix="vỏ" /> },
+    { key: 'deposit', show: showBottles, node: <Statistic className="af-stat-deposit" title="Tiền cọc đang giữ" value={totalDeposit} formatter={(value) => currency(Number(value))} /> },
+  ].filter((stat) => stat.show)
+
   const columns: TableColumnsType<Customer> = [
     {
       ...sort.column('Khách hàng', 'name', 'text'),
@@ -43,28 +59,28 @@ export function CustomersPage() {
             {customer.name}
           </button>
           <small>
-            <a href={`tel:${customer.phone.replace(/\s/g, '')}`}>{customer.phone}</a>
+            {customer.phone ? <a href={`tel:${customer.phone.replace(/\s/g, '')}`}>{customer.phone}</a> : 'Chưa có số điện thoại'}
           </small>
         </div>
       ),
     },
-    { title: 'Khu vực', dataIndex: 'area', ellipsis: true },
+    ...optional<Customer>(showArea, { title: 'Khu vực', dataIndex: 'area', ellipsis: true }),
     { ...sort.column('Số đơn', 'orders', 'number'), dataIndex: 'orders', align: 'right', width: 100, sorter: (a, b) => a.orders - b.orders },
-    {
+    ...optional<Customer>(showDebt, {
       ...sort.column('Còn phải thu', 'debt', 'number'),
       dataIndex: 'debt',
       align: 'right',
       width: 140,
       sorter: (a, b) => a.debt - b.debt,
       render: (debt: number) => (debt > 0 ? <Money value={debt} tone="due" /> : <span className="af-text-muted">—</span>),
-    },
-    {
+    }),
+    ...optional<Customer>(showBottles, {
       ...sort.column('Vỏ đang giữ', 'bottlesHeld', 'number'),
       dataIndex: 'bottlesHeld',
       width: 130,
       sorter: (a, b) => a.bottlesHeld - b.bottlesHeld,
       render: (count: number) => (count > 0 ? <Tag color="orange">{count} vỏ</Tag> : <Tag>Không</Tag>),
-    },
+    }),
     {
       title: 'Thao tác',
       key: 'action',
@@ -85,7 +101,7 @@ export function CustomersPage() {
   return (
     <Page
       title="Khách hàng"
-      description="Hồ sơ liên hệ, lịch sử mua, công nợ và sổ vỏ bình của từng khách."
+      description={showDebt || showBottles ? 'Hồ sơ liên hệ, lịch sử mua, công nợ và sổ vỏ bình của từng khách.' : 'Hồ sơ liên hệ, địa chỉ giao và lịch sử mua của từng khách.'}
       actions={
         <Button type="primary" icon={<Plus size={16} />} onClick={() => setEditing(null)}>
           Thêm khách hàng
@@ -99,26 +115,11 @@ export function CustomersPage() {
       ) : (
         <>
           <Row gutter={[12, 12]} className="af-stat-row">
-            <Col xs={24} sm={12} lg={6}>
-              <Card loading={customersQuery.isPending}>
-                <Statistic title="Khách hàng" value={customers.length} />
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card loading={customersQuery.isPending}>
-                <Statistic className={totalDebt > 0 ? 'af-stat-due' : 'af-stat-paid'} title="Còn phải thu" value={totalDebt} formatter={(value) => currency(Number(value))} />
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card loading={customersQuery.isPending}>
-                <Statistic title="Vỏ khách đang giữ" value={totalBottles} suffix="vỏ" />
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card loading={customersQuery.isPending}>
-                <Statistic className="af-stat-deposit" title="Tiền cọc đang giữ" value={totalDeposit} formatter={(value) => currency(Number(value))} />
-              </Card>
-            </Col>
+            {stats.map((stat) => (
+              <Col key={stat.key} xs={24} sm={12} lg={stats.length > 1 ? 6 : 8}>
+                <Card loading={customersQuery.isPending}>{stat.node}</Card>
+              </Col>
+            ))}
           </Row>
           <Card className="af-card" styles={{ body: { padding: 0 } }}>
             <div className="af-toolbar">
@@ -171,8 +172,15 @@ export function CustomersPage() {
         onClose={() => setEditing(undefined)}
         onSaved={(customer) => editing === null && setProfileId(customer.id)}
       />
+      {!demo && orderFor && (
+        <LiveOrderDraftModal
+          defaultCustomer={{ id: Number(orderFor.id), name: orderFor.name, phone: orderFor.phone || undefined }}
+          onClose={() => setOrderFor(null)}
+          onCreated={() => setOrderFor(null)}
+        />
+      )}
       <CreateOrderModal
-        open={orderFor !== null}
+        open={demo && orderFor !== null}
         defaultCustomer={orderFor?.name}
         defaultPhone={orderFor?.phone}
         defaultAddress={orderFor?.addresses[0]}

@@ -9,11 +9,20 @@ export const backendFeatures = {
   supplierContactName: false,
   /** Email nhà cung cấp (SupplierResponse chưa có). */
   supplierEmail: false,
+  /** Loại khách cá nhân/doanh nghiệp (CustomerResponse chưa có). */
+  customerType: false,
+  /** Khu vực và ghi chú trên hồ sơ khách (BE chỉ có khu vực theo từng địa chỉ giao). */
+  customerProfileExtras: false,
+  /** Công nợ của khách (chưa có luồng thanh toán). */
+  customerDebt: false,
+  /** Sổ vỏ bình và tiền cọc (chưa có API). */
+  bottleLedger: false,
 } satisfies Record<string, boolean>
 
 export type BackendFeature = keyof typeof backendFeatures
 
+export const useIsDemo = () => useAuth().user?.isDemo ?? false
+
 export function useFeature(feature: BackendFeature) {
-  const demo = useAuth().user?.isDemo ?? false
-  return demo || backendFeatures[feature]
+  return useIsDemo() || backendFeatures[feature]
 }
