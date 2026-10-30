@@ -26,6 +26,8 @@ export const backendFeatures = {
   lowStockThreshold: false,
   /** Phiếu thu, số còn phải thu của đơn (BE chỉ có trạng thái thanh toán, chưa có luồng thu tiền). */
   orderPayments: false,
+  /** Kiểm hàng hoàn sau giao thất bại và lịch sử xuất giao / nhập hàng hoàn (chờ API Dispatch, Return của BE). */
+  deliveryReturns: false,
   /** Thông báo trên thanh trên cùng (chưa có API). */
   notifications: false,
 } satisfies Record<string, boolean>

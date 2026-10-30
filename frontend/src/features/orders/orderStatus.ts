@@ -1,4 +1,4 @@
-import type { Order, OrderStatus } from './types'
+import { awaitingReturnInspection, type Order, type OrderStatus } from './types'
 
 export const orderStatuses: OrderStatus[] = ['Chờ xác nhận', 'Đã xác nhận', 'Đang chuẩn bị', 'Đang giao', 'Đã giao', 'Giao thất bại', 'Đã hoàn tất', 'Đã hủy']
 
@@ -18,8 +18,9 @@ export const statusColor: Record<OrderStatus, string> = {
 
 export const nextActionLabel = (order: Order) => {
   if (order.status === 'Chờ xác nhận') return 'Xác nhận'
-  if (order.status === 'Đang chuẩn bị') return order.method === 'Tại quầy' ? 'Khách nhận hàng' : 'Bắt đầu giao'
+  // Đơn giao tận nơi chỉ xuất kho qua chuyến giao (Giao hàng → chi tiết chuyến).
+  if (order.status === 'Đang chuẩn bị') return order.method === 'Tại quầy' ? 'Khách nhận hàng' : undefined
   if (order.status === 'Đang giao') return 'Kết quả giao'
-  if (order.status === 'Giao thất bại') return 'Giao lại'
+  if (order.status === 'Giao thất bại') return awaitingReturnInspection(order) ? undefined : 'Giao lại'
   return undefined
 }

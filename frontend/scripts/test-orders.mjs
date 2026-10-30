@@ -150,7 +150,7 @@ try {
     db.products[0].expiry = '01/01/2000'
     await assert.rejects(orderService.receive(order.id, { success: true, receiver: 'Khách' }))
   })
-  await test('failed delivery requires reason, retry keeps reservation, delivery alone is not completion', async () => {
+  await test('failed delivery requires reason; retry needs return inspection and a new reservation; delivery alone is not completion', async () => {
     const order = await orderService.create(draft())
     await orderService.advanceStatus(order.id)
     await orderService.advanceStatus(order.id)
@@ -159,8 +159,17 @@ try {
     const failed = await orderService.receive(order.id, { success: false, reason: 'Khách hẹn lại' })
     assert.equal(failed.status, 'Giao thất bại')
     const stock = db.products[0].stock
-    await orderService.advanceStatus(order.id)
+    // Không tự cộng kho, không giao lại khi chưa kiểm hàng mang về.
+    await assert.rejects(orderService.advanceStatus(order.id), /Kiểm hàng/)
     assert.equal(db.products[0].stock, stock)
+    const quantity = order.lines[0].quantity
+    await orderService.inspectReturn(order.id, { sellable: [quantity] })
+    assert.equal(db.products[0].stock, stock + quantity)
+    await assert.rejects(orderService.inspectReturn(order.id, { sellable: [quantity] }), /không có hàng chờ kiểm/)
+    const again = await orderService.advanceStatus(order.id)
+    assert.deepEqual([again.status, again.stockReserved, db.products[0].stock], ['Đang chuẩn bị', true, stock])
+    await orderService.advanceStatus(order.id)
+    assert.equal(db.orders.find((item) => item.id === order.id).dispatches.length, 2)
     const received = await orderService.receive(order.id, { success: true, receiver: 'Người nhận hộ' })
     assert.equal(received.status, 'Đã giao')
     assert.match(received.history.at(-1).message, /Người nhận hộ/)

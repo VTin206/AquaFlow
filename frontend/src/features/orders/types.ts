@@ -33,6 +33,14 @@ export type ReturnDraft = {
   refundMethod?: Payment['method']
   refundReference?: string
 }
+/** Một dòng hàng theo lô; `lotCode` trống khi sản phẩm không quản lý theo lô. */
+export type LotLine = { productId: string; name: string; unit: string; lotCode?: string; expiryDate?: string; quantity: number }
+/** Một lần xuất kho đi giao (DISPATCH): xuất toàn bộ hàng của đơn, ghi theo lô FEFO. */
+export type StockDispatch = { at: string; by?: string; tripId?: string; lines: LotLine[] }
+/** Kiểm hàng mang về sau khi giao thất bại: chỉ phần bán lại được mới nhập lại kho (RETURN). */
+export type ReturnInspection = { at: string; by?: string; note?: string; lines: (LotLine & { sellable: number; damaged: number })[] }
+export type ReturnInspectionDraft = { sellable: number[]; note?: string }
+
 export type DeliveryResult = {
   success: boolean
   receiver?: string
@@ -75,6 +83,8 @@ export type Order = {
   /** Thời điểm khách nhận hàng (giao thành công hoặc nhận tại quầy). */
   deliveredAt?: string
   returns?: OrderReturn[]
+  dispatches?: StockDispatch[]
+  returnInspections?: ReturnInspection[]
   /** Mã bí mật trong liên kết tra cứu gửi cho khách. */
   trackingToken?: string
 }
@@ -101,6 +111,29 @@ export const paymentLabel = (order: Order) =>
 export const jugCount = (order: Pick<Order, 'lines'>) => order.lines.filter((line) => line.unit === 'Bình').reduce((sum, line) => sum + line.quantity, 0)
 
 export const createdAtOf = (order: Pick<Order, 'history'>) => order.history[0]?.at
+
+/** Hàng đang ở ngoài kho chờ kiểm: lần xuất gần nhất (hoặc cả đơn với dữ liệu cũ chưa ghi lần xuất). */
+export const returnLinesOf = (order: Order): LotLine[] =>
+  order.dispatches?.at(-1)?.lines ?? order.lines.map(({ productId, name, unit, quantity }) => ({ productId, name, unit, quantity }))
+
+/** Giao thất bại nhưng chưa kiểm hàng mang về thì chưa được hủy hay giao lại. */
+export const awaitingReturnInspection = (order: Order) => {
+  if (order.status !== 'Giao thất bại') return false
+  const lastDispatch = order.dispatches?.at(-1)?.at
+  return !(order.returnInspections ?? []).some((inspection) => !lastDispatch || inspection.at >= lastDispatch)
+}
+
+export type DeliveryAttempt = { at: string; by?: string; success: boolean; reason?: string }
+/** Các lần giao suy ra từ lịch sử đơn (giao thành công / thất bại). */
+export const deliveryAttempts = (order: Pick<Order, 'history'>): DeliveryAttempt[] =>
+  order.history
+    .filter((event) => /^Giao (thành công|thất bại)/.test(event.message))
+    .map((event) => ({
+      at: event.at,
+      by: event.by,
+      success: event.message.startsWith('Giao thành công'),
+      reason: event.message.startsWith('Giao thất bại') ? event.message.replace(/^Giao thất bại:\s*/, '') : undefined,
+    }))
 
 /** Giá trị hàng đã nhận trả lại. */
 export const returnedValue = (order: Pick<Order, 'returns'>) =>

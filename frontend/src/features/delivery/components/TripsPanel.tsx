@@ -5,8 +5,10 @@ import { QueryError } from '../../../shared/components/QueryError'
 import { Money } from '../../../shared/components/Money'
 import { dueTone } from '../../../shared/utils/money'
 import { currency } from '../../../shared/utils/format'
+import { canDispatch } from '../../orders/orderService'
 import { amountDue, jugCount, type Order } from '../../orders/types'
 import { useOrders } from '../../orders/useOrders'
+import { openIn } from '../tripService'
 import { useTrips } from '../useTrips'
 import { CreateTripModal } from './CreateTripModal'
 import { TripDrawer } from './TripDrawer'
@@ -22,8 +24,16 @@ export function TripsPanel() {
 
   const orders = ordersQuery.data ?? []
   const trips = tripsQuery.data ?? []
-  const busy = new Set(trips.filter((trip) => trip.status !== 'Đã đối soát').flatMap((trip) => trip.orderIds))
-  const waiting = orders.filter((order) => order.method === 'Giao tận nơi' && ['Đang chuẩn bị', 'Giao thất bại'].includes(order.status) && !busy.has(order.id))
+  // Đơn còn việc ở một chuyến chưa đối soát thì không xếp thêm; đơn giao lại (đã kiểm hàng hoàn) quay về danh sách chờ.
+  const busy = new Set(
+    trips
+      .filter((trip) => trip.status !== 'Đã đối soát')
+      .flatMap((trip) => trip.orderIds.filter((id) => {
+        const order = orders.find((item) => item.id === id)
+        return !order || openIn(trip, order)
+      })),
+  )
+  const waiting = orders.filter((order) => canDispatch(order) && !busy.has(order.id))
   const chosen = waiting.filter((order) => selected.includes(order.id))
   const activeTrips = trips.filter((trip) => trip.status !== 'Đã đối soát')
   const settledTrips = trips.filter((trip) => trip.status === 'Đã đối soát')
@@ -64,7 +74,7 @@ export function TripsPanel() {
               render: (id: string, order) => (
                 <div className="af-cell-stack">
                   <span className="af-strong">{id}</span>
-                  {order.status === 'Giao thất bại' ? <small className="af-text-warning">Giao lại</small> : <small>{order.time}</small>}
+                  {order.dispatches?.length ? <small className="af-text-warning">Giao lại</small> : <small>{order.time}</small>}
                 </div>
               ),
             },

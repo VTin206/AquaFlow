@@ -9,7 +9,7 @@ import { useStaff } from '../../auth/useStaff'
 import { useSettings } from '../../settings/settingsService'
 import { canCancel as cancellable, returnableQuantity } from '../orderService'
 import { DeliverySlipDocument, InvoiceDocument } from '../print/OrderDocuments'
-import { amountDue, paidAmount, paymentLabel, type OrderLine, type Payment, type PaymentDraft, type RefundDraft } from '../types'
+import { amountDue, awaitingReturnInspection, paidAmount, paymentLabel, type OrderLine, type Payment, type PaymentDraft, type RefundDraft } from '../types'
 import { useOrderAction, useOrders } from '../useOrders'
 import { AdvanceStatusButton } from './AdvanceStatusButton'
 import { LateTag } from './LateTag'
@@ -43,7 +43,7 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
   const dueColor = cancelled ? undefined : due > 0 ? token.colorWarningText : token.colorSuccessText
   const dueBackground = cancelled ? undefined : due > 0 ? token.colorWarningBg : token.colorSuccessBg
   const canPay = !['Chờ xác nhận', 'Đã hủy', 'Đã hoàn tất'].includes(order.status) && due > 0
-  const canCancel = cancellable(order) && can(role, 'cancelOrder')
+  const canCancel = cancellable(order) && !awaitingReturnInspection(order) && can(role, 'cancelOrder')
   const needsRefundRight = paid > 0 && !can(role, 'refund')
   const canReturn = ['Đã giao', 'Đã hoàn tất'].includes(order.status) && can(role, 'refund') && order.lines.some((line) => returnableQuantity(order, line.productId) > 0)
   // Giá trị hàng trả và số phải hoàn tính ngay khi nhập, giống cách backend sẽ tính.
@@ -107,7 +107,16 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
             type="info"
             showIcon
             title="Muốn hủy đơn đang giao?"
-            description="Tài xế ghi kết quả “Giao thất bại” khi mang hàng về, sau đó mới hủy được để nhập lại kho."
+            description="Tài xế ghi kết quả “Giao thất bại”, kho kiểm hàng mang về rồi mới hủy được."
+          />
+        )}
+        {awaitingReturnInspection(order) && (
+          <Alert
+            className="af-detail-alert"
+            type="warning"
+            showIcon
+            title="Chờ kiểm hàng hoàn"
+            description="Kiểm hàng mang về ở Kho hàng → Hàng hoàn. Xong mới giao lại hoặc hủy đơn."
           />
         )}
         <Descriptions
@@ -320,7 +329,7 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
             action.mutate({ kind: 'cancel', id: order.id, reason, refund: paid > 0 && method ? { method, reference } : undefined }, callbacks)
           }
         >
-          <p>{order.status === 'Giao thất bại' ? 'Hàng tài xế mang về sẽ được nhập lại số lượng có thể bán.' : 'Hàng đang giữ cho đơn sẽ được trả lại số lượng có thể bán.'}</p>
+          <p>{order.status === 'Giao thất bại' ? 'Hàng mang về đã được xử lý khi kiểm hàng hoàn.' : 'Hàng đang giữ cho đơn sẽ được trả lại số lượng có thể bán.'}</p>
           {paid > 0 && (
             <>
               <Alert type="warning" showIcon title={`Đơn đã thu ${currency(paid)}. Hủy đơn sẽ ghi phiếu hoàn toàn bộ số này cho khách.`} style={{ marginBottom: 16 }} />
