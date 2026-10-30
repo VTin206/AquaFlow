@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router'
 import { ArrowDownRight, ArrowUpRight, Download } from 'lucide-react'
 import { BarChart } from '../../shared/components/BarChart'
 import { Money } from '../../shared/components/Money'
+import { OrderTotals } from '../../shared/components/OrderTotals'
 import { Page } from '../../shared/components/Page'
 import { PanelHeading } from '../../shared/components/PanelHeading'
 import { QueryError } from '../../shared/components/QueryError'
@@ -265,17 +266,17 @@ export function ReportsPage() {
                   <>
                 <Row gutter={[16, 16]}>
                   <Col xs={24} xl={8}>
-                    <Card title="Doanh thu" className="af-card af-fill" loading={loading}>
+                    {/* Không kéo cao bằng biểu đồ bên cạnh để thẻ không trống phía dưới. */}
+                    <Card title="Doanh thu" className="af-card" loading={loading}>
                       {report && (
-                        <Descriptions
-                          size="small"
-                          column={1}
-                          items={[
-                            { key: 'goods', label: 'Tiền hàng đơn đã giao', children: currency(report.sales.goods) },
-                            { key: 'fees', label: 'Phí giao', children: currency(report.sales.deliveryFees) },
-                            { key: 'returns', label: 'Trừ hàng khách trả', children: <Money value={report.sales.returnsValue} tone="refund" /> },
-                            { key: 'net', label: <strong>Doanh thu thuần</strong>, children: <strong>{currency(report.sales.net)}</strong> },
+                        <OrderTotals
+                          wide
+                          rows={[
+                            { label: 'Tiền hàng đơn đã giao', value: currency(report.sales.goods) },
+                            { label: 'Phí giao', value: currency(report.sales.deliveryFees) },
+                            { label: 'Trừ hàng khách trả', value: <Money value={report.sales.returnsValue} tone="refund" /> },
                           ]}
+                          total={{ label: 'Doanh thu thuần', value: currency(report.sales.net) }}
                         />
                       )}
                       <p className="af-form-hint">Ghi nhận khi khách nhận hàng. Hàng trả trừ vào kỳ khách trả, không sửa số của kỳ đã giao.</p>

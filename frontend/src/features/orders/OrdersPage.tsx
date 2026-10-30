@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Alert, Button, Card, Input, Select, Tooltip } from 'antd'
-import { FunnelX, Plus, Search } from 'lucide-react'
+import { Alert, Button, Card, Grid, Input, Select, Tooltip } from 'antd'
+import { FunnelX, Plus, Search, SlidersHorizontal } from 'lucide-react'
 import { CountLabel } from '../../shared/components/CountLabel'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
@@ -21,6 +21,10 @@ export function OrdersPage() {
   const ordersQuery = useOrderList()
   const { filters: { query, status, method, payment }, updateFilters, resetFilters } = useOrderFilters()
   const [creating, setCreating] = useState(false)
+  // Điện thoại: chỉ hiện lọc trạng thái và tìm kiếm, hai bộ lọc còn lại gom vào nút "Lọc thêm" để đơn hiện sớm hơn.
+  const narrow = Grid.useBreakpoint().md === false
+  const [moreFilters, setMoreFilters] = useState(false)
+  const extraActive = Number(method !== ALL) + Number(payment !== ALL)
   const [created, setCreated] = useState<number | null>(null)
 
   const orders = ordersQuery.data ?? []
@@ -74,6 +78,12 @@ export function OrdersPage() {
                     label: <CountLabel label={value} count={countOf(value)} urgent={value === 'Chờ xác nhận'} />,
                   }))}
                 />
+                {narrow && (
+                  <Button icon={<SlidersHorizontal size={16} />} aria-expanded={moreFilters} onClick={() => setMoreFilters((open) => !open)}>
+                    Lọc thêm{extraActive ? ` (${extraActive})` : ''}
+                  </Button>
+                )}
+                {(!narrow || moreFilters) && <>
                 <Select
                   aria-label="Lọc hình thức nhận"
                   value={method}
@@ -91,6 +101,7 @@ export function OrdersPage() {
                     options={[{ value: ALL, label: showPayments ? 'Mọi thanh toán' : 'Thanh toán (chưa hỗ trợ)' }, ...['Còn phải thu', 'Đã thanh toán'].map((value) => ({ value, label: value }))]}
                   />
                 </Tooltip>
+                </>}
               </div>
               <Input
                 allowClear

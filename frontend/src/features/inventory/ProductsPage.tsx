@@ -183,7 +183,6 @@ export function ProductsPage() {
       <Card className="af-card">
         <div className="af-catalog-heading">
           <strong>Thương hiệu</strong>
-          <Select className="af-brand-select" aria-label="Chọn thương hiệu" placeholder="Tất cả thương hiệu" allowClear showSearch={{ filterOption: (input, option) => normalizeSearch(String(option?.label ?? '')).includes(normalizeSearch(input)) }} value={brand} options={brands.map((item) => ({ value: item.name, label: `${item.name} (${item.count})` }))} onChange={(value) => { setBrand(value); setPage(1) }} />
         </div>
         <div className="af-brand-filters" role="group" aria-label="Lọc theo thương hiệu">
           <button type="button" className={`af-brand-filter${!brand ? ' is-active' : ''}`} aria-pressed={!brand} onClick={() => { setBrand(undefined); setPage(1) }}><LayoutGrid size={25} aria-hidden /><span>Tất cả <small>{products.length}</small></span></button>

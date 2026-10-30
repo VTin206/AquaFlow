@@ -94,7 +94,7 @@ export function TripsPanel() {
               width: 140,
               render: (value?: string) => (value ? new Date(value).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '—'),
             },
-            { title: 'Bình', key: 'jugs', width: 70, align: 'right', render: (_, order) => jugCount(order) || '—' },
+            { title: 'Bình', key: 'jugs', width: 80, align: 'right', render: (_, order) => jugCount(order) || '—' },
             { title: 'Cần thu', key: 'due', width: 130, align: 'right', render: (_, order) => <Money value={amountDue(order)} tone={dueTone(amountDue(order))} /> },
           ]}
         />
