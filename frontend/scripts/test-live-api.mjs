@@ -94,6 +94,21 @@ try {
   console.log('PASS order list/detail preserve backend status, item prices, discount and total')
   console.log('PASS live cancel and prepare actions match backend policy; cancel stays unavailable after dispatch')
 
+  const { inferCatalog } = await vite.ssrLoadModule('/src/features/inventory/catalog.ts')
+  const { shopGroups } = await vite.ssrLoadModule('/src/features/shop/shopGroups.ts')
+  const groupOf = (name, unit) => shopGroups.find((group) => group.match({ name, unit, catalog: inferCatalog(name, unit) }))?.key
+  assert.deepEqual(inferCatalog('Nước khoáng Vĩnh Hảo 20 Lít (Vòi)', 'Bình'), { category: 'Nước khoáng', packaging: 'Bình có vòi', capacity: '18,5–20L', volumeMl: 20000 })
+  assert.equal(inferCatalog('Nước khoáng Vĩnh Hảo có gas 500ml', 'Thùng').category, 'Nước có ga')
+  assert.equal(inferCatalog('Nước Revive muối khoáng 390ml', 'Thùng').category, 'Bù khoáng & điện giải')
+  assert.equal(inferCatalog('Nước kiềm ion Life 1.25 Lít', 'Thùng').volumeMl, 1250)
+  assert.equal(groupOf('Nước LaVie kiềm 19 Lít (úp)', 'Bình'), 'jug-dispenser')
+  assert.equal(groupOf('Nước tinh khiết Aquafina 1,5 Lít', 'Thùng'), 'large')
+  assert.equal(groupOf('Nước khoáng Lavie 5 Lít', 'Thùng'), 'can-5l')
+  assert.equal(groupOf('Thức uống bổ sung ion Pocari Sweat Lon 330ml', 'Thùng'), 'tin')
+  assert.equal(groupOf('Nước Rosée chai 330ml (24 chai)', 'Lốc'), 'small-350')
+  assert.equal(inferCatalog('Vỏ bình 20L', 'Vỏ').packaging, 'Vỏ bình')
+  console.log('PASS live shop infers water type, packaging and size from product names so storefront filters work without catalog data')
+
   const guestInput = toGuestOrderInput({ customer: 'Nguyen Van An', phone: '0901234567', address: '123 Nguyen Trai', area: 'Quan 5', lines: [{ productId: '12', quantity: 2 }], note: 'Giao buổi sáng', floor: 4, appointment: '2026-10-29T08:00:00Z' })
   const createdGuestOrder = await guestOrderApi.create(guestInput)
   assert.equal(createdGuestOrder.status, 'PENDING')

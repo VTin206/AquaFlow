@@ -5,6 +5,7 @@ import { useAuth } from '../auth/useAuth'
 import { catalogApi, type CatalogProduct } from '../live/catalogApi'
 import { guestOrderApi, type GuestOrderInput } from '../live/guestOrderApi'
 import { daysUntilExpiry } from '../inventory/expiry'
+import { inferCatalog } from '../inventory/catalog'
 import type { Product } from '../inventory/types'
 import { resolveProductImage } from '../inventory/productImages'
 import { orderService } from '../orders/orderService'
@@ -21,6 +22,7 @@ export const toShopProduct = (product: CatalogProduct): ShopProduct => ({
   id: String(product.id), sku: product.sku, name: product.name, brand: product.brand ?? '',
   unit: product.unit, price: product.salePrice, available: product.active ? null : false,
   unitsPerCase: product.unitsPerCase, bottleTypeName: product.bottleTypeName, image: resolveProductImage(product),
+  catalog: inferCatalog(product.name, product.unit),
 })
 
 export const shopService = {
