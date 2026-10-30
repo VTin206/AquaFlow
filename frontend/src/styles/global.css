@@ -438,6 +438,11 @@ body {
   vertical-align: -2px;
 }
 
+/* ---------- Form trong hộp thoại ---------- */
+/* Hộp thoại nhiều trường: dồn khoảng cách để thấy hết form, ít phải cuộn. Lỗi vẫn hiện ngay dưới ô. */
+.ant-modal .ant-form-item { margin-bottom: 14px; }
+.ant-modal .ant-form-vertical .ant-form-item-label { padding-bottom: 4px; }
+
 /* ---------- Ô trong bảng ---------- */
 /* Nội dung hộp xác nhận: tên đối tượng in đậm, mỗi ý một đoạn ngắn. */
 .af-confirm-body p { margin: 0; color: var(--af-text-secondary); line-height: 1.6; }
