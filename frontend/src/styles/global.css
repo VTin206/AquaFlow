@@ -696,6 +696,20 @@ body {
   gap: 6px;
   justify-content: space-between;
 }
+/* Hộp thoại sản phẩm: ảnh vuông bên trái, các nhóm trường bên phải. */
+.af-product-form { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; }
+.af-product-form-image { display: flex; flex-direction: column; gap: 4px; }
+.af-product-form-image .ant-upload-wrapper, .af-product-form-image .ant-upload.ant-upload-select { width: 100% !important; height: auto !important; aspect-ratio: 1; margin: 0 !important; }
+.af-product-form-image .af-upload-preview { object-fit: contain; background: #fff; }
+.af-product-form-image .af-form-hint { margin: 4px 0 0; }
+.af-product-form-fields { display: flex; flex-direction: column; gap: 4px; }
+.af-product-form-fields h4 { margin: 0 0 8px; color: var(--af-text-tertiary); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.af-product-form-fields section + section { padding-top: 12px; border-top: 1px solid var(--af-border); }
+@media (max-width: 640px) {
+  .af-product-form { grid-template-columns: 1fr; gap: 12px; }
+  .af-product-form-image { flex-direction: row; align-items: center; gap: 12px; }
+  .af-product-form-image .ant-upload-wrapper, .af-product-form-image .ant-upload.ant-upload-select { width: 96px !important; flex: none; }
+}
 .af-upload-preview {
   border-radius: 8px;
   height: 100%;
