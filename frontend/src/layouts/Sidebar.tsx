@@ -37,11 +37,11 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: Sid
     return {
       key: path,
       // Thu gọn thì nhãn ẩn vào tooltip, số đơn chờ chuyển thành chấm trên icon.
-      icon: collapsed && pending ? <Badge dot color="#087fad"><Icon size={18} strokeWidth={1.8} /></Badge> : <Icon size={18} strokeWidth={1.8} />,
+      icon: collapsed && pending ? <Badge dot color="var(--af-primary)"><Icon size={18} strokeWidth={1.8} /></Badge> : <Icon size={18} strokeWidth={1.8} />,
       label: (
         <span className="af-menu-label">
           {label}
-          {pending && <Badge count={pendingCount} size="small" color="#087fad" title={`${pendingCount} đơn chờ xác nhận`} />}
+          {pending && <Badge count={pendingCount} size="small" color="var(--af-primary)" title={`${pendingCount} đơn chờ xác nhận`} />}
           {!supported(path) && <small className="af-menu-soon">Chưa hỗ trợ</small>}
         </span>
       ),
