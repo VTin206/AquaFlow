@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Alert, Button, Card, Input, Select, Tooltip } from 'antd'
-import { Plus, RotateCcw, Search } from 'lucide-react'
+import { FunnelX, Plus, Search } from 'lucide-react'
 import { CountLabel } from '../../shared/components/CountLabel'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
@@ -104,7 +104,7 @@ export function OrdersPage() {
             </div>
             <div className="af-filter-summary">
               <span role="status">{ordersQuery.isPending ? 'Đang tải đơn hàng…' : `${visible.length} / ${orders.length} đơn hàng`}</span>
-              {hasFilters && <Button type="link" size="small" icon={<RotateCcw size={14} />} onClick={resetFilters}>Xóa bộ lọc</Button>}
+              {hasFilters && <Button type="link" size="small" className="af-clear-filter" icon={<FunnelX size={14} />} onClick={resetFilters}>Xóa bộ lọc</Button>}
             </div>
             <OrdersTable
               filterKey={JSON.stringify([query, status, method, paymentFilter])}

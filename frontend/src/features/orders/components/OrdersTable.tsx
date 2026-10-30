@@ -124,7 +124,7 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch∆
         <OrderCards orders={orders} loading={loading} compact={compact} emptyText={emptyText} onDetails={setSelectedId} filterKey={filterKey} />
       ) : <Table<Order>
         key={filterKey}
-        className="af-data-table"
+        className="af-data-table af-table-flush"
         rowKey="id"
         columns={columns}
         dataSource={orders}

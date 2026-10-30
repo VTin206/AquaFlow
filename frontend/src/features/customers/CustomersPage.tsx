@@ -143,7 +143,7 @@ export function CustomersPage() {
               />
             ) : <Table<Customer>
               key={query}
-              className="af-data-table"
+              className="af-data-table af-table-flush"
               size="middle"
               rowKey="id"
               columns={columns}

@@ -50,7 +50,7 @@ export function LotsPanel() {
       </div>
       <Table<LotItem>
         key={`${filter}:${query}`}
-        className="af-data-table"
+        className="af-data-table af-table-flush"
         size="middle"
         rowKey="id"
         loading={lotsQuery.isPending}
