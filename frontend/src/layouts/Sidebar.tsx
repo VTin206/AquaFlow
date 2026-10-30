@@ -27,7 +27,7 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: Sid
   const supported = usePageSupported()
   const allowed = (path: string) => !staff || canOpen(staff.role, path)
   const pendingCount = staff?.isDemo ? orders.filter((order) => order.status === 'Chờ xác nhận').length : 0
-  const storeName = staff?.isDemo ? settings?.storeName ?? 'Cửa hàng của bạn' : 'Cửa hàng của bạn'
+  const storeName = staff?.isDemo ? settings?.storeName ?? 'Cửa hàng' : 'Cửa hàng'
 
   const groups = navGroups
     .map((group) => ({ ...group, items: group.items.filter((item) => allowed(item.path)) }))
@@ -70,8 +70,8 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: Sid
         </Tooltip>
         {!collapsed && (
           <div className="af-workspace-text">
-            <strong className="af-cell-truncate" title={staff?.isDemo ? settings?.storeName : undefined}>{storeName}</strong>
-            <small>Quản lý đại lý nước</small>
+            <strong className="af-cell-truncate" title={storeName}>{storeName}</strong>
+            <small>Đại lý nước</small>
           </div>
         )}
         {onToggleCollapse && (
