@@ -26,7 +26,6 @@ const LiveInventoryPage = lazy(() => import('../features/live/LiveInventoryPage'
 const TrackPage = lazy(() => import('../features/shop/TrackPage').then((m) => ({ default: m.TrackPage })))
 const LoginPage = lazy(() => import('../features/auth/LoginPage').then((m) => ({ default: m.LoginPage })))
 const LivePages = lazy(() => import('../features/live/LiveSprintOnePages').then((m) => ({ default: m.LiveProductsPage })))
-const LiveSuppliersPage = lazy(() => import('../features/live/LiveSprintOnePages').then((m) => ({ default: m.LiveSuppliersPage })))
 const LiveCustomersPage = lazy(() => import('../features/live/LiveSprintOnePages').then((m) => ({ default: m.LiveCustomersPage })))
 const UnavailablePage = lazy(() => import('../features/live/UnavailablePage').then((m) => ({ default: m.UnavailablePage })))
 
@@ -67,7 +66,7 @@ export function App() {
             <Route path="inventory" element={<SprintOneMode demo={<InventoryPage />} live={<LiveInventoryPage />} />} />
             <Route path="products" element={<SprintOneMode demo={<ProductsPage />} live={<LivePages />} />} />
             <Route path="customers" element={<SprintOneMode demo={<CustomersPage />} live={<LiveCustomersPage />} />} />
-            <Route path="suppliers" element={<SprintOneMode demo={<SuppliersPage />} live={<LiveSuppliersPage />} />} />
+            <Route path="suppliers" element={<SuppliersPage />} />
             <Route path="delivery" element={<DemoOnly demo={<DeliveryPage />} />} />
             <Route path="driver" element={<DemoOnly demo={<DriverPage />} />} />
             <Route path="reports" element={<DemoOnly demo={<ReportsPage />} />} />

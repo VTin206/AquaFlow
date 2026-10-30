@@ -16,8 +16,6 @@ type ProductDto = {
   unitsPerCase: number | null; bottleTypeId: number | null; salePrice: number; active: boolean
 }
 type ProductDraft = Omit<ProductDto, 'id' | 'active'>
-type SupplierDto = { id: number; name: string; phone: string | null; address: string | null; active: boolean }
-type SupplierDraft = Pick<SupplierDto, 'name' | 'phone' | 'address'>
 type CustomerDto = { id: number; fullName: string; phone: string | null; createdAt: string }
 type CustomerDraft = Pick<CustomerDto, 'fullName' | 'phone'>
 type CatalogFilter = 'active' | 'inactive' | 'all'
@@ -88,52 +86,6 @@ export function LiveProductsPage() {
       </Form>
     </Modal>
     {bottlesOpen && <LiveBottleTypes onClose={() => setBottlesOpen(false)} />}
-  </Page>
-}
-
-export function LiveSuppliersPage() {
-  const { message } = App.useApp()
-  const admin = useStaff()?.role === 'ADMIN'
-  const queryClient = useQueryClient()
-  const [form] = Form.useForm<SupplierDraft>()
-  const [editing, setEditing] = useState<SupplierDto | null | undefined>()
-  const [filter, setFilter] = useState<CatalogFilter>('active')
-  const [search, setSearch] = useState('')
-  const effectiveFilter = admin ? filter : 'active'
-  const suppliers = useQuery({ queryKey: ['live', 'suppliers', effectiveFilter], queryFn: () => api.get<SupplierDto[]>(`/suppliers${activeQuery(effectiveFilter)}`) })
-  const save = useMutation({
-    mutationFn: (draft: SupplierDraft) => {
-      const input = { name: draft.name.trim(), phone: phone(draft.phone), address: draft.address?.trim() || null }
-      return editing ? api.put<SupplierDto>(`/suppliers/${editing.id}`, input) : api.post<SupplierDto>('/suppliers', input)
-    },
-    onSuccess: () => { void invalidateLiveData(queryClient); setEditing(undefined); message.success('Đã lưu nhà cung cấp.') },
-    onError: (error: Error) => message.error(error.message),
-  })
-  const deactivate = useMutation({
-    mutationFn: (id: number) => api.delete<void>(`/suppliers/${id}`),
-    onSuccess: () => { void invalidateLiveData(queryClient); message.success('Đã ngừng sử dụng nhà cung cấp.') },
-    onError: (error: Error) => message.error(error.message),
-  })
-  const open = (supplier: SupplierDto | null) => { setEditing(supplier); form.setFieldsValue(supplier ?? { name: '', phone: null, address: null }) }
-
-  return <Page title="Nhà cung cấp" description="Danh sách nhà cung cấp từ backend." actions={admin ? <Button type="primary" onClick={() => open(null)}>Thêm nhà cung cấp</Button> : undefined}>
-    <Space wrap style={{ marginBottom: 16 }}>
-      <Input aria-label="Tìm nhà cung cấp" placeholder="Tìm tên, điện thoại, địa chỉ" allowClear value={search} onChange={(event) => setSearch(event.target.value)} />
-      {admin && <Select aria-label="Trạng thái nhà cung cấp" value={filter} onChange={setFilter} options={filterOptions} />}
-      <Button loading={suppliers.isFetching} onClick={() => void suppliers.refetch()}>Làm mới</Button>
-    </Space>
-    {suppliers.isError ? <QueryError error={suppliers.error} onRetry={suppliers.refetch} /> : <Table<SupplierDto> key={`${effectiveFilter}:${search}`} rowKey="id" loading={suppliers.isPending} dataSource={(suppliers.data ?? []).filter((item) => matchesSearch(search, `${item.name} ${item.phone ?? ''} ${item.address ?? ''}`))} pagination={{ pageSize: 10 }} scroll={{ x: 680 }} columns={[
-      { title: 'Tên', dataIndex: 'name' }, { title: 'Số điện thoại', dataIndex: 'phone', render: (v: string | null) => v || '—' }, { title: 'Địa chỉ', dataIndex: 'address', render: (v: string | null) => v || '—' },
-      { title: 'Trạng thái', dataIndex: 'active', render: (value: boolean) => <Tag color={value ? 'green' : 'default'}>{value ? 'Đang dùng' : 'Đã ngừng dùng'}</Tag> },
-      ...(admin ? [{ title: 'Thao tác', key: 'actions', render: (_: unknown, item: SupplierDto) => <><Button type="link" onClick={() => open(item)}>Sửa</Button>{item.active && <Popconfirm title="Ngừng sử dụng nhà cung cấp?" onConfirm={() => deactivate.mutateAsync(item.id).catch(() => undefined)}><Button type="link" danger disabled={deactivate.isPending}>Ngừng dùng</Button></Popconfirm>}</> }] : []),
-    ]} />}
-    <Modal title={editing ? 'Sửa nhà cung cấp' : 'Thêm nhà cung cấp'} open={editing !== undefined} onCancel={() => setEditing(undefined)} onOk={() => form.submit()} confirmLoading={save.isPending} destroyOnHidden>
-      <Form form={form} layout="vertical" onFinish={(draft) => save.mutate(draft)}>
-        <Form.Item label="Tên" name="name" rules={[{ required: true, max: 200 }]}><Input /></Form.Item>
-        <Form.Item label="Số điện thoại" name="phone" rules={[{ pattern: /^(0|\+84)[0-9]{9,10}$/, message: 'Số điện thoại không hợp lệ.' }]}><Input /></Form.Item>
-        <Form.Item label="Địa chỉ" name="address" rules={[{ max: 500 }]}><Input.TextArea /></Form.Item>
-      </Form>
-    </Modal>
   </Page>
 }
 
