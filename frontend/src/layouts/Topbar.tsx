@@ -1,14 +1,11 @@
 import { useEffect, useState } from 'react'
-import { App, Avatar, Button, Dropdown, Tooltip, type MenuProps } from 'antd'
-import { Bell, Check, ChevronDown, Clock3, LogOut, Menu as MenuIcon, ShoppingCart, Waves } from 'lucide-react'
-import { Link, useNavigate } from 'react-router'
-import { roleNames, type RoleCode } from '../features/auth/permissions'
-import { useQueryClient } from '@tanstack/react-query'
-import { useAuth } from '../features/auth/useAuth'
-import { devAccounts, type DevAccount } from '../features/auth/devAccounts'
-import { setDemoRole, useStaff } from '../features/auth/useStaff'
+import { Avatar, Button, Dropdown, Tooltip } from 'antd'
+import { Bell, ChevronDown, Clock3, Menu as MenuIcon, ShoppingCart, Waves } from 'lucide-react'
+import { Link } from 'react-router'
+import { useStaff } from '../features/auth/useStaff'
 import { useFeature } from '../shared/features'
 import { NotificationPopover } from './NotificationPopover'
+import { initialsOf, useAccountMenuItems } from './useAccountMenu'
 
 const dateFormatter = new Intl.DateTimeFormat('vi-VN', {
   timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric',
@@ -35,61 +32,9 @@ function TopbarClock() {
 
 /** Thanh ứng dụng và các thao tác nhanh. */
 export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
-  const { user, logout, login, enterDemo } = useAuth()
-  const { message } = App.useApp()
-  const queryClient = useQueryClient()
   const staff = useStaff()
-  const navigate = useNavigate()
-  // Dev: đổi tài khoản không cần qua trang đăng nhập; xóa cache để không lẫn dữ liệu của tài khoản trước.
-  const switchTo = async (account: DevAccount) => {
-    try {
-      await login(account)
-      queryClient.clear()
-      message.success(`Đã chuyển sang ${account.label}.`)
-      navigate('/', { replace: true })
-    } catch (error) {
-      message.error(error instanceof Error ? error.message : 'Đăng nhập thất bại.')
-    }
-  }
-  const switchTargets: NonNullable<MenuProps['items']> = [
-    ...(staff && !staff.isDemo
-      ? [{ key: 'switch:demo', label: 'Bản dùng thử', onClick: () => { enterDemo(); queryClient.clear(); navigate('/', { replace: true }) } }]
-      : []),
-    // Không liệt kê tài khoản đang đăng nhập.
-    ...devAccounts.filter((account) => account.email.toLowerCase() !== user?.email?.toLowerCase()).map((account) => ({
-      key: `switch:${account.email}`,
-      label: account.label,
-      title: account.email,
-      onClick: () => void switchTo(account),
-    })),
-  ]
-  const switchItems: MenuProps['items'] = import.meta.env.DEV && switchTargets.length
-    ? [
-        { type: 'group', key: 'switch', label: 'Đổi tài khoản (dev)', children: switchTargets },
-        { type: 'divider' },
-      ]
-    : []
+  const menuItems = useAccountMenuItems()
   const showNotifications = useFeature('notifications')
-  const logoutItem = { key: 'logout', danger: true, icon: <LogOut size={16} />, label: 'Đăng xuất', onClick: () => { logout(); navigate('/shop', { replace: true }) } }
-  // Bản dùng thử: đổi vai trò để xem menu và quyền của từng nhân viên.
-  const menuItems: MenuProps['items'] = staff?.isDemo
-    ? [
-        {
-          type: 'group',
-          key: 'role',
-          label: 'Xem với vai trò',
-          children: (Object.keys(roleNames) as RoleCode[]).map((role) => ({
-            key: role,
-            label: roleNames[role],
-            icon: <Check size={16} style={{ visibility: staff.role === role ? 'visible' : 'hidden' }} />,
-            onClick: () => setDemoRole(role),
-          })),
-        },
-        { type: 'divider' },
-        ...switchItems,
-        logoutItem,
-      ]
-    : [...switchItems, logoutItem]
 
   return (
     <header className="af-topbar">
@@ -121,7 +66,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
           menu={{ items: menuItems }}
         >
           <button type="button" className="af-topbar-user af-account-menu" aria-label="Menu tài khoản">
-            <Avatar className="af-avatar">{(staff?.name ?? 'A').split(/\s+/).map((part) => part[0]).slice(-2).join('').toUpperCase()}</Avatar>
+            <Avatar className="af-avatar">{initialsOf(staff?.name ?? 'A')}</Avatar>
             <div className="af-topbar-user-text">
               <strong>{staff?.name ?? 'Quản trị viên'}</strong>
               <small>{staff ? `${staff.roleName}${staff.isDemo ? ' · dùng thử' : ''}` : 'Quản trị viên'}</small>

@@ -2,6 +2,7 @@ import { lazy, Suspense, type ReactNode } from 'react'
 import { Spin } from 'antd'
 import { Navigate, Route, Routes } from 'react-router'
 import { AppLayout } from '../layouts/AppLayout'
+import { DriverLayout } from '../layouts/DriverLayout'
 import { RequireAuth } from './RequireAuth'
 import { usePageSupported } from '../shared/features'
 
@@ -68,11 +69,14 @@ export function App() {
             <Route path="customers" element={<CustomersPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
             <Route path="delivery" element={<BackendPage path="/delivery" title="Giao hàng"><DeliveryPage /></BackendPage>} />
-            <Route path="driver" element={<BackendPage path="/driver" title="Chuyến của tôi"><DriverPage /></BackendPage>} />
             <Route path="reports" element={<BackendPage path="/reports" title="Báo cáo"><ReportsPage /></BackendPage>} />
             <Route path="activity" element={<BackendPage path="/activity" title="Nhật ký"><ActivityPage /></BackendPage>} />
             <Route path="settings" element={<BackendPage path="/settings" title="Cài đặt"><SettingsPage /></BackendPage>} />
             <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+          {/* Nhân viên giao hàng dùng khung riêng, không vào trang quản lý. */}
+          <Route element={<DriverLayout />}>
+            <Route path="driver" element={<BackendPage path="/driver" title="Chuyến của tôi"><DriverPage /></BackendPage>} />
           </Route>
         </Route>
       </Routes>

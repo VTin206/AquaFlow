@@ -1,23 +1,18 @@
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useState } from 'react'
 import { Drawer, Layout, Spin } from 'antd'
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { canOpen, homeOf } from '../features/auth/permissions'
 import { useStaff } from '../features/auth/useStaff'
-import { setMockSession } from '../mocks/session'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
+import { useMockSession } from './useAccountMenu'
 
 export function AppLayout() {
   const [navOpen, setNavOpen] = useState(false)
   const staff = useStaff()
   const { pathname } = useLocation()
 
-  // Dữ liệu mẫu ghi tên và kiểm tra quyền theo nhân viên đang dùng, giống backend đọc từ JWT.
-  const staffName = staff?.name
-  const staffRole = staff?.role
-  useEffect(() => {
-    if (staffName && staffRole) setMockSession({ name: staffName, role: staffRole })
-  }, [staffName, staffRole])
+  useMockSession(staff)
 
   // Mở trang không thuộc vai trò (gõ đường dẫn, đổi vai trò) thì về trang chính của vai trò đó.
   if (staff && !canOpen(staff.role, pathname)) return <Navigate to={homeOf(staff.role)} replace />

@@ -994,6 +994,16 @@ body {
 
 /* ---------- Màn hình tài xế (ưu tiên điện thoại) ---------- */
 .af-driver { max-width: 640px; }
+/* Khung riêng của nhân viên giao hàng. */
+.af-driver-shell { min-height: 100vh; background: var(--af-bg); }
+.af-driver-bar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 56px; padding: 0 16px; background: #fff; border-bottom: 1px solid var(--af-border); }
+.af-driver-bar .af-topbar-brand small { color: var(--af-text-tertiary); font-size: 13px; font-weight: 500; padding-left: 8px; border-left: 1px solid var(--af-border); }
+.af-driver-bar-right { display: flex; align-items: center; gap: 8px; }
+.af-driver-account { display: flex; align-items: center; gap: 4px; padding: 2px; border: 0; background: none; cursor: pointer; color: var(--af-text-secondary); }
+.af-driver-main { max-width: 640px; margin: 0 auto; padding: 16px 16px 32px; }
+.af-driver-head { margin-bottom: 12px; }
+.af-driver-head h1 { margin: 0; font-size: 20px; color: var(--af-text-strong); }
+.af-driver-head p { margin: 2px 0 0; color: var(--af-text-secondary); font-size: 13px; }
 .af-driver-picker { display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--af-text-strong); }
 .af-driver-picker .ant-select { flex: 1; max-width: 280px; }
 .af-driver-trip { margin-top: 16px; }
@@ -1050,8 +1060,6 @@ body {
 @media (max-width: 640px) {
   .af-report-delivery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-.af-driver-me { margin: 0; font-size: 15px; color: var(--af-text-secondary); }
-.af-driver-me strong { color: var(--af-text-strong); }
 
 /* Trang khách đặt hàng */
 .af-shop { min-height: 100dvh; display: flex; flex-direction: column; background: var(--af-bg); }
