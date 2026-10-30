@@ -114,6 +114,16 @@ class ProductControllerIntegrationTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminWithoutActiveFilterListsEveryBottleType() throws Exception {
+        when(bottleTypeService.findAll(null)).thenReturn(List.of(new com.aquaflow.inventory.api.dto.BottleTypeResponse(1L, "Bình 19L", BigDecimal.valueOf(50000), false)));
+
+        mockMvc.perform(get("/api/v1/bottle-types"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].active").value(false));
+    }
+
+    @Test
     void anonymousUserCannotListInactiveProducts() throws Exception {
         when(productService.findAll(true)).thenReturn(List.of(sampleProduct()));
 
