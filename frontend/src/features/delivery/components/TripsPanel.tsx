@@ -47,7 +47,7 @@ export function TripsPanel() {
         }
       >
         <Table<Order>
-          className="af-data-table"
+          className="af-data-table af-table-flush"
           size="middle"
           rowKey="id"
           loading={ordersQuery.isPending}

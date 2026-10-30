@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { App, Button, Card, Col, Empty, Input, Pagination, Popconfirm, Row, Segmented, Select, Skeleton, Space, Tag, Tooltip, Typography } from 'antd'
-import { Droplets, LayoutGrid, Plus, RotateCcw, Search } from 'lucide-react'
+import { Droplets, FunnelX, LayoutGrid, Plus, Search } from 'lucide-react'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
 import { useFeature, useIsDemo } from '../../shared/features'
@@ -85,7 +85,7 @@ export function ProductsPage() {
     if (productsQuery.isPending) return <Skeleton active paragraph={{ rows: 6 }} />
     if (visible.length === 0) return (
       <Empty description={brand && !brands.find((item) => item.name === brand)?.count ? `Chưa có sản phẩm ${brand} trong danh mục.` : hasFilters ? 'Không có sản phẩm phù hợp với bộ lọc.' : status === 'inactive' ? 'Không có sản phẩm đã ngừng bán.' : 'Chưa có sản phẩm nào.'}>
-        {hasFilters ? <Button onClick={resetFilters}>Xóa bộ lọc</Button> : canManage && status !== 'inactive' && <Button type="primary" onClick={() => setEditing(null)}>Thêm sản phẩm đầu tiên</Button>}
+        {hasFilters ? <Button icon={<FunnelX size={16} />} onClick={resetFilters}>Xóa bộ lọc</Button> : canManage && status !== 'inactive' && <Button type="primary" onClick={() => setEditing(null)}>Thêm sản phẩm đầu tiên</Button>}
       </Empty>
     )
     return (
@@ -166,7 +166,7 @@ export function ProductsPage() {
         <div className="af-catalog-results">
           {canManage && <Segmented<ProductStatus> value={status} onChange={(next) => { setStatus(next); setPage(1) }} options={statusOptions} />}
           <Typography.Text type="secondary">Hiển thị {visible.length} sản phẩm{brand ? ` · ${brand}` : ''}</Typography.Text>
-          {hasFilters && <Button type="link" size="small" icon={<RotateCcw size={14} />} onClick={resetFilters}>Xóa bộ lọc</Button>}
+          {hasFilters && <Button type="link" size="small" className="af-clear-filter" icon={<FunnelX size={14} />} onClick={resetFilters}>Xóa bộ lọc</Button>}
         </div>
         {renderBody()}
       </Card>

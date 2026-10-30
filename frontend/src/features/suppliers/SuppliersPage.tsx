@@ -89,7 +89,7 @@ export function SuppliersPage() {
               <Input allowClear className="af-search" prefix={<Search size={16} className="af-input-icon" />} aria-label="Tìm nhà cung cấp" placeholder="Tìm tên, mã, số điện thoại..." value={query} onChange={(event) => { setQuery(event.target.value); setPage(1) }} />
             </div>
             <Table<Supplier>
-              className="af-data-table" size="middle" rowKey="id" columns={columns} dataSource={visible} loading={suppliersQuery.isPending}
+              className="af-data-table af-table-flush" size="middle" rowKey="id" columns={columns} dataSource={visible} loading={suppliersQuery.isPending}
               pagination={{ ...tablePagination, current: page, pageSize, onChange: (nextPage, nextSize) => { setPage(nextSize === pageSize ? nextPage : 1); setPageSize(nextSize) } }}
               scroll={{ x: 990, y: tableScrollHeight }}
               locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={keyword ? 'Không tìm thấy nhà cung cấp phù hợp.' : effectiveStatus === 'inactive' ? 'Không có nhà cung cấp đã ngừng dùng.' : 'Chưa có nhà cung cấp nào.'}>{keyword ? <Button onClick={() => { setQuery(''); setPage(1) }}>Xóa tìm kiếm</Button> : canManage && effectiveStatus !== 'inactive' && <Button type="primary" onClick={() => setEditing(null)}>Thêm nhà cung cấp</Button>}</Empty> }}

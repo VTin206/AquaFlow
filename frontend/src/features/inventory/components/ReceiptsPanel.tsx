@@ -56,7 +56,7 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
       )}
       <Table<ReceiptView>
         key={filter}
-        className="af-data-table"
+        className="af-data-table af-table-flush"
         size="middle"
         rowKey="id"
         loading={receiptsQuery.isPending}
