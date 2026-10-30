@@ -1,5 +1,5 @@
 import { Tooltip, type TableColumnType } from 'antd'
-import { ArrowDown10, ArrowDownZA, ArrowUp01, ArrowUpAZ, ArrowUpDown, ClockArrowDown, ClockArrowUp, type LucideIcon } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 import { useState } from 'react'
 
 type SortKind = 'text' | 'number' | 'time' | 'stockRatio'
@@ -13,21 +13,13 @@ const labels: Record<SortKind, [string, string]> = {
   stockRatio: ['Tỷ lệ tồn: thấp → cao', 'Tỷ lệ tồn: cao → thấp'],
 }
 
-/** Icon cho từng chiều sắp xếp: tăng dần mũi tên lên, giảm dần mũi tên xuống, kèm ký hiệu theo loại dữ liệu. */
-const icons: Record<SortKind, [LucideIcon, LucideIcon]> = {
-  text: [ArrowUpAZ, ArrowDownZA],
-  number: [ArrowUp01, ArrowDown10],
-  time: [ClockArrowUp, ClockArrowDown],
-  stockRatio: [ArrowUp01, ArrowDown10],
-}
-
 /** Mỗi lần bấm: tăng dần → giảm dần → bỏ sắp xếp. */
 const nextOrder = (order: Order | null): Order | null => (order === null ? 'ascend' : order === 'ascend' ? 'descend' : null)
 
 type SortableProps<T> = Pick<TableColumnType<T>, 'key' | 'title' | 'sortOrder' | 'sortIcon' | 'sortDirections' | 'showSorterTooltip'>
 
 /**
- * Sắp xếp bằng cách bấm tiêu đề cột, xoay vòng tăng → giảm → bỏ; icon cho biết chiều hiện tại theo loại dữ liệu.
+ * Sắp xếp bằng cách bấm tiêu đề cột, xoay vòng tăng → giảm → bỏ; mũi tên cho biết chiều hiện tại.
  * `sortOrder` được điều khiển ở đây nên cú bấm vào ô tiêu đề của AntD không đổi thứ tự.
  */
 export function useColumnSort<T>(initial: SortState = null) {
@@ -36,8 +28,8 @@ export function useColumnSort<T>(initial: SortState = null) {
   const column = (label: string, key: string, kind: SortKind): SortableProps<T> => {
     const order = sort?.key === key ? sort.order : null
     const [ascLabel, descLabel] = labels[kind]
-    const [AscIcon, DescIcon] = icons[kind]
-    const Icon = order === 'ascend' ? AscIcon : order === 'descend' ? DescIcon : ArrowUpDown
+    // Mũi tên lên là tăng dần, xuống là giảm dần; nghĩa cụ thể theo loại cột nằm ở tooltip.
+    const Icon = order === 'ascend' ? ArrowUp : order === 'descend' ? ArrowDown : ArrowUpDown
     const textOf = (value: Order | null) => (value === 'ascend' ? ascLabel : value === 'descend' ? descLabel : 'Bỏ sắp xếp')
     const next = nextOrder(order)
 
