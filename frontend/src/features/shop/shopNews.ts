@@ -1,0 +1,100 @@
+import type { LucideIcon } from 'lucide-react'
+import { CalendarClock, Droplets, GlassWater, Recycle, ThermometerSun } from 'lucide-react'
+
+/**
+ * Bài viết trên trang khách. BE chưa có API tin tức nên nội dung viết sẵn ở FE;
+ * khi có API thì thay mảng này bằng truy vấn, giữ nguyên kiểu `ShopArticle`.
+ */
+export type ShopArticle = {
+  slug: string
+  title: string
+  summary: string
+  /** "yyyy-mm-dd" */
+  publishedOn: string
+  icon: LucideIcon
+  /** Mỗi phần tử là một đoạn; đoạn bắt đầu bằng "## " là tiêu đề nhỏ. */
+  body: string[]
+}
+
+export const shopArticles: ShopArticle[] = [
+  {
+    slug: 'binh-up-hay-binh-voi',
+    title: 'Bình úp hay bình vòi: chọn loại nào cho gia đình và văn phòng?',
+    summary: 'Hai kiểu bình 19–20 lít phổ biến nhất, khác nhau ở cách dùng và thiết bị đi kèm.',
+    publishedOn: '2026-10-28',
+    icon: GlassWater,
+    body: [
+      'Bình nước 19–20 lít có hai kiểu chính: bình úp (lắp ngược lên cây nước nóng lạnh) và bình vòi (đặt đứng, có vòi rót ở thân bình).',
+      '## Bình úp',
+      'Phù hợp khi bạn đã có cây nước nóng lạnh. Nước được lấy qua cây nên dùng được cả nước nóng và lạnh. Khi thay bình cần nhấc và lật bình, hơi nặng với người lớn tuổi.',
+      '## Bình vòi',
+      'Không cần cây nước, đặt lên kệ là dùng được ngay. Hợp với phòng họp, quầy lễ tân, gia đình ít người hoặc nơi không có ổ điện gần.',
+      '## Gợi ý nhanh',
+      'Văn phòng đông người, cần nước nóng pha trà, cà phê: chọn bình úp. Nhà ở, cửa hàng nhỏ, cần gọn và dễ thay: chọn bình vòi.',
+    ],
+  },
+  {
+    slug: 'bao-quan-binh-19l',
+    title: 'Bảo quản bình nước 19L sau khi mở nắp đúng cách',
+    summary: 'Vài thói quen nhỏ giúp nước luôn ngon và bình dùng được lâu hơn.',
+    publishedOn: '2026-10-21',
+    icon: ThermometerSun,
+    body: [
+      'Nước đóng bình an toàn khi còn niêm phong. Sau khi mở nắp, cách bảo quản quyết định chất lượng nước tới giọt cuối cùng.',
+      '## Tránh nắng và nguồn nhiệt',
+      'Đặt bình nơi thoáng mát, không để gần cửa sổ có nắng chiếu trực tiếp hay cạnh bếp. Nhiệt độ cao làm nước nhanh có mùi nhựa.',
+      '## Dùng hết trong vài ngày',
+      'Nên dùng hết bình đã mở trong khoảng 7–10 ngày. Nếu nhà ít người, cân nhắc đặt bình nhỏ hơn hoặc nước thùng chai.',
+      '## Vệ sinh cây nước định kỳ',
+      'Mỗi lần thay bình, lau sạch miệng bình và khay hứng nước. Cây nước nên được vệ sinh bên trong khoảng 1–2 tháng một lần.',
+    ],
+  },
+  {
+    slug: 'coc-vo-binh-la-gi',
+    title: 'Cọc vỏ bình là gì và khi nào được hoàn lại?',
+    summary: 'Lần đầu đặt bình 19L bạn sẽ gặp khoản cọc vỏ. Đây là cách nó hoạt động.',
+    publishedOn: '2026-10-14',
+    icon: Recycle,
+    body: [
+      'Vỏ bình 19–20 lít được dùng lại nhiều lần. Khi bạn chưa có vỏ để đổi, cửa hàng thu một khoản cọc cho mỗi vỏ giao kèm.',
+      '## Đổi vỏ ở những lần sau',
+      'Từ lần đặt thứ hai, nhân viên giao bình mới và thu lại vỏ cũ trong cùng một lần giao. Bạn chỉ trả tiền nước, không cọc thêm.',
+      '## Hoàn cọc',
+      'Khi không dùng nữa, bạn trả lại vỏ còn nguyên vẹn và nhận lại tiền cọc. Vỏ bị nứt, vỡ hoặc mất có thể không được hoàn đủ.',
+      'Mức cọc cụ thể do cửa hàng thông báo khi xác nhận đơn.',
+    ],
+  },
+  {
+    slug: 'nuoc-tinh-khiet-va-nuoc-khoang',
+    title: 'Nước tinh khiết và nước khoáng khác nhau thế nào?',
+    summary: 'Cùng là nước uống đóng chai nhưng nguồn và thành phần không giống nhau.',
+    publishedOn: '2026-10-07',
+    icon: Droplets,
+    body: [
+      '## Nước tinh khiết',
+      'Được lọc qua nhiều bước (thường có thẩm thấu ngược) để loại gần hết tạp chất và khoáng chất. Vị nhạt, trung tính, hợp pha trà, cà phê, sữa cho trẻ.',
+      '## Nước khoáng',
+      'Lấy từ nguồn khoáng tự nhiên, giữ lại các khoáng chất như canxi, magie, bicarbonat. Vị đậm hơn, có loại có gas.',
+      '## Nên chọn loại nào?',
+      'Uống hằng ngày cho cả nhà: nước tinh khiết bình lớn là tiết kiệm. Muốn bổ sung khoáng hoặc thích vị đậm: chọn nước khoáng chai nhỏ để dùng xen kẽ.',
+    ],
+  },
+  {
+    slug: 'dat-nuoc-dinh-ky',
+    title: 'Mẹo đặt nước đúng lúc để không bao giờ hết giữa chừng',
+    summary: 'Ước lượng lượng nước dùng mỗi tuần và đặt trước một ngày.',
+    publishedOn: '2026-09-30',
+    icon: CalendarClock,
+    body: [
+      'Một người lớn uống khoảng 1,5–2 lít mỗi ngày. Gia đình 4 người thường dùng hết một bình 19L trong 3–4 ngày.',
+      '## Đặt khi còn khoảng 1/4 bình',
+      'Đừng đợi cạn hẳn. Khi bình còn khoảng một phần tư, đặt đơn mới để cửa hàng kịp sắp xếp chuyến giao.',
+      '## Đặt nhiều bình một lần',
+      'Văn phòng hoặc cửa hàng nên giữ sẵn 1–2 bình dự phòng. Đặt nhiều bình một lần cũng giúp giảm số lần giao.',
+    ],
+  },
+]
+
+export const articleDate = (isoDate: string) => new Date(`${isoDate}T00:00:00`).toLocaleDateString('vi-VN')
+
+export const findArticle = (slug: string) => shopArticles.find((article) => article.slug === slug)
