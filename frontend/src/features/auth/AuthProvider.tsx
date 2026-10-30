@@ -59,7 +59,7 @@ const saveUser = (user: AuthUser | null) => {
   }
 }
 
-const toAuthUser = (user: { fullName: string; email: string; role: string }): AuthUser => ({ name: user.fullName || user.email, role: roleLabel(user.role) })
+const toAuthUser = (user: { fullName: string; email: string; role: string }): AuthUser => ({ name: user.fullName || user.email, email: user.email, role: roleLabel(user.role) })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { message } = App.useApp()

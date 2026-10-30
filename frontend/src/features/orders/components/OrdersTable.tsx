@@ -1,14 +1,18 @@
 import { useState } from 'react'
-import { Button, Space, Table, Tooltip, type TableColumnsType } from 'antd'
+import { Button, Grid, Space, Table, Tooltip, type TableColumnsType } from 'antd'
 import { Eye } from 'lucide-react'
 import { Money } from '../../../shared/components/Money'
 import { tablePagination, tableScrollHeight } from '../../../shared/utils/table'
 import { useColumnSort } from '../../../shared/components/sortableColumn'
-import { amountDue, paidAmount, paymentLabel, type Order } from '../types'
+import { useFeature, useIsDemo } from '../../../shared/features'
+import { Unsupported } from '../../../shared/components/Unsupported'
+import { LiveOrderDetails } from '../../live/LiveOrderDetails'
+import { amountDue, createdAtOf, paidAmount, paymentLabel, type Order } from '../types'
 import { AdvanceStatusButton } from './AdvanceStatusButton'
 import { LateTag } from './LateTag'
 import { OrderStatusTag } from './OrderStatusTag'
 import { OrderDetailsModal } from './OrderDetailsModal'
+import { OrderCards } from './OrderCards'
 
 type OrdersTableProps = {
   orders: Order[]
@@ -16,10 +20,17 @@ type OrdersTableProps = {
   /** Bản rút gọn cho Dashboard, kèm nút mở chi tiết. */
   compact?: boolean
   emptyText?: string
+  /** Đổi bộ lọc chỉ đặt lại phân trang, giữ lựa chọn sắp xếp. */
+  filterKey?: string
 }
 
-export function OrdersTable({ orders, loading, compact = false, emptyText = 'Chưa có đơn hàng nào.' }: OrdersTableProps) {
+export function OrdersTable({ orders, loading, compact = false, emptyText = 'Chưa có đơn hàng nào.', filterKey }: OrdersTableProps) {
+  const screens = Grid.useBreakpoint()
+  const demo = useIsDemo()
+  // Tài khoản thật: BE chưa có phiếu thu nên không tính "còn phải thu"; thao tác đơn nằm trong chi tiết đơn.
+  const showPayments = useFeature('orderPayments')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [pageSize, setPageSize] = useState(tablePagination.defaultPageSize ?? 10)
   const sort = useColumnSort<Order>()
   const columns: TableColumnsType<Order> = [
     {
@@ -28,8 +39,8 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
       width: compact ? 110 : 150,
       render: (id: string, order) => (
         <span className="af-order-id">
-          <Button type="link" size="small" onClick={() => setSelectedId(id)} aria-label={`Xem đơn ${id}`}>
-            {id}
+          <Button type="link" size="small" onClick={() => setSelectedId(id)} aria-label={`Xem đơn ${order.code ?? id}`}>
+            {order.code ?? id}
           </Button>
           {!compact && order.status === 'Chờ xác nhận' && <span className="af-new-tag">Mới</span>}
         </span>
@@ -48,7 +59,7 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
         </div>
       ),
     },
-    ...(compact ? [] : [{ ...sort.column('Giờ đặt', 'time', 'time'), dataIndex: 'time', width: 130, sorter: (a: Order, b: Order) => a.time.localeCompare(b.time) }]),
+    ...(compact ? [] : [{ ...sort.column('Giờ đặt', 'time', 'time'), dataIndex: 'time', width: 130, sorter: (a: Order, b: Order) => (createdAtOf(a) ?? a.time).localeCompare(createdAtOf(b) ?? b.time) }]),
     {
       title: 'Tổng tiền',
       ...(!compact && sort.column('Tổng tiền', 'total', 'number')),
@@ -60,7 +71,7 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
         <div className="af-cell-stack af-money-stack">
           <Money value={total} />
           {!compact && order.status !== 'Đã hủy' && (
-            <small>{amountDue(order) > 0 ? <Money value={amountDue(order)} tone="due" prefix="Còn " /> : <span className="af-money is-paid">Đã thu đủ</span>}</small>
+            <small>{!showPayments ? <Unsupported label="Còn phải thu: chưa hỗ trợ" /> : amountDue(order) > 0 ? <Money value={amountDue(order)} tone="due" prefix="Còn " /> : <span className="af-money is-paid">Đã thu đủ</span>}</small>
           )}
         </div>
       ),
@@ -86,7 +97,7 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
             render: (_: unknown, order: Order) => (
               <div className="af-cell-stack">
                 <span>{paymentLabel(order)}</span>
-                {order.payments.length > 0 && <small>Đã thu <Money value={paidAmount(order)} tone="paid" /></small>}
+                {showPayments && order.payments.length > 0 && <small>Đã thu <Money value={paidAmount(order)} tone="paid" /></small>}
               </div>
             ),
           },
@@ -99,9 +110,9 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
       render: (_, order) => (
         <Space size={6}>
           <Tooltip title="Xem chi tiết">
-            <Button size="small" icon={<Eye size={15} />} onClick={() => setSelectedId(order.id)} aria-label={`Chi tiết đơn ${order.id}`} />
+            <Button size="small" icon={<Eye size={15} />} onClick={() => setSelectedId(order.id)} aria-label={`Chi tiết đơn ${order.code ?? order.id}`} />
           </Tooltip>
-          {!compact && <AdvanceStatusButton order={order} menu />}
+          {!compact && demo && <AdvanceStatusButton order={order} menu />}
         </Space>
       ),
     },
@@ -109,18 +120,23 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
 
   return (
     <>
-      <Table<Order>
+      {screens.md === false ? (
+        <OrderCards orders={orders} loading={loading} compact={compact} emptyText={emptyText} onDetails={setSelectedId} filterKey={filterKey} />
+      ) : <Table<Order>
+        key={filterKey}
         className="af-data-table"
         rowKey="id"
         columns={columns}
         dataSource={orders}
         loading={loading}
         size="middle"
-        pagination={compact ? false : tablePagination}
+        pagination={compact ? false : { ...tablePagination, pageSize, onShowSizeChange: (_, size) => setPageSize(size) }}
         locale={{ emptyText }}
         scroll={{ x: compact ? 720 : 1220, ...(!compact && { y: tableScrollHeight }) }}
-      />
-      {selectedId && <OrderDetailsModal key={selectedId} orderId={selectedId} onClose={() => setSelectedId(null)} />}
+      />}
+      {selectedId && (demo
+        ? <OrderDetailsModal key={selectedId} orderId={selectedId} onClose={() => setSelectedId(null)} />
+        : <LiveOrderDetails key={selectedId} id={Number(selectedId)} onClose={() => setSelectedId(null)} />)}
     </>
   )
 }

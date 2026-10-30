@@ -4,6 +4,7 @@ import { ArrowRight, CircleCheck, Headphones, LockKeyhole, Package, Store, Truck
 import { Link, useLocation, useNavigate } from 'react-router'
 import { useAuth } from './useAuth'
 import type { LoginCredentials } from './authService'
+import { devAccounts } from './devAccounts'
 import './login.css'
 
 const REMEMBERED_EMAIL_KEY = 'aquaflow.auth.remembered-email'
@@ -111,11 +112,21 @@ export function LoginPage() {
                 </div>
                 <Button type="primary" size="large" htmlType="submit" loading={submitting} block icon={<ArrowRight size={18} />} iconPlacement="end">Đăng nhập</Button>
               </Form>
+              {devAccounts.length > 0 && (
+                <div className="af-login-dev">
+                  <Divider plain><span className="af-login-divider-text">Đăng nhập nhanh (dev)</span></Divider>
+                  <div className="af-login-dev-list">
+                    {devAccounts.map((account) => (
+                      <Button key={account.email} disabled={submitting} title={account.email} onClick={() => submitLogin(account)}>{account.label}</Button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <Divider plain><span className="af-login-divider-text">Khám phá AquaFlow</span></Divider>
               <Button block size="large" onClick={openDemo}>Xem bản dùng thử</Button>
             </ConfigProvider>
             <div className="af-login-preview-note">
-              <Alert type="info" showIcon title="Đăng nhập cần Auth API đang hoạt động. Có thể vào bản dùng thử để khám phá giao diện." />
+              <Alert type="info" showIcon title="Tài khoản thật quản lý danh mục, khách hàng và xem đơn hàng. Nhập kho và cập nhật đơn đang được hoàn thiện." />
             </div>
           </section>
         </div>
@@ -124,7 +135,7 @@ export function LoginPage() {
       <footer className="af-login-footer"><span>AquaFlow · Hệ thống quản lý cửa hàng nước</span><span>Một cửa hàng. Một không gian quản lý.</span></footer>
       <Modal title="Hỗ trợ đăng nhập" open={helpOpen} centered onCancel={() => setHelpOpen(false)} footer={<Button type="primary" onClick={() => setHelpOpen(false)}>Đã hiểu</Button>}>
         <p>Nếu bạn chưa có tài khoản hoặc quên mật khẩu, hãy liên hệ người quản trị cửa hàng để được hỗ trợ.</p>
-        <Alert type="info" showIcon title="Auth API" description="Đăng nhập gửi tên đăng nhập và mật khẩu tới /api/v1/auth/login. Nếu backend chưa triển khai endpoint này, hãy dùng bản xem thử." />
+        <Alert type="info" showIcon title="Auth API" description="Đăng nhập gửi email và mật khẩu tới /api/v1/auth/login. Người quản trị cấp tài khoản trên database trước khi sử dụng." />
       </Modal>
     </div>
   )

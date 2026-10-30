@@ -39,7 +39,7 @@ export function addBottleEntry(entry: Omit<BottleEntry, 'id' | 'at'>) {
   return saved
 }
 
-export const findCustomerByPhone = (phone: string) => db.customers.find((customer) => normalizePhone(customer.phone) === normalizePhone(phone))
+export const findCustomerByPhone = (phone: string) => db.customers.find((customer) => customer.active !== false && normalizePhone(customer.phone) === normalizePhone(phone))
 
 /** Gắn đơn với hồ sơ khách theo số điện thoại; tạo hồ sơ mới nếu chưa có. */
 export function ensureCustomer(name: string, phone: string, address?: string) {
@@ -93,7 +93,7 @@ function validateDraft(draft: CustomerDraft, id?: string) {
 }
 
 export const customerService = {
-  list: () => mockRequest(() => db.customers.map(toView)),
+  list: () => mockRequest(() => db.customers.filter((customer) => customer.active !== false).map(toView)),
 
   create: (draft: CustomerDraft) =>
     mockRequest(() => {
@@ -112,6 +112,16 @@ export const customerService = {
       Object.assign(record, validateDraft(draft, id))
       logActivity('Khách hàng', record.id, `Cập nhật hồ sơ ${record.name}`)
       return toView(record)
+    }),
+
+  /** Ngừng dùng hồ sơ: ẩn khỏi danh sách, đơn và sổ vỏ cũ giữ nguyên (giống BE). */
+  deactivate: (id: string) =>
+    mockRequest(() => {
+      const record = db.customers.find((customer) => customer.id === id)
+      if (!record) throw mockError(404, 'Không tìm thấy khách hàng.')
+      requireRole(['ADMIN', 'SALES_STAFF'], 'ngừng dùng hồ sơ khách')
+      record.active = false
+      logActivity('Khách hàng', record.id, `Ngừng dùng hồ sơ ${record.name}`)
     }),
 
   ledger: (customerId: string) =>

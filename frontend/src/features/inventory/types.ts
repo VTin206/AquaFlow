@@ -10,6 +10,8 @@ export type Product = {
   sku: string
   image?: string
   catalog?: { category: string; packaging: string; capacity: string; volumeMl: number }
+  /** false khi đã ngừng kinh doanh; thiếu nghĩa là đang bán. */
+  active?: boolean
 }
 
 export type ProductDraft = {

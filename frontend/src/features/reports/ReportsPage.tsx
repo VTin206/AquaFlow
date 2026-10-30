@@ -6,12 +6,12 @@ import { ArrowDownRight, ArrowUpRight, Download } from 'lucide-react'
 import { BarChart } from '../../shared/components/BarChart'
 import { Money } from '../../shared/components/Money'
 import { Page } from '../../shared/components/Page'
+import { PanelHeading } from '../../shared/components/PanelHeading'
 import { QueryError } from '../../shared/components/QueryError'
-import { downloadCsv } from '../../shared/utils/csv'
 import { compactCurrency, currency, shortDate } from '../../shared/utils/format'
 import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
 import { autoGranularity, granularityLabels, groupRevenue, type Granularity } from './periods'
-import { previousRange, reportChannels, useReport, type CustomerReportRow, type DriverReportRow, type InventoryReportRow, type PeriodReport, type ProductReportRow, type ReportFilters, type ReportRange } from './reportService'
+import { previousRange, reportChannels, useReport, type CustomerReportRow, type DriverReportRow, type InventoryReportRow, type ProductReportRow, type ReportFilters, type ReportRange } from './reportService'
 
 const FORMAT = 'YYYY-MM-DD'
 const toRange = ([from, to]: [Dayjs, Dayjs]): ReportRange => ({ from: from.format(FORMAT), to: to.format(FORMAT) })
@@ -90,59 +90,6 @@ const lapsedColumns: TableColumnsType<CustomerReportRow> = [
   { title: 'Lần cuối', dataIndex: 'daysSince', align: 'right', width: 110, render: (days: number) => `${days} ngày trước` },
 ]
 
-/** Gom các phần của báo cáo thành một tệp CSV. */
-function exportReport(report: PeriodReport, filters: ReportFilters) {
-  const { range, sales, cash, deposits, delivery, profit } = report
-  downloadCsv(`bao-cao-${range.from}_${range.to}.csv`, [
-    ['Báo cáo AquaFlow', `${range.from} đến ${range.to}`],
-    ['Kênh', filters.channels?.length ? filters.channels.join(', ') : 'Tất cả'],
-    ['Hình thức nhận', filters.method ?? 'Tất cả'],
-    [],
-    ['Chỉ tiêu', 'Giá trị'],
-    ['Tiền hàng (đơn đã giao)', sales.goods],
-    ['Phí giao', sales.deliveryFees],
-    ['Trừ hàng khách trả trong kỳ', -sales.returnsValue],
-    ['Doanh thu thuần', sales.net],
-    ['Đơn tạo trong kỳ', sales.orders],
-    ['Đơn đã giao', sales.delivered],
-    ['Đơn hủy', sales.cancelled],
-    ['Tiền thực thu (sau hoàn)', cash.collected],
-    ['Thu tiền mặt', cash.cash],
-    ['Thu chuyển khoản', cash.transfer],
-    ['Hoàn tiền', cash.refunds],
-    ['Cọc vỏ thu (ngoài doanh thu)', deposits.collected],
-    ['Cọc vỏ hoàn', deposits.refunded],
-    ['Vỏ khách đang giữ cuối kỳ', deposits.held.bottles],
-    ['Cọc đang giữ cuối kỳ', deposits.held.deposit],
-    ['Vỏ chưa đủ cọc cuối kỳ', deposits.held.uncoveredBottles],
-    ['Giá vốn ước tính', profit.cost],
-    ['Lãi gộp ước tính', profit.gross],
-    ['Giao thành công', delivery.delivered],
-    ['Lần giao thất bại', delivery.failedAttempts],
-    ['Giao trễ hẹn', delivery.late],
-    [],
-    ['Ngày', 'Doanh thu', 'Tiền thu', 'Đơn tạo'],
-    ...report.days.map((day) => [day.date, day.revenue, day.collected, day.orders]),
-    [],
-    ['Sản phẩm', 'Đã bán', 'Trả lại', 'Doanh thu', 'Giá vốn ước tính', 'Lãi gộp'],
-    ...report.products.map((row) => [row.name, row.sold, row.returned, row.revenue, row.cost, row.revenue - row.cost]),
-    [],
-    ['Nhập – xuất – tồn', 'Đơn vị', 'Tồn đầu kỳ', 'Nhập NCC', 'Khách trả nhập lại', 'Xuất bán', 'Tồn cuối kỳ', 'Hỏng khi nhận', 'Giá trị tồn cuối'],
-    ...report.inventory.rows.map((row) => [row.name, row.unit, row.opening, row.received, row.restocked, row.issued, row.closing, row.damaged, row.closingValue]),
-    [],
-    ['Tài xế', 'Thành công', 'Thất bại', 'Trễ hẹn', 'Chuyến đối soát', 'Tiền mặt phải nộp', 'Đã nộp', 'Nộp thiếu', 'Chuyến chờ đối soát', 'Tiền chờ đối soát'],
-    ...delivery.drivers.map((row) => [row.driver, row.delivered, row.failed, row.late, row.settledTrips, row.cashExpected, row.cashHandedOver, row.cashShort, row.pendingTrips, row.pendingCash]),
-    [],
-    ['Khách mua trong kỳ', report.customers.active],
-    ['Khách mới', report.customers.new],
-    ['Khách mua nhiều nhất', 'SĐT', 'Đơn', 'Doanh thu'],
-    ...report.customers.top.map((row) => [row.name, row.phone, row.orders, row.revenue]),
-    [],
-    [`Lâu chưa đặt lại (từ ${LAPSED_LABEL})`, 'SĐT', 'Số ngày từ lần cuối'],
-    ...report.customers.lapsed.map((row) => [row.name, row.phone, row.daysSince]),
-  ])
-}
-
 /** Thay đổi so với kỳ trước. `upIsGood` false khi số tăng là xấu (vd. đơn hủy). */
 function Delta({ current, previous, upIsGood = true }: { current: number; previous?: number; upIsGood?: boolean }) {
   if (previous === undefined) return null
@@ -172,6 +119,7 @@ const methodOptions = [
 
 export function ReportsPage() {
   const { message } = App.useApp()
+  const [exporting, setExporting] = useState(false)
   const [dates, setDates] = useState<[Dayjs, Dayjs]>(presets[2].value)
   const [channels, setChannels] = useState<NonNullable<ReportFilters['channels']>>([])
   const [method, setMethod] = useState<ReportFilters['method']>()
@@ -206,10 +154,11 @@ export function ReportsPage() {
       title="Báo cáo"
       description="Doanh thu, tiền thu, giao hàng và nhập–xuất–tồn theo kỳ, tính từ giao dịch."
       actions={
-        <>
+        <div className="af-report-actions">
           <DatePicker.RangePicker
             aria-label="Chọn kỳ báo cáo"
             allowClear={false}
+            disabled={exporting}
             format="DD/MM/YYYY"
             value={dates}
             presets={presets}
@@ -240,15 +189,24 @@ export function ReportsPage() {
           <Button
             icon={<Download size={16} />}
             disabled={!report}
-            onClick={() => {
-              if (!report) return
-              exportReport(report, filters)
-              message.success('Đã tải tệp CSV.')
+            loading={exporting}
+            onClick={async () => {
+              if (!report || exporting) return
+              setExporting(true)
+              try {
+                const { downloadReportExcel } = await import('./exportReport')
+                await downloadReportExcel(report, filters)
+                message.success('Đã tạo tệp Excel.')
+              } catch {
+                message.error('Không thể tạo tệp Excel. Vui lòng thử lại.')
+              } finally {
+                setExporting(false)
+              }
             }}
           >
-            Xuất CSV
+            Xuất Excel
           </Button>
-        </>
+        </div>
       }
     >
       {filtered && (
@@ -264,7 +222,7 @@ export function ReportsPage() {
       ) : (
         <>
           <Row gutter={[16, 16]} className="af-stat-row af-report-kpis">
-            <Col xs={12} xl={6}>
+            <Col xs={24} sm={12} xl={6}>
               <Card loading={loading}>
                 <Statistic title="Doanh thu thuần" value={currency(report?.sales.net ?? 0)} />
                 <Typography.Text type="secondary">
@@ -273,21 +231,21 @@ export function ReportsPage() {
                 {report && <Delta current={report.sales.net} previous={previous?.sales.net} />}
               </Card>
             </Col>
-            <Col xs={12} xl={6}>
+            <Col xs={24} sm={12} xl={6}>
               <Card loading={loading}>
                 <Statistic className="af-stat-paid" title="Tiền thực thu" value={currency(report?.cash.collected ?? 0)} />
                 <Typography.Text type="secondary">Đã trừ hoàn {currency(report?.cash.refunds ?? 0)}</Typography.Text>
                 {report && <Delta current={report.cash.collected} previous={previous?.cash.collected} />}
               </Card>
             </Col>
-            <Col xs={12} xl={6}>
+            <Col xs={24} sm={12} xl={6}>
               <Card loading={loading}>
                 <Statistic className={(report?.profit.gross ?? 0) < 0 ? 'af-stat-refund' : 'af-stat-paid'} title="Lãi gộp ước tính" value={currency(report?.profit.gross ?? 0)} />
                 <Typography.Text type="secondary">Biên {margin}% · giá vốn bình quân lô</Typography.Text>
                 {report && <Delta current={report.profit.gross} previous={previous?.profit.gross} />}
               </Card>
             </Col>
-            <Col xs={12} xl={6}>
+            <Col xs={24} sm={12} xl={6}>
               <Card loading={loading}>
                 <Statistic title="Đơn tạo trong kỳ" value={report?.sales.orders ?? 0} />
                 <Typography.Text type="secondary">{report?.sales.cancelled ?? 0} đơn hủy</Typography.Text>
@@ -325,8 +283,7 @@ export function ReportsPage() {
                   </Col>
                   <Col xs={24} xl={16}>
                     <Card
-                      title={`Doanh thu thuần theo ${granularityLabels[unit].toLowerCase()}`}
-                      extra={
+                      title={<PanelHeading title={`Doanh thu thuần theo ${granularityLabels[unit].toLowerCase()}`} extra={
                         <Segmented<Granularity>
                           size="small"
                           aria-label="Gom biểu đồ theo"
@@ -334,7 +291,7 @@ export function ReportsPage() {
                           onChange={setGranularity}
                           options={(Object.keys(granularityLabels) as Granularity[]).map((value) => ({ value, label: granularityLabels[value] }))}
                         />
-                      }
+                      } />}
                       className="af-card af-fill"
                       loading={loading}
                     >
@@ -494,8 +451,7 @@ export function ReportsPage() {
                   />
                 </Card>
                 <Card
-                  title="Nhập – xuất – tồn"
-                  extra={report && <Typography.Text type="secondary">Giá trị tồn: {compactCurrency(report.inventory.openingValue)} → {compactCurrency(report.inventory.closingValue)}</Typography.Text>}
+                  title={<PanelHeading title="Nhập – xuất – tồn" extra={report && <Typography.Text type="secondary">Giá trị tồn: {compactCurrency(report.inventory.openingValue)} → {compactCurrency(report.inventory.closingValue)}</Typography.Text>} />}
                   className="af-card"
                   styles={{ body: { padding: 0 } }}
                 >
@@ -521,8 +477,7 @@ export function ReportsPage() {
                 children: (
                   <>
                 <Card
-                  title="Khách hàng"
-                  extra={report && <Typography.Text type="secondary">{report.customers.active} khách mua · {report.customers.new} khách mới</Typography.Text>}
+                  title={<PanelHeading title="Khách hàng" extra={report && <Typography.Text type="secondary">{report.customers.active} khách mua · {report.customers.new} khách mới</Typography.Text>} />}
                   className="af-card"
                   loading={loading}
                 >

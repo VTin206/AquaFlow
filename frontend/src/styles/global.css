@@ -260,6 +260,12 @@ body {
   justify-content: space-between;
   width: 100%;
 }
+.af-menu-soon {
+  color: var(--af-text-tertiary);
+  font-size: 11px;
+  margin-left: auto;
+  white-space: nowrap;
+}
 .af-sider-footer {
   border-top: 1px solid var(--af-border);
   padding: 12px 16px;
@@ -475,6 +481,9 @@ body {
 .af-text-warning {
   color: var(--af-warning) !important;
 }
+.af-text-danger {
+  color: var(--af-danger) !important;
+}
 .af-money-stack > small { font-size: 12px; }
 .af-money.is-due, .af-stat-due .ant-statistic-content { color: var(--af-money-due); }
 .af-money.is-paid, .af-stat-paid .ant-statistic-content { color: var(--af-money-paid); }
@@ -568,6 +577,9 @@ body {
   display: inline-flex;
   gap: 8px;
 }
+.af-panel-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding-block: 12px; white-space: normal; }
+.af-panel-heading-title { min-width: 0; }
+.af-panel-heading-extra { display: inline-flex; align-items: center; font-size: 13px; font-weight: 400; }
 .af-text-link,
 .af-list-more {
   font-size: 12px;
@@ -908,6 +920,12 @@ body {
     margin-top: 2px;
   }
 }
+@media (max-width: 360px) {
+  .af-topbar-brand .af-brand-mark { display: none; }
+}
+
+.af-report-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.af-report-range { width: 286px; max-width: 100%; }
 
 .af-metric-link:focus-visible,
 .af-topbar-brand:focus-visible,
@@ -976,6 +994,16 @@ body {
   flex-wrap: wrap;
   gap: 10px;
   max-width: 100%;
+}
+.af-filter-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 20px 12px;
+  color: var(--af-text-secondary);
+  font-size: 13px;
 }
 .af-detail-actions {
   margin-bottom: 16px;
@@ -1156,9 +1184,26 @@ body {
 .af-shop-cart { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .af-shop-cart li { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--af-border); }
 .af-shop-cart li > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.af-shop-cart small { color: var(--af-text-secondary); }
+.af-shop-cart small { color: var(--af-text-secondary); font-size: 13px; }
 .af-shop-cart-footer { display: flex; flex-direction: column; gap: 4px; }
 .af-shop-cart-footer .ant-btn { margin-top: 8px; }
+.af-deposit-note { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: 8px; background: var(--af-primary-soft); font-size: 13px; line-height: 1.5; color: var(--af-text-secondary); }
+.af-deposit-note strong { color: var(--af-text-strong); }
+.af-mobile-records { padding: 16px; }
+.af-mobile-record-controls { margin-bottom: 12px; }
+.af-mobile-record-controls > * { width: 100%; }
+.af-record-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.af-record { min-width: 0; overflow-wrap: anywhere; }
+.af-record-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--af-text-secondary); }
+.af-record-heading strong { color: var(--af-primary); font-size: 14px; }
+.af-record h3 { margin: 8px 0 4px; font-size: 16px; line-height: 1.5; color: var(--af-text-strong); }
+.af-record-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 4px 0 10px; font-size: 13px; line-height: 1.6; color: var(--af-text-secondary); }
+.af-record-meta a { display: inline-flex; align-items: center; min-height: 32px; }
+.af-record-facts { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; margin: 12px 0; font-size: 14px; }
+.af-record-facts dt { color: var(--af-text-secondary); }
+.af-record-facts dd { margin: 0; text-align: right; font-weight: 600; }
+.af-record-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 8px; margin-top: 12px; }
+.af-mobile-record-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 16px; font-size: 13px; color: var(--af-text-secondary); }
 .af-shop-narrow { max-width: 640px; margin: 0 auto; }
 .af-shop-track { display: flex; flex-direction: column; gap: 16px; }
 .af-shop-track-card .ant-steps { margin-bottom: 16px; }

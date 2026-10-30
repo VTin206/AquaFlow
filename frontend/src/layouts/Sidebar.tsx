@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router'
 import { navGroups } from '../app/navigation'
 import { canOpen } from '../features/auth/permissions'
 import { useStaff } from '../features/auth/useStaff'
+import { usePageSupported } from '../shared/features'
 import { useOrders } from '../features/orders/useOrders'
 import { useSettings } from '../features/settings/settingsService'
 
@@ -12,11 +13,12 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation()
   const navigate = useNavigate()
   const { message } = App.useApp()
-  const { data: orders = [] } = useOrders()
-  const { data: settings } = useSettings()
   const staff = useStaff()
+  const { data: orders = [] } = useOrders(Boolean(staff?.isDemo))
+  const { data: settings } = useSettings(Boolean(staff?.isDemo))
+  const supported = usePageSupported()
   const allowed = (path: string) => !staff || canOpen(staff.role, path)
-  const pendingCount = orders.filter((order) => order.status === 'Chờ xác nhận').length
+  const pendingCount = staff?.isDemo ? orders.filter((order) => order.status === 'Chờ xác nhận').length : 0
 
   const items: MenuProps['items'] = navGroups
     .map((group) => ({ ...group, items: group.items.filter((item) => allowed(item.path)) }))
@@ -32,6 +34,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <span className="af-menu-label">
             {label}
             {path === '/orders' && pendingCount > 0 && <Badge count={pendingCount} size="small" color="#087fad" title={`${pendingCount} đơn chờ xác nhận`} />}
+            {!supported(path) && <small className="af-menu-soon">Chưa hỗ trợ</small>}
           </span>
         ),
       })),
@@ -44,7 +47,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <Droplets size={20} />
         </span>
         <div>
-          <strong className="af-cell-truncate" title={settings?.storeName}>{settings?.storeName ?? 'Cửa hàng của bạn'}</strong>
+          <strong className="af-cell-truncate" title={staff?.isDemo ? settings?.storeName : undefined}>{staff?.isDemo ? settings?.storeName ?? 'Cửa hàng của bạn' : 'Cửa hàng của bạn'}</strong>
           <small>Quản lý đại lý nước</small>
         </div>
       </div>
@@ -69,6 +72,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             }}
           >
             <Settings2 size={18} strokeWidth={1.8} /> Cài đặt
+            {!supported('/settings') && <small className="af-menu-soon">Chưa hỗ trợ</small>}
           </button>
         )}
         <button className="af-sider-link" onClick={() => message.info('Hướng dẫn sử dụng sẽ được bổ sung.')}>

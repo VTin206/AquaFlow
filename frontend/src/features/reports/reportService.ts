@@ -20,6 +20,7 @@ export type DailyRevenue = { date: string; revenue: number; collected: number; o
 
 export type ProductReportRow = {
   productId: string
+  sku: string | null
   name: string
   unit: string
   /** Đã giao trong kỳ, trừ hàng khách trả. */
@@ -333,7 +334,8 @@ function buildReport(range: ReportRange, filters: ReportFilters = {}): PeriodRep
   const rowOf = (productId: string, name: string, unit: string) => {
     const existing = products.get(productId)
     if (existing) return existing
-    const row: ProductReportRow = { productId, name, unit, sold: 0, returned: 0, revenue: 0, cost: 0 }
+    const product = db.products.find((item) => item.id === productId)
+    const row: ProductReportRow = { productId, sku: product?.sku ?? null, name, unit, sold: 0, returned: 0, revenue: 0, cost: 0 }
     products.set(productId, row)
     return row
   }

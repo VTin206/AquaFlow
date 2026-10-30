@@ -54,13 +54,18 @@ const dispatched = async (overrides) => {
   await orderService.advanceStatus(order.id)
   return order
 }
-const future = (days) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10)
-const today = () => {
-  const now = new Date()
+const localDate = (now) => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 }
+const future = (days, now = new Date()) => {
+  const date = new Date(now)
+  date.setDate(date.getDate() + days)
+  return localDate(date)
+}
+const today = () => localDate(new Date())
 
 try {
+  assert.equal(future(1, new Date(2026, 9, 23, 0, 15)), '2026-10-24', 'Tomorrow stays tomorrow after local midnight')
   await test('customer profiles: unique phone, edit, auto-link from orders', async () => {
     const created = await customerService.create({ name: 'Nguyễn Kiểm Thử', phone: '0911 222 333', type: 'Cá nhân', area: 'Quận 3', addresses: ['5 Đường B', ' ', '5 Đường B'] })
     assert.equal(created.id, 'KH-001')

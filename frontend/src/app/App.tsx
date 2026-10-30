@@ -1,8 +1,9 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 import { Spin } from 'antd'
 import { Navigate, Route, Routes } from 'react-router'
 import { AppLayout } from '../layouts/AppLayout'
 import { RequireAuth } from './RequireAuth'
+import { usePageSupported } from '../shared/features'
 
 // Mỗi trang được tải khi người dùng mở tới, giúp lần tải đầu nhẹ hơn.
 const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })))
@@ -18,8 +19,16 @@ const SettingsPage = lazy(() => import('../features/settings/SettingsPage').then
 const ActivityPage = lazy(() => import('../features/activity/ActivityPage').then((m) => ({ default: m.ActivityPage })))
 const ShopLayout = lazy(() => import('../features/shop/ShopLayout').then((m) => ({ default: m.ShopLayout })))
 const ShopPage = lazy(() => import('../features/shop/ShopPage').then((m) => ({ default: m.ShopPage })))
+const ProductDetailPage = lazy(() => import('../features/shop/ProductDetailPage').then((m) => ({ default: m.ProductDetailPage })))
+const CheckoutPage = lazy(() => import('../features/shop/CheckoutPage').then((m) => ({ default: m.CheckoutPage })))
 const TrackPage = lazy(() => import('../features/shop/TrackPage').then((m) => ({ default: m.TrackPage })))
 const LoginPage = lazy(() => import('../features/auth/LoginPage').then((m) => ({ default: m.LoginPage })))
+const UnavailablePage = lazy(() => import('../features/live/UnavailablePage').then((m) => ({ default: m.UnavailablePage })))
+
+/** Trang chưa có API BE: tài khoản thật vẫn mở được nhưng thấy "Chưa hỗ trợ" thay cho dữ liệu mẫu. */
+function BackendPage({ path, title, children }: { path: string; title: string; children: ReactNode }) {
+  return usePageSupported()(path) ? children : <UnavailablePage title={title} />
+}
 
 const pageFallback = (
   <div className="af-page-loading">
@@ -36,22 +45,24 @@ export function App() {
         {/* Trang công khai cho khách đặt hàng và tra cứu đơn, không cần đăng nhập. */}
         <Route element={<ShopLayout />}>
           <Route path="shop" element={<ShopPage />} />
+          <Route path="shop/products/:id" element={<ProductDetailPage />} />
+          <Route path="checkout" element={<CheckoutPage />} />
           <Route path="track" element={<TrackPage />} />
           <Route path="track/:token" element={<TrackPage />} />
         </Route>
         <Route element={<RequireAuth />}>
           <Route element={<AppLayout />}>
-            <Route index element={<DashboardPage />} />
+            <Route index element={<BackendPage path="/" title="Tổng quan"><DashboardPage /></BackendPage>} />
             <Route path="orders" element={<OrdersPage />} />
             <Route path="inventory" element={<InventoryPage />} />
             <Route path="products" element={<ProductsPage />} />
             <Route path="customers" element={<CustomersPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
-            <Route path="delivery" element={<DeliveryPage />} />
-            <Route path="driver" element={<DriverPage />} />
-            <Route path="reports" element={<ReportsPage />} />
-            <Route path="activity" element={<ActivityPage />} />
-            <Route path="settings" element={<SettingsPage />} />
+            <Route path="delivery" element={<BackendPage path="/delivery" title="Giao hàng"><DeliveryPage /></BackendPage>} />
+            <Route path="driver" element={<BackendPage path="/driver" title="Chuyến của tôi"><DriverPage /></BackendPage>} />
+            <Route path="reports" element={<BackendPage path="/reports" title="Báo cáo"><ReportsPage /></BackendPage>} />
+            <Route path="activity" element={<BackendPage path="/activity" title="Nhật ký"><ActivityPage /></BackendPage>} />
+            <Route path="settings" element={<BackendPage path="/settings" title="Cài đặt"><SettingsPage /></BackendPage>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Route>

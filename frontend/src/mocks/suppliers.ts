@@ -1,7 +1,7 @@
-import type { Supplier } from '../features/suppliers/types'
+import type { SupplierRecord } from '../features/suppliers/types'
 
 // Các đơn vị và thông tin liên hệ hư cấu phục vụ giao diện mẫu.
-export const initialSuppliers: Supplier[] = [
+export const initialSuppliers: SupplierRecord[] = [
   { id: 'NCC-001', name: 'Kho nước Minh An', contactName: 'Nguyễn Minh An', phone: '0900000001', email: 'minhan@example.com', address: '12 Đường số 1, phường Thủ Đức, TP. Hồ Chí Minh' },
   { id: 'NCC-002', name: 'Phân phối nước Hòa Bình', contactName: 'Trần Thanh Bình', phone: '0900000002', email: 'hoabinh@example.com', address: '25 Đường số 2, phường Bình Thạnh, TP. Hồ Chí Minh' },
   { id: 'NCC-003', name: 'Đại lý nước An Phú', contactName: 'Lê Hoàng Phú', phone: '0900000003', address: '38 Đường số 3, phường An Phú, TP. Hồ Chí Minh' },
