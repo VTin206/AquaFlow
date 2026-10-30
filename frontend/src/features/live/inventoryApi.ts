@@ -9,8 +9,6 @@ export type ProductStock = {
 }
 
 export type ReceiptStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELLED'
-export const receiptStatusLabels: Record<ReceiptStatus, string> = { DRAFT: 'Nháp', CONFIRMED: 'Đã nhập kho', CANCELLED: 'Đã hủy' }
-export const receiptStatusColors: Record<ReceiptStatus, string> = { DRAFT: 'blue', CONFIRMED: 'green', CANCELLED: 'default' }
 
 export type ReceiptItem = {
   id: number; productId: number; productName: string; batchId: number; lotCode: string
@@ -28,8 +26,6 @@ export type ReceiptInput = {
 }
 
 export const receiptCode = (receipt: Pick<PurchaseReceipt, 'id'>) => `PN-${String(receipt.id).padStart(5, '0')}`
-/** Giá trị nhập tính theo số lượng nhận vào kho (phần bị loại không tính). */
-export const receiptTotal = (receipt: Pick<PurchaseReceipt, 'items'>) => receipt.items.reduce((sum, item) => sum + item.quantityAccepted * item.unitCost, 0)
 
 export const inventoryApi = {
   stock: () => api.get<ProductStock[]>('/inventory/stock'),
