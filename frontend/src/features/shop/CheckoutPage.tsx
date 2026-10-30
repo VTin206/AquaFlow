@@ -6,6 +6,7 @@ import type { LiveOrder } from '../live/orderApi'
 import { Money } from '../../shared/components/Money'
 import { QueryError } from '../../shared/components/QueryError'
 import { currency } from '../../shared/utils/format'
+import { focusNextOnEnter } from '../../shared/utils/forms'
 import { DEPOSIT_PER_BOTTLE, suggestedDeliveryFee } from '../../shared/policy'
 import { readProfile, saveProfile, useCart, useCartActions } from './cart'
 import { submitCheckoutOnce } from './checkoutSubmit'
@@ -78,7 +79,7 @@ export function CheckoutPage() {
         <p className="af-form-hint">Chưa gồm tiền cọc vỏ.{demo && jugs > 0 ? ` Nếu thiếu vỏ để đổi, cọc ${currency(DEPOSIT_PER_BOTTLE)}/vỏ khi nhận hàng.` : ''}</p>
       </Card>
       <Card style={{ marginTop: 16 }}>
-        <Form form={form} name="checkout" layout="vertical" scrollToFirstError={{ focus: true }} initialValues={{ ...profile, floor: profile?.floor ?? 0, remember: Boolean(profile) }} onFinish={submit}>
+        <Form form={form} name="checkout" layout="vertical" scrollToFirstError={{ focus: true }} initialValues={{ ...profile, floor: profile?.floor ?? 0, remember: Boolean(profile) }} onFinish={submit} onKeyDown={focusNextOnEnter}>
           <Form.Item name="customer" label="Tên người nhận" rules={[{ required: true, whitespace: true, message: 'Nhập tên người nhận.' }, { max: 150 }]}><Input autoComplete="name" /></Form.Item>
           <Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, message: 'Nhập số điện thoại.' }, { pattern: /^(?:0\d{9,10}|\+84\d{9,10})$/, transform: (value?: string) => value?.replace(/[\s().-]/g, ''), message: 'Số điện thoại không hợp lệ.' }]}><Input inputMode="tel" autoComplete="tel" /></Form.Item>
           <Form.Item name="address" label="Địa chỉ giao" rules={[{ required: true, whitespace: true, message: 'Nhập địa chỉ giao.' }, { max: 255 }]}><Input.TextArea autoComplete="street-address" rows={2} /></Form.Item>

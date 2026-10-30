@@ -3,6 +3,7 @@ import { Alert, App, Button, Form, Input, Modal, Tabs } from 'antd'
 import { ArrowRight, LockKeyhole, UserRound, Waves } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { RegisterForm } from '../../auth/RegisterForm'
+import { focusNextOnEnter } from '../../../shared/utils/forms'
 import { useAuth } from '../../auth/useAuth'
 import type { LoginCredentials } from '../../auth/authService'
 
@@ -52,7 +53,7 @@ export function AuthModal({ tab, onTabChange, onClose }: { tab: AuthTab | null; 
               <>
                 <Alert type="info" showIcon style={{ marginBottom: 16 }} title="Hiện chỉ tài khoản nhân viên đăng nhập được; đăng nhập xong sẽ vào trang quản lý." />
                 {error && <Alert type="error" showIcon style={{ marginBottom: 16 }} title={error} />}
-                <Form<LoginCredentials> name="shop-login" layout="vertical" requiredMark={false} autoComplete="on" onFinish={submit}>
+                <Form<LoginCredentials> name="shop-login" layout="vertical" requiredMark={false} autoComplete="on" onFinish={submit} onKeyDown={focusNextOnEnter}>
                   <Form.Item label="Email" name="email" rules={[{ required: true, type: 'email', whitespace: true, message: 'Nhập email hợp lệ.' }]}>
                     <Input type="email" size="large" prefix={<UserRound size={17} aria-hidden />} placeholder="name@example.com" autoComplete="email" autoCapitalize="none" spellCheck={false} />
                   </Form.Item>

@@ -1,6 +1,7 @@
 import { Alert, Button, Checkbox, Form, Input, Tooltip } from 'antd'
 import { LockKeyhole, Mail, Phone, UserRound, UserRoundPlus } from 'lucide-react'
 import { UNSUPPORTED_HINT } from '../../shared/components/Unsupported'
+import { focusNextOnEnter } from '../../shared/utils/forms'
 
 type RegisterValues = { fullName: string; phone: string; email: string; password: string; confirm: string; agree: boolean }
 
@@ -12,7 +13,7 @@ export function RegisterForm({ size = 'large' }: { size?: 'middle' | 'large' }) 
   const [form] = Form.useForm<RegisterValues>()
   return (
     <>
-      <Form form={form} name="register" layout="vertical" requiredMark={false} autoComplete="on">
+      <Form form={form} name="register" layout="vertical" requiredMark={false} autoComplete="on" onKeyDown={focusNextOnEnter}>
         <Form.Item label="Họ và tên" name="fullName" rules={[{ required: true, whitespace: true, message: 'Nhập họ và tên.' }, { max: 150, message: 'Tối đa 150 ký tự.' }]}>
           <Input size={size} prefix={<UserRound size={17} aria-hidden />} placeholder="Nguyễn Văn An" autoComplete="name" />
         </Form.Item>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Alert, App, Button, Checkbox, ConfigProvider, Divider, Form, Input, Modal } from 'antd'
 import { ArrowLeft, ArrowRight, CircleCheck, Headphones, LockKeyhole, Package, Store, Truck, UserRound, Waves } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router'
+import { focusNextOnEnter } from '../../shared/utils/forms'
 import { useAuth } from './useAuth'
 import type { LoginCredentials } from './authService'
 import { devAccounts } from './devAccounts'
@@ -100,6 +101,7 @@ export function LoginPage() {
                 layout="vertical"
                 requiredMark={false}
                 onFinish={submitLogin}
+                onKeyDown={focusNextOnEnter}
               >
                 <Form.Item label="Email" name="email" rules={[{ required: true, type: 'email', whitespace: true, message: 'Nhập email hợp lệ.' }]}>
                   <Input type="email" size="large" prefix={<UserRound size={17} aria-hidden />} placeholder="name@example.com" autoComplete="email" autoCapitalize="none" spellCheck={false} />
