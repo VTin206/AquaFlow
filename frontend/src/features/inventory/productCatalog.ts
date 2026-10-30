@@ -100,6 +100,12 @@ export function useSaveProduct() {
   })
 }
 
+/** BE chưa có API bán lại nên chỉ bản dùng thử (cờ `reactivate`). */
+export function useActivateProduct() {
+  const invalidate = useInvalidateProducts()
+  return useMutation({ mutationFn: productService.activate, onSuccess: () => void invalidate() })
+}
+
 export function useDeactivateProduct() {
   const demo = useIsDemo()
   const invalidate = useInvalidateProducts()
