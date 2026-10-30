@@ -17,7 +17,7 @@ import { productKeys } from './useProducts'
 export type StockItem = {
   id: string; name: string; sku: string; brand?: string; unit?: string
   onHand: number; reserved: number; available: number; expiredOnHand: number
-  /** Ngưỡng tồn tối thiểu; BE chưa có nên chỉ bản dùng thử có. */
+  /** Ngưỡng tồn tối thiểu (ProductController); sản phẩm đã ngừng bán không có. */
   threshold?: number
   /** Hạn gần nhất của lô còn hàng, "yyyy-mm-dd". */
   nearestExpiry?: string
@@ -159,10 +159,10 @@ const useLiveKey = () => {
   return [staff?.name, staff?.role] as const
 }
 
-export function useStockItems() {
+export function useStockItems(enabled = true) {
   const demo = useDemo()
   const who = useLiveKey()
-  return useQuery({ queryKey: demo ? [...productKeys.all, 'stock-view'] : ['live', 'inventory-stock', ...who], queryFn: demo ? demoStock : liveStock })
+  return useQuery({ queryKey: demo ? [...productKeys.all, 'stock-view'] : ['live', 'inventory-stock', ...who], queryFn: demo ? demoStock : liveStock, enabled })
 }
 
 export function useLotItems() {

@@ -20,8 +20,10 @@ export type OrderInput = {
   items: { productId: number; quantity: number }[]; note: string | null
 }
 
-/** Xác nhận/hủy theo OrderStatusPolicy; các bước giao hàng thuộc màn hình giao vận. */
+/** Xác nhận/chuẩn bị/hủy theo OrderStatusPolicy; các bước giao hàng thuộc màn hình giao vận. */
 export const canConfirm = (order: Pick<LiveOrder, 'status'>) => order.status === 'PENDING'
+/** Đơn đã giữ hàng chuyển sang soạn hàng; đơn giao phải ở bước này mới xếp được vào chuyến. */
+export const canPrepare = (order: Pick<LiveOrder, 'status'>) => order.status === 'CONFIRMED'
 export const canCancel = (order: Pick<LiveOrder, 'status'>) => ['PENDING', 'CONFIRMED', 'PREPARING'].includes(order.status)
 
 export const orderApi = {

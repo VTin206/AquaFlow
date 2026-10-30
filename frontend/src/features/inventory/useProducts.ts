@@ -8,7 +8,7 @@ export const productKeys = {
   receipts: ['products', 'receipts'] as const,
 }
 
-export const useProducts = () => useQuery({ queryKey: productKeys.all, queryFn: productService.list })
+export const useProducts = (enabled = true) => useQuery({ queryKey: productKeys.all, queryFn: productService.list, enabled })
 
 export function useCreateProduct() {
   const queryClient = useQueryClient()

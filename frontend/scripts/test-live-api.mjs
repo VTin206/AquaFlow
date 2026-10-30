@@ -65,7 +65,7 @@ try {
   const { catalogApi } = await vite.ssrLoadModule('/src/features/live/catalogApi.ts')
   const { guestOrderApi } = await vite.ssrLoadModule('/src/features/live/guestOrderApi.ts')
   const { customerApi } = await vite.ssrLoadModule('/src/features/live/customerApi.ts')
-  const { canCancel, orderApi, orderStatusLabels, paymentStatusLabels } = await vite.ssrLoadModule('/src/features/live/orderApi.ts')
+  const { canCancel, canPrepare, orderApi, orderStatusLabels, paymentStatusLabels } = await vite.ssrLoadModule('/src/features/live/orderApi.ts')
   const { toGuestOrderInput, toShopProduct } = await vite.ssrLoadModule('/src/features/shop/shopService.ts')
 
   assert.deepEqual(await catalogApi.products(), [product])
@@ -90,8 +90,9 @@ try {
   assert.equal(paymentStatusLabels.PARTIALLY_PAID, 'Thanh toán một phần')
   for (const status of ['PENDING', 'CONFIRMED', 'PREPARING']) assert.equal(canCancel({ status }), true)
   for (const status of ['OUT_FOR_DELIVERY', 'DELIVERED', 'COMPLETED', 'CANCELLED']) assert.equal(canCancel({ status }), false)
+  for (const status of Object.keys(orderStatusLabels)) assert.equal(canPrepare({ status }), status === 'CONFIRMED')
   console.log('PASS order list/detail preserve backend status, item prices, discount and total')
-  console.log('PASS live cancel action matches backend policy and stays unavailable after dispatch')
+  console.log('PASS live cancel and prepare actions match backend policy; cancel stays unavailable after dispatch')
 
   const guestInput = toGuestOrderInput({ customer: 'Nguyen Van An', phone: '0901234567', address: '123 Nguyen Trai', area: 'Quan 5', lines: [{ productId: '12', quantity: 2 }], note: 'Giao buổi sáng', floor: 4, appointment: '2026-10-29T08:00:00Z' })
   const createdGuestOrder = await guestOrderApi.create(guestInput)

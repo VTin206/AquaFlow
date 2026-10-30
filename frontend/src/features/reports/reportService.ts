@@ -435,11 +435,11 @@ export const dayFromToday = (offset = 0) => {
   return localDay(date.toISOString())
 }
 
-export const useReport = (range: ReportRange, filters?: ReportFilters) =>
-  useQuery({ queryKey: reportKeys.summary(range, filters), queryFn: () => reportService.summary(range, filters) })
+export const useReport = (range: ReportRange, filters?: ReportFilters, enabled = true) =>
+  useQuery({ queryKey: reportKeys.summary(range, filters), queryFn: () => reportService.summary(range, filters), enabled })
 
 /** Doanh thu 14 ngày gần nhất cho trang tổng quan. */
-export function useDailyRevenue() {
-  const query = useReport({ from: dayFromToday(-13), to: dayFromToday() })
+export function useDailyRevenue(enabled = true) {
+  const query = useReport({ from: dayFromToday(-13), to: dayFromToday() }, undefined, enabled)
   return { ...query, data: query.data?.days }
 }

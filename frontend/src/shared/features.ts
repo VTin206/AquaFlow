@@ -37,7 +37,7 @@ export type BackendFeature = keyof typeof backendFeatures
 export const useIsDemo = () => useAuth().user?.isDemo ?? false
 
 /** Trang chưa có API BE: tài khoản thật vẫn thấy trên menu, mở ra là trang "Chưa hỗ trợ". */
-const unsupportedPages = new Set(['/', '/delivery', '/driver', '/reports', '/activity', '/settings'])
+const unsupportedPages = new Set(['/delivery', '/driver', '/reports', '/activity', '/settings'])
 
 export function usePageSupported() {
   const demo = useIsDemo()
