@@ -465,6 +465,10 @@ body {
   vertical-align: -2px;
 }
 
+/* Icon trong ô nhập (điện thoại, tìm kiếm, khóa...): mặc định AntD chỉ cách chữ 4px, nới ra cho dễ đọc. */
+.ant-input-affix-wrapper > .ant-input-prefix { margin-inline-end: 10px; }
+.ant-input-affix-wrapper > .ant-input-suffix { margin-inline-start: 10px; }
+
 /* Dấu * của trường bắt buộc, đặt sau nhãn. */
 .af-required-mark { margin-left: 4px; color: var(--af-danger); font-weight: 600; }
 
