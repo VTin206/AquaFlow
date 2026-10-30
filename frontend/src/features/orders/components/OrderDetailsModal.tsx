@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { Alert, App, Button, Checkbox, Descriptions, Divider, Dropdown, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Timeline, Tooltip, Typography, theme } from 'antd'
 import { Printer } from 'lucide-react'
+import { Money } from '../../../shared/components/Money'
+import { OrderTotals } from '../../../shared/components/OrderTotals'
 import { TransferQr } from '../../../shared/payment/TransferQr'
+import { dueTone } from '../../../shared/utils/money'
 import { usePrinter } from '../../../shared/print/usePrinter'
 import { currency } from '../../../shared/utils/format'
 import { can } from '../../auth/permissions'
@@ -9,7 +12,7 @@ import { useStaff } from '../../auth/useStaff'
 import { useSettings } from '../../settings/settingsService'
 import { canCancel as cancellable, returnableQuantity } from '../orderService'
 import { DeliverySlipDocument, InvoiceDocument } from '../print/OrderDocuments'
-import { amountDue, awaitingReturnInspection, paidAmount, paymentLabel, type OrderLine, type Payment, type PaymentDraft, type RefundDraft } from '../types'
+import { amountDue, awaitingReturnInspection, paidAmount, paymentLabel, returnedValue, type OrderLine, type Payment, type PaymentDraft, type RefundDraft } from '../types'
 import { useOrderAction, useOrders } from '../useOrders'
 import { AdvanceStatusButton } from './AdvanceStatusButton'
 import { LateTag } from './LateTag'
@@ -40,8 +43,6 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
   const due = amountDue(order)
   const paid = paidAmount(order)
   const cancelled = order.status === 'Đã hủy'
-  const dueColor = cancelled ? undefined : due > 0 ? token.colorWarningText : token.colorSuccessText
-  const dueBackground = cancelled ? undefined : due > 0 ? token.colorWarningBg : token.colorSuccessBg
   const canPay = !['Chờ xác nhận', 'Đã hủy', 'Đã hoàn tất'].includes(order.status) && due > 0
   const canCancel = cancellable(order) && !awaitingReturnInspection(order) && can(role, 'cancelOrder')
   const needsRefundRight = paid > 0 && !can(role, 'refund')
@@ -167,28 +168,28 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
             { title: 'Thành tiền', key: 'total', align: 'right', render: (_, line) => currency(line.quantity * line.unitPrice) },
           ]}
         />
-        <div className="af-order-summary">
-          <span>Phí giao hàng</span>
-          <span>{currency(order.deliveryFee)}</span>
-        </div>
-        {order.returns?.length ? (
-          <div className="af-order-summary">
-            <span>Hàng khách trả lại</span>
-            <span>−{currency(order.returns.flatMap((item) => item.lines).reduce((sum, line) => sum + line.quantity * line.unitPrice, 0))}</span>
-          </div>
-        ) : null}
-        <div className="af-order-summary af-order-summary-highlight">
-          <span>Tổng tiền hàng & giao hàng</span>
-          <strong style={{ color: token.colorPrimaryText }}>{currency(order.total)}</strong>
-        </div>
-        <div className="af-order-summary">
-          <span>Đã thu (sau hoàn)</span>
-          <span style={{ color: paid > 0 ? token.colorSuccessText : undefined, fontWeight: paid > 0 ? 600 : undefined }}>{currency(paid)}</span>
-        </div>
-        <div className="af-order-summary" style={{ background: dueBackground }}>
-          <span>Còn phải thu</span>
-          <strong style={{ color: dueColor }}>{cancelled ? '—' : currency(due)}</strong>
-        </div>
+        <OrderTotals
+          rows={[
+            { label: 'Tiền hàng', value: currency(order.lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0)) },
+            ...(order.method === 'Giao tận nơi' ? [{ label: 'Phí giao', value: order.deliveryFee > 0 ? currency(order.deliveryFee) : 'Miễn phí' }] : []),
+            ...(order.returns?.length ? [{ label: 'Hàng khách trả lại', value: `−${currency(returnedValue(order))}` }] : []),
+          ]}
+          total={{ label: 'Tổng cộng', value: currency(order.total) }}
+          after={cancelled ? (
+            <div className="is-status"><Tag>Đã hủy</Tag></div>
+          ) : (
+            <>
+              <div className="is-after-total">
+                <dt>Đã thu</dt>
+                <dd><Money value={paid} tone={paid > 0 ? 'paid' : 'neutral'} /></dd>
+              </div>
+              <div>
+                <dt>Còn phải thu</dt>
+                <dd><strong><Money value={due} tone={dueTone(due)} /></strong></dd>
+              </div>
+            </>
+          )}
+        />
         <Divider style={{ marginBlock: 16 }} />
         <Typography.Title level={5}>Lịch sử thanh toán</Typography.Title>
         {order.payments.length ? (

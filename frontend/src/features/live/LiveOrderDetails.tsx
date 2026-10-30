@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, App, Button, Card, Descriptions, Modal, Popconfirm, Space, Table, Tag } from 'antd'
+import { OrderTotals } from '../../shared/components/OrderTotals'
 import { QueryError } from '../../shared/components/QueryError'
 import { currency } from '../../shared/utils/format'
 import { useStaff } from '../auth/useStaff'
@@ -9,6 +10,11 @@ import { invalidateLiveData } from './invalidateLiveData'
 
 const dateTime = (value: string | null) => value ? new Date(value).toLocaleString('vi-VN') : '—'
 const statusColors: Record<OrderStatus, string> = { PENDING: 'gold', CONFIRMED: 'blue', PREPARING: 'blue', OUT_FOR_DELIVERY: 'cyan', DELIVERED: 'green', COMPLETED: 'green', CANCELLED: 'default' }
+
+/** Màu trạng thái thanh toán theo quy ước tiền: cam còn phải thu, xanh đã thu, đỏ đang hoàn. */
+const paymentTagColors: Record<keyof typeof paymentStatusLabels, string> = {
+  UNPAID: 'orange', PARTIALLY_PAID: 'orange', PAID: 'green', REFUND_PENDING: 'red', REFUNDED: 'default',
+}
 
 /** Chi tiết đơn của BE: xác nhận (giữ hàng), chuẩn bị hàng và hủy theo OrderStatusPolicy. */
 export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => void }) {
@@ -60,12 +66,19 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
         {catalog.isError && <Alert type="warning" title="Không tải được tên sản phẩm; đang hiển thị mã định danh." action={<Button onClick={() => void catalog.refetch()}>Thử lại</Button>} />}
         <Table rowKey="id" dataSource={order.items} pagination={false} scroll={{ x: 550 }} columns={[
           { title: 'Sản phẩm', dataIndex: 'productId', render: (productId: number) => catalog.data?.find((product) => product.id === productId)?.name ?? `Sản phẩm #${productId}` },
-          { title: 'Số lượng', dataIndex: 'quantity' }, { title: 'Đơn giá', dataIndex: 'unitPrice', render: currency }, { title: 'Thành tiền', dataIndex: 'lineTotal', render: currency },
+          { title: 'Số lượng', dataIndex: 'quantity', align: 'right', width: 90 }, { title: 'Đơn giá', dataIndex: 'unitPrice', align: 'right', render: currency }, { title: 'Thành tiền', dataIndex: 'lineTotal', align: 'right', render: currency },
         ]} />
-        <div className="af-order-summary"><span>Tiền hàng</span><span>{currency(order.subtotal)}</span></div>
-        <div className="af-order-summary"><span>Giảm giá</span><span>{currency(order.discountAmount)}</span></div>
-        <div className="af-order-summary"><span>Phí giao</span><span>{currency(order.deliveryFee)}</span></div>
-        <div className="af-order-summary"><strong>Tổng cộng</strong><strong>{currency(order.total)}</strong></div>
+        <OrderTotals
+          rows={[
+            { label: 'Tiền hàng', value: currency(order.subtotal) },
+            ...(Number(order.discountAmount) > 0 ? [{ label: 'Giảm giá', value: `−${currency(order.discountAmount)}` }] : []),
+            ...(order.fulfillmentType === 'DELIVERY' ? [{ label: 'Phí giao', value: Number(order.deliveryFee) > 0 ? currency(order.deliveryFee) : 'Miễn phí' }] : []),
+          ]}
+          total={{ label: 'Tổng cộng', value: currency(order.total) }}
+          after={order.status !== 'CANCELLED' && (
+            <div className="is-status"><Tag color={paymentTagColors[order.paymentStatus]}>{paymentStatusLabels[order.paymentStatus] ?? order.paymentStatus}</Tag></div>
+          )}
+        />
         {canConfirm(order) && <Alert type="warning" showIcon style={{ marginTop: 12 }} title="Đơn đang chờ xác nhận" description="Kiểm tra thông tin với khách rồi xác nhận để giữ hàng trong kho." />}
       </>}
     </Card>}
