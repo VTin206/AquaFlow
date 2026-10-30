@@ -11,9 +11,12 @@ import com.aquaflow.customer.order.api.dto.OrderCreateRequest;
 import com.aquaflow.customer.order.api.dto.OrderResponse;
 import com.aquaflow.customer.order.api.dto.GuestOrderCreateRequest;
 import com.aquaflow.customer.order.application.OrderService;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -27,7 +30,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/customer/orders")
 @Tag(name = "Customer Orders", description = "Online customer orders")
-@SecurityRequirement(name = "bearerAuth")
 public class CustomerOrderController {
 
     private final OrderService orderService;
@@ -42,6 +44,7 @@ public class CustomerOrderController {
 
     @GetMapping
     @Operation(summary = "Get orders belonging to the current customer")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<List<OrderResponse>> findMyOrders(
             @AuthenticationPrincipal AuthUserDetails principal) {
 
@@ -55,6 +58,7 @@ public class CustomerOrderController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get an order belonging to the current customer")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<OrderResponse> findMyOrderById(
             @PathVariable Long id,
             @AuthenticationPrincipal AuthUserDetails principal) {
@@ -72,6 +76,7 @@ public class CustomerOrderController {
 
     @PostMapping
     @Operation(summary = "Create an online order")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<OrderResponse> create(
             @Valid @RequestBody OrderCreateRequest request,
             @AuthenticationPrincipal AuthUserDetails principal) {
@@ -95,8 +100,15 @@ public class CustomerOrderController {
     }
 
     @PostMapping("/guest")
-    @SecurityRequirements
-    @Operation(summary = "Create a guest delivery order")
+    @Operation(summary = "Create a guest delivery order without authentication")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Guest order created", content =
+                    @Content(mediaType = "application/json", schema = @Schema(implementation = OrderResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid guest order request", content =
+                    @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+            @ApiResponse(responseCode = "404", description = "Active product not found", content =
+                    @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
+    })
     public ResponseEntity<OrderResponse> createGuest(
             @Valid @RequestBody GuestOrderCreateRequest request) {
 

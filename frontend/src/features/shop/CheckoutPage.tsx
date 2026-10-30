@@ -7,6 +7,7 @@ import { QueryError } from '../../shared/components/QueryError'
 import { currency } from '../../shared/utils/format'
 import { DEPOSIT_PER_BOTTLE, suggestedDeliveryFee } from '../../shared/policy'
 import { readProfile, saveProfile, useCart, useCartActions } from './cart'
+import { submitCheckoutOnce } from './checkoutSubmit'
 import { usePlaceWebOrder, useShopDemo, useShopProducts } from './shopService'
 
 type CheckoutForm = { customer: string; phone: string; address: string; area: string; floor?: number; appointment?: Dayjs; note?: string; remember: boolean }
@@ -35,16 +36,16 @@ export function CheckoutPage() {
   const fee = demo ? suggestedDeliveryFee({ units, jugs, floor }) : null
   const submit = (values: CheckoutForm) => {
     if (submitLock.current || mutation.isPending || invalid || !cart.length || products.isError || products.isPending) return
-    submitLock.current = true
     setSubmitError(undefined)
-    mutation.mutate({ customer: values.customer.trim(), phone: values.phone.replace(/[\s().-]/g, ''), address: values.address.trim(),
+    const draft = { customer: values.customer.trim(), phone: values.phone.replace(/[\s().-]/g, ''), address: values.address.trim(),
       area: values.area.trim(), floor, appointment: values.appointment?.toISOString(), note: values.note?.trim(), lines: cart,
-    }, { onSuccess: (order) => {
+    }
+    void submitCheckoutOnce(submitLock, () => mutation.mutateAsync(draft), (order) => {
       if (demo) saveProfile(values.remember ? { customer: values.customer.trim(), phone: values.phone.trim(), address: values.address.trim(), area: values.area.trim(), floor } : null)
       actions.clear()
       if (demo && 'trackingToken' in order && order.trackingToken) navigate(`/track/${order.trackingToken}`, { state: { placed: true } })
       else if (!demo) setPlacedLiveOrder(order as LiveOrder)
-    }, onError: (error) => { setSubmitError(error.message); message.error(error.message) }, onSettled: () => { submitLock.current = false } })
+    }, (error) => { setSubmitError(error.message); message.error(error.message) })
   }
 
   if (placedLiveOrder) return <div className="af-shop-page af-shop-narrow">

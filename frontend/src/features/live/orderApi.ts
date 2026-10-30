@@ -22,7 +22,7 @@ export type OrderInput = {
 
 /** Xác nhận/hủy theo OrderStatusPolicy; các bước giao hàng thuộc màn hình giao vận. */
 export const canConfirm = (order: Pick<LiveOrder, 'status'>) => order.status === 'PENDING'
-export const canCancel = (order: Pick<LiveOrder, 'status'>) => ['PENDING', 'CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY'].includes(order.status)
+export const canCancel = (order: Pick<LiveOrder, 'status'>) => ['PENDING', 'CONFIRMED', 'PREPARING'].includes(order.status)
 
 export const orderApi = {
   list: () => api.get<LiveOrder[]>('/sales/orders'),
