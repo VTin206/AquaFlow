@@ -23,6 +23,8 @@ export const backendFeatures = {
   productCatalogDetails: false,
   /** Tồn kho tối thiểu để cảnh báo sắp hết (BE chưa có). */
   lowStockThreshold: false,
+  /** Phiếu thu, số còn phải thu của đơn (BE chỉ có trạng thái thanh toán, chưa có luồng thu tiền). */
+  orderPayments: false,
 } satisfies Record<string, boolean>
 
 export type BackendFeature = keyof typeof backendFeatures

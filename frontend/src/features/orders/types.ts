@@ -1,4 +1,4 @@
-export type OrderStatus = 'Chờ xác nhận' | 'Đang chuẩn bị' | 'Đang giao' | 'Đã giao' | 'Giao thất bại' | 'Đã hoàn tất' | 'Đã hủy'
+export type OrderStatus = 'Chờ xác nhận' | 'Đã xác nhận' | 'Đang chuẩn bị' | 'Đang giao' | 'Đã giao' | 'Giao thất bại' | 'Đã hoàn tất' | 'Đã hủy'
 
 export type OrderLine = { productId: string; name: string; unit: string; quantity: number; unitPrice: number }
 export type Payment = {
@@ -47,6 +47,10 @@ export type OrderBottles = { delivered: number; returned: number; deposit: numbe
 
 export type Order = {
   id: string
+  /** Mã hiển thị khi khác `id` (tài khoản thật: orderCode của BE). */
+  code?: string
+  /** Trạng thái thanh toán do BE trả về; bản dùng thử tính từ các phiếu thu. */
+  paymentStatusLabel?: string
   /** Hồ sơ khách gắn với đơn; khách vãng lai không có. */
   customerId?: string
   customer: string
@@ -91,7 +95,7 @@ export type OrderDraft = {
 export const paidAmount = (order: Order) => order.payments.reduce((sum, payment) => sum + (payment.refund ? -payment.amount : payment.amount), 0)
 export const amountDue = (order: Order) => Math.max(0, order.total - paidAmount(order))
 export const paymentLabel = (order: Order) =>
-  order.status === 'Đã hủy' ? 'Đã hủy' : amountDue(order) === 0 ? 'Đã thanh toán' : paidAmount(order) > 0 ? 'Thanh toán một phần' : 'Chưa thanh toán'
+  order.paymentStatusLabel ?? (order.status === 'Đã hủy' ? 'Đã hủy' : amountDue(order) === 0 ? 'Đã thanh toán' : paidAmount(order) > 0 ? 'Thanh toán một phần' : 'Chưa thanh toán')
 
 /** Số bình (có vỏ luân chuyển) trong đơn. */
 export const jugCount = (order: Pick<Order, 'lines'>) => order.lines.filter((line) => line.unit === 'Bình').reduce((sum, line) => sum + line.quantity, 0)
@@ -102,7 +106,7 @@ export const createdAtOf = (order: Pick<Order, 'history'>) => order.history[0]?.
 export const returnedValue = (order: Pick<Order, 'returns'>) =>
   (order.returns ?? []).flatMap((item) => item.lines).reduce((sum, line) => sum + line.quantity * line.unitPrice, 0)
 
-const OPEN_DELIVERY: OrderStatus[] = ['Chờ xác nhận', 'Đang chuẩn bị', 'Đang giao', 'Giao thất bại']
+const OPEN_DELIVERY: OrderStatus[] = ['Chờ xác nhận', 'Đã xác nhận', 'Đang chuẩn bị', 'Đang giao', 'Giao thất bại']
 
 /** Số phút trễ so với giờ hẹn: đơn chưa giao tính tới hiện tại, đơn đã giao tính tới lúc nhận. 0 nếu đúng hẹn. */
 export function minutesLate(order: Order, now = Date.now()) {

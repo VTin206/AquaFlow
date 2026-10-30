@@ -12,6 +12,7 @@ import { lookupOrder, useShopDemo, useTrackedOrder } from './shopService'
 
 const stepOf: Record<PublicOrder['status'], number> = {
   'Chờ xác nhận': 0,
+  'Đã xác nhận': 1,
   'Đang chuẩn bị': 1,
   'Đang giao': 2,
   'Giao thất bại': 2,
