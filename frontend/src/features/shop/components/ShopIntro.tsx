@@ -3,6 +3,7 @@ import { ArrowRight, BadgeCheck, ClipboardList, Droplets, MapPin, PackageSearch,
 import { Link } from 'react-router'
 import { DEPOSIT_PER_BOTTLE, FREE_DELIVERY_MIN_UNITS } from '../../../shared/policy'
 import { currency } from '../../../shared/utils/format'
+import { articleDate, shopArticles } from '../shopNews'
 import type { ShopProduct } from '../shopService'
 
 type Props = {
@@ -15,7 +16,7 @@ type Props = {
 }
 
 /**
- * Phần giới thiệu trước danh mục: banner, ưu đãi, lý do chọn, thương hiệu và cách đặt hàng.
+ * Phần giới thiệu trước danh mục: banner kèm tin mới, ưu đãi, lý do chọn, thương hiệu và cách đặt hàng.
  * Con số chính sách (miễn phí giao, cọc vỏ) chỉ hiện ở bản dùng thử vì BE chưa có cấu hình cửa hàng.
  */
 export function ShopIntro({ demo, storeName, phone, products, onShop, onBrand }: Props) {
@@ -37,29 +38,50 @@ export function ShopIntro({ demo, storeName, phone, products, onShop, onBrand }:
 
   return (
     <div className="af-shop-intro">
-      <section className="af-shop-banner" aria-labelledby="af-shop-banner-title">
-        <div className="af-shop-banner-copy">
-          <span className="af-shop-eyebrow"><Droplets size={14} aria-hidden /> {storeName ?? 'Cửa hàng nước uống'}</span>
-          <h1 id="af-shop-banner-title">Nước uống sạch<br />giao tận nhà</h1>
-          <p>Bình 19L, nước suối đóng chai, nước khoáng từ các thương hiệu quen thuộc. Đặt vài bước, cửa hàng giao tới tận cửa.</p>
-          <div className="af-shop-banner-actions">
-            <Button type="primary" size="large" icon={<ShoppingCart size={18} />} onClick={onShop}>Đặt nước ngay</Button>
-            {tel ? (
-              <Button size="large" ghost icon={<Phone size={18} />} href={`tel:${tel}`}>{phone}</Button>
-            ) : demo ? (
-              <Link to="/track"><Button size="large" ghost icon={<PackageSearch size={18} />}>Tra cứu đơn</Button></Link>
-            ) : null}
+      <div className="af-shop-top">
+        <section className="af-shop-banner" aria-labelledby="af-shop-banner-title">
+          <div className="af-shop-banner-copy">
+            <span className="af-shop-eyebrow"><Droplets size={14} aria-hidden /> {storeName ?? 'Cửa hàng nước uống'}</span>
+            <h1 id="af-shop-banner-title">Nước uống sạch<br />giao tận nhà</h1>
+            <p>Bình 19L, nước suối đóng chai, nước khoáng từ các thương hiệu quen thuộc. Đặt vài bước, cửa hàng giao tới tận cửa.</p>
+            <div className="af-shop-banner-actions">
+              <Button type="primary" size="large" icon={<ShoppingCart size={18} />} onClick={onShop}>Đặt nước ngay</Button>
+              {tel ? (
+                <Button size="large" ghost icon={<Phone size={18} />} href={`tel:${tel}`}>{phone}</Button>
+              ) : demo ? (
+                <Link to="/track"><Button size="large" ghost icon={<PackageSearch size={18} />}>Tra cứu đơn</Button></Link>
+              ) : null}
+            </div>
           </div>
-        </div>
-        <div className={`af-shop-banner-art ${showcase.length ? '' : 'is-empty'}`} aria-hidden>
-          <span className="af-shop-bubble is-a" />
-          <span className="af-shop-bubble is-b" />
-          <span className="af-shop-bubble is-c" />
-          {showcase.length ? showcase.map((product, index) => (
-            <img key={product.id} src={product.image} alt="" className={`af-shop-banner-item is-${index}`} loading="lazy" />
-          )) : <Droplets size={120} strokeWidth={1.2} className="af-shop-banner-drop" />}
-        </div>
-      </section>
+          <div className={`af-shop-banner-art ${showcase.length ? '' : 'is-empty'}`} aria-hidden>
+            <span className="af-shop-bubble is-a" />
+            <span className="af-shop-bubble is-b" />
+            <span className="af-shop-bubble is-c" />
+            {showcase.length ? showcase.map((product, index) => (
+              <img key={product.id} src={product.image} alt="" className={`af-shop-banner-item is-${index}`} loading="lazy" />
+            )) : <Droplets size={120} strokeWidth={1.2} className="af-shop-banner-drop" />}
+          </div>
+        </section>
+        <aside className="af-shop-news" aria-labelledby="af-shop-news-title">
+          <h2 id="af-shop-news-title">Tin mới cập nhật</h2>
+          <ul>
+            {shopArticles.map((article) => {
+              const Icon = article.icon
+              return (
+                <li key={article.slug}>
+                  <Link to={`/shop/news/${article.slug}`}>
+                    <span className="af-shop-news-thumb" aria-hidden><Icon size={24} /></span>
+                    <span className="af-shop-news-text">
+                      <strong>{article.title}</strong>
+                      <small>{articleDate(article.publishedOn)}</small>
+                    </span>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </aside>
+      </div>
 
       <section className="af-shop-promos" aria-label="Ưu đãi">
         {promos.map((promo) => (

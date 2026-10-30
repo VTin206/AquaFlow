@@ -18,6 +18,7 @@ const DriverPage = lazy(() => import('../features/delivery/DriverPage').then((m)
 const SettingsPage = lazy(() => import('../features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 const ActivityPage = lazy(() => import('../features/activity/ActivityPage').then((m) => ({ default: m.ActivityPage })))
 const ShopLayout = lazy(() => import('../features/shop/ShopLayout').then((m) => ({ default: m.ShopLayout })))
+const ArticlePage = lazy(() => import('../features/shop/ArticlePage').then((m) => ({ default: m.ArticlePage })))
 const ShopPage = lazy(() => import('../features/shop/ShopPage').then((m) => ({ default: m.ShopPage })))
 const ProductDetailPage = lazy(() => import('../features/shop/ProductDetailPage').then((m) => ({ default: m.ProductDetailPage })))
 const CheckoutPage = lazy(() => import('../features/shop/CheckoutPage').then((m) => ({ default: m.CheckoutPage })))
@@ -46,6 +47,7 @@ export function App() {
         <Route element={<ShopLayout />}>
           <Route path="shop" element={<ShopPage />} />
           <Route path="shop/products/:id" element={<ProductDetailPage />} />
+          <Route path="shop/news/:slug" element={<ArticlePage />} />
           <Route path="checkout" element={<CheckoutPage />} />
           <Route path="track" element={<TrackPage />} />
           <Route path="track/:token" element={<TrackPage />} />
