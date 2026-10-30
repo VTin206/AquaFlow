@@ -216,7 +216,7 @@ export function InventoryPage() {
                 </div>
                 <Table<StockItem>
                   key={`${filter}:${query}`}
-                  className="af-data-table"
+                  className="af-data-table af-table-flush"
                   size="middle"
                   rowKey="id"
                   columns={columns}
