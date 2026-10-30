@@ -186,7 +186,7 @@ public class Order {
                 this.status,
                 nextStatus,
                 this.fulfillmentType)) {
-            throw new IllegalStateException(
+            throw new InvalidOrderStatusTransitionException(
                     "Invalid order status transition from "
                             + this.status
                             + " to "

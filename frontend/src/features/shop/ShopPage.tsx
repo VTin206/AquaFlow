@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react'
 import { App, Button, Card, Col, Empty, Input, Row, Select, Skeleton, Tag, Typography } from 'antd'
 import { Droplets, Search, ShoppingCart, Truck } from 'lucide-react'
-import { useOutletContext } from 'react-router'
+import { Link, useOutletContext } from 'react-router'
 import { QueryError } from '../../shared/components/QueryError'
 import { DEPOSIT_PER_BOTTLE, FREE_DELIVERY_MIN_UNITS } from '../../shared/policy'
 import { currency } from '../../shared/utils/format'
 import { normalizeSearch } from '../inventory/catalog'
 import { useSettings } from '../settings/settingsService'
-import { cartActions, useCart } from './cart'
+import { useCartActions, useCart } from './cart'
 import { shopGroups } from './shopGroups'
-import { useShopProducts, type ShopProduct } from './shopService'
+import { useShopDemo, useShopProducts, type ShopProduct } from './shopService'
 
 const ALL = 'Tất cả'
 
@@ -28,15 +28,17 @@ export function ShopPage() {
   const { message } = App.useApp()
   const { openCart } = useOutletContext<{ openCart: () => void }>()
   const productsQuery = useShopProducts()
-  const { data: settings } = useSettings()
+  const demo = useShopDemo()
+  const { data: settings } = useSettings(demo)
+  const cartActions = useCartActions()
   const cart = useCart()
   const [group, setGroup] = useState<string>(ALL)
   const [category, setCategory] = useState(ALL)
   const [query, setQuery] = useState('')
 
   useEffect(() => {
-    document.title = `Đặt nước | ${settings?.storeName ?? 'AquaFlow'}`
-  }, [settings?.storeName])
+    document.title = `Đặt nước | ${demo ? settings?.storeName ?? 'AquaFlow' : 'AquaFlow'}`
+  }, [demo, settings?.storeName])
 
   const products = productsQuery.data ?? []
   const categories = [...new Set(products.map((product) => product.catalog?.category ?? 'Khác'))]
@@ -63,16 +65,16 @@ export function ShopPage() {
       <section className="af-shop-hero">
         <div>
           <Typography.Title level={2}>Đặt nước giao tận nơi</Typography.Title>
-          <p>Không cần tài khoản. Đặt xong nhận liên kết riêng để theo dõi đơn và thanh toán chuyển khoản.</p>
+          <p>{demo ? 'Bản dùng thử: đặt đơn không cần tài khoản khách hàng và xem trạng thái mô phỏng.' : 'Xem sản phẩm và đặt hàng không cần tài khoản.'}</p>
         </div>
-        <ul>
+        {demo && <ul>
           <li>
             <Truck size={16} aria-hidden /> Miễn phí giao từ {FREE_DELIVERY_MIN_UNITS} bình/thùng
           </li>
           <li>
             <Droplets size={16} aria-hidden /> Khách mới chưa có vỏ: cọc {currency(DEPOSIT_PER_BOTTLE)}/vỏ, hoàn khi trả vỏ
           </li>
-        </ul>
+        </ul>}
       </section>
 
       <div className="af-shop-toolbar">
@@ -112,10 +114,10 @@ export function ShopPage() {
                 <Card className="af-product-card af-shop-card" cover={<ShopImage product={product} />}>
                   <div className="af-product-brand-line">
                     <span>{product.brand}</span>
-                    {!product.available && <Tag>Tạm hết hàng</Tag>}
+                    {product.available === false && <Tag>Tạm hết hàng</Tag>}
                   </div>
                   <Typography.Title level={5} className="af-product-name" ellipsis={{ rows: 2, tooltip: product.name }}>
-                    {product.name}
+                    <Link to={`/shop/products/${encodeURIComponent(product.id)}`}>{product.name}</Link>
                   </Typography.Title>
                   <div className="af-shop-card-footer">
                     <span>
@@ -125,7 +127,7 @@ export function ShopPage() {
                     <Button
                       type={inCart ? 'default' : 'primary'}
                       icon={<ShoppingCart size={15} />}
-                      disabled={!product.available}
+                      disabled={product.available === false}
                       onClick={() => {
                         cartActions.add(product.id)
                         message.open({

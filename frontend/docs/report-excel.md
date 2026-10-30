@@ -16,7 +16,8 @@ Trang Báo cáo dùng nút **Xuất Excel** thay cho CSV. Tên tệp:
 
 Mỗi sheet ghi kỳ báo cáo, cố định bốn hàng đầu, có bộ lọc, độ rộng cột
 và tiêu đề màu AquaFlow. Tiền/số lượng là số, ngày là ngày Excel,
-mã sản phẩm là văn bản để giữ số 0 đầu. Tên bắt đầu bằng `=` vẫn là văn bản.
+mã sản phẩm lấy từ SKU trong danh mục, là văn bản để giữ số 0 đầu; để trống
+nếu không còn tìm thấy sản phẩm trong danh mục. Tên bắt đầu bằng `=` vẫn là văn bản.
 Giữ số âm và số 0; không thay đổi phép tính của service.
 
 Tồn hiện tại là tồn lúc xuất, không phải tồn cuối kỳ. Cọc/vỏ là biến động,

@@ -17,11 +17,14 @@ type OrdersTableProps = {
   /** Bản rút gọn cho Dashboard, kèm nút mở chi tiết. */
   compact?: boolean
   emptyText?: string
+  /** Đổi bộ lọc chỉ đặt lại phân trang, giữ lựa chọn sắp xếp. */
+  filterKey?: string
 }
 
-export function OrdersTable({ orders, loading, compact = false, emptyText = 'Chưa có đơn hàng nào.' }: OrdersTableProps) {
+export function OrdersTable({ orders, loading, compact = false, emptyText = 'Chưa có đơn hàng nào.', filterKey }: OrdersTableProps) {
   const screens = Grid.useBreakpoint()
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [pageSize, setPageSize] = useState(tablePagination.defaultPageSize ?? 10)
   const sort = useColumnSort<Order>()
   const columns: TableColumnsType<Order> = [
     {
@@ -112,15 +115,16 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
   return (
     <>
       {screens.md === false ? (
-        <OrderCards orders={orders} loading={loading} compact={compact} emptyText={emptyText} onDetails={setSelectedId} />
+        <OrderCards orders={orders} loading={loading} compact={compact} emptyText={emptyText} onDetails={setSelectedId} filterKey={filterKey} />
       ) : <Table<Order>
+        key={filterKey}
         className="af-data-table"
         rowKey="id"
         columns={columns}
         dataSource={orders}
         loading={loading}
         size="middle"
-        pagination={compact ? false : tablePagination}
+        pagination={compact ? false : { ...tablePagination, pageSize, onShowSizeChange: (_, size) => setPageSize(size) }}
         locale={{ emptyText }}
         scroll={{ x: compact ? 720 : 1220, ...(!compact && { y: tableScrollHeight }) }}
       />}

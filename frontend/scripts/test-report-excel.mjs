@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import console from 'node:console'
+import { setTimeout } from 'node:timers'
 import ExcelJS from 'exceljs'
 import { createServer } from 'vite'
 
@@ -15,7 +16,7 @@ const sample = {
   deposits: { collected: 50000, refunded: 100000, bottlesOut: 1, bottlesBack: 2, bottlesLost: 0 },
   delivery: { delivered: 1, failedAttempts: 2, withAppointment: 1, late: 1, averageLateMinutes: 15, drivers: [{ driver: 'Nguyễn An', delivered: 1, failed: 2, late: 1 }] },
   channels: [{ channel: 'Website', orders: 2, revenue: 110000 }],
-  products: [{ productId: '0012', name: '=1+1', unit: 'Bình', sold: 1, returned: 1, revenue: 100000, cost: 120000, received: 3, damaged: 1, stock: 5 }],
+  products: [{ productId: 'P-012', sku: '0012', name: '=1+1', unit: 'Bình', sold: 1, returned: 1, revenue: 100000, cost: 120000, received: 3, damaged: 1, stock: 5 }],
   receipts: { count: 1, value: 360000 },
   profit: { goodsRevenue: 100000, cost: 120000, gross: -20000 },
 }
@@ -85,6 +86,33 @@ try {
     assert.ok(emptyWorkbook.getWorksheet(name).autoFilter)
   }
   console.log('PASS empty detail sheets still produce a readable workbook with headings')
+
+  // Đi qua service thật để phát hiện nhầm ID nội bộ với SKU trong dữ liệu xuất.
+  globalThis.window = { setTimeout: (callback) => setTimeout(callback, 0) }
+  const { db } = await server.ssrLoadModule('/src/mocks/db.ts')
+  const { reportService } = await server.ssrLoadModule('/src/features/reports/reportService.ts')
+  db.orders = []
+  db.archivedOrders = []
+  db.lots = []
+  db.bottleLedger = []
+  db.products = [{ id: 'P-INTERNAL', sku: '0012', name: 'Nước kiểm thử', unit: 'Bình', price: 20000, stock: 2 }]
+  db.receipts = [{
+    receivedAt: sample.range.from, total: 30000,
+    lines: [
+      { productId: 'P-INTERNAL', productName: 'Nước kiểm thử', unit: 'Bình', received: 2, damaged: 0 },
+      { productId: 'P-REMOVED', productName: 'Sản phẩm cũ', unit: 'Bình', received: 1, damaged: 0 },
+    ],
+  }]
+  const report = await reportService.summary(sample.range)
+  assert.equal(report.products.find((row) => row.productId === 'P-INTERNAL').sku, '0012')
+  assert.equal(report.products.find((row) => row.productId === 'P-REMOVED').sku, null)
+  const serviceWorkbook = new ExcelJS.Workbook()
+  await serviceWorkbook.xlsx.load(await buildReportWorkbook(report).xlsx.writeBuffer())
+  const serviceProducts = serviceWorkbook.getWorksheet('Nhập xuất tồn')
+  assert.equal(serviceProducts.getCell('A5').value, '0012')
+  assert.equal(serviceProducts.getCell('A5').type, ExcelJS.ValueType.String)
+  assert.ok([null, ''].includes(serviceProducts.getCell('A6').value), 'Unknown SKU stays blank instead of exporting an internal ID')
+  console.log('PASS report service exports catalog SKU, preserves leading zero and leaves missing SKU blank')
 } finally {
   await server.close()
 }

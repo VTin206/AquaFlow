@@ -115,7 +115,7 @@ export function LoginPage() {
               <Button block size="large" onClick={openDemo}>Xem bản dùng thử</Button>
             </ConfigProvider>
             <div className="af-login-preview-note">
-              <Alert type="info" showIcon title="Tài khoản thật dùng API cho Sản phẩm, Nhà cung cấp và Khách hàng. Các màn còn lại đang ở bản dùng thử." />
+              <Alert type="info" showIcon title="Tài khoản thật quản lý danh mục, khách hàng và xem đơn hàng. Nhập kho và cập nhật đơn đang được hoàn thiện." />
             </div>
           </section>
         </div>

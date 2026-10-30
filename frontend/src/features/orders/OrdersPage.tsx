@@ -85,7 +85,7 @@ export function OrdersPage() {
               {hasFilters && <Button type="link" size="small" icon={<RotateCcw size={14} />} onClick={resetFilters}>Xóa bộ lọc</Button>}
             </div>
             <OrdersTable
-              key={JSON.stringify([query, status, method, payment])}
+              filterKey={JSON.stringify([query, status, method, payment])}
               orders={visible}
               loading={ordersQuery.isPending}
               emptyText={

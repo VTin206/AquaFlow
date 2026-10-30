@@ -104,14 +104,23 @@ class OrderDomainTest {
 
         order.transitionTo(OrderStatus.CONFIRMED);
         order.transitionTo(OrderStatus.PREPARING);
-        order.transitionTo(OrderStatus.OUT_FOR_DELIVERY);
-        order.transitionTo(OrderStatus.DELIVERED);
-        order.transitionTo(OrderStatus.COMPLETED);
 
         assertThatThrownBy(() -> order.transitionTo(OrderStatus.PENDING))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage(
-                        "Invalid order status transition from COMPLETED to PENDING");
+                        "Invalid order status transition from PREPARING to PENDING");
+    }
+
+    @Test
+    void transitionToRejectsDeliveryStatusBeforeInventoryDispatchIsImplemented() {
+        Order order = createOrder();
+        order.transitionTo(OrderStatus.CONFIRMED);
+        order.transitionTo(OrderStatus.PREPARING);
+
+        assertThatThrownBy(() -> order.transitionTo(OrderStatus.OUT_FOR_DELIVERY))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage(
+                        "Invalid order status transition from PREPARING to OUT_FOR_DELIVERY");
     }
 
     private Order createOrder() {
