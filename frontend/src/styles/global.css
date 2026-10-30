@@ -1154,9 +1154,8 @@ body {
 .af-shop-brand { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--af-text-strong); }
 .af-shop-brand strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
 .af-shop-brand .af-brand-mark { flex: none; width: 34px; height: 34px; }
-.af-shop-nav { display: flex; gap: 4px; margin-left: auto; }
-.af-shop-nav a { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; color: var(--af-text-secondary); font-weight: 500; white-space: nowrap; }
-.af-shop-nav a:hover, .af-shop-nav a.active { color: var(--af-primary); background: var(--af-primary-soft); }
+.af-shop-back.ant-btn { display: inline-flex; align-items: center; gap: 6px; height: auto; margin: -4px 0 12px; padding: 4px 0; color: var(--af-text-secondary); }
+.af-shop-back.ant-btn:hover { color: var(--af-primary); }
 .af-shop-main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 20px 16px 32px; }
 .af-shop-footer { border-top: 1px solid var(--af-border); background: #f5fbfe; color: var(--af-text-secondary); font-size: 14px; }
 .af-shop-footer-grid { max-width: 1180px; margin: 0 auto; padding: 36px 16px 28px; display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr)); gap: 28px 40px; }
@@ -1375,7 +1374,5 @@ body {
 @media (max-width: 640px) {
   .af-shop-header-inner { gap: 8px; }
   .af-shop-cart-label { display: none; }
-  .af-shop-nav a { padding: 6px; }
-  .af-shop-nav-text { display: none; }
   .af-shop-hero ul { display: none; }
 }
