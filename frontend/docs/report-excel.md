@@ -1,18 +1,22 @@
 # Xuất báo cáo Excel
 
 Trang Báo cáo dùng nút **Xuất Excel** thay cho CSV. Tên tệp:
-`bao-cao-YYYY-MM-DD_YYYY-MM-DD.xlsx`, theo kỳ đang chọn.
+`bao-cao-YYYY-MM-DD_YYYY-MM-DD.xlsx`, theo kỳ đang chọn. Bộ lọc kênh và
+hình thức nhận đang bật được ghi ở hàng 2 của mọi sheet.
 
 ## Nội dung
 
-1. **Tổng quan**: doanh thu, đơn hàng, tiền thu/hoàn, giá vốn, lãi gộp,
-   nhập hàng và chỉ số giao hàng.
-2. **Theo ngày**: ngày, doanh thu, tiền thực thu, đơn tạo.
-3. **Cọc và vỏ**: biến động thu/hoàn cọc, giao/thu/mất vỏ trong kỳ.
-4. **Giao hàng**: kết quả theo tài xế.
-5. **Nhập xuất tồn**: mã/tên/đơn vị sản phẩm, nhập đạt/hỏng, bán/trả,
-   tồn hiện tại, doanh thu, giá vốn, lãi gộp.
-6. **Kênh tiếp nhận**: số đơn tạo và doanh thu theo kênh.
+1. **Tổng quan**: tiền hàng, phí giao, hàng trả, doanh thu thuần, đơn hàng,
+   tiền thu/hoàn, giá vốn, lãi gộp, nhập hàng, giao hàng và khách mua/khách mới.
+2. **Theo ngày**: ngày, doanh thu thuần, tiền thực thu, đơn tạo.
+3. **Cọc và vỏ**: biến động thu/hoàn cọc, giao/thu/mất vỏ trong kỳ và số dư
+   vỏ/cọc khách đang giữ cuối kỳ.
+4. **Giao hàng**: kết quả và đối soát tiền mặt theo tài xế.
+5. **Bán hàng**: mã/tên/đơn vị sản phẩm, bán/trả, doanh thu, giá vốn, lãi gộp.
+6. **Nhập xuất tồn**: tồn đầu kỳ, nhập NCC, khách trả nhập lại, xuất bán,
+   tồn cuối kỳ, hỏng khi nhận, giá trị tồn cuối.
+7. **Khách hàng** và **Khách lâu chưa đặt**.
+8. **Kênh tiếp nhận**: số đơn tạo và doanh thu thuần theo kênh.
 
 Mỗi sheet ghi kỳ báo cáo, cố định bốn hàng đầu, có bộ lọc, độ rộng cột
 và tiêu đề màu AquaFlow. Tiền/số lượng là số, ngày là ngày Excel,
@@ -20,8 +24,8 @@ mã sản phẩm lấy từ SKU trong danh mục, là văn bản để giữ s�
 nếu không còn tìm thấy sản phẩm trong danh mục. Tên bắt đầu bằng `=` vẫn là văn bản.
 Giữ số âm và số 0; không thay đổi phép tính của service.
 
-Tồn hiện tại là tồn lúc xuất, không phải tồn cuối kỳ. Cọc/vỏ là biến động,
-không phải số dư; giá vốn/lãi gộp là ước tính. Các lưu ý này nằm trong tệp.
+Nhập xuất tồn, vỏ cọc và đối soát tài xế tính cho cả cửa hàng, không theo bộ
+lọc; giá vốn/lãi gộp là ước tính. Các lưu ý này nằm trong tệp.
 Không thêm CSV vào menu Báo cáo; các chức năng CSV khác không đổi.
 
 ## Triển khai và kiểm tra
@@ -36,7 +40,7 @@ Không thêm CSV vào menu Báo cáo; các chức năng CSV khác không đổi.
   dữ liệu rỗng và dữ liệu nguồn không bị sửa.
 - Lint và build (gồm TypeScript) đã qua.
 - Chrome trên bản production, màn hình 320px, dữ liệu demo: bấm xuất bằng
-  chuột, tải tệp vào thư mục tạm, đọc lại 6 sheet và đối chiếu tổng doanh thu
+  chuột, tải tệp vào thư mục tạm, đọc lại các sheet và đối chiếu tổng doanh thu
   với màn hình; xác minh thư viện chỉ được tải sau khi bấm nút.
 
 Kiểm tra này dùng dữ liệu demo hiện có, không xác minh với API báo cáo thật.
