@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { App, Badge, Menu, Tooltip, type MenuProps } from 'antd'
-import { Droplets, LifeBuoy, PanelLeftClose, PanelLeftOpen, Settings2, type LucideIcon } from 'lucide-react'
+import { CircleQuestionMark, Droplets, PanelLeftClose, PanelLeftOpen, Settings2, type LucideIcon } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router'
 import { navGroups } from '../app/navigation'
 import { canOpen } from '../features/auth/permissions'
@@ -104,7 +104,7 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: Sid
             !supported('/settings') && <small className="af-menu-soon">Chưa hỗ trợ</small>,
             location.pathname === '/settings',
           )}
-        {footerLink('Trợ giúp', <LifeBuoy size={18} strokeWidth={1.8} />, () => message.info('Hướng dẫn sử dụng sẽ được bổ sung.'))}
+        {footerLink('Trợ giúp', <CircleQuestionMark size={18} strokeWidth={1.8} />, () => message.info('Hướng dẫn sử dụng sẽ được bổ sung.'))}
       </div>
     </div>
   )
