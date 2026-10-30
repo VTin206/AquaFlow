@@ -114,14 +114,14 @@ export const customerService = {
       return toView(record)
     }),
 
-  /** Ngừng dùng hồ sơ: ẩn khỏi danh sách, đơn và sổ vỏ cũ giữ nguyên (giống BE). */
+  /** Lưu trữ hồ sơ: ẩn khỏi danh sách, đơn và sổ vỏ cũ giữ nguyên (giống BE). */
   deactivate: (id: string) =>
     mockRequest(() => {
       const record = db.customers.find((customer) => customer.id === id)
       if (!record) throw mockError(404, 'Không tìm thấy khách hàng.')
-      requireRole(['ADMIN', 'SALES_STAFF'], 'ngừng dùng hồ sơ khách')
+      requireRole(['ADMIN', 'SALES_STAFF'], 'lưu trữ hồ sơ khách')
       record.active = false
-      logActivity('Khách hàng', record.id, `Ngừng dùng hồ sơ ${record.name}`)
+      logActivity('Khách hàng', record.id, `Lưu trữ hồ sơ ${record.name}`)
     }),
 
   ledger: (customerId: string) =>

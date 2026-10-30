@@ -439,6 +439,15 @@ body {
 }
 
 /* ---------- Ô trong bảng ---------- */
+/* Nội dung hộp xác nhận: tên đối tượng in đậm, mỗi ý một đoạn ngắn. */
+.af-confirm-body p { margin: 0; color: var(--af-text-secondary); line-height: 1.6; }
+.af-confirm-body p + p { margin-top: 4px; }
+.af-confirm-body strong { color: var(--af-text-strong); font-weight: 600; }
+/* Bản ghi đã ngừng (nhà cung cấp, loại vỏ): chữ nhạt, tag xám cạnh tên thay cho cột trạng thái. */
+.af-row-inactive > td { color: var(--af-text-tertiary); }
+.af-row-inactive .af-cell-stack > span, .af-row-inactive a { color: var(--af-text-tertiary); }
+.af-name-with-tag { display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
+.af-inactive-tag.ant-tag { margin: 0; flex: none; font-size: 11px; line-height: 18px; color: var(--af-text-secondary); }
 .af-sort-trigger { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: inherit; white-space: nowrap; cursor: pointer; }
 .af-sort-trigger:focus-visible { outline: 2px solid var(--af-primary); outline-offset: 2px; border-radius: 4px; }
 .af-sort-icon { flex-shrink: 0; color: var(--af-text-tertiary); }

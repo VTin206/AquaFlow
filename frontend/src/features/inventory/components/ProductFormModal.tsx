@@ -160,7 +160,7 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
                     allowClear
                     loading={bottleTypes.isPending}
                     placeholder="Không dùng vỏ"
-                    options={(bottleTypes.data ?? []).filter((type) => type.active || type.id === product?.bottleTypeId).map((type) => ({ value: type.id, label: `${type.name}${type.active ? '' : ' (đã ngừng dùng)'}`, disabled: !type.active }))}
+                    options={(bottleTypes.data ?? []).filter((type) => type.active || type.id === product?.bottleTypeId).map((type) => ({ value: type.id, label: `${type.name}${type.active ? '' : ' (ngừng lưu hành)'}`, disabled: !type.active }))}
                   />
                 </Form.Item>
               </Col>

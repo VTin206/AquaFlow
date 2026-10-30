@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { App, Avatar, Button, Descriptions, Drawer, Empty, Popconfirm, Space, Table, Tabs, Tag, Tooltip, Typography } from 'antd'
-import { Pencil, Phone, ShoppingBag } from 'lucide-react'
+import { App, Avatar, Button, Descriptions, Drawer, Dropdown, Empty, Space, Table, Tabs, Tag, Tooltip, Typography } from 'antd'
+import { Ellipsis, Pencil, Phone, ShoppingBag } from 'lucide-react'
 import { Money } from '../../../shared/components/Money'
 import { useFeature, useIsDemo } from '../../../shared/features'
 import { Unsupported } from '../../../shared/components/Unsupported'
@@ -24,7 +24,7 @@ const signed = (value: number, render: (value: number) => string = String) => (v
 /** Hồ sơ khách: liên hệ, đơn hàng, công nợ và sổ vỏ/cọc trong một ngăn kéo. */
 export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: CustomerDrawerProps) {
   const staff = useStaff()
-  const { message } = App.useApp()
+  const { message, modal } = App.useApp()
   const demo = useIsDemo()
   const showType = useFeature('customerType')
   const showExtras = useFeature('customerProfileExtras')
@@ -55,16 +55,24 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
     { label: 'Cọc đang giữ', value: currency(customer.depositHeld), tone: 'deposit', show: showBottles },
   ].map((item) => (item.show ? item : { ...item, value: <Unsupported />, tone: undefined }))
 
-  const remove = () =>
-    deactivate.mutateAsync(customer.id).then(
-      () => {
-        message.success(`Đã ngừng dùng hồ sơ ${customer.name}.`)
-        onClose()
-      },
-      (error: Error) => {
-        message.error(error.message)
-      },
-    )
+  const archive = () =>
+    modal.confirm({
+      title: 'Lưu trữ hồ sơ?',
+      content: <div className="af-confirm-body"><p><strong>{customer.name}</strong> sẽ không còn trong danh sách và ô chọn khách khi tạo đơn.</p><p>Đơn, công nợ và sổ vỏ cũ vẫn giữ nguyên.</p></div>,
+      centered: true,
+      okText: 'Lưu trữ',
+      cancelText: 'Không',
+      onOk: () =>
+        deactivate.mutateAsync(customer.id).then(
+          () => {
+            message.success(`Đã lưu trữ hồ sơ ${customer.name}.`)
+            onClose()
+          },
+          (error: Error) => {
+            message.error(error.message)
+          },
+        ),
+    })
 
   const addressView = demo ? (
     customer.addresses.length ? (
@@ -112,15 +120,16 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
         }
         extra={
           <Space className="af-drawer-actions">
-            <Popconfirm title={`Ngừng dùng hồ sơ ${customer.name}?`} description="Khách không còn trong danh sách. Đơn và lịch sử cũ vẫn giữ nguyên." okText="Ngừng dùng" okButtonProps={{ danger: true }} cancelText="Không" onConfirm={remove}>
-              <Button danger type="text" loading={deactivate.isPending}>Ngừng dùng</Button>
-            </Popconfirm>
-            <Tooltip title="Sửa hồ sơ">
-              <Button icon={<Pencil size={15} />} aria-label="Sửa hồ sơ" onClick={() => onEdit(customer)} />
-            </Tooltip>
             <Button type="primary" icon={<ShoppingBag size={15} />} aria-label="Tạo đơn" onClick={() => onCreateOrder(customer)}>
               Tạo đơn
             </Button>
+            <Tooltip title="Sửa hồ sơ">
+              <Button icon={<Pencil size={15} />} aria-label="Sửa hồ sơ" onClick={() => onEdit(customer)} />
+            </Tooltip>
+            {/* Lưu trữ ít khi dùng nên nằm trong menu ⋯, không tô đỏ vì lịch sử vẫn giữ. */}
+            <Dropdown trigger={['click']} menu={{ items: [{ key: 'archive', label: 'Lưu trữ hồ sơ', disabled: deactivate.isPending, onClick: archive }] }}>
+              <Button icon={<Ellipsis size={16} />} aria-label="Thao tác khác" />
+            </Dropdown>
           </Space>
         }
       >
