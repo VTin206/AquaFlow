@@ -5,9 +5,8 @@ import { Money } from '../../../shared/components/Money'
 import { tablePagination, tableScrollHeight } from '../../../shared/utils/table'
 import { useColumnSort } from '../../../shared/components/sortableColumn'
 import { useFeature, useIsDemo } from '../../../shared/features'
-import { Unsupported } from '../../../shared/components/Unsupported'
 import { LiveOrderDetails } from '../../live/LiveOrderDetails'
-import { amountDue, createdAtOf, paidAmount, paymentLabel, type Order } from '../types'
+import { amountDue, appointmentOf, createdAtOf, orderedAtOf, paymentLabel, type Order } from '../types'
 import { AdvanceStatusButton } from './AdvanceStatusButton'
 import { LateTag } from './LateTag'
 import { OrderStatusTag } from './OrderStatusTag'
@@ -32,11 +31,16 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [pageSize, setPageSize] = useState(tablePagination.defaultPageSize ?? 10)
   const sort = useColumnSort<Order>()
+  // Mã của BE (AF- + 20 ký tự) dài hơn mã mẫu nhiều, nên cột rộng theo mã dài nhất để không bị cắt.
+  const longestCode = Math.max(0, ...orders.map((order) => (order.code ?? order.id).length))
+  const codeWidth = Math.max(compact ? 110 : 150, longestCode * 9 + (compact ? 24 : 64))
+  // Độ rộng tối thiểu của bảng = tổng các cột, để không tự giãn rồi che cột cố định bên phải.
+  const tableMinWidth = codeWidth + (compact ? 180 + 150 + 170 + 80 : 220 + 130 + 160 + 170 + 112)
   const columns: TableColumnsType<Order> = [
     {
       title: 'Mã đơn',
       dataIndex: 'id',
-      width: compact ? 110 : 150,
+      width: codeWidth,
       render: (id: string, order) => (
         <span className="af-order-id">
           <Button type="link" size="small" onClick={() => setSelectedId(id)} aria-label={`Xem đơn ${order.code ?? id}`}>
@@ -49,7 +53,8 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
     {
       title: 'Khách hàng',
       dataIndex: 'customer',
-      width: compact ? 180 : 220,
+      // Không đặt độ rộng: cột tên nhận phần dư khi màn hình rộng, các cột số giữ vừa nội dung.
+      minWidth: compact ? 180 : 220,
       render: (_, order) => (
         <div className="af-cell-stack">
           <span className="af-cell-truncate" title={order.customer}>{order.customer}</span>
@@ -59,19 +64,29 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
         </div>
       ),
     },
-    ...(compact ? [] : [{ ...sort.column('Giờ đặt', 'time', 'time'), dataIndex: 'time', width: 130, sorter: (a: Order, b: Order) => (createdAtOf(a) ?? a.time).localeCompare(createdAtOf(b) ?? b.time) }]),
+    ...(compact ? [] : [{ ...sort.column('Đặt lúc', 'time', 'time'), dataIndex: 'time', width: 130, sorter: (a: Order, b: Order) => (createdAtOf(a) ?? a.time).localeCompare(createdAtOf(b) ?? b.time), render: (_: string, order: Order) => {
+      const at = orderedAtOf(order)
+      const appointment = appointmentOf(order)
+      return (
+        <div className="af-cell-stack">
+          <span className="af-ordered-at" title={`Đặt lúc ${at.full}`}>{at.label}</span>
+          {appointment && <small className={`af-appointment is-${appointment.tone}`} title={`Hẹn giao ${appointment.full}`}>{appointment.label}</small>}
+        </div>
+      )
+    } }]),
     {
       title: 'Tổng tiền',
       ...(!compact && sort.column('Tổng tiền', 'total', 'number')),
       dataIndex: 'total',
       align: 'right',
-      width: 140,
+      width: compact ? 150 : 160,
       sorter: compact ? undefined : (a, b) => a.total - b.total,
+      // Gộp thanh toán vào đây: dòng dưới là số còn phải thu, hoặc trạng thái thanh toán của BE khi chưa có phiếu thu.
       render: (total: number, order) => (
         <div className="af-cell-stack af-money-stack">
           <Money value={total} />
           {!compact && order.status !== 'Đã hủy' && (
-            <small>{!showPayments ? <Unsupported label="Còn phải thu: chưa hỗ trợ" /> : amountDue(order) > 0 ? <Money value={amountDue(order)} tone="due" prefix="Còn " /> : <span className="af-money is-paid">Đã thu đủ</span>}</small>
+            <small>{!showPayments ? <span className={paymentLabel(order) === 'Đã thanh toán' ? 'af-money is-paid' : 'af-money is-due'}>{paymentLabel(order)}</span> : amountDue(order) > 0 ? <Money value={amountDue(order)} tone="due" prefix="Còn " /> : <span className="af-money is-paid">Đã thu đủ</span>}</small>
           )}
         </div>
       ),
@@ -87,25 +102,10 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
         </Space>
       ),
     },
-    ...(compact
-      ? []
-      : [
-          {
-            title: 'Thanh toán',
-            key: 'payment',
-            width: 185,
-            render: (_: unknown, order: Order) => (
-              <div className="af-cell-stack">
-                <span>{paymentLabel(order)}</span>
-                {showPayments && order.payments.length > 0 && <small>Đã thu <Money value={paidAmount(order)} tone="paid" /></small>}
-              </div>
-            ),
-          },
-        ]),
     {
       title: 'Thao tác',
       key: 'action',
-      width: compact ? 80 : 100,
+      width: compact ? 80 : 112,
       fixed: 'right',
       render: (_, order) => (
         <Space size={6}>
@@ -132,7 +132,7 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
         size="middle"
         pagination={compact ? false : { ...tablePagination, pageSize, onShowSizeChange: (_, size) => setPageSize(size) }}
         locale={{ emptyText }}
-        scroll={{ x: compact ? 720 : 1220, ...(!compact && { y: tableScrollHeight }) }}
+        scroll={{ x: tableMinWidth, ...(!compact && { y: tableScrollHeight }) }}
       />}
       {selectedId && (demo
         ? <OrderDetailsModal key={selectedId} orderId={selectedId} onClose={() => setSelectedId(null)} />

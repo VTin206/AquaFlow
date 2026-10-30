@@ -47,6 +47,15 @@ export const productService = {
       logActivity('Kho hàng', product.id, `Ngừng kinh doanh ${product.name}`)
     }),
 
+  activate: (id: string) =>
+    mockRequest(() => {
+      requireRole(['ADMIN', 'SALES_STAFF'], 'bán lại sản phẩm')
+      const product = db.products.find((item) => item.id === id)
+      if (!product) throw mockError(404, 'Không tìm thấy sản phẩm.')
+      product.active = true
+      logActivity('Kho hàng', product.id, `Bán lại ${product.name}`)
+    }),
+
   create: (draft: ProductDraft) =>
     mockRequest(() => {
       requireRole(['ADMIN', 'SALES_STAFF'], 'thêm sản phẩm')

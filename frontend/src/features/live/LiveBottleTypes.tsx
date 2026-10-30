@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, App, Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Tag } from 'antd'
+import { Alert, App, Button, Dropdown, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Tooltip } from 'antd'
+import { Ellipsis, Pencil } from 'lucide-react'
 import { QueryError } from '../../shared/components/QueryError'
 import { useConfirmDiscard } from '../../shared/hooks/useConfirmDiscard'
 import { currency } from '../../shared/utils/format'
@@ -29,7 +30,7 @@ function BottleTypeForm({ item, onClose }: { item: BottleType | null; onClose: (
 
 export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
   const admin = useStaff()?.role === 'ADMIN'
-  const { message } = App.useApp()
+  const { message, modal } = App.useApp()
   const client = useQueryClient()
   const [status, setStatus] = useState<'active' | 'inactive' | 'all'>('active')
   const [search, setSearch] = useState('')
@@ -38,27 +39,41 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
   const types = useQuery({ queryKey: ['live', 'bottle-types', admin, active], queryFn: () => bottleTypeApi.list(active) })
   const deactivate = useMutation({
     mutationFn: bottleTypeApi.deactivate,
-    onSuccess: () => { void invalidateLiveData(client); message.success('Đã ngừng dùng loại vỏ.') },
+    onSuccess: () => { void invalidateLiveData(client); message.success('Đã ngừng lưu hành loại vỏ.') },
     onError: (error: Error) => message.error(error.message),
   })
   const visible = (types.data ?? []).filter((type) => matchesSearch(search, type.name))
+  const confirmStop = (item: BottleType) => modal.confirm({
+    title: 'Ngừng lưu hành?',
+    content: <div className="af-confirm-body"><p><strong>{item.name}</strong> sẽ không chọn được cho sản phẩm mới.</p><p>Sản phẩm, sổ vỏ và tiền cọc cũ vẫn giữ nguyên.</p></div>,
+    centered: true,
+    okText: 'Ngừng lưu hành', okButtonProps: { danger: true },
+    cancelText: 'Không',
+    onOk: () => deactivate.mutateAsync(item.id).catch(() => undefined),
+  })
   return <>
     <Modal open title="Loại vỏ bình" width={850} onCancel={onClose} footer={<Button onClick={onClose}>Đóng</Button>}>
-      <Alert type="info" showIcon title="Quản lý loại vỏ và tiền cọc" description="Ngừng dùng sẽ giữ lại lịch sử. Loại vỏ đã ngừng dùng không xuất hiện trong danh sách chọn cho sản phẩm mới; hiện chưa hỗ trợ kích hoạt lại." style={{ marginBottom: 16 }} />
+      <Alert type="info" showIcon title="Quản lý loại vỏ và tiền cọc" description="Loại vỏ ngừng lưu hành vẫn giữ lịch sử nhưng không chọn được cho sản phẩm mới; lưu hành lại đang chờ backend hỗ trợ." style={{ marginBottom: 16 }} />
       <Space wrap style={{ marginBottom: 16 }}>
         <Input aria-label="Tìm loại vỏ" placeholder="Tìm tên loại vỏ" value={search} allowClear onChange={(event) => setSearch(event.target.value)} />
-        {admin && <Select aria-label="Trạng thái loại vỏ" value={status} onChange={setStatus} options={[{ value: 'active', label: 'Đang dùng' }, { value: 'inactive', label: 'Đã ngừng dùng' }, { value: 'all', label: 'Tất cả' }]} />}
+        {admin && <Select aria-label="Trạng thái loại vỏ" value={status} onChange={setStatus} options={[{ value: 'active', label: 'Đang lưu hành' }, { value: 'inactive', label: 'Ngừng lưu hành' }, { value: 'all', label: 'Tất cả' }]} />}
         <Button onClick={() => void types.refetch()} loading={types.isFetching}>Làm mới</Button>
         {admin && <Button type="primary" onClick={() => setEditing(null)}>Thêm loại vỏ</Button>}
       </Space>
-      {types.isError ? <QueryError error={types.error} onRetry={types.refetch} /> : <Table<BottleType> key={`${status}:${search}`} rowKey="id" loading={types.isPending} dataSource={visible} pagination={{ pageSize: 10 }} scroll={{ x: 600 }} locale={{ emptyText: 'Không có loại vỏ phù hợp.' }} columns={[
-        { title: 'Tên loại vỏ', dataIndex: 'name' },
+      {types.isError ? <QueryError error={types.error} onRetry={types.refetch} /> : <Table<BottleType> key={`${status}:${search}`} rowKey="id" rowClassName={(item) => (item.active ? '' : 'af-row-inactive')} loading={types.isPending} dataSource={visible} pagination={{ pageSize: 10 }} scroll={{ x: 600 }} locale={{ emptyText: 'Không có loại vỏ phù hợp.' }} columns={[
+        { title: 'Tên loại vỏ', dataIndex: 'name', render: (name: string, item: BottleType) => <span className="af-name-with-tag">{name}{!item.active && <Tag className="af-inactive-tag">Ngừng lưu hành</Tag>}</span> },
         { title: 'Tiền cọc / vỏ', dataIndex: 'depositUnitAmount', render: currency },
-        { title: 'Trạng thái', dataIndex: 'active', render: (value: boolean) => <Tag color={value ? 'green' : 'default'}>{value ? 'Đang dùng' : 'Đã ngừng dùng'}</Tag> },
-        ...(admin ? [{ title: 'Thao tác', key: 'actions', render: (_: unknown, item: BottleType) => item.active ? <Space>
-          <Button type="link" disabled={deactivate.isPending} onClick={() => setEditing(item)}>Sửa tiền cọc</Button>
-          <Popconfirm title={`Ngừng dùng ${item.name}?`} description="Loại vỏ vẫn được giữ trong lịch sử." okText="Ngừng dùng" cancelText="Hủy" onConfirm={() => deactivate.mutateAsync(item.id).catch(() => undefined)}><Button danger type="link" disabled={deactivate.isPending}>Ngừng dùng</Button></Popconfirm>
-        </Space> : '—' }] : []),
+        ...(admin ? [{ title: 'Thao tác', key: 'actions', width: 100, render: (_: unknown, item: BottleType) => item.active ? <Space size={4}>
+          <Tooltip title="Sửa tiền cọc"><Button size="small" icon={<Pencil size={15} />} aria-label={`Sửa tiền cọc ${item.name}`} disabled={deactivate.isPending} onClick={() => setEditing(item)} /></Tooltip>
+          <Dropdown trigger={['click']} menu={{ items: [{ key: 'stop', label: 'Ngừng lưu hành', danger: true, disabled: deactivate.isPending, onClick: () => confirmStop(item) }] }}>
+            <Button size="small" type="text" icon={<Ellipsis size={16} />} aria-label={`Thao tác khác với ${item.name}`} />
+          </Dropdown>
+        </Space> : (
+          // BE chưa có API lưu hành lại; giữ chỗ để người dùng biết thao tác sẽ có.
+          <Dropdown trigger={['click']} menu={{ items: [{ key: 'resume', label: 'Lưu hành lại', disabled: true, extra: 'Chưa hỗ trợ' }] }}>
+            <Button size="small" type="text" icon={<Ellipsis size={16} />} aria-label={`Thao tác khác với ${item.name}`} />
+          </Dropdown>
+        ) }] : []),
       ]} />}
     </Modal>
     {editing !== undefined && <BottleTypeForm item={editing} onClose={() => setEditing(undefined)} />}

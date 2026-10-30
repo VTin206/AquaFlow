@@ -39,10 +39,16 @@ export const supplierService = {
     return fromRecord(record)
   }),
   deactivate: (id: string) => mockRequest(() => {
-    requireRole(['ADMIN', 'SALES_STAFF'], 'ngừng dùng nhà cung cấp')
+    requireRole(['ADMIN', 'SALES_STAFF'], 'ngừng hợp tác với nhà cung cấp')
     const record = findRecord(id)
     record.active = false
-    logActivity('Nhà cung cấp', id, `Ngừng dùng ${record.name}`)
+    logActivity('Nhà cung cấp', id, `Ngừng hợp tác với ${record.name}`)
+  }),
+  activate: (id: string) => mockRequest(() => {
+    requireRole(['ADMIN', 'SALES_STAFF'], 'hợp tác lại với nhà cung cấp')
+    const record = findRecord(id)
+    record.active = true
+    logActivity('Nhà cung cấp', id, `Hợp tác lại với ${record.name}`)
   }),
 }
 

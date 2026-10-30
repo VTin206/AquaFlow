@@ -31,7 +31,7 @@
   max-width: 1100px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  background: #fff;
+  background: var(--af-surface);
   border: 1px solid var(--af-border);
   border-radius: 24px;
   overflow: hidden;
@@ -43,7 +43,7 @@
   isolation: isolate;
   overflow: hidden;
   padding: 48px;
-  color: #fff;
+  color: var(--af-on-primary);
   background: linear-gradient(145deg, #143e67 0%, #096e98 65%, #0787a6 100%);
   display: flex;
   flex-direction: column;

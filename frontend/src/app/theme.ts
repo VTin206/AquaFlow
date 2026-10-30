@@ -1,4 +1,4 @@
-import type { ThemeConfig } from 'antd'
+import { theme, type ThemeConfig } from 'antd'
 
 // Design token dùng chung cho Ant Design. Đổi màu/font toàn app tại đây.
 export const appTheme: ThemeConfig = {
@@ -59,5 +59,38 @@ export const appTheme: ThemeConfig = {
     Segmented: { trackBg: '#f0f4f8', itemSelectedColor: '#087fad', trackPadding: 4 },
     Form: { labelColor: '#263e53', labelFontSize: 13, verticalLabelPadding: '0 0 8px' },
     Modal: { titleFontSize: 18 },
+  },
+}
+
+// Chế độ tối: thuật toán tối của AntD + các màu ghi đè theo bảng màu tối trong global.css (:root[data-theme="dark"]).
+export const darkTheme: ThemeConfig = {
+  ...appTheme,
+  algorithm: theme.darkAlgorithm,
+  token: {
+    ...appTheme.token,
+    colorPrimary: '#3aa6d6',
+    colorInfo: '#3aa6d6',
+    colorSuccess: '#4cc39a',
+    colorWarning: '#e2a03f',
+    colorError: '#f07171',
+    colorText: '#cbd5e1',
+    colorTextHeading: '#e2e8f0',
+    colorTextSecondary: '#94a3b8',
+    colorTextTertiary: '#718096',
+    colorBorder: '#273042',
+    colorBorderSecondary: '#1c2333',
+    colorBgLayout: '#0a0f1a',
+    colorBgContainer: '#0f1626',
+    colorBgElevated: '#121a2c',
+  },
+  components: {
+    ...appTheme.components,
+    Breadcrumb: { ...appTheme.components?.Breadcrumb, linkColor: '#718096', linkHoverColor: '#3aa6d6', lastItemColor: '#e2e8f0', separatorColor: '#718096' },
+    Layout: { siderBg: '#080c15', headerBg: '#080c15', bodyBg: '#0a0f1a' },
+    Menu: { ...appTheme.components?.Menu, itemSelectedBg: '#13213a', itemSelectedColor: '#5bb8e3', itemColor: '#94a3b8', itemHoverBg: '#151f33', groupTitleColor: '#718096', itemBg: 'transparent' },
+    Button: { ...appTheme.components?.Button, primaryShadow: 'none' },
+    Table: { ...appTheme.components?.Table, headerBg: '#121a2c', headerColor: '#94a3b8', rowHoverBg: '#131c30' },
+    Segmented: { ...appTheme.components?.Segmented, trackBg: '#0b111d', itemSelectedColor: '#5bb8e3', itemSelectedBg: '#1a2640' },
+    Form: { ...appTheme.components?.Form, labelColor: '#cbd5e1' },
   },
 }

@@ -1,13 +1,17 @@
 import { useState } from 'react'
-import { Avatar, Button, Popover } from 'antd'
+import { App, Avatar, Button, Popover } from 'antd'
+import { useQueryClient } from '@tanstack/react-query'
 import { LayoutDashboard, LogOut, UserRound } from 'lucide-react'
 import { useNavigate } from 'react-router'
+import { devAccounts, type DevAccount } from '../../auth/devAccounts'
 import { useAuth } from '../../auth/useAuth'
 import { useStaff } from '../../auth/useStaff'
 
 /** Icon tài khoản trên đầu trang khách: chưa đăng nhập thì sang trang tài khoản, đã đăng nhập thì xem thông tin tài khoản. */
 export function AccountMenu() {
-  const { isAuthenticated, user, logout } = useAuth()
+  const { isAuthenticated, user, logout, login, enterDemo } = useAuth()
+  const { message } = App.useApp()
+  const queryClient = useQueryClient()
   // Tên vai trò lấy giống thanh trên của trang quản lý.
   const staff = useStaff()
   const navigate = useNavigate()
@@ -18,6 +22,21 @@ export function AccountMenu() {
   if (!isAuthenticated || !user) {
     return <Button type="text" shape="circle" icon={icon} aria-label="Đăng nhập" title="Đăng nhập" onClick={() => navigate('/shop/account')} />
   }
+
+  // Dev: đổi tài khoản mà vẫn ở trang đang xem, để so cửa hàng dữ liệu thật với bản dùng thử; xóa cache để không lẫn dữ liệu.
+  const switchTo = async (account: DevAccount) => {
+    setOpen(false)
+    try {
+      await login(account)
+      queryClient.clear()
+      message.success(`Đã chuyển sang ${account.label}.`)
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : 'Đăng nhập thất bại.')
+    }
+  }
+  const switchToDemo = () => { setOpen(false); enterDemo(); queryClient.clear() }
+  const otherAccounts = devAccounts.filter((account) => account.email.toLowerCase() !== user.email?.toLowerCase())
+  const showSwitch = import.meta.env.DEV && (otherAccounts.length > 0 || !user.isDemo)
 
   const content = (
     <div className="af-shop-account">
@@ -30,6 +49,15 @@ export function AccountMenu() {
         </div>
       </div>
       <Button block type="primary" icon={<LayoutDashboard size={16} />} onClick={() => go('/')}>Trang quản lý</Button>
+      {showSwitch && (
+        <div className="af-shop-account-switch">
+          <small>Đổi tài khoản (dev)</small>
+          {!user.isDemo && <Button block size="small" onClick={switchToDemo}>Bản dùng thử</Button>}
+          {otherAccounts.map((account) => (
+            <Button key={account.email} block size="small" title={account.email} onClick={() => void switchTo(account)}>{account.label}</Button>
+          ))}
+        </div>
+      )}
       <Button block danger icon={<LogOut size={16} />} onClick={() => { logout(); go('/shop') }}>Đăng xuất</Button>
     </div>
   )

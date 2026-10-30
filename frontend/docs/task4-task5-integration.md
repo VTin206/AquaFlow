@@ -49,6 +49,10 @@
 2. Tạo, xác nhận và hủy đơn của nhân viên; kiểm tồn/giữ hàng và quyền ở backend.
 3. Tổng hợp tồn theo sản phẩm/lô: tồn thực tế, đã giữ, khả dụng, đơn vị và hạn dùng.
 4. Danh sách/chi tiết/tạo/xác nhận phiếu nhập, cùng quy tắc mã lô và hạn sử dụng.
+5. Số liệu trong ngày cho trang Tổng quan: doanh thu thuần, tiền đã thu, tổng còn phải thu (theo số tiền, không chỉ trạng thái thanh toán). Hiện tài khoản thật chỉ hiện số đơn tạo hôm nay và đếm đơn chưa thu đủ theo `paymentStatus`.
+6. Trạng thái giao thất bại: BE chưa có nên mục "Giao thất bại" trong Việc cần làm chỉ có ở bản dùng thử.
+7. Mã đơn ngắn, đọc được qua điện thoại: hiện BE sinh `AF-` + 20 ký tự UUID (23 ký tự), quá dài cho bảng, phiếu in và khi khách đọc mã tra cứu. Đề xuất `AF-YYMMDD-NNN` (số thứ tự trong ngày, ví dụ `AF-261030-012`) hoặc `AF-` + số tăng dần; link tra cứu đã có `trackingToken` riêng nên mã đơn không cần khó đoán.
+8. Bật lại bản ghi đã ngừng: hiện chỉ có `DELETE /suppliers/{id}`, `DELETE /bottle-types/{id}`, `DELETE /sales/customers/{id}`, `DELETE /products/{id}` (ngừng), không có chiều ngược lại và `SupplierRequest` không có `active`. Cần `PATCH .../{id}/activate` cho nhà cung cấp, loại vỏ, khách hàng, sản phẩm (hoặc nhận `active` trong PUT), và `GET /sales/customers?active=false` để xem khách đã lưu trữ. Có API thì bật cờ `reactivate` trong `src/shared/features.ts`.
 
 Không dự đoán URL hoặc tự gửi request vào endpoint chưa có.
 

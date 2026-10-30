@@ -15,7 +15,7 @@ export type CustomerRecord = {
   note?: string
   /** Số đơn trước khi có hệ thống (dữ liệu chuyển đổi). */
   legacyOrders: number
-  /** false khi đã ngừng dùng hồ sơ; thiếu nghĩa là đang dùng. */
+  /** false khi hồ sơ đã lưu trữ; thiếu nghĩa là đang hoạt động. */
   active?: boolean
 }
 

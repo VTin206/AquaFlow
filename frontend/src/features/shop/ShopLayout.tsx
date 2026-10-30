@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Alert, Badge, Button } from 'antd'
-import { PackageSearch, Search, ShoppingCart, Waves } from 'lucide-react'
-import { Link, NavLink, Outlet, useNavigate } from 'react-router'
+import { ArrowLeft, PackageSearch, Search, ShoppingCart, Waves } from 'lucide-react'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router'
 import { useSettings } from '../settings/settingsService'
 import { useCart } from './cart'
 import { AccountMenu } from './components/AccountMenu'
@@ -18,6 +18,10 @@ export function ShopLayout() {
   const settingsQuery = useSettings(demo)
   const settings = demo ? settingsQuery.data : undefined
   const navigate = useNavigate()
+  const location = useLocation()
+  // Có trang trước trong app thì quay lại; mở thẳng bằng link hoặc vừa đặt đơn xong thì về trang chủ cửa hàng.
+  const placed = (location.state as { placed?: boolean } | null)?.placed
+  const goBack = () => (location.key !== 'default' && !placed ? navigate(-1) : navigate('/shop'))
   const cart = useCart()
   const [cartOpen, setCartOpen] = useState(false)
   const count = cart.reduce((sum, line) => sum + line.quantity, 0)
@@ -32,14 +36,10 @@ export function ShopLayout() {
             </span>
             <strong>AquaFlow</strong>
           </Link>
-          {demo && <nav className="af-shop-nav" aria-label="Điều hướng cửa hàng">
-            <NavLink to="/track" aria-label="Tra cứu đơn">
-              <PackageSearch size={16} aria-hidden />
-              <span className="af-shop-nav-text">Tra cứu đơn</span>
-            </NavLink>
-          </nav>}
           <div className="af-shop-icons">
             <Button type="text" shape="circle" icon={<Search size={20} />} aria-label="Tìm sản phẩm" title="Tìm sản phẩm" onClick={() => navigate('/shop', { state: { focusSearch: Date.now() } })} />
+            {/* Tra cứu đơn chỉ có ở bản dùng thử; tài khoản thật chờ API tra đơn công khai. */}
+            {demo && <Button type="text" shape="circle" icon={<PackageSearch size={20} />} aria-label="Tra cứu đơn" title="Tra cứu đơn" onClick={() => navigate('/track')} />}
             <AccountMenu />
           </div>
           <Badge count={count} size="small" offset={[-4, 4]}>
@@ -51,6 +51,9 @@ export function ShopLayout() {
       </header>
       <main className="af-shop-main">
         {demo && <Alert type="warning" showIcon title="Bản dùng thử — dữ liệu mẫu, không gửi đơn tới cửa hàng" style={{ marginBottom: 16 }} />}
+        {location.pathname !== '/shop' && (
+          <Button type="link" className="af-shop-back" icon={<ArrowLeft size={16} />} onClick={goBack}>Quay lại</Button>
+        )}
         <Outlet context={{ openCart: () => setCartOpen(true) }} />
       </main>
       <ShopFooter demo={demo} contact={settings} />

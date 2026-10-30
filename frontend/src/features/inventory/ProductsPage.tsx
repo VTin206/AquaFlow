@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { App, Button, Card, Col, Empty, Input, Pagination, Popconfirm, Row, Segmented, Select, Skeleton, Space, Tag, Tooltip, Typography } from 'antd'
-import { Droplets, FunnelX, LayoutGrid, Plus, Search } from 'lucide-react'
+import { useState, type KeyboardEvent } from 'react'
+import { App, Button, Card, Col, Dropdown, Empty, Input, Pagination, Row, Segmented, Select, Skeleton, Space, Tag, Tooltip, Typography, type MenuProps } from 'antd'
+import { Droplets, Ellipsis, FunnelX, LayoutGrid, Plus, Search } from 'lucide-react'
 import { Page } from '../../shared/components/Page'
 import { QueryError } from '../../shared/components/QueryError'
 import { useFeature, useIsDemo } from '../../shared/features'
@@ -8,11 +8,11 @@ import { currency } from '../../shared/utils/format'
 import { LiveBottleTypes } from '../live/LiveBottleTypes'
 import { brandGroups, capacityGroups, catalogCategories, getBrandGroup, getCatalogDetails, normalizeSearch } from './catalog'
 import { ProductFormModal } from './components/ProductFormModal'
-import { useCanManageProducts, useCatalog, useDeactivateProduct, type CatalogItem, type ProductStatus } from './productCatalog'
+import { useActivateProduct, useCanManageProducts, useCatalog, useDeactivateProduct, type CatalogItem, type ProductStatus } from './productCatalog'
 
 const statusOptions: { value: ProductStatus; label: string }[] = [
   { value: 'active', label: 'Đang bán' },
-  { value: 'inactive', label: 'Đã ngừng bán' },
+  { value: 'inactive', label: 'Ngừng bán' },
   { value: 'all', label: 'Tất cả' },
 ]
 
@@ -26,13 +26,12 @@ function ProductImage({ product }: { product: CatalogItem }) {
 }
 
 function StockTag({ product }: { product: CatalogItem }) {
-  if (!product.active) return <Tag>Đã ngừng bán</Tag>
-  if (product.stock === undefined) return null
+  if (!product.active || product.stock === undefined) return null
   return <Tag color={product.stock === 0 ? 'default' : product.lowStock ? 'orange' : 'green'}>{product.stock === 0 ? 'Chưa có hàng' : `Còn ${product.stock}`}</Tag>
 }
 
 export function ProductsPage() {
-  const { message } = App.useApp()
+  const { message, modal } = App.useApp()
   const demo = useIsDemo()
   const canManage = useCanManageProducts()
   const showDetails = useFeature('productCatalogDetails')
@@ -40,6 +39,8 @@ export function ProductsPage() {
   // Nhân viên không quản lý chỉ xem sản phẩm đang bán (BE cũng giới hạn như vậy).
   const productsQuery = useCatalog(canManage ? status : 'active')
   const deactivate = useDeactivateProduct()
+  const activate = useActivateProduct()
+  const canReactivate = useFeature('reactivate')
   const [query, setQuery] = useState('')
   const [brand, setBrand] = useState<string>()
   const [category, setCategory] = useState<string>()
@@ -74,11 +75,37 @@ export function ProductsPage() {
     if (field === 'capacity') values.sort((a, b) => capacityGroups.indexOf(a) - capacityGroups.indexOf(b))
     return values.map((value) => ({ value, label: value }))
   }
-  const stopSelling = (product: CatalogItem) =>
-    deactivate.mutateAsync(product.id).then(
+  // Còn hàng mà ngừng bán thường là bấm nhầm, nên hộp xác nhận nhắc số tồn.
+  const confirmStop = (product: CatalogItem) => modal.confirm({
+    title: 'Ngừng bán?',
+    content: (
+      <div className="af-confirm-body">
+        <p><strong>{product.name}</strong> sẽ không còn trên cửa hàng và không nhập kho được.</p>
+        {product.stock ? <p className="af-confirm-warning">Trong kho còn <strong>{product.stock} {product.unit.toLowerCase()}</strong>.</p> : null}
+        <p>Đơn và phiếu nhập cũ vẫn giữ nguyên.</p>
+      </div>
+    ),
+    centered: true,
+    okText: 'Ngừng bán', okButtonProps: { danger: true },
+    cancelText: 'Không',
+    onOk: () => deactivate.mutateAsync(product.id).then(
       () => { message.success(`Đã ngừng bán ${product.name}.`) },
       (error: Error) => { message.error(error.message) },
+    ),
+  })
+  const resumeSelling = (product: CatalogItem) =>
+    activate.mutateAsync(product.id).then(
+      () => { message.success(`Đã bán lại ${product.name}.`) },
+      (error: Error) => { message.error(error.message) },
     )
+  const cardMenu = (product: CatalogItem): MenuProps['items'] => [
+    { key: 'edit', label: 'Sửa thông tin', onClick: () => setEditing(product) },
+    { type: 'divider' },
+    // Thao tác ngừng tô đỏ để tách khỏi thao tác thường; hộp xác nhận nói rõ hậu quả.
+    product.active
+      ? { key: 'stop', label: 'Ngừng bán', danger: true, disabled: deactivate.isPending, onClick: () => confirmStop(product) }
+      : { key: 'resume', label: 'Bán lại', disabled: !canReactivate || activate.isPending, extra: canReactivate ? undefined : 'Chưa hỗ trợ', onClick: () => void resumeSelling(product) },
+  ]
 
   const renderBody = () => {
     if (productsQuery.isError) return <QueryError error={productsQuery.error} onRetry={productsQuery.refetch} />
@@ -98,17 +125,31 @@ export function ProductsPage() {
               : [product.unitsPerCase && `${product.unitsPerCase} ${product.unit.toLowerCase()}/thùng`, product.bottleTypeName && `Vỏ ${product.bottleTypeName}`].filter(Boolean).join(' · ')
             return (
               <Col key={product.id} xs={24} sm={12} lg={8} xl={6}>
+                {/* Người quản lý bấm thẻ để sửa; thao tác khác nằm trong ⋯ ở góc ảnh. */}
                 <Card
-                  className="af-product-card"
-                  cover={<ProductImage key={product.image ?? product.id} product={product} />}
-                  actions={canManage ? [
-                    <Button key="edit" type="link" size="small" onClick={() => setEditing(product)}>Sửa</Button>,
-                    ...(product.active ? [
-                      <Popconfirm key="stop" title={`Ngừng bán ${product.name}?`} description="Sản phẩm không còn để bán hoặc nhập kho. Đơn và phiếu nhập cũ vẫn giữ nguyên." okText="Ngừng bán" okButtonProps={{ danger: true }} cancelText="Không" onConfirm={() => stopSelling(product)}>
-                        <Button type="link" size="small" danger disabled={deactivate.isPending}>Ngừng bán</Button>
-                      </Popconfirm>,
-                    ] : []),
-                  ] : undefined}
+                  className={`af-product-card${product.active ? '' : ' is-inactive'}${canManage ? ' is-editable' : ''}`}
+                  hoverable={canManage}
+                  {...(canManage && {
+                    role: 'button',
+                    tabIndex: 0,
+                    'aria-label': `Sửa ${product.name}`,
+                    onClick: () => setEditing(product),
+                    onKeyDown: (event: KeyboardEvent) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); setEditing(product) } },
+                  })}
+                  cover={
+                    <div className="af-product-cover">
+                      <ProductImage key={product.image ?? product.id} product={product} />
+                      {!product.active && <Tag className="af-product-cover-tag">Ngừng bán</Tag>}
+                      {canManage && (
+                        // Menu render qua portal nhưng sự kiện React vẫn nổi lên thẻ, nên chặn để không mở form sửa.
+                        <span className="af-product-menu" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+                          <Dropdown trigger={['click']} menu={{ items: cardMenu(product) }}>
+                            <Button size="small" icon={<Ellipsis size={16} />} aria-label={`Thao tác với ${product.name}`} />
+                          </Dropdown>
+                        </span>
+                      )}
+                    </div>
+                  }
                 >
                   <div className="af-product-brand-line"><span>{brandName(product)}</span><Tag>{details.category}</Tag></div>
                   <Typography.Title level={5} className="af-product-name">{product.name}</Typography.Title>
@@ -142,7 +183,6 @@ export function ProductsPage() {
       <Card className="af-card">
         <div className="af-catalog-heading">
           <strong>Thương hiệu</strong>
-          <Select className="af-brand-select" aria-label="Chọn thương hiệu" placeholder="Tất cả thương hiệu" allowClear showSearch={{ filterOption: (input, option) => normalizeSearch(String(option?.label ?? '')).includes(normalizeSearch(input)) }} value={brand} options={brands.map((item) => ({ value: item.name, label: `${item.name} (${item.count})` }))} onChange={(value) => { setBrand(value); setPage(1) }} />
         </div>
         <div className="af-brand-filters" role="group" aria-label="Lọc theo thương hiệu">
           <button type="button" className={`af-brand-filter${!brand ? ' is-active' : ''}`} aria-pressed={!brand} onClick={() => { setBrand(undefined); setPage(1) }}><LayoutGrid size={25} aria-hidden /><span>Tất cả <small>{products.length}</small></span></button>

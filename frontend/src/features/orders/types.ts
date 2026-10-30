@@ -1,3 +1,4 @@
+import { relativeDateTime } from '../../shared/utils/format'
 export type OrderStatus = 'Chờ xác nhận' | 'Đã xác nhận' | 'Đang chuẩn bị' | 'Đang giao' | 'Đã giao' | 'Giao thất bại' | 'Đã hoàn tất' | 'Đã hủy'
 
 export type OrderLine = { productId: string; name: string; unit: string; quantity: number; unitPrice: number }
@@ -112,6 +113,12 @@ export const jugCount = (order: Pick<Order, 'lines'>) => order.lines.filter((lin
 
 export const createdAtOf = (order: Pick<Order, 'history'>) => order.history[0]?.at
 
+/** Lúc đặt đơn: nhãn ngắn theo ngày ("Hôm qua 13:10") và ngày giờ đầy đủ cho tooltip; thiếu thời điểm thì dùng giờ có sẵn. */
+export const orderedAtOf = (order: Pick<Order, 'history' | 'time'>) => {
+  const at = createdAtOf(order)
+  return at ? { label: relativeDateTime(at), full: new Date(at).toLocaleString('vi-VN') } : { label: order.time, full: order.time }
+}
+
 /** Hàng đang ở ngoài kho chờ kiểm: lần xuất gần nhất (hoặc cả đơn với dữ liệu cũ chưa ghi lần xuất). */
 export const returnLinesOf = (order: Order): LotLine[] =>
   order.dispatches?.at(-1)?.lines ?? order.lines.map(({ productId, name, unit, quantity }) => ({ productId, name, unit, quantity }))
@@ -151,6 +158,14 @@ export function minutesLate(order: Order, now = Date.now()) {
 
 /** Đơn giao chưa xong đã quá giờ hẹn, cần ưu tiên hoặc báo khách. */
 export const isOverdue = (order: Order, now = Date.now()) => OPEN_DELIVERY.includes(order.status) && minutesLate(order, now) > 0
+
+/** Giờ hẹn của đơn giao chưa xong; `tone` đỏ khi đã trễ, cam khi còn dưới 1 giờ. Không có hẹn hoặc đã giao xong thì null. */
+export function appointmentOf(order: Order, now = Date.now()) {
+  if (order.method !== 'Giao tận nơi' || !order.appointment || !OPEN_DELIVERY.includes(order.status)) return null
+  const minutesLeft = (Date.parse(order.appointment) - now) / 60_000
+  const tone = isOverdue(order, now) ? 'danger' : minutesLeft <= 60 ? 'warning' : 'muted'
+  return { label: `Hẹn ${relativeDateTime(order.appointment, new Date(now))}`, full: new Date(order.appointment).toLocaleString('vi-VN'), tone } as const
+}
 
 export const lateLabel = (minutes: number) => (minutes >= 60 ? `${Math.floor(minutes / 60)} giờ ${minutes % 60 ? `${minutes % 60} phút` : ''}`.trim() : `${minutes} phút`)
 

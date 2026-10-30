@@ -6,7 +6,7 @@ import { Money } from '../../../shared/components/Money'
 import { dueTone } from '../../../shared/utils/money'
 import { currency } from '../../../shared/utils/format'
 import { canDispatch } from '../../orders/orderService'
-import { amountDue, jugCount, type Order } from '../../orders/types'
+import { amountDue, jugCount, orderedAtOf, type Order } from '../../orders/types'
 import { useOrders } from '../../orders/useOrders'
 import { openIn } from '../tripService'
 import { useTrips } from '../useTrips'
@@ -74,7 +74,7 @@ export function TripsPanel() {
               render: (id: string, order) => (
                 <div className="af-cell-stack">
                   <span className="af-strong">{id}</span>
-                  {order.dispatches?.length ? <small className="af-text-warning">Giao lại</small> : <small>{order.time}</small>}
+                  {order.dispatches?.length ? <small className="af-text-warning">Giao lại</small> : <small title={orderedAtOf(order).full}>{orderedAtOf(order).label}</small>}
                 </div>
               ),
             },
@@ -94,7 +94,7 @@ export function TripsPanel() {
               width: 140,
               render: (value?: string) => (value ? new Date(value).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '—'),
             },
-            { title: 'Bình', key: 'jugs', width: 70, align: 'right', render: (_, order) => jugCount(order) || '—' },
+            { title: 'Bình', key: 'jugs', width: 80, align: 'right', render: (_, order) => jugCount(order) || '—' },
             { title: 'Cần thu', key: 'due', width: 130, align: 'right', render: (_, order) => <Money value={amountDue(order)} tone={dueTone(amountDue(order))} /> },
           ]}
         />

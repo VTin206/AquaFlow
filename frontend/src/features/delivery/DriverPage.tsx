@@ -1,7 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Alert, Button, Card, Empty, Progress, Select, Skeleton, Tag } from 'antd'
 import { Clock3, Map, Package, Phone, Recycle, Wallet } from 'lucide-react'
-import { Page } from '../../shared/components/Page'
 import { useStaff } from '../auth/useStaff'
 import { QueryError } from '../../shared/components/QueryError'
 import { Money } from '../../shared/components/Money'
@@ -42,6 +41,8 @@ export function DriverPage() {
   const orders = ordersQuery.data ?? []
   const myTrips = (tripsQuery.data ?? []).filter((trip) => trip.driver === driver && trip.status !== 'Đã đối soát')
 
+  useEffect(() => { document.title = 'Chuyến của tôi | AquaFlow' }, [])
+
   const chooseDriver = (value: string) => {
     setDriver(value)
     try {
@@ -52,13 +53,13 @@ export function DriverPage() {
   }
 
   return (
-    <Page title="Chuyến của tôi" description="Danh sách điểm giao theo thứ tự, gọi khách và ghi kết quả ngay tại chỗ.">
+    <>
       <div className="af-driver">
-        {ownTrips ? (
-          <p className="af-driver-me">
-            Xin chào <strong>{driver}</strong>
-          </p>
-        ) : (
+        <header className="af-driver-head">
+          <h1>Chuyến của tôi</h1>
+          {ownTrips && <p>{driver} · {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit' })}</p>}
+        </header>
+        {!ownTrips && (
           <>
             <label className="af-driver-picker">
               <span>Tài xế</span>
@@ -85,7 +86,7 @@ export function DriverPage() {
         )}
       </div>
       {orderId && <OrderDetailsModal key={orderId} orderId={orderId} onClose={() => setOrderId(null)} />}
-    </Page>
+    </>
   )
 }
 

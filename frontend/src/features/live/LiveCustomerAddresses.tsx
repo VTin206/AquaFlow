@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Checkbox, Form, Input, Modal, Popconfirm, Table, Tag } from 'antd'
+import { App, Button, Checkbox, Form, Input, Modal, Popconfirm, Table, Tag, Tooltip } from 'antd'
+import { Pencil } from 'lucide-react'
 import { api } from '../../shared/api/client'
 import { QueryError } from '../../shared/components/QueryError'
 import { invalidateLiveData } from './invalidateLiveData'
@@ -43,7 +44,7 @@ export function LiveCustomerAddresses({ customerId, customerName, onClose }: { c
       {addresses.isError ? <QueryError error={addresses.error} onRetry={addresses.refetch} /> : <Table<Address> rowKey="id" loading={addresses.isPending} dataSource={addresses.data ?? []} pagination={false} scroll={{ x: 650 }} columns={[
         { title: 'Người nhận', dataIndex: 'recipientName' }, { title: 'Điện thoại', dataIndex: 'recipientPhone' }, { title: 'Địa chỉ', dataIndex: 'addressLine' },
         { title: 'Mặc định', dataIndex: 'isDefault', render: (value: boolean) => value ? <Tag color="blue">Có</Tag> : '—' },
-        { title: 'Thao tác', render: (_: unknown, item: Address) => <><Button type="link" onClick={() => open(item)}>Sửa</Button><Popconfirm title="Xóa địa chỉ này?" onConfirm={() => remove.mutate(item.id)}><Button type="link" danger>Xóa</Button></Popconfirm></> },
+        { title: 'Thao tác', render: (_: unknown, item: Address) => <><Tooltip title="Sửa"><Button type="link" icon={<Pencil size={15} />} aria-label="Sửa địa chỉ" onClick={() => open(item)} /></Tooltip><Popconfirm title="Xóa địa chỉ này?" onConfirm={() => remove.mutate(item.id)}><Button type="link" danger>Xóa</Button></Popconfirm></> },
       ]} />}
     </Modal>
     <Modal title={editing ? 'Sửa địa chỉ' : 'Thêm địa chỉ'} open={editing !== undefined} onCancel={() => setEditing(undefined)} onOk={() => form.submit()} confirmLoading={save.isPending} destroyOnHidden>

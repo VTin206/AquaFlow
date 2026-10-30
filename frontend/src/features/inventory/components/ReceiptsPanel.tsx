@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { App, Button, Modal, Popconfirm, Segmented, Space, Table, Tag, Typography } from 'antd'
+import { App, Button, Modal, Popconfirm, Segmented, Space, Table, Tag, Tooltip, Typography } from 'antd'
+import { Pencil } from 'lucide-react'
 import { CountLabel } from '../../../shared/components/CountLabel'
 import { QueryError } from '../../../shared/components/QueryError'
 import { currency } from '../../../shared/utils/format'
@@ -112,7 +113,7 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
                     <Popconfirm title={`Nhập kho phiếu ${receipt.code}?`} description="Hàng đạt được cộng vào tồn; sau đó không sửa hoặc hủy phiếu được." okText="Nhập kho" cancelText="Chưa" onConfirm={() => run(receipt, 'confirm')}>
                       <Button size="small" type="primary" loading={action.isPending && action.variables?.id === receipt.id && action.variables.action === 'confirm'} disabled={action.isPending}>Nhập kho</Button>
                     </Popconfirm>
-                    <Button size="small" disabled={action.isPending} onClick={() => onEdit(receipt)}>Sửa</Button>
+                    <Tooltip title="Sửa phiếu"><Button size="small" icon={<Pencil size={15} />} aria-label={`Sửa phiếu ${receipt.code}`} disabled={action.isPending} onClick={() => onEdit(receipt)} /></Tooltip>
                     <Popconfirm title={`Hủy phiếu ${receipt.code}?`} description="Phiếu đã hủy không dùng lại được." okText="Hủy phiếu" okButtonProps={{ danger: true }} cancelText="Không" onConfirm={() => run(receipt, 'cancel')}>
                       <Button size="small" danger type="text" loading={action.isPending && action.variables?.id === receipt.id && action.variables.action === 'cancel'} disabled={action.isPending}>Hủy</Button>
                     </Popconfirm>

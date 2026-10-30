@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Button, Select } from 'antd'
-import { Plus, UserRound } from 'lucide-react'
+import { Button, Select, Tooltip } from 'antd'
+import { Eye, Plus } from 'lucide-react'
 import { MobileRecordList } from '../../../shared/components/MobileRecordList'
 import { Money } from '../../../shared/components/Money'
 import { useFeature } from '../../../shared/features'
@@ -50,7 +50,7 @@ export function CustomerCards({ customers, loading, emptyText, onProfile, onCrea
             <dt>Vỏ đang giữ</dt><dd>{showBottles ? `${customer.bottlesHeld} vỏ` : <Unsupported />}</dd>
           </dl>
           <div className="af-record-actions">
-            <Button icon={<UserRound size={16} />} onClick={() => onProfile(customer.id)} aria-label={`Hồ sơ ${customer.name}`}>Hồ sơ</Button>
+            <Tooltip title="Xem hồ sơ"><Button icon={<Eye size={16} />} onClick={() => onProfile(customer.id)} aria-label={`Xem hồ sơ ${customer.name}`} /></Tooltip>
             <Button icon={<Plus size={16} />} onClick={() => onCreateOrder(customer)} aria-label={`Tạo đơn cho ${customer.name}`}>Tạo đơn</Button>
           </div>
         </article>

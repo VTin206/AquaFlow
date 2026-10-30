@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Button, Card, Empty } from 'antd'
-import { ArrowLeft, ShoppingCart } from 'lucide-react'
+import { ShoppingCart } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { articleDate, findArticle, findPolicy, shopArticles, shopPolicies } from './shopNews'
 
@@ -23,7 +23,6 @@ export function ArticlePage({ kind = 'news' }: { kind?: 'news' | 'policy' }) {
   const Icon = article.icon
   const others = list.filter((item) => item.slug !== article.slug).slice(0, 3)
   return <div className="af-shop-page af-shop-narrow af-shop-article">
-    <Link to="/shop" className="af-text-link"><ArrowLeft size={14} /> Trang chủ</Link>
     <article>
       <div className="af-shop-article-cover" aria-hidden><Icon size={56} strokeWidth={1.4} /></div>
       <h1>{article.title}</h1>

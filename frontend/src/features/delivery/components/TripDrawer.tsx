@@ -213,6 +213,7 @@ export function TripDrawer({ tripId, onClose }: { tripId: string; onClose: () =>
                   content: `Tiền mặt ${currency(draft.cashHandedOver)} · ${draft.bottlesHandedOver} vỏ. Sau khi chốt không sửa được.`,
                   okText: 'Chốt đối soát',
                   cancelText: 'Xem lại',
+                  centered: true,
                   onOk: () => run({ kind: 'settle', id: trip.id, draft }, `Đã đối soát chuyến ${trip.id}.`),
                 })
               }
