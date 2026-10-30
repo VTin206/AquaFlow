@@ -5,7 +5,7 @@ import { MobileRecordList } from '../../../shared/components/MobileRecordList'
 import { Money } from '../../../shared/components/Money'
 import { useFeature, useIsDemo } from '../../../shared/features'
 import { Unsupported } from '../../../shared/components/Unsupported'
-import { amountDue, orderedAtOf, paymentLabel, type Order } from '../types'
+import { amountDue, appointmentOf, orderedAtOf, paymentLabel, type Order } from '../types'
 import { nextActionLabel } from '../orderStatus'
 import { AdvanceStatusButton } from './AdvanceStatusButton'
 import { LateTag } from './LateTag'
@@ -46,7 +46,7 @@ export function OrderCards({ orders, loading, compact, emptyText, onDetails, fil
       )}
       renderItem={(order) => (
         <article className="af-record" aria-label={`Đơn ${order.code ?? order.id}`}>
-          <div className="af-record-heading"><strong>{order.code ?? order.id}</strong><span title={orderedAtOf(order).full}>{orderedAtOf(order).label}</span></div>
+          <div className="af-record-heading"><strong>{order.code ?? order.id}</strong><span title={orderedAtOf(order).full}>{orderedAtOf(order).label}{appointmentOf(order) && <small className={`af-appointment is-${appointmentOf(order)!.tone}`}> · {appointmentOf(order)!.label}</small>}</span></div>
           <h3>{order.customer}</h3>
           <p className="af-record-meta">
             {order.method}

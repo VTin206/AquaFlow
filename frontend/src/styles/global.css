@@ -465,6 +465,12 @@ body {
   vertical-align: -2px;
 }
 
+/* Giờ hẹn dưới "Đặt lúc": xám bình thường, cam khi còn dưới 1 giờ, đỏ khi đã trễ. */
+.af-cell-stack > .af-ordered-at { font-weight: 400; color: var(--af-text); }
+.af-appointment.is-muted { color: var(--af-text-tertiary); }
+.af-appointment.is-warning { color: var(--af-warning); font-weight: 500; }
+.af-appointment.is-danger { color: var(--af-danger); font-weight: 500; }
+
 /* Icon trong ô nhập (điện thoại, tìm kiếm, khóa...): mặc định AntD chỉ cách chữ 4px, nới ra cho dễ đọc. */
 .ant-input-affix-wrapper > .ant-input-prefix { margin-inline-end: 10px; }
 .ant-input-affix-wrapper > .ant-input-suffix { margin-inline-start: 10px; }

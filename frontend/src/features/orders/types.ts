@@ -159,6 +159,14 @@ export function minutesLate(order: Order, now = Date.now()) {
 /** Đơn giao chưa xong đã quá giờ hẹn, cần ưu tiên hoặc báo khách. */
 export const isOverdue = (order: Order, now = Date.now()) => OPEN_DELIVERY.includes(order.status) && minutesLate(order, now) > 0
 
+/** Giờ hẹn của đơn giao chưa xong; `tone` đỏ khi đã trễ, cam khi còn dưới 1 giờ. Không có hẹn hoặc đã giao xong thì null. */
+export function appointmentOf(order: Order, now = Date.now()) {
+  if (order.method !== 'Giao tận nơi' || !order.appointment || !OPEN_DELIVERY.includes(order.status)) return null
+  const minutesLeft = (Date.parse(order.appointment) - now) / 60_000
+  const tone = isOverdue(order, now) ? 'danger' : minutesLeft <= 60 ? 'warning' : 'muted'
+  return { label: `Hẹn ${relativeDateTime(order.appointment, new Date(now))}`, full: new Date(order.appointment).toLocaleString('vi-VN'), tone } as const
+}
+
 export const lateLabel = (minutes: number) => (minutes >= 60 ? `${Math.floor(minutes / 60)} giờ ${minutes % 60 ? `${minutes % 60} phút` : ''}`.trim() : `${minutes} phút`)
 
 /** Thông tin đơn khách xem được trên trang tra cứu. */

@@ -6,7 +6,7 @@ import { tablePagination, tableScrollHeight } from '../../../shared/utils/table'
 import { useColumnSort } from '../../../shared/components/sortableColumn'
 import { useFeature, useIsDemo } from '../../../shared/features'
 import { LiveOrderDetails } from '../../live/LiveOrderDetails'
-import { amountDue, createdAtOf, orderedAtOf, paymentLabel, type Order } from '../types'
+import { amountDue, appointmentOf, createdAtOf, orderedAtOf, paymentLabel, type Order } from '../types'
 import { AdvanceStatusButton } from './AdvanceStatusButton'
 import { LateTag } from './LateTag'
 import { OrderStatusTag } from './OrderStatusTag'
@@ -64,7 +64,16 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
         </div>
       ),
     },
-    ...(compact ? [] : [{ ...sort.column('Đặt lúc', 'time', 'time'), dataIndex: 'time', width: 130, sorter: (a: Order, b: Order) => (createdAtOf(a) ?? a.time).localeCompare(createdAtOf(b) ?? b.time), render: (_: string, order: Order) => { const at = orderedAtOf(order); return <span title={at.full}>{at.label}</span> } }]),
+    ...(compact ? [] : [{ ...sort.column('Đặt lúc', 'time', 'time'), dataIndex: 'time', width: 130, sorter: (a: Order, b: Order) => (createdAtOf(a) ?? a.time).localeCompare(createdAtOf(b) ?? b.time), render: (_: string, order: Order) => {
+      const at = orderedAtOf(order)
+      const appointment = appointmentOf(order)
+      return (
+        <div className="af-cell-stack">
+          <span className="af-ordered-at" title={`Đặt lúc ${at.full}`}>{at.label}</span>
+          {appointment && <small className={`af-appointment is-${appointment.tone}`} title={`Hẹn giao ${appointment.full}`}>{appointment.label}</small>}
+        </div>
+      )
+    } }]),
     {
       title: 'Tổng tiền',
       ...(!compact && sort.column('Tổng tiền', 'total', 'number')),
