@@ -12,6 +12,7 @@ import com.aquaflow.inventory.api.dto.SupplierResponse;
 import com.aquaflow.inventory.application.BottleTypeService;
 import com.aquaflow.inventory.application.ProductService;
 import com.aquaflow.inventory.application.SupplierService;
+import com.aquaflow.delivery.application.DeliveryTripService;
 import com.aquaflow.shared.api.NotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,6 +68,9 @@ class SupplierControllerIntegrationTest {
 
     @MockitoBean
     private ProductService productService;
+
+    @MockitoBean
+    private DeliveryTripService deliveryTripService;
 
     @MockitoBean
     private BottleTypeService bottleTypeService;

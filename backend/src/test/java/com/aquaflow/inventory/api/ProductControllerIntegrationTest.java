@@ -11,6 +11,7 @@ import com.aquaflow.inventory.api.dto.ProductResponse;
 import com.aquaflow.inventory.application.BottleTypeService;
 import com.aquaflow.inventory.application.ProductService;
 import com.aquaflow.inventory.application.SupplierService;
+import com.aquaflow.delivery.application.DeliveryTripService;
 import com.aquaflow.customer.order.application.OrderService;
 import com.aquaflow.shared.api.ConflictException;
 import com.aquaflow.shared.api.NotFoundException;
@@ -68,6 +69,9 @@ class ProductControllerIntegrationTest {
 
     @MockitoBean
     private BottleTypeService bottleTypeService;
+
+    @MockitoBean
+    private DeliveryTripService deliveryTripService;
 
     @MockitoBean
     private UserRepository userRepository;

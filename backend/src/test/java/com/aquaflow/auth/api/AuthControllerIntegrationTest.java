@@ -13,6 +13,7 @@ import com.aquaflow.inventory.repository.BottleTypeRepository;
 import com.aquaflow.inventory.repository.ProductRepository;
 import com.aquaflow.inventory.repository.SupplierRepository;
 import com.aquaflow.auth.application.JwtService;
+import com.aquaflow.delivery.application.DeliveryTripService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Optional;
@@ -85,6 +87,9 @@ class AuthControllerIntegrationTest {
     @MockBean
     private OrderItemRepository orderItemRepository;
 
+    @MockBean
+    private DeliveryTripService deliveryTripService;
+
     private User activeUser;
 
     @BeforeEach
@@ -137,6 +142,48 @@ class AuthControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/auth/me"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.path").value("/api/v1/auth/me"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminCanReadDeliveryTripList() throws Exception {
+        when(deliveryTripService.findAll()).thenReturn(java.util.List.of());
+        mockMvc.perform(get("/api/v1/delivery/trips"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "SALES_STAFF")
+    void salesStaffCanReadDeliveryTripList() throws Exception {
+        when(deliveryTripService.findAll()).thenReturn(java.util.List.of());
+        mockMvc.perform(get("/api/v1/delivery/trips"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "DELIVERY_STAFF")
+    void deliveryStaffCannotUseManagementListOrCreateEndpoint() throws Exception {
+        mockMvc.perform(get("/api/v1/delivery/trips"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/delivery/trips")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"driverId\":1}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "CUSTOMER")
+    void customerCannotAccessDeliveryApi() throws Exception {
+        mockMvc.perform(get("/api/v1/delivery/trips"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/delivery/driver/trips"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void guestCannotAccessDeliveryApi() throws Exception {
+        mockMvc.perform(get("/api/v1/delivery/trips"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

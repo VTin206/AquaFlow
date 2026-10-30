@@ -6,6 +6,7 @@ import com.aquaflow.customer.repository.CustomerAddressRepository;
 import com.aquaflow.customer.application.CustomerAuditService;
 import com.aquaflow.customer.repository.CustomerRepository;
 import com.aquaflow.auth.repository.UserRepository;
+import com.aquaflow.delivery.application.DeliveryTripService;
 import com.aquaflow.inventory.repository.BottleTypeRepository;
 import com.aquaflow.inventory.repository.ProductRepository;
 import com.aquaflow.inventory.repository.SupplierRepository;
@@ -57,6 +58,9 @@ class HealthControllerTest {
 
     @MockBean
     private OrderItemRepository orderItemRepository;
+
+    @MockBean
+    private DeliveryTripService deliveryTripService;
 
     @Test
     void applicationContextLoads() {
