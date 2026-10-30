@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { App, Button, Card, Col, Empty, Input, Row, Select, Skeleton, Tag, Typography } from 'antd'
+import { App, Button, Card, Col, Empty, Input, Row, Select, Skeleton, Tag, Typography, type InputRef } from 'antd'
 import { Droplets, Search, ShoppingCart } from 'lucide-react'
-import { Link, useOutletContext } from 'react-router'
+import { Link, useLocation, useOutletContext } from 'react-router'
 import { QueryError } from '../../shared/components/QueryError'
 import { currency } from '../../shared/utils/format'
 import { normalizeSearch } from '../inventory/catalog'
@@ -36,7 +36,15 @@ export function ShopPage() {
   const [category, setCategory] = useState(ALL)
   const [query, setQuery] = useState('')
   const catalogRef = useRef<HTMLElement>(null)
+  const searchRef = useRef<InputRef>(null)
   const goToCatalog = () => catalogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  // Nút kính lúp trên đầu trang: cuộn tới danh mục và đặt con trỏ vào ô tìm kiếm.
+  const focusSearch = (useLocation().state as { focusSearch?: number } | null)?.focusSearch
+  useEffect(() => {
+    if (!focusSearch) return
+    catalogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    searchRef.current?.focus({ preventScroll: true })
+  }, [focusSearch])
 
   useEffect(() => {
     document.title = `Đặt nước | ${demo ? settings?.storeName ?? 'AquaFlow' : 'AquaFlow'}`
@@ -98,7 +106,7 @@ export function ShopPage() {
             style={{ minWidth: 200 }}
             options={[{ value: ALL, label: 'Mọi dòng nước' }, ...categories.map((value) => ({ value, label: value }))]}
           />
-          <Input allowClear prefix={<Search size={16} className="af-input-icon" />} placeholder="Tìm sản phẩm, thương hiệu..." value={query} onChange={(event) => setQuery(event.target.value)} className="af-search" />
+          <Input ref={searchRef} allowClear prefix={<Search size={16} className="af-input-icon" />} placeholder="Tìm sản phẩm, thương hiệu..." value={query} onChange={(event) => setQuery(event.target.value)} className="af-search" />
         </div>
 
         {productsQuery.isError ? (

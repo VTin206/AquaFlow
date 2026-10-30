@@ -14,6 +14,8 @@
   gap: 20px;
 }
 
+.af-login-header-actions { display: flex; align-items: center; gap: 4px; }
+
 .af-login-main {
   flex: 1;
   display: flex;
@@ -131,6 +133,7 @@
 
 @media (max-width: 380px) {
   .af-login-header { padding: 14px 12px; }
+  .af-login-header-actions .ant-btn > span:not(.ant-btn-icon) { display: none; }
   .af-login-main { padding: 8px 12px 24px; }
   .af-login-form-panel { padding: 28px 20px; }
   .af-login-form-heading h1 { font-size: 23px; }

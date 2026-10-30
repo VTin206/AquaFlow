@@ -70,7 +70,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
       ]
     : []
   const showNotifications = useFeature('notifications')
-  const logoutItem = { key: 'logout', danger: true, icon: <LogOut size={16} />, label: 'Đăng xuất', onClick: () => { logout(); navigate('/login', { replace: true }) } }
+  const logoutItem = { key: 'logout', danger: true, icon: <LogOut size={16} />, label: 'Đăng xuất', onClick: () => { logout(); navigate('/shop', { replace: true }) } }
   // Bản dùng thử: đổi vai trò để xem menu và quyền của từng nhân viên.
   const menuItems: MenuProps['items'] = staff?.isDemo
     ? [

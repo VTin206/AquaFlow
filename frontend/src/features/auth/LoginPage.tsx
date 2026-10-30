@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Alert, App, Button, Checkbox, ConfigProvider, Divider, Form, Input, Modal } from 'antd'
-import { ArrowRight, CircleCheck, Headphones, LockKeyhole, Package, Store, Truck, UserRound, Waves } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CircleCheck, Headphones, LockKeyhole, Package, Store, Truck, UserRound, Waves } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { useAuth } from './useAuth'
 import type { LoginCredentials } from './authService'
@@ -47,11 +47,14 @@ export function LoginPage() {
   return (
     <div className="af-login-page">
       <header className="af-login-header">
-        <Link to="/" className="af-topbar-brand" aria-label="AquaFlow — Trang chủ">
+        <Link to="/shop" className="af-topbar-brand" aria-label="AquaFlow — Về cửa hàng">
           <span className="af-brand-mark"><Waves size={22} strokeWidth={2.2} /></span>
           <strong>AquaFlow</strong>
         </Link>
-        <Button type="text" icon={<Headphones size={17} />} onClick={() => setHelpOpen(true)}>Hỗ trợ</Button>
+        <div className="af-login-header-actions">
+          <Link to="/shop"><Button type="text" icon={<ArrowLeft size={17} />}>Về cửa hàng</Button></Link>
+          <Button type="text" icon={<Headphones size={17} />} onClick={() => setHelpOpen(true)}>Hỗ trợ</Button>
+        </div>
       </header>
 
       <main className="af-login-main">
