@@ -28,7 +28,7 @@ export function ShopFooter({ demo, contact }: Props) {
           <ul>
             <li><Link to="/shop">Sản phẩm</Link></li>
             {latest && <li><Link to={`/shop/news/${latest.slug}`}>Tin tức</Link></li>}
-            {demo && <li><Link to="/track">Tra cứu đơn</Link></li>}
+            <li><Link to="/track">Tra cứu đơn</Link></li>
             <li><Link to="/shop/account">Đăng nhập</Link></li>
             <li><Link to="/shop/register">Tạo tài khoản</Link></li>
             <li><Link to="/login">Đăng nhập cho nhân viên</Link></li>

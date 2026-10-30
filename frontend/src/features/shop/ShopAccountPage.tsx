@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Alert, App, Avatar, Button, Form, Input } from 'antd'
-import { ArrowRight, History, LayoutDashboard, LockKeyhole, LogOut, MapPin, ShoppingBag, UserRound, UserRoundPlus } from 'lucide-react'
+import { ArrowRight, History, LayoutDashboard, LockKeyhole, LogOut, MapPin, PackageSearch, ShoppingBag, UserRound, UserRoundPlus } from 'lucide-react'
 import { Link, useNavigate } from 'react-router'
 import { focusNextOnEnter } from '../../shared/utils/forms'
 import type { LoginCredentials } from '../auth/authService'
@@ -84,6 +84,8 @@ export function ShopAccountPage() {
           </ul>
           <Link to="/shop"><Button size="large" block icon={<ShoppingBag size={18} />}>Mua hàng không cần tài khoản</Button></Link>
           <p>Chỉ cần tên, số điện thoại và địa chỉ giao khi thanh toán.</p>
+          <Link to="/track"><Button size="large" block icon={<PackageSearch size={18} />}>Tra cứu đơn không cần tài khoản</Button></Link>
+          <p>Xem trạng thái đơn bằng mã đơn và số điện thoại đặt hàng.</p>
         </section>
       </div>
     </div>
