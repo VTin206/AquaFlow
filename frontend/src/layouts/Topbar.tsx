@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Avatar, Button, Dropdown, Tooltip, type MenuProps } from 'antd'
+import { App, Avatar, Button, Dropdown, Tooltip, type MenuProps } from 'antd'
 import { Bell, Check, ChevronDown, Clock3, LogOut, Menu as MenuIcon, ShoppingCart, Waves } from 'lucide-react'
 import { Link, useNavigate } from 'react-router'
 import { roleNames, type RoleCode } from '../features/auth/permissions'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../features/auth/useAuth'
+import { devAccounts, type DevAccount } from '../features/auth/devAccounts'
 import { setDemoRole, useStaff } from '../features/auth/useStaff'
 import { useFeature } from '../shared/features'
 import { NotificationPopover } from './NotificationPopover'
@@ -33,9 +35,38 @@ function TopbarClock() {
 
 /** Thanh ứng dụng và các thao tác nhanh. */
 export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
-  const { logout } = useAuth()
+  const { logout, login } = useAuth()
+  const { message } = App.useApp()
+  const queryClient = useQueryClient()
   const staff = useStaff()
   const navigate = useNavigate()
+  // Dev: đổi tài khoản không cần qua trang đăng nhập; xóa cache để không lẫn dữ liệu của tài khoản trước.
+  const switchTo = async (account: DevAccount) => {
+    try {
+      await login(account)
+      queryClient.clear()
+      message.success(`Đã chuyển sang ${account.label}.`)
+      navigate('/', { replace: true })
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : 'Đăng nhập thất bại.')
+    }
+  }
+  const switchItems: MenuProps['items'] = devAccounts.length
+    ? [
+        {
+          type: 'group',
+          key: 'switch',
+          label: 'Đổi tài khoản (dev)',
+          children: devAccounts.map((account) => ({
+            key: `switch:${account.email}`,
+            label: account.label,
+            title: account.email,
+            onClick: () => void switchTo(account),
+          })),
+        },
+        { type: 'divider' },
+      ]
+    : []
   const showNotifications = useFeature('notifications')
   const logoutItem = { key: 'logout', danger: true, icon: <LogOut size={16} />, label: 'Đăng xuất', onClick: () => { logout(); navigate('/login', { replace: true }) } }
   // Bản dùng thử: đổi vai trò để xem menu và quyền của từng nhân viên.
@@ -53,9 +84,10 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
           })),
         },
         { type: 'divider' },
+        ...switchItems,
         logoutItem,
       ]
-    : [logoutItem]
+    : [...switchItems, logoutItem]
 
   return (
     <header className="af-topbar">
