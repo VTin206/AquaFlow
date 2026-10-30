@@ -1278,7 +1278,12 @@ body {
 .af-shop-cart-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .af-shop-cart-head { display: flex; align-items: flex-start; gap: 4px; }
 .af-shop-cart-head strong { flex: 1; min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; }
-.af-shop-cart-head .ant-btn { flex: none; margin: -2px -4px 0 0; }
+.af-shop-cart-remove { flex: none; display: grid; place-items: center; width: 20px; height: 20px; margin-top: 1px; padding: 0; border: 0; border-radius: 50%; background: var(--af-danger); color: #fff; cursor: pointer; transition: filter 0.15s; }
+.af-shop-cart-remove:hover { filter: brightness(1.12); }
+.af-shop-cart-remove:focus-visible { outline: 2px solid var(--af-danger); outline-offset: 2px; }
+.af-shop-cart-actions { display: flex; gap: 8px; margin-top: 8px; }
+.af-shop-cart-actions > * { flex: 1; }
+.af-shop-cart-actions .ant-btn { width: 100%; }
 .af-shop-cart-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
 .af-shop-cart-qty.ant-input-number { width: 40px; }
 .af-shop-cart-qty .ant-input-number-input { text-align: center; padding: 0 2px; }

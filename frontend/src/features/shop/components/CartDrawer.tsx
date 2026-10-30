@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Button, Drawer, Empty, InputNumber, Skeleton, Space } from 'antd'
-import { Droplets, Minus, Plus, Trash2 } from 'lucide-react'
+import { Button, Drawer, Empty, InputNumber, Popconfirm, Skeleton, Space } from 'antd'
+import { Droplets, Minus, Plus } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { currency } from '../../../shared/utils/format'
 import { QueryError } from '../../../shared/components/QueryError'
@@ -33,7 +33,9 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
             <div className="af-shop-cart-body">
               <div className="af-shop-cart-head">
                 <strong>{name}</strong>
-                <Button type="text" size="small" danger icon={<Trash2 size={15} />} aria-label={`Bỏ ${name}`} onClick={() => actions.remove(productId)} />
+                <button type="button" className="af-shop-cart-remove" aria-label={`Bỏ ${name} khỏi giỏ`} title="Bỏ khỏi giỏ" onClick={() => actions.remove(productId)}>
+                  <Minus size={13} strokeWidth={3} aria-hidden />
+                </button>
               </div>
               <small>{product ? `${currency(product.price)} / ${product.unit.toLowerCase()}` : 'Sản phẩm không còn trong danh mục. Vui lòng bỏ khỏi giỏ.'}{product?.available === false && ' · Tạm hết hàng'}</small>
               <div className="af-shop-cart-foot">
@@ -50,7 +52,13 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
       </ul>
       <div className="af-order-summary"><span>Tiền hàng tạm tính</span><strong>{currency(subtotal)}</strong></div>
       <p className="af-form-hint">Chưa gồm phí giao và tiền cọc vỏ nếu có.</p>
-      <Button style={{ marginTop: 16 }} type="primary" block size="large" disabled={invalid} onClick={() => { onClose(); navigate('/checkout') }}>Tiếp tục đến Checkout</Button>
+      <Button style={{ marginTop: 16 }} type="primary" block size="large" disabled={invalid} onClick={() => { onClose(); navigate('/checkout') }}>Thanh toán</Button>
+      <div className="af-shop-cart-actions">
+        <Button onClick={onClose}>Mua hàng tiếp</Button>
+        <Popconfirm title="Xóa hết sản phẩm trong giỏ?" okText="Xóa hết" okButtonProps={{ danger: true }} cancelText="Không" onConfirm={actions.clear}>
+          <Button danger>Xóa hết</Button>
+        </Popconfirm>
+      </div>
     </>}
   </Drawer>
 }
