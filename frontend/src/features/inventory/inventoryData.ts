@@ -125,7 +125,7 @@ async function liveStock(): Promise<StockItem[]> {
     return {
       id: String(product.id), name: product.name, sku: product.sku, brand: product.brand ?? undefined, unit: product.unit,
       onHand: item?.onHand ?? 0, reserved: item?.reserved ?? 0, available: item?.available ?? 0, expiredOnHand: item?.expiredOnHand ?? 0,
-      nearestExpiry: item && nearestExpiry(item), salePrice: product.salePrice,
+      nearestExpiry: item && nearestExpiry(item), salePrice: product.salePrice, threshold: product.lowStockThreshold,
     }
   })
   // Sản phẩm đã ngừng bán nhưng còn tồn vẫn phải hiện để xử lý.

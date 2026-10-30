@@ -18,16 +18,19 @@ export type CatalogItem = Pick<Product, 'id' | 'sku' | 'name' | 'brand' | 'unit'
   /** Số bán được; undefined khi chưa tải được tồn kho. */
   stock?: number
   lowStock: boolean
+  /** Khả dụng từ mức này trở xuống là sắp hết. */
+  threshold?: number
   unitsPerCase?: number
   bottleTypeId?: number
   bottleTypeName?: string
 }
 export type ProductStatus = 'active' | 'inactive' | 'all'
-export type ProductForm = { sku: string; name: string; brand?: string; unit: string; price: number; stock?: number; image?: string; unitsPerCase?: number; bottleTypeId?: number }
+export type ProductForm = { sku: string; name: string; brand?: string; unit: string; price: number; stock?: number; image?: string; unitsPerCase?: number; bottleTypeId?: number; threshold?: number }
 
 type ProductResponse = {
   id: number; sku: string; name: string; brand: string | null; unit: string; image: string | null
   unitsPerCase: number | null; bottleTypeId: number | null; bottleTypeName: string | null; salePrice: number; active: boolean
+  lowStockThreshold?: number
 }
 
 const fromDemo = (product: Product): CatalogItem => ({
@@ -37,13 +40,15 @@ const fromDemo = (product: Product): CatalogItem => ({
 
 const fromResponse = (product: ProductResponse, available?: number): CatalogItem => ({
   id: String(product.id), sku: product.sku, name: product.name, brand: product.brand ?? 'Chưa có thương hiệu', unit: product.unit, price: Number(product.salePrice),
-  active: product.active, stock: available, lowStock: available === 0, image: resolveProductImage(product),
+  active: product.active, stock: available, image: resolveProductImage(product), threshold: product.lowStockThreshold,
+  lowStock: available !== undefined && (product.lowStockThreshold === undefined ? available === 0 : available <= product.lowStockThreshold),
   unitsPerCase: product.unitsPerCase ?? undefined, bottleTypeId: product.bottleTypeId ?? undefined, bottleTypeName: product.bottleTypeName ?? undefined,
 })
 
 const toRequest = (form: ProductForm) => ({
   name: form.name.trim(), brand: form.brand?.trim() || null, unit: form.unit, salePrice: form.price,
   unitsPerCase: form.unitsPerCase ?? null, bottleTypeId: form.bottleTypeId ?? null, image: form.image ?? null,
+  lowStockThreshold: form.threshold ?? null,
 })
 
 /** Nhân viên chưa xem được tồn kho thì danh mục vẫn hiện, chỉ thiếu số tồn. */

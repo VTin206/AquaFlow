@@ -77,8 +77,8 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
         layout="vertical"
         disabled={save.isPending}
         initialValues={product
-          ? { sku: product.sku, name: product.name, brand: product.brand === 'Chưa có thương hiệu' ? undefined : product.brand, unit: product.unit, price: product.price, unitsPerCase: product.unitsPerCase, bottleTypeId: product.bottleTypeId }
-          : { unit: 'Bình', price: 0, stock: 0 }}
+          ? { sku: product.sku, name: product.name, brand: product.brand === 'Chưa có thương hiệu' ? undefined : product.brand, unit: product.unit, price: product.price, unitsPerCase: product.unitsPerCase, bottleTypeId: product.bottleTypeId, threshold: product.threshold }
+          : { unit: 'Bình', price: 0, stock: 0, threshold: 10 }}
         onFinish={submit}
         preserve={false}
       >
@@ -147,6 +147,11 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
               <Col xs={24} sm={10}>
                 <Form.Item name="unitsPerCase" label="Số đơn vị / thùng">
                   <InputNumber min={1} precision={0} style={{ width: '100%' }} placeholder="Không bắt buộc" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={14}>
+                <Form.Item name="threshold" label="Tồn tối thiểu" extra="Khả dụng từ mức này trở xuống được cảnh báo sắp hết." rules={[{ required: true, message: 'Nhập tồn tối thiểu.' }]}>
+                  <InputNumber min={0} precision={0} style={{ width: '100%' }} />
                 </Form.Item>
               </Col>
               <Col xs={24}>

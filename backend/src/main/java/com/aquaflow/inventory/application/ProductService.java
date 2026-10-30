@@ -34,6 +34,7 @@ public class ProductService {
                 request.sku(), request.name(), request.brand(), request.unit(),
                 request.unitsPerCase(), bottleType, request.salePrice());
         product.setImage(request.image());
+        if (request.lowStockThreshold() != null) product.setLowStockThreshold(request.lowStockThreshold());
         return toResponse(productRepository.save(product));
     }
 
@@ -61,7 +62,7 @@ public class ProductService {
                 bottleType == null ? null : bottleType.getName(),
                 product.getSalePrice(),
                 product.isActive(),
-                product.getCreatedAt(), product.getImage());
+                product.getCreatedAt(), product.getImage(), product.getLowStockThreshold());
     }
 
     @Transactional(readOnly = true)
@@ -85,6 +86,7 @@ public class ProductService {
                 request.unitsPerCase(), findBottleType(request.bottleTypeId()), request.salePrice());
         // Older clients may omit image; preserve the existing photo in that case.
         if (request.image() != null) product.setImage(request.image().isBlank() ? null : request.image());
+        if (request.lowStockThreshold() != null) product.setLowStockThreshold(request.lowStockThreshold());
         return toResponse(product);
     }
 

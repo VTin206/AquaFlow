@@ -24,6 +24,12 @@ public class Supplier {
     @Column(columnDefinition = "TEXT")
     private String address;
 
+    @Column(name = "contact_name", length = 150)
+    private String contactName;
+
+    @Column(length = 254)
+    private String email;
+
     @Column(nullable = false)
     private boolean active;
 
@@ -43,6 +49,12 @@ public class Supplier {
         this.address = address;
     }
 
+    /** Null keeps the current value so older clients that omit these fields do not erase them. */
+    public void updateContact(String contactName, String email) {
+        if (contactName != null) this.contactName = contactName.isBlank() ? null : contactName.trim();
+        if (email != null) this.email = email.isBlank() ? null : email.trim();
+    }
+
     public void deactivate() {
         this.active = false;
     }
@@ -51,5 +63,7 @@ public class Supplier {
     public String getName() { return name; }
     public String getPhone() { return phone; }
     public String getAddress() { return address; }
+    public String getContactName() { return contactName; }
+    public String getEmail() { return email; }
     public boolean isActive() { return active; }
 }

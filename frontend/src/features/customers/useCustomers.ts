@@ -13,12 +13,16 @@ export const customerKeys = {
   ledger: (customerId: string) => ['customers', customerId, 'ledger'] as const,
 }
 
-// Tài khoản thật: CustomerController chỉ có họ tên và số điện thoại; địa chỉ giao quản lý riêng theo từng khách.
-type CustomerResponse = { id: number; fullName: string; phone: string | null; createdAt: string }
+// Tài khoản thật: CustomerController; địa chỉ giao quản lý riêng theo từng khách.
+type CustomerResponse = {
+  id: number; fullName: string; phone: string | null; createdAt: string
+  customerType?: Customer['type'] | null; area?: string | null; note?: string | null
+}
 
-/** Field BE chưa có để giá trị trung tính; giao diện ẩn chúng qua `useFeature`. */
+/** Sổ vỏ, công nợ BE chưa có nên để giá trị trung tính; giao diện ẩn chúng qua `useFeature`. */
 const fromResponse = (customer: CustomerResponse, orders: number): Customer => ({
-  id: String(customer.id), name: customer.fullName, phone: customer.phone ?? '', type: 'Cá nhân', area: '', addresses: [],
+  id: String(customer.id), name: customer.fullName, phone: customer.phone ?? '', type: customer.customerType ?? 'Cá nhân', area: customer.area ?? '',
+  note: customer.note ?? undefined, addresses: [],
   legacyOrders: 0, initials: initialsOf(customer.fullName), orders, bottlesHeld: 0, depositHeld: 0, debt: 0,
 })
 
@@ -70,7 +74,11 @@ const useInvalidateCustomers = () => {
   return () => Promise.all([invalidateLiveData(queryClient), queryClient.invalidateQueries({ queryKey: customerKeys.all })])
 }
 
-const toRequest = (draft: CustomerDraft) => ({ fullName: draft.name.trim(), phone: draft.phone?.replace(/[\s().-]/g, '') || null })
+// Chuỗi rỗng để BE xóa khu vực/ghi chú cũ; null là giữ nguyên.
+const toRequest = (draft: CustomerDraft) => ({
+  fullName: draft.name.trim(), phone: draft.phone?.replace(/[\s().-]/g, '') || null,
+  customerType: draft.type, area: draft.area?.trim() ?? '', note: draft.note?.trim() ?? '',
+})
 
 /** Thêm mới khi không có `id`, cập nhật khi có. */
 export function useSaveCustomer() {
