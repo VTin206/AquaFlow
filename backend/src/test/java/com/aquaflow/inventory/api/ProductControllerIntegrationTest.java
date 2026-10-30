@@ -104,6 +104,16 @@ class ProductControllerIntegrationTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminWithoutActiveFilterListsEveryProduct() throws Exception {
+        when(productService.findAll(null)).thenReturn(List.of(sampleProduct()));
+
+        mockMvc.perform(get("/api/v1/products"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].sku").value("NUOC-19L"));
+    }
+
+    @Test
     void anonymousUserCannotListInactiveProducts() throws Exception {
         when(productService.findAll(true)).thenReturn(List.of(sampleProduct()));
 
