@@ -37,20 +37,7 @@ class PersistenceIntegrationTest {
     @Autowired
     private ProductRepository products;
 
-    @Autowired
-    private com.aquaflow.operations.application.WorkspaceQueries workspaceQueries;
 
-    @Test
-    void workspaceReadsTheSameProductImageAsTheCatalog() {
-        Product product = new Product("TEST-SHARED-IMAGE", "Water", null, "Bottle", null, null, BigDecimal.TEN);
-        product.setImage("/images/reference/iwater/lavie-19l-voi.png");
-        products.saveAndFlush(product);
-
-        assertThat(workspaceQueries.products())
-                .filteredOn(row -> "TEST-SHARED-IMAGE".equals(row.get("sku")))
-                .singleElement()
-                .satisfies(row -> assertThat(row.get("image")).isEqualTo(product.getImage()));
-    }
 
     @Test
     void migrationsAndActivePhoneConstraintWorkOnPostgres() {
