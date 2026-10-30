@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { App, type MenuProps } from 'antd'
-import { Check, LogOut, Monitor, Moon, Sun } from 'lucide-react'
-import { setColorMode, useColorMode, type ColorMode } from '../app/colorMode'
+import { Check, LogOut } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { roleNames, type RoleCode } from '../features/auth/permissions'
@@ -17,23 +16,6 @@ export function useAccountMenuItems(): MenuProps['items'] {
   const queryClient = useQueryClient()
   const staff = useStaff()
   const navigate = useNavigate()
-  const { selected: colorMode } = useColorMode()
-  const modes: [ColorMode, string, typeof Sun][] = [['light', 'Sáng', Sun], ['dark', 'Tối', Moon], ['system', 'Theo máy', Monitor]]
-  // Giao diện sáng/tối: dấu ✓ đánh dấu lựa chọn hiện tại.
-  const themeItems: MenuProps['items'] = [
-    {
-      type: 'group',
-      key: 'theme',
-      label: 'Giao diện',
-      children: modes.map(([value, label, Icon]) => ({
-        key: `theme:${value}`,
-        icon: <Icon size={16} />,
-        label: <span className="af-menu-check">{label}{colorMode === value && <Check size={14} aria-hidden />}</span>,
-        onClick: () => setColorMode(value),
-      })),
-    },
-    { type: 'divider' },
-  ]
   // Dev: đổi tài khoản không cần qua trang đăng nhập; xóa cache để không lẫn dữ liệu của tài khoản trước.
   const switchTo = async (account: DevAccount) => {
     try {
@@ -79,11 +61,10 @@ export function useAccountMenuItems(): MenuProps['items'] {
           })),
         },
         { type: 'divider' },
-        ...themeItems,
         ...switchItems,
         logoutItem,
       ]
-    : [...themeItems, ...switchItems, logoutItem]
+    : [...switchItems, logoutItem]
 }
 
 /** Dữ liệu mẫu ghi tên và kiểm tra quyền theo nhân viên đang dùng, giống backend đọc từ JWT. */

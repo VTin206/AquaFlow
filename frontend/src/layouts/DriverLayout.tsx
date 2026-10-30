@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronDown, Waves } from 'lucide-react'
 import { Link, Navigate, Outlet, useLocation } from 'react-router'
 import { canOpen, homeOf } from '../features/auth/permissions'
 import { useStaff } from '../features/auth/useStaff'
+import { ThemeToggle } from './ThemeToggle'
 import { initialsOf, useAccountMenuItems, useMockSession } from './useAccountMenu'
 
 /**
@@ -32,6 +33,7 @@ export function DriverLayout() {
         )}
         <div className="af-driver-bar-right">
           {staff?.isDemo && <span className="af-demo-label">Dữ liệu mẫu</span>}
+          <ThemeToggle />
           <Dropdown trigger={['click']} menu={{ items: menuItems }}>
             <button type="button" className="af-account-menu af-driver-account" aria-label="Menu tài khoản">
               <Avatar size={32} className="af-avatar">{initialsOf(staff?.name ?? 'A')}</Avatar>

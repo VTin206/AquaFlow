@@ -50,13 +50,13 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
   --af-primary: #3aa6d6;
-  --af-primary-soft: #12324a;
-  --af-text: #d5e1ec;
-  --af-text-strong: #eef4fa;
-  --af-text-secondary: #9fb3c5;
-  --af-text-tertiary: #7f94a7;
-  --af-border: #243445;
-  --af-bg: #0e1620;
+  --af-primary-soft: #13213a;
+  --af-text: #cbd5e1;
+  --af-text-strong: #e2e8f0;
+  --af-text-secondary: #94a3b8;
+  --af-text-tertiary: #718096;
+  --af-border: #1c2333;
+  --af-bg: #0a0f1a;
   --af-warning: #e2a03f;
   --af-danger: #f07171;
   --af-money-due: #e8a24a;
@@ -64,19 +64,21 @@
   --af-money-refund: #f07171;
   --af-money-deposit: #5bb8e3;
   --af-accent: #e2a03f;
-  --af-surface: #141f2b;
-  --af-surface-muted: #182533;
-  --af-surface-hover: #1c2a39;
-  --af-surface-sunken: #1a2734;
-  --af-border-strong: #2f4256;
-  --af-chrome: #111b26;
+  --af-surface: #0f1626;
+  --af-surface-muted: #121a2c;
+  --af-surface-hover: #151f33;
+  --af-surface-sunken: #0b111d;
+  --af-border-strong: #273042;
+  --af-chrome: #080c15;
   --af-accent-soft: #3a2a12;
-  --af-chart-bar: #1f4d66;
-  --af-chart-bar-hover: #2f6d8f;
+  --af-chart-bar: #24597a;
+  --af-chart-bar-hover: #3a7fa8;
   --af-shadow-chrome: #0006;
   --af-shadow-primary: #0006;
   --af-shadow-card: #0003;
 }
+/* Tối: sidebar cùng màu thanh trên cùng, nội dung nằm trên nền navy. */
+:root[data-theme="dark"] .af-nav { background: var(--af-chrome); }
 
 * {
   box-sizing: border-box;
@@ -524,7 +526,6 @@ body {
 .af-appointment.is-danger { color: var(--af-danger); font-weight: 500; }
 
 /* Mục chọn trong menu có dấu ✓ bên phải. */
-.af-menu-check { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 
 /* Icon trong ô nhập (điện thoại, tìm kiếm, khóa...): mặc định AntD chỉ cách chữ 4px, nới ra cho dễ đọc. */
 .ant-input-affix-wrapper > .ant-input-prefix { margin-inline-end: 10px; }
@@ -1150,7 +1151,7 @@ body {
 .af-driver { max-width: 640px; }
 /* Khung riêng của nhân viên giao hàng. */
 .af-driver-shell { min-height: 100vh; background: var(--af-bg); }
-.af-driver-bar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 56px; padding: 0 16px; background: var(--af-surface); border-bottom: 1px solid var(--af-border); }
+.af-driver-bar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 56px; padding: 0 16px; background: var(--af-chrome); border-bottom: 1px solid var(--af-border); }
 .af-driver-bar .af-topbar-brand small { color: var(--af-text-tertiary); font-size: 13px; font-weight: 500; padding-left: 8px; border-left: 1px solid var(--af-border); }
 .af-driver-bar-right { display: flex; align-items: center; gap: 8px; }
 .af-driver-account { display: flex; align-items: center; gap: 4px; padding: 2px; border: 0; background: none; cursor: pointer; color: var(--af-text-secondary); }
@@ -1452,3 +1453,17 @@ body {
   .af-shop-cart-label { display: none; }
   .af-shop-hero ul { display: none; }
 }
+
+/* Nút + menu chọn giao diện sáng/tối/hệ thống trên thanh trên cùng. */
+.af-theme-toggle.ant-btn { width: 34px; height: 34px; border-radius: 10px; box-shadow: none; }
+.af-theme-menu .ant-dropdown-menu { min-width: 210px; padding: 4px; border: 1px solid var(--af-border); }
+.af-theme-menu .ant-dropdown-menu-item-group-title { padding: 6px 10px 4px; color: var(--af-text-tertiary); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.af-theme-menu .ant-dropdown-menu-item { padding: 5px 10px !important; border-radius: 8px !important; }
+.af-theme-menu .ant-dropdown-menu-item .ant-dropdown-menu-item-icon { margin-inline-end: 10px; }
+.af-theme-option { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.af-theme-option > span { display: flex; flex-direction: column; line-height: 1.3; }
+.af-theme-option strong { font-size: 14px; font-weight: 600; }
+.af-theme-option small { color: var(--af-text-secondary); font-size: 12px; }
+.af-theme-option > svg { flex: none; color: var(--af-primary); }
+.af-theme-menu .ant-dropdown-menu-item-selected strong { color: var(--af-primary); }
+.af-theme-menu .ant-dropdown-menu-item-selected { background: var(--af-primary-soft) !important; }

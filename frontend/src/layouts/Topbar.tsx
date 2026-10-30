@@ -5,6 +5,7 @@ import { Link } from 'react-router'
 import { useStaff } from '../features/auth/useStaff'
 import { useFeature } from '../shared/features'
 import { NotificationPopover } from './NotificationPopover'
+import { ThemeToggle } from './ThemeToggle'
 import { initialsOf, useAccountMenuItems } from './useAccountMenu'
 
 const dateFormatter = new Intl.DateTimeFormat('vi-VN', {
@@ -61,6 +62,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
             <Button type="text" className="af-topbar-icon" aria-label="Thông báo (chưa hỗ trợ)" icon={<Bell size={19} />} disabled />
           </Tooltip>
         )}
+        <ThemeToggle />
         <Dropdown
           trigger={['click']}
           menu={{ items: menuItems }}
