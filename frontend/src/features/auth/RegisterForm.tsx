@@ -22,20 +22,23 @@ export function RegisterForm({ size = 'large' }: { size?: 'middle' | 'large' }) 
         <Form.Item label="Email" name="email" rules={[{ required: true, type: 'email', whitespace: true, message: 'Nhập email hợp lệ.' }]}>
           <Input type="email" size={size} prefix={<Mail size={17} aria-hidden />} placeholder="name@example.com" autoComplete="email" autoCapitalize="none" spellCheck={false} />
         </Form.Item>
-        <Form.Item label="Mật khẩu" name="password" rules={[{ required: true, message: 'Nhập mật khẩu.' }, { min: 8, max: 128, message: 'Mật khẩu có từ 8 đến 128 ký tự.' }]}>
-          <Input.Password size={size} prefix={<LockKeyhole size={17} aria-hidden />} placeholder="Ít nhất 8 ký tự" autoComplete="new-password" />
-        </Form.Item>
-        <Form.Item
-          label="Nhập lại mật khẩu"
-          name="confirm"
-          dependencies={['password']}
-          rules={[
-            { required: true, message: 'Nhập lại mật khẩu.' },
-            ({ getFieldValue }) => ({ validator: (_, value) => (!value || value === getFieldValue('password') ? Promise.resolve() : Promise.reject(new Error('Mật khẩu nhập lại không khớp.'))) }),
-          ]}
-        >
-          <Input.Password size={size} prefix={<LockKeyhole size={17} aria-hidden />} placeholder="Nhập lại mật khẩu" autoComplete="new-password" />
-        </Form.Item>
+        {/* Hai ô mật khẩu đứng cạnh nhau trong khung hẹp (xem .af-auth-modal). */}
+        <div className="af-register-passwords">
+          <Form.Item label="Mật khẩu" name="password" rules={[{ required: true, message: 'Nhập mật khẩu.' }, { min: 8, max: 128, message: 'Mật khẩu có từ 8 đến 128 ký tự.' }]}>
+            <Input.Password size={size} prefix={<LockKeyhole size={17} aria-hidden />} placeholder="Ít nhất 8 ký tự" autoComplete="new-password" />
+          </Form.Item>
+          <Form.Item
+            label="Nhập lại mật khẩu"
+            name="confirm"
+            dependencies={['password']}
+            rules={[
+              { required: true, message: 'Nhập lại mật khẩu.' },
+              ({ getFieldValue }) => ({ validator: (_, value) => (!value || value === getFieldValue('password') ? Promise.resolve() : Promise.reject(new Error('Mật khẩu nhập lại không khớp.'))) }),
+            ]}
+          >
+            <Input.Password size={size} prefix={<LockKeyhole size={17} aria-hidden />} placeholder="Nhập lại mật khẩu" autoComplete="new-password" />
+          </Form.Item>
+        </div>
         <Form.Item name="agree" valuePropName="checked" rules={[{ validator: (_, value) => (value ? Promise.resolve() : Promise.reject(new Error('Vui lòng đồng ý với điều khoản.'))) }]}>
           <Checkbox>Tôi đồng ý với điều khoản sử dụng của cửa hàng</Checkbox>
         </Form.Item>

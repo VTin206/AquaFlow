@@ -1174,7 +1174,7 @@ body {
 .af-shop-account-head > div { display: flex; flex-direction: column; min-width: 0; }
 .af-shop-account-head strong { color: var(--af-text-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .af-shop-account-head small { color: var(--af-text-secondary); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.af-shop-icons { display: flex; align-items: center; gap: 2px; }
+.af-shop-icons { display: flex; align-items: center; gap: 2px; margin-left: auto; }
 .af-shop-icons .ant-btn { color: var(--af-text-strong); }
 .af-shop-icons .ant-btn:hover { color: var(--af-primary); }
 .af-shop-header-inner { max-width: 1180px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 16px; }
@@ -1195,7 +1195,13 @@ body {
 .af-shop-footer a:hover, .af-shop-footer a:focus-visible, .af-shop-footer .af-link-button:hover, .af-shop-footer .af-link-button:focus-visible { color: var(--af-primary); }
 .af-auth-modal-brand { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 4px 0 8px; font-size: 18px; color: var(--af-text-strong); }
 .af-auth-modal-brand .af-brand-mark { width: 34px; height: 34px; }
-.af-auth-modal-switch { margin: 14px 0 0; text-align: center; color: var(--af-text-secondary); }
+/* Khung đăng nhập, đăng ký trên trang khách: thu gọn khoảng cách để vừa một màn hình. */
+.af-auth-modal .ant-form-item { margin-bottom: 12px; }
+.af-auth-modal .ant-form-item-label { padding-bottom: 4px; }
+.af-auth-modal .ant-tabs-nav { margin-bottom: 12px; }
+.af-auth-modal .af-register-passwords { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; }
+@media (max-width: 480px) { .af-auth-modal .af-register-passwords { grid-template-columns: 1fr; } }
+.af-auth-modal-switch { margin: 10px 0 0; text-align: center; color: var(--af-text-secondary); }
 .af-auth-modal-switch .ant-btn { padding: 0 4px; font-weight: 600; }
 .af-shop-footer-about p { margin: 12px 0 0; max-width: 340px; line-height: 1.7; }
 .af-shop-footer-contact li { display: flex; align-items: flex-start; gap: 8px; overflow-wrap: anywhere; }
@@ -1374,7 +1380,6 @@ body {
   .af-shop-header-inner { gap: 8px; }
   .af-shop-cart-label { display: none; }
   .af-shop-nav a { padding: 6px; }
-  .af-shop-nav a:first-child { display: none; }
   .af-shop-nav-text { display: none; }
   .af-shop-hero ul { display: none; }
 }

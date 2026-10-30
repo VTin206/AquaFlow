@@ -34,15 +34,12 @@ export function ShopLayout() {
             </span>
             <strong>AquaFlow</strong>
           </Link>
-          <nav className="af-shop-nav" aria-label="Điều hướng cửa hàng">
-            <NavLink to="/shop" end>
-              Sản phẩm
-            </NavLink>
-            {demo && <NavLink to="/track" aria-label="Tra cứu đơn">
+          {demo && <nav className="af-shop-nav" aria-label="Điều hướng cửa hàng">
+            <NavLink to="/track" aria-label="Tra cứu đơn">
               <PackageSearch size={16} aria-hidden />
               <span className="af-shop-nav-text">Tra cứu đơn</span>
-            </NavLink>}
-          </nav>
+            </NavLink>
+          </nav>}
           <div className="af-shop-icons">
             <Button type="text" shape="circle" icon={<Search size={20} />} aria-label="Tìm sản phẩm" title="Tìm sản phẩm" onClick={() => navigate('/shop', { state: { focusSearch: Date.now() } })} />
             <AccountMenu onLogin={() => setAuthTab('login')} />
