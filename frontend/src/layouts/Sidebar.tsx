@@ -63,19 +63,27 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: Sid
 
   return (
     <div className={`af-nav${collapsed ? ' is-collapsed' : ''}`}>
-      <Tooltip title={collapsed ? storeName : undefined} placement="right">
-        <div className="af-workspace">
+      {/* Nút thu gọn nằm cố định ở đầu menu: cạnh tên cửa hàng khi mở rộng, dưới icon khi thu gọn. */}
+      <div className="af-workspace">
+        <Tooltip title={collapsed ? storeName : undefined} placement="right">
           <span className="af-workspace-icon">
             <Droplets size={20} />
           </span>
-          {!collapsed && (
-            <div>
-              <strong className="af-cell-truncate" title={staff?.isDemo ? settings?.storeName : undefined}>{storeName}</strong>
-              <small>Quản lý đại lý nước</small>
-            </div>
-          )}
-        </div>
-      </Tooltip>
+        </Tooltip>
+        {!collapsed && (
+          <div className="af-workspace-text">
+            <strong className="af-cell-truncate" title={staff?.isDemo ? settings?.storeName : undefined}>{storeName}</strong>
+            <small>Quản lý đại lý nước</small>
+          </div>
+        )}
+        {onToggleCollapse && (
+          <Tooltip title={collapsed ? 'Mở rộng menu' : 'Thu gọn menu'} placement="right">
+            <button type="button" className="af-sider-toggle" aria-label={collapsed ? 'Mở rộng menu' : 'Thu gọn menu'} aria-expanded={!collapsed} onClick={onToggleCollapse}>
+              {collapsed ? <PanelLeftOpen size={16} strokeWidth={1.8} /> : <PanelLeftClose size={16} strokeWidth={1.8} />}
+            </button>
+          </Tooltip>
+        )}
+      </div>
       <Menu
         mode="inline"
         items={items}
@@ -99,8 +107,6 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: Sid
             location.pathname === '/settings',
           )}
         {footerLink('Trợ giúp', <LifeBuoy size={18} strokeWidth={1.8} />, () => message.info('Hướng dẫn sử dụng sẽ được bổ sung.'))}
-        {onToggleCollapse &&
-          footerLink(collapsed ? 'Mở rộng menu' : 'Thu gọn menu', collapsed ? <PanelLeftOpen size={18} strokeWidth={1.8} /> : <PanelLeftClose size={18} strokeWidth={1.8} />, onToggleCollapse)}
       </div>
     </div>
   )

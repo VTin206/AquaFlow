@@ -17,11 +17,19 @@ const queryClient = new QueryClient({
   },
 })
 
+// Dấu * đỏ đặt sau nhãn trường bắt buộc; ô nhập vẫn có aria-required nên trình đọc màn hình đọc được.
+const requiredMark = (label: ReactNode, { required }: { required: boolean }) => (
+  <>
+    {label}
+    {required && <span className="af-required-mark" aria-hidden>*</span>}
+  </>
+)
+
 /** Gom các provider dùng chung: dữ liệu (React Query), giao diện (Ant Design), điều hướng (Router). */
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <ConfigProvider locale={viVN} theme={appTheme} form={{ requiredMark: true }}>
+      <ConfigProvider locale={viVN} theme={appTheme} form={{ requiredMark }}>
         <AntApp message={{ maxCount: 3 }}>
           <AuthProvider>
             <BrowserRouter>{children}</BrowserRouter>

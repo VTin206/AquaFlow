@@ -287,7 +287,11 @@ body {
   background: #f2f4f7;
 }
 /* Sidebar thu gọn: chỉ còn icon, nhãn hiện ở tooltip. */
-.af-nav.is-collapsed .af-workspace { justify-content: center; margin: 0 12px 20px; padding: 10px 0; }
+.af-workspace-text { flex: 1; min-width: 0; }
+.af-sider-toggle { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 28px; height: 28px; padding: 0; border: 1px solid var(--af-border); border-radius: 6px; background: #fff; color: var(--af-text-secondary); cursor: pointer; }
+.af-sider-toggle:hover { color: var(--af-primary); border-color: var(--af-primary); }
+.af-sider-toggle:focus-visible { outline: 2px solid var(--af-primary); outline-offset: 2px; }
+.af-nav.is-collapsed .af-workspace { flex-direction: column; justify-content: center; gap: 12px; margin: 0 12px 20px; padding: 10px 0; }
 .af-nav.is-collapsed .af-menu { padding: 0 8px; }
 .af-nav.is-collapsed .af-menu .ant-menu-item-divider { margin: 8px 12px; }
 .af-nav.is-collapsed .af-sider-footer { padding: 12px 8px; }
@@ -443,6 +447,9 @@ body {
 .af-inline-icon {
   vertical-align: -2px;
 }
+
+/* Dấu * của trường bắt buộc, đặt sau nhãn. */
+.af-required-mark { margin-left: 4px; color: var(--af-danger); font-weight: 600; }
 
 /* ---------- Form trong hộp thoại ---------- */
 /* Hộp thoại nhiều trường: dồn khoảng cách để thấy hết form, ít phải cuộn. Lỗi vẫn hiện ngay dưới ô. */
