@@ -51,7 +51,8 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
     {
       title: 'Khách hàng',
       dataIndex: 'customer',
-      width: compact ? 180 : 220,
+      // Không đặt độ rộng: cột tên nhận phần dư khi màn hình rộng, các cột số giữ vừa nội dung.
+      minWidth: compact ? 180 : 220,
       render: (_, order) => (
         <div className="af-cell-stack">
           <span className="af-cell-truncate" title={order.customer}>{order.customer}</span>
@@ -61,7 +62,7 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
         </div>
       ),
     },
-    ...(compact ? [] : [{ ...sort.column('Giờ đặt', 'time', 'time'), dataIndex: 'time', width: 130, sorter: (a: Order, b: Order) => (createdAtOf(a) ?? a.time).localeCompare(createdAtOf(b) ?? b.time) }]),
+    ...(compact ? [] : [{ ...sort.column('Giờ đặt', 'time', 'time'), dataIndex: 'time', width: 110, sorter: (a: Order, b: Order) => (createdAtOf(a) ?? a.time).localeCompare(createdAtOf(b) ?? b.time) }]),
     {
       title: 'Tổng tiền',
       ...(!compact && sort.column('Tổng tiền', 'total', 'number')),

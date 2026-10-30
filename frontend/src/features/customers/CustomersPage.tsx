@@ -48,7 +48,7 @@ export function CustomersPage() {
     activate.mutateAsync(customer.id).then(() => { message.success(`Đã khôi phục hồ sơ ${customer.name}.`) }, (error: Error) => { message.error(error.message) })
   const archivedColumns: TableColumnsType<Customer> = [
     {
-      title: 'Khách hàng', dataIndex: 'name', width: 260,
+      title: 'Khách hàng', dataIndex: 'name', minWidth: 260,
       render: (_, customer) => (
         <div className="af-cell-stack">
           <span className="af-name-with-tag"><span className="af-cell-truncate">{customer.name}</span><Tag className="af-inactive-tag">Đã lưu trữ</Tag></span>
@@ -81,7 +81,8 @@ export function CustomersPage() {
     {
       ...sort.column('Khách hàng', 'name', 'text'),
       dataIndex: 'name',
-      width: 260,
+      // Cột tên nhận phần dư khi màn hình rộng, các cột số giữ vừa nội dung.
+      minWidth: 260,
       sorter: (a, b) => a.name.localeCompare(b.name, 'vi'),
       render: (_, customer) => (
         <div className="af-cell-stack">
