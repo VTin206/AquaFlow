@@ -35,7 +35,8 @@ public class BottleTypeController {
         @ApiResponse(responseCode = "200", description = "List of bottle types")
     })
     public ResponseEntity<List<BottleTypeResponse>> getAllBottleTypes(@RequestParam(required = false) Boolean active, Authentication authentication) {
-        return ResponseEntity.ok(bottleTypeService.findAll(isAdmin(authentication) ? active : true));
+        // Boolean.TRUE keeps both branches boxed; a primitive `true` would unbox a null `active` and throw.
+        return ResponseEntity.ok(bottleTypeService.findAll(isAdmin(authentication) ? active : Boolean.TRUE));
     }
 
     @GetMapping("/{id}")

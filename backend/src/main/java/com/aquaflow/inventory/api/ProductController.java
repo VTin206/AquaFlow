@@ -35,7 +35,8 @@ public class ProductController {
         @ApiResponse(responseCode = "200", description = "List of products")
     })
     public ResponseEntity<List<ProductResponse>> getAllProducts(@RequestParam(required = false) Boolean active, Authentication authentication) {
-        return ResponseEntity.ok(productService.findAll(isAdmin(authentication) ? active : true));
+        // Boolean.TRUE keeps both branches boxed; a primitive `true` would unbox a null `active` and throw.
+        return ResponseEntity.ok(productService.findAll(isAdmin(authentication) ? active : Boolean.TRUE));
     }
 
     @GetMapping("/{id}")
