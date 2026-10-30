@@ -35,7 +35,7 @@ function TopbarClock() {
 
 /** Thanh ứng dụng và các thao tác nhanh. */
 export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
-  const { logout, login } = useAuth()
+  const { logout, login, enterDemo } = useAuth()
   const { message } = App.useApp()
   const queryClient = useQueryClient()
   const staff = useStaff()
@@ -51,19 +51,20 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
       message.error(error instanceof Error ? error.message : 'Đăng nhập thất bại.')
     }
   }
-  const switchItems: MenuProps['items'] = devAccounts.length
+  const switchTargets: NonNullable<MenuProps['items']> = [
+    ...(staff && !staff.isDemo
+      ? [{ key: 'switch:demo', label: 'Bản dùng thử', onClick: () => { enterDemo(); queryClient.clear(); navigate('/', { replace: true }) } }]
+      : []),
+    ...devAccounts.map((account) => ({
+      key: `switch:${account.email}`,
+      label: account.label,
+      title: account.email,
+      onClick: () => void switchTo(account),
+    })),
+  ]
+  const switchItems: MenuProps['items'] = import.meta.env.DEV && switchTargets.length
     ? [
-        {
-          type: 'group',
-          key: 'switch',
-          label: 'Đổi tài khoản (dev)',
-          children: devAccounts.map((account) => ({
-            key: `switch:${account.email}`,
-            label: account.label,
-            title: account.email,
-            onClick: () => void switchTo(account),
-          })),
-        },
+        { type: 'group', key: 'switch', label: 'Đổi tài khoản (dev)', children: switchTargets },
         { type: 'divider' },
       ]
     : []
