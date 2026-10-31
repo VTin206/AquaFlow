@@ -2128,3 +2128,21 @@ body {
 .af-theme-menu .ant-dropdown-menu-item-selected {
   background: var(--af-primary-soft) !important;
 }
+
+/* Thanh thao tác khi đã tích chọn dòng trong bảng (BulkBar). */
+.af-bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--af-border);
+  background: var(--af-primary-soft);
+  color: var(--af-text-strong);
+}
+.af-bulk-errors {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--af-text-secondary);
+}

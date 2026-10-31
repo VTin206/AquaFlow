@@ -12,6 +12,7 @@ import { LateTag } from './LateTag'
 import { OrderStatusTag } from './OrderStatusTag'
 import { OrderDetailsModal } from './OrderDetailsModal'
 import { OrderCards } from './OrderCards'
+import { OrderBulkActions } from './OrderBulkActions'
 
 type OrdersTableProps = {
   orders: Order[]
@@ -29,6 +30,9 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
   // Tài khoản thật: BE chưa có phiếu thu nên không tính "còn phải thu"; thao tác đơn nằm trong chi tiết đơn.
   const showPayments = useFeature('orderPayments')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  // Tích chọn nhiều đơn (chỉ bảng đầy đủ); chỉ tính các đơn còn hiện theo bộ lọc.
+  const [checkedIds, setCheckedIds] = useState<string[]>([])
+  const checked = compact ? [] : orders.filter((order) => checkedIds.includes(order.id))
   const [pageSize, setPageSize] = useState(tablePagination.defaultPageSize ?? 10)
   // Mặc định đưa đơn cần giao sớm nhất lên đầu.
   const sort = useColumnSort<Order>(compact ? null : { key: 'due', order: 'ascend' })
@@ -36,7 +40,7 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
   const longestCode = Math.max(0, ...orders.map((order) => (order.code ?? order.id).length))
   const codeWidth = Math.max(compact ? 110 : 150, longestCode * 9 + (compact ? 24 : 64))
   // Độ rộng tối thiểu của bảng = tổng các cột, để không tự giãn rồi che cột cố định bên phải.
-  const tableMinWidth = codeWidth + (compact ? 180 + 150 + 170 + 80 : 220 + 170 + 160 + 170 + 112)
+  const tableMinWidth = codeWidth + (compact ? 180 + 150 + 170 + 80 : 44 + 220 + 170 + 160 + 170 + 112)
   const columns: TableColumnsType<Order> = [
     {
       title: 'Mã đơn',
@@ -159,18 +163,31 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
           filterKey={filterKey}
         />
       ) : (
-        <Table<Order>
-          key={filterKey}
-          className="af-data-table af-table-flush"
-          rowKey="id"
-          columns={columns}
-          dataSource={orders}
-          loading={loading}
-          size="middle"
-          pagination={compact ? false : { ...tablePagination, pageSize, onShowSizeChange: (_, size) => setPageSize(size) }}
-          locale={{ emptyText }}
-          scroll={{ x: tableMinWidth, ...(!compact && { y: tableScrollHeight }) }}
-        />
+        <>
+          {!compact && <OrderBulkActions orders={checked} onSelect={setCheckedIds} />}
+          <Table<Order>
+            key={filterKey}
+            className="af-data-table af-table-flush"
+            rowKey="id"
+            columns={columns}
+            dataSource={orders}
+            loading={loading}
+            size="middle"
+            pagination={compact ? false : { ...tablePagination, pageSize, onShowSizeChange: (_, size) => setPageSize(size) }}
+            locale={{ emptyText }}
+            scroll={{ x: tableMinWidth, ...(!compact && { y: tableScrollHeight }) }}
+            rowSelection={
+              compact
+                ? undefined
+                : {
+                    selectedRowKeys: checked.map((order) => order.id),
+                    onChange: (keys) => setCheckedIds(keys.map(String)),
+                    fixed: 'left',
+                    columnWidth: 44,
+                  }
+            }
+          />
+        </>
       )}
       {selectedId &&
         (demo ? (

@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { App, Button, Card, Col, Dropdown, Grid, Input, Row, Segmented, Statistic, Table, Tag, Tooltip, type TableColumnsType } from 'antd'
-import { Ellipsis, Eye, Plus, Search } from 'lucide-react'
+import { Ellipsis, Eye, FileSpreadsheet, Plus, Search } from 'lucide-react'
+import { BulkBar } from '@/shared/components/BulkBar'
 import { Page } from '@/shared/components/Page'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { ToneLabel } from '@/shared/components/ToneLabel'
 import { QueryError } from '@/shared/components/QueryError'
 import { useColumnSort } from '@/shared/components/sortableColumn'
 import { Money } from '@/shared/components/Money'
+import { downloadExcel, type ExcelColumn } from '@/shared/utils/excel'
 import { currency } from '@/shared/utils/format'
 import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
 import { useFeature, useIsDemo } from '@/shared/features'
@@ -29,6 +31,8 @@ export function CustomersPage() {
   const customersQuery = useCustomers()
   const { message } = App.useApp()
   const canReactivate = useFeature('reactivate')
+  const [checkedIds, setCheckedIds] = useState<string[]>([])
+  const [exporting, setExporting] = useState(false)
   // Khách đã lưu trữ chỉ xem được khi BE có API (bản dùng thử thì luôn có).
   const [view, setView] = useState<'active' | 'archived'>('active')
   // Tải sẵn để hiện số đếm trên bộ lọc.
@@ -44,6 +48,35 @@ export function CustomersPage() {
   const visible = customers.filter((customer) =>
     matchesSearch(query, `${customerCode(customer)} ${customer.name} ${customer.phone} ${customer.area}`, customer.phone),
   )
+  // Chỉ tính các khách còn hiện theo ô tìm kiếm.
+  const checked = visible.filter((customer) => checkedIds.includes(customer.id))
+  const exportChecked = async () => {
+    setExporting(true)
+    const columns: ExcelColumn<Customer>[] = [
+      { title: 'Mã khách', width: 12, value: customerCode },
+      { title: 'Tên khách', width: 26, value: (customer) => customer.name },
+      { title: 'Số điện thoại', width: 15, value: (customer) => customer.phone },
+      { title: 'Loại', width: 14, value: (customer) => customer.type },
+      ...(showArea ? [{ title: 'Khu vực', width: 20, value: (customer: Customer) => customer.area }] : []),
+      { title: 'Địa chỉ giao', width: 40, value: (customer) => customer.addresses.join('; ') },
+      { title: 'Số đơn', width: 10, format: 'count', value: (customer) => customer.orders },
+      ...(showBottles
+        ? [
+            { title: 'Vỏ đang giữ', width: 12, format: 'count', value: (customer: Customer) => customer.bottlesHeld } as const,
+            { title: 'Tiền cọc đang giữ', width: 18, format: 'money', value: (customer: Customer) => customer.depositHeld } as const,
+          ]
+        : []),
+      ...(showDebt ? [{ title: 'Còn phải thu', width: 16, format: 'money', value: (customer: Customer) => customer.debt } as const] : []),
+      { title: 'Ghi chú', width: 30, value: (customer) => customer.note },
+    ]
+    try {
+      await downloadExcel(`khach-hang-${new Date().toISOString().slice(0, 10)}.xlsx`, 'Khách hàng', columns, checked)
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : 'Không xuất được tệp Excel.')
+    } finally {
+      setExporting(false)
+    }
+  }
   const totalBottles = customers.reduce((sum, customer) => sum + customer.bottlesHeld, 0)
   const totalDeposit = customers.reduce((sum, customer) => sum + customer.depositHeld, 0)
   const totalDebt = customers.reduce((sum, customer) => sum + customer.debt, 0)
@@ -283,18 +316,31 @@ export function CustomersPage() {
                 onCreateOrder={setOrderFor}
               />
             ) : (
-              <Table<Customer>
-                key={query}
-                className="af-data-table af-table-flush"
-                size="middle"
-                rowKey="id"
-                columns={columns}
-                dataSource={visible}
-                loading={customersQuery.isPending}
-                pagination={tablePagination}
-                locale={{ emptyText: query.trim() ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.' }}
-                scroll={{ x: 920, y: tableScrollHeight }}
-              />
+              <>
+                <BulkBar count={checked.length} noun="khách" onClear={() => setCheckedIds([])}>
+                  <Button icon={<FileSpreadsheet size={16} />} loading={exporting} onClick={() => void exportChecked()}>
+                    Xuất Excel
+                  </Button>
+                </BulkBar>
+                <Table<Customer>
+                  key={query}
+                  className="af-data-table af-table-flush"
+                  size="middle"
+                  rowKey="id"
+                  columns={columns}
+                  dataSource={visible}
+                  loading={customersQuery.isPending}
+                  pagination={tablePagination}
+                  locale={{ emptyText: query.trim() ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.' }}
+                  scroll={{ x: 964, y: tableScrollHeight }}
+                  rowSelection={{
+                    selectedRowKeys: checked.map((customer) => customer.id),
+                    onChange: (keys) => setCheckedIds(keys.map(String)),
+                    fixed: 'left',
+                    columnWidth: 44,
+                  }}
+                />
+              </>
             )}
           </Card>
         </>

@@ -16,7 +16,14 @@ import {
 } from '../useInventory'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 
-type ReceiveStockModalProps = { open: boolean; onClose: () => void; defaultProductId?: string; receipt?: ReceiptView }
+type ReceiveStockModalProps = {
+  open: boolean
+  onClose: () => void
+  defaultProductId?: string
+  /** Điền sẵn nhiều dòng, ví dụ khi tích chọn các sản phẩm sắp hết ở bảng tồn kho. */
+  defaultLines?: { productId: string; received: number }[]
+  receipt?: ReceiptView
+}
 
 /** Phiếu nhập kiểm nhận: nhiều dòng, mỗi dòng là một lô có hạn dùng, số hỏng và giá vốn. */
 export function ReceiveStockModal(props: ReceiveStockModalProps) {
@@ -81,7 +88,7 @@ export function ReceiptResult({ receipt, onClose }: { receipt: ReceiptView; onCl
   )
 }
 
-function ReceiptDialog({ open, onClose, defaultProductId, receipt }: ReceiveStockModalProps) {
+function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt }: ReceiveStockModalProps) {
   const { message } = App.useApp()
   const caps = useInventoryCaps()
   const [form] = Form.useForm<ReceiptForm>()
@@ -167,7 +174,11 @@ function ReceiptDialog({ open, onClose, defaultProductId, receipt }: ReceiveStoc
               : {
                   receivedAt: today,
                   receiver: caps.receiver ? 'Nguyễn An' : undefined,
-                  lines: [{ productId: defaultProductId, received: 1, damaged: 0, costPrice: 0 }],
+                  lines: (defaultLines ?? [{ productId: defaultProductId, received: 1 }]).map((line) => ({
+                    ...line,
+                    damaged: 0,
+                    costPrice: 0,
+                  })),
                 }
           }
         >
