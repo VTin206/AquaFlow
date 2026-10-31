@@ -414,11 +414,15 @@ body {
 .af-tone.is-warning { --tone: var(--af-warning); --tone-soft: var(--af-warning-soft); }
 .af-tone.is-danger { --tone: var(--af-danger); --tone-soft: var(--af-danger-soft); }
 .af-tone.is-neutral { --tone: var(--af-text-tertiary); --tone-soft: var(--af-surface-sunken); }
-.ant-segmented-item-selected:has(.af-tone.is-success) { background: var(--af-success-soft); color: var(--af-success); }
-.ant-segmented-item-selected:has(.af-tone.is-warning) { background: var(--af-warning-soft); color: var(--af-warning); }
-.ant-segmented-item-selected:has(.af-tone.is-danger) { background: var(--af-danger-soft); color: var(--af-danger); }
-.ant-segmented-item-selected:has(.af-tone.is-neutral) { background: var(--af-surface-sunken); color: var(--af-text-strong); }
-.ant-segmented-item-selected .af-tone .af-count { background: var(--tone); color: var(--af-on-primary); }
+/* -selected-text gắn ngay khi bấm; -selected chỉ gắn sau khi thanh trượt chạy xong, nên tô cả thanh trượt cùng màu để không nháy màu mặc định. */
+.ant-segmented .ant-segmented-item-selected-text:has(.af-tone) { color: var(--tone-text); }
+.ant-segmented .ant-segmented-item-selected:has(.af-tone) { background: var(--tone-bg); }
+.ant-segmented-item-selected-text .af-tone .af-count { background: var(--tone); color: var(--af-on-primary); }
+.ant-segmented-item:has(.af-tone.is-success), .ant-segmented:has(.ant-segmented-item-selected-text .af-tone.is-success) { --tone-text: var(--af-success); --tone-bg: var(--af-success-soft); }
+.ant-segmented-item:has(.af-tone.is-warning), .ant-segmented:has(.ant-segmented-item-selected-text .af-tone.is-warning) { --tone-text: var(--af-warning); --tone-bg: var(--af-warning-soft); }
+.ant-segmented-item:has(.af-tone.is-danger), .ant-segmented:has(.ant-segmented-item-selected-text .af-tone.is-danger) { --tone-text: var(--af-danger); --tone-bg: var(--af-danger-soft); }
+.ant-segmented-item:has(.af-tone.is-neutral), .ant-segmented:has(.ant-segmented-item-selected-text .af-tone.is-neutral) { --tone-text: var(--af-text-strong); --tone-bg: var(--af-surface-sunken); }
+.ant-segmented:has(.ant-segmented-item-selected-text .af-tone) .ant-segmented-thumb { background: var(--tone-bg); }
 .af-order-id {
   align-items: center;
   display: inline-flex;
