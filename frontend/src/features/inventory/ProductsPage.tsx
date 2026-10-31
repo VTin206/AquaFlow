@@ -2,7 +2,7 @@ import { useState, type KeyboardEvent, type ReactNode } from 'react'
 import { App, Button, Card, Col, Dropdown, Empty, Input, Pagination, Row, Segmented, Select, Skeleton, Space, Tag, Tooltip, Typography, type MenuProps } from 'antd'
 import { Droplets, Ellipsis, FunnelX, LayoutGrid, Plus, Search } from 'lucide-react'
 import { Page } from '../../shared/components/Page'
-import { ToneLabel } from '../../shared/components/ToneLabel'
+import { CountLabel } from '../../shared/components/CountLabel'
 import { QueryError } from '../../shared/components/QueryError'
 import { useFeature, useIsDemo } from '../../shared/features'
 import { currency } from '../../shared/utils/format'
@@ -11,11 +11,6 @@ import { brandGroups, capacityGroups, catalogCategories, getBrandGroup, getCatal
 import { ProductFormModal } from './components/ProductFormModal'
 import { useActivateProduct, useCanManageProducts, useCatalog, useDeactivateProduct, type CatalogItem, type ProductStatus } from './productCatalog'
 
-const statusOptions: { value: ProductStatus; label: ReactNode }[] = [
-  { value: 'active', label: <ToneLabel tone="success">Đang bán</ToneLabel> },
-  { value: 'inactive', label: <ToneLabel tone="danger">Ngừng bán</ToneLabel> },
-  { value: 'all', label: 'Tất cả' },
-]
 
 function ProductImage({ product }: { product: CatalogItem }) {
   const [failed, setFailed] = useState(false)
@@ -37,8 +32,8 @@ export function ProductsPage() {
   const canManage = useCanManageProducts()
   const showDetails = useFeature('productCatalogDetails')
   const [status, setStatus] = useState<ProductStatus>('active')
-  // Nhân viên không quản lý chỉ xem sản phẩm đang bán (BE cũng giới hạn như vậy).
-  const productsQuery = useCatalog(canManage ? status : 'active')
+  // Quản lý tải hết một lần rồi lọc tại chỗ để đếm được từng trạng thái; nhân viên chỉ xem sản phẩm đang bán (BE cũng giới hạn như vậy).
+  const productsQuery = useCatalog(canManage ? 'all' : 'active')
   const deactivate = useDeactivateProduct()
   const activate = useActivateProduct()
   const canReactivate = useFeature('reactivate')
@@ -52,7 +47,14 @@ export function ProductsPage() {
   // undefined: đóng; null: thêm mới; CatalogItem: sửa.
   const [editing, setEditing] = useState<CatalogItem | null>()
   const [bottlesOpen, setBottlesOpen] = useState(false)
-  const products = productsQuery.data ?? []
+  const allProducts = productsQuery.data ?? []
+  const products = status === 'all' ? allProducts : allProducts.filter((product) => product.active === (status === 'active'))
+  const activeCount = allProducts.filter((product) => product.active).length
+  const statusOptions: { value: ProductStatus; label: ReactNode }[] = [
+    { value: 'active', label: <CountLabel label="Đang bán" count={activeCount} tone="success" /> },
+    { value: 'inactive', label: <CountLabel label="Ngừng bán" count={allProducts.length - activeCount} tone="danger" /> },
+    { value: 'all', label: <CountLabel label="Tất cả" count={allProducts.length} /> },
+  ]
   const keyword = normalizeSearch(query.trim())
   const brandName = (product: CatalogItem) => getBrandGroup(product.brand)?.name ?? product.brand
   // Bản dùng thử giới thiệu đủ các nhóm thương hiệu; tài khoản thật chỉ hiện thương hiệu đang có sản phẩm.
