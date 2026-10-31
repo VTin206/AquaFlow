@@ -1214,6 +1214,12 @@ body {
 
 /* Trang khách đặt hàng */
 .af-shop { min-height: 100dvh; display: flex; flex-direction: column; background: var(--af-bg); }
+.af-shop-topbar { background: var(--af-primary); color: #fff; font-size: 13px; }
+.af-shop-topbar-inner { max-width: 1180px; margin: 0 auto; padding: 6px 16px; display: flex; align-items: center; gap: 8px 24px; flex-wrap: wrap; }
+.af-shop-topbar-inner > * { display: inline-flex; align-items: center; gap: 6px; color: inherit; }
+.af-shop-topbar a:hover, .af-shop-topbar a:focus-visible { color: inherit; text-decoration: underline; }
+/* Tối: nền xanh sáng không đủ tương phản với chữ trắng, đổi sang nền xanh trầm, chữ xanh. */
+:root[data-theme="dark"] .af-shop-topbar { background: var(--af-primary-soft); color: var(--af-primary); border-bottom: 1px solid var(--af-border); }
 .af-shop-header { position: sticky; top: 0; z-index: 10; background: var(--af-chrome); box-shadow: 0 2px 8px var(--af-shadow-chrome); border-bottom: 1px solid var(--af-border); }
 .af-shop-account { width: 260px; display: flex; flex-direction: column; gap: 10px; }
 .af-shop-account-head { display: flex; align-items: center; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--af-border); }
@@ -1448,6 +1454,8 @@ body {
 @media (max-width: 640px) {
   .af-shop-header-inner { gap: 8px; }
   .af-shop-cart-label { display: none; }
+  .af-shop-topbar-inner { justify-content: center; }
+  .af-shop-topbar-hours { display: none; }
   .af-shop-hero ul { display: none; }
 }
 

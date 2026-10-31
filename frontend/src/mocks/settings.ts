@@ -6,6 +6,7 @@ export const initialSettings: StoreSettings = {
   address: '12 Đường số 3, Phường An Phú, TP. Hồ Chí Minh',
   phone: '0283 456 7890',
   email: 'lienhe@aquaflow.example',
+  openingHours: '6:00 – 21:00 hằng ngày',
   taxCode: '0312345678',
   bankName: 'Vietcombank',
   bankAccount: '0071000123456',

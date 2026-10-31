@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Alert, Badge, Button } from 'antd'
-import { ArrowLeft, PackageSearch, Search, ShoppingCart, Waves } from 'lucide-react'
+import { ArrowLeft, Clock3, PackageSearch, Phone, Search, ShoppingCart, Waves } from 'lucide-react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router'
 import { useSettings } from '../settings/settingsService'
 import { useCart } from './cart'
@@ -25,9 +25,20 @@ export function ShopLayout() {
   const cart = useCart()
   const [cartOpen, setCartOpen] = useState(false)
   const count = cart.reduce((sum, line) => sum + line.quantity, 0)
+  const tel = settings?.phone?.replace(/\s/g, '')
+  const hours = settings?.openingHours?.trim()
 
   return (
     <div className="af-shop">
+      {/* Thanh hotline cuộn đi theo trang, chỉ header bên dưới dính lại. Tài khoản thật chưa có API cài đặt nên chưa hiện. */}
+      {(tel || hours) && (
+        <div className="af-shop-topbar">
+          <div className="af-shop-topbar-inner">
+            {tel && <a href={`tel:${tel}`}><Phone size={14} aria-hidden /> Hotline đặt nước: <strong>{settings?.phone}</strong></a>}
+            {hours && <span className="af-shop-topbar-hours"><Clock3 size={14} aria-hidden /> Mở cửa {hours}</span>}
+          </div>
+        </div>
+      )}
       <header className="af-shop-header">
         <div className="af-shop-header-inner">
           <Link to="/shop" className="af-shop-brand">

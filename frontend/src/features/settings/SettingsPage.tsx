@@ -104,6 +104,9 @@ function SettingsForm({ settings }: { settings: StoreSettings }) {
                 </Form.Item>
               </Col>
             </Row>
+            <Form.Item name="openingHours" label="Giờ mở cửa" extra="Hiện cạnh hotline trên đầu trang đặt hàng." rules={[{ max: 100 }]}>
+              <Input placeholder="Vd. 6:00 – 21:00 hằng ngày" />
+            </Form.Item>
           </Card>
 
           <Card className="af-card af-settings-card" title="Chuyển khoản & hóa đơn">
