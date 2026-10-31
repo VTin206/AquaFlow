@@ -34,9 +34,6 @@
   --af-accent-soft: #fff1dc;
   /* Màu trạng thái cho bộ lọc (ToneLabel): đang dùng / cần chú ý / lỗi. */
   --af-success: #1f7a60;
-  --af-success-soft: #e3f4ec;
-  --af-warning-soft: #fff1dc;
-  --af-danger-soft: #fdecec;
   /* Chữ/nút trắng đặt trên nền màu thương hiệu; giữ trắng ở mọi chế độ. */
   --af-on-primary: #fff;
   /* Khung ảnh sản phẩm, logo, QR: ảnh có nền trắng nên khung luôn trắng. */
@@ -77,9 +74,6 @@
   --af-chrome: #080c15;
   --af-accent-soft: #3a2a12;
   --af-success: #4cc39a;
-  --af-success-soft: #10291f;
-  --af-warning-soft: #3a2a12;
-  --af-danger-soft: #3a1a1d;
   --af-chart-bar: #24597a;
   --af-chart-bar-hover: #3a7fa8;
   --af-shadow-chrome: #0006;
@@ -408,21 +402,15 @@ body {
   color: var(--af-on-primary);
 }
 
-/* Nhãn trạng thái (ToneLabel): bình thường giữ màu chữ mặc định, ô Segmented đang chọn mới đổi chữ và nền theo màu trạng thái. */
+/* Nhãn trạng thái (ToneLabel): bình thường giữ màu chữ mặc định, ô Segmented đang chọn mới đổi màu chữ theo trạng thái.
+   Dùng -selected-text vì antd gắn ngay khi bấm, còn -selected chỉ gắn sau khi thanh trượt chạy xong. */
 .af-tone { display: inline-flex; align-items: center; }
-.af-tone.is-success { --tone: var(--af-success); --tone-soft: var(--af-success-soft); }
-.af-tone.is-warning { --tone: var(--af-warning); --tone-soft: var(--af-warning-soft); }
-.af-tone.is-danger { --tone: var(--af-danger); --tone-soft: var(--af-danger-soft); }
-.af-tone.is-neutral { --tone: var(--af-text-tertiary); --tone-soft: var(--af-surface-sunken); }
-/* -selected-text gắn ngay khi bấm; -selected chỉ gắn sau khi thanh trượt chạy xong, nên tô cả thanh trượt cùng màu để không nháy màu mặc định. */
-.ant-segmented .ant-segmented-item-selected-text:has(.af-tone) { color: var(--tone-text); }
-.ant-segmented .ant-segmented-item-selected:has(.af-tone) { background: var(--tone-bg); }
+.af-tone.is-success { --tone: var(--af-success); }
+.af-tone.is-warning { --tone: var(--af-warning); }
+.af-tone.is-danger { --tone: var(--af-danger); }
+.af-tone.is-neutral { --tone: var(--af-text-strong); }
+.ant-segmented .ant-segmented-item-selected-text .af-tone { color: var(--tone); }
 .ant-segmented-item-selected-text .af-tone .af-count { background: var(--tone); color: var(--af-on-primary); }
-.ant-segmented-item:has(.af-tone.is-success), .ant-segmented:has(.ant-segmented-item-selected-text .af-tone.is-success) { --tone-text: var(--af-success); --tone-bg: var(--af-success-soft); }
-.ant-segmented-item:has(.af-tone.is-warning), .ant-segmented:has(.ant-segmented-item-selected-text .af-tone.is-warning) { --tone-text: var(--af-warning); --tone-bg: var(--af-warning-soft); }
-.ant-segmented-item:has(.af-tone.is-danger), .ant-segmented:has(.ant-segmented-item-selected-text .af-tone.is-danger) { --tone-text: var(--af-danger); --tone-bg: var(--af-danger-soft); }
-.ant-segmented-item:has(.af-tone.is-neutral), .ant-segmented:has(.ant-segmented-item-selected-text .af-tone.is-neutral) { --tone-text: var(--af-text-strong); --tone-bg: var(--af-surface-sunken); }
-.ant-segmented:has(.ant-segmented-item-selected-text .af-tone) .ant-segmented-thumb { background: var(--tone-bg); }
 .af-order-id {
   align-items: center;
   display: inline-flex;
