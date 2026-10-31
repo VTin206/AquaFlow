@@ -1215,7 +1215,7 @@ body {
 /* Trang khách đặt hàng */
 .af-shop { min-height: 100dvh; display: flex; flex-direction: column; background: var(--af-bg); }
 .af-shop-topbar { background: var(--af-primary); color: #fff; font-size: 13px; }
-.af-shop-topbar-inner { max-width: 1180px; margin: 0 auto; padding: 6px 16px; display: flex; align-items: center; gap: 8px 24px; flex-wrap: wrap; }
+.af-shop-topbar-inner { max-width: 1180px; margin: 0 auto; padding: 11px 16px; display: flex; align-items: center; gap: 8px 24px; flex-wrap: wrap; }
 .af-shop-topbar-inner > * { display: inline-flex; align-items: center; gap: 6px; color: inherit; }
 .af-shop-topbar a:hover, .af-shop-topbar a:focus-visible { color: inherit; text-decoration: underline; }
 .af-shop-topbar-account { margin-left: auto; display: inline-flex; align-items: center; gap: 24px; }
@@ -1231,14 +1231,15 @@ body {
 .af-shop-account-head > div { display: flex; flex-direction: column; min-width: 0; }
 .af-shop-account-head strong { color: var(--af-text-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .af-shop-account-head small { color: var(--af-text-secondary); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.af-shop-icons { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+.af-shop-icons { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.af-shop-icons .ant-btn.ant-btn-icon-only { width: 44px; height: 44px; }
 .af-shop-icons .ant-btn { color: var(--af-text-strong); }
 .af-shop-icons .ant-btn:hover { color: var(--af-primary); }
 .af-shop-greeting { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.af-shop-header-inner { max-width: 1180px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 16px; }
+.af-shop-header-inner { max-width: 1180px; margin: 0 auto; padding: 18px 16px; display: flex; align-items: center; gap: 16px; }
 .af-shop-brand { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--af-text-strong); }
-.af-shop-brand strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
-.af-shop-brand .af-brand-mark { flex: none; width: 34px; height: 34px; }
+.af-shop-brand strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 18px; }
+.af-shop-brand .af-brand-mark { flex: none; width: 40px; height: 40px; }
 .af-shop-back.ant-btn { display: inline-flex; align-items: center; gap: 6px; height: auto; margin: -4px 0 12px; padding: 4px 0; color: var(--af-text-secondary); }
 .af-shop-back.ant-btn:hover { color: var(--af-primary); }
 .af-shop-main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 20px 16px 32px; }
@@ -1456,7 +1457,8 @@ body {
 .af-shop-track-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .af-shop-track-privacy.ant-typography { font-size: 12px; margin: 0; }
 @media (max-width: 640px) {
-  .af-shop-header-inner { gap: 8px; }
+  .af-shop-header-inner { gap: 8px; padding-block: 12px; }
+  .af-shop-icons { gap: 0; }
   .af-shop-cart-label { display: none; }
   .af-shop-topbar-hours, .af-shop-topbar-label, .af-shop-topbar-register { display: none; }
   .af-shop-topbar-account { gap: 16px; }

@@ -51,18 +51,18 @@ export function ShopLayout() {
         <div className="af-shop-header-inner">
           <Link to="/shop" className="af-shop-brand">
             <span className="af-brand-mark">
-              <Waves size={20} strokeWidth={2.2} />
+              <Waves size={22} strokeWidth={2.2} />
             </span>
             <strong>AquaFlow</strong>
           </Link>
           <div className="af-shop-icons">
-            <Button type="text" shape="circle" icon={<Search size={20} />} aria-label="Tìm sản phẩm" title="Tìm sản phẩm" onClick={() => navigate('/shop', { state: { focusSearch: Date.now() } })} />
+            <Button type="text" shape="circle" icon={<Search size={24} />} aria-label="Tìm sản phẩm" title="Tìm sản phẩm" onClick={() => navigate('/shop', { state: { focusSearch: Date.now() } })} />
             {/* Tra cứu đơn chỉ có ở bản dùng thử; tài khoản thật chờ API tra đơn công khai. */}
-            {demo && <Button type="text" shape="circle" icon={<PackageSearch size={20} />} aria-label="Tra cứu đơn" title="Tra cứu đơn" onClick={() => navigate('/track')} />}
+            {demo && <Button type="text" shape="circle" icon={<PackageSearch size={24} />} aria-label="Tra cứu đơn" title="Tra cứu đơn" onClick={() => navigate('/track')} />}
             <AccountMenu />
           </div>
           <Badge count={count} size="small" offset={[-4, 4]}>
-            <Button type="primary" icon={<ShoppingCart size={17} />} onClick={() => setCartOpen(true)} aria-label={`Giỏ hàng, ${count} sản phẩm`}>
+            <Button type="primary" size="large" icon={<ShoppingCart size={20} />} onClick={() => setCartOpen(true)} aria-label={`Giỏ hàng, ${count} sản phẩm`}>
               <span className="af-shop-cart-label">Giỏ hàng</span>
             </Button>
           </Badge>

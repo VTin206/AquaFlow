@@ -20,7 +20,7 @@ export function AccountMenu({ variant = 'icon' }: { variant?: 'icon' | 'text' })
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const go = (to: string) => { setOpen(false); navigate(to) }
-  const icon = <UserRound size={20} />
+  const icon = <UserRound size={24} />
 
   if (!isAuthenticated || !user) {
     return variant === 'text'
