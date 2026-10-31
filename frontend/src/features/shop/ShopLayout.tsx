@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Alert, Badge, Button } from 'antd'
-import { ArrowLeft, Clock3, PackageSearch, Phone, Search, ShoppingCart, Waves } from 'lucide-react'
+import { Alert, Badge, Button, Dropdown } from 'antd'
+import { ArrowLeft, ChevronDown, Clock3, PackageSearch, Phone, Search, ShoppingCart, Waves } from 'lucide-react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { useSettings } from '../settings/settingsService'
@@ -38,9 +38,13 @@ export function ShopLayout() {
       {/* Thanh hotline cuộn đi theo trang, chỉ header bên dưới dính lại. */}
       <div className="af-shop-topbar">
         <div className="af-shop-topbar-inner">
-          {tel && <a href={`tel:${tel}`}><Phone size={14} aria-hidden /> Hotline đặt nước: <strong>{settings?.phone}</strong></a>}
+          {tel && <a href={`tel:${tel}`}><Phone size={14} aria-hidden /> <span className="af-shop-topbar-label">Hotline đặt nước:</span> <strong>{settings?.phone}</strong></a>}
           {hours && <span className="af-shop-topbar-hours"><Clock3 size={14} aria-hidden /> Mở cửa {hours}</span>}
           <span className="af-shop-topbar-account"><AccountMenu variant="text" /></span>
+          {/* Chưa có bản dịch: chỉ Tiếng Việt, English để chỗ sẵn. */}
+          <Dropdown trigger={['click']} placement="bottomRight" menu={{ selectable: true, selectedKeys: ['vi'], items: [{ key: 'vi', label: 'Tiếng Việt' }, { key: 'en', label: 'English (sắp có)', disabled: true }] }}>
+            <Button type="link" className="af-shop-topbar-link af-shop-topbar-lang" aria-label="Ngôn ngữ: Tiếng Việt">VI <ChevronDown size={14} aria-hidden /></Button>
+          </Dropdown>
         </div>
       </div>
       <header className="af-shop-header">

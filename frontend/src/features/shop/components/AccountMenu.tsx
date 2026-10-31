@@ -24,7 +24,10 @@ export function AccountMenu({ variant = 'icon' }: { variant?: 'icon' | 'text' })
 
   if (!isAuthenticated || !user) {
     return variant === 'text'
-      ? <Button type="link" className="af-shop-topbar-link" onClick={() => navigate('/shop/account')}>Đăng nhập</Button>
+      ? <>
+        <Button type="link" className="af-shop-topbar-link" onClick={() => navigate('/shop/account')}>Đăng nhập</Button>
+        <Button type="link" className="af-shop-topbar-link af-shop-topbar-register" onClick={() => navigate('/shop/register')}>Tạo tài khoản</Button>
+      </>
       : <Button type="text" shape="circle" icon={icon} aria-label="Đăng nhập" title="Đăng nhập" onClick={() => navigate('/shop/account')} />
   }
 
