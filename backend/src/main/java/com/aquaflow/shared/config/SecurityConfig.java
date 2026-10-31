@@ -73,6 +73,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/products/**", "/api/v1/bottle-types/**", "/api/v1/suppliers/**").hasRole("ADMIN")
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/store-settings").hasAnyRole("ADMIN", "SALES_STAFF", "DELIVERY_STAFF")
+                        .requestMatchers("/api/v1/store-settings/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/sales/**").hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers(HttpMethod.POST, "/api/v1/customer/orders/guest").permitAll()

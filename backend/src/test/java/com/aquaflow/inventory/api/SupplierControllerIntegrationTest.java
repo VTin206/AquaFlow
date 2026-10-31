@@ -42,6 +42,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 @AutoConfigureMockMvc
 class SupplierControllerIntegrationTest {
+    @MockitoBean private com.aquaflow.workspace.repository.StoreSettingsRepository storeSettingsRepository;
+    @MockitoBean private com.aquaflow.workspace.repository.NotificationRepository notificationRepository;
 
 
 
