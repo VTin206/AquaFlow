@@ -95,7 +95,6 @@ function ReceiptDialog({ open, onClose, defaultProductId, receipt }: ReceiveStoc
       open={open}
       title={title}
       width={880}
-      style={{ top: 24 }}
       styles={{ body: { maxHeight: 'calc(100dvh - 200px)', overflowY: 'auto', paddingRight: 8 } }}
       footer={footer}
       onCancel={result ? onClose : discard}
