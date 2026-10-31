@@ -7,8 +7,11 @@ import { devAccounts, type DevAccount } from '../../auth/devAccounts'
 import { useAuth } from '../../auth/useAuth'
 import { useStaff } from '../../auth/useStaff'
 
-/** Tài khoản trên đầu trang khách: chưa đăng nhập thì hiện nút "Đăng nhập", đã đăng nhập thì lời chào mở thông tin tài khoản. */
-export function AccountMenu() {
+/**
+ * Tài khoản trên đầu trang khách, có hai chỗ: chữ trên thanh trên cùng ("Đăng nhập" / "Chào, …") và icon trên header.
+ * Chưa đăng nhập thì bấm sang trang tài khoản, đã đăng nhập thì mở thông tin tài khoản.
+ */
+export function AccountMenu({ variant = 'icon' }: { variant?: 'icon' | 'text' }) {
   const { isAuthenticated, user, logout, login, enterDemo, enterDemoGuest } = useAuth()
   const { message } = App.useApp()
   const queryClient = useQueryClient()
@@ -20,7 +23,9 @@ export function AccountMenu() {
   const icon = <UserRound size={20} />
 
   if (!isAuthenticated || !user) {
-    return <Button type="text" icon={icon} className="af-shop-login" onClick={() => navigate('/shop/account')}>Đăng nhập</Button>
+    return variant === 'text'
+      ? <Button type="link" className="af-shop-topbar-link" onClick={() => navigate('/shop/account')}>Đăng nhập</Button>
+      : <Button type="text" shape="circle" icon={icon} aria-label="Đăng nhập" title="Đăng nhập" onClick={() => navigate('/shop/account')} />
   }
 
   // Dev: đổi tài khoản mà vẫn ở trang đang xem, để so cửa hàng dữ liệu thật với bản dùng thử; xóa cache để không lẫn dữ liệu.
@@ -66,9 +71,9 @@ export function AccountMenu() {
 
   return (
     <Popover content={content} trigger="click" placement="bottomRight" open={open} onOpenChange={setOpen} arrow={false}>
-      <Button type="text" icon={icon} className="af-shop-login" aria-label={`Tài khoản của ${user.name}`} title="Tài khoản">
-        <span className="af-shop-greeting">Chào, {givenName(user.name)}</span>
-      </Button>
+      {variant === 'text'
+        ? <Button type="link" className="af-shop-topbar-link" title="Tài khoản"><span className="af-shop-greeting">Chào, {givenName(user.name)}</span></Button>
+        : <Button type="text" shape="circle" icon={icon} aria-label="Tài khoản" title="Tài khoản" />}
     </Popover>
   )
 }

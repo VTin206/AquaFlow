@@ -36,14 +36,13 @@ export function ShopLayout() {
   return (
     <div className="af-shop">
       {/* Thanh hotline cuộn đi theo trang, chỉ header bên dưới dính lại. */}
-      {(tel || hours) && (
-        <div className="af-shop-topbar">
-          <div className="af-shop-topbar-inner">
-            {tel && <a href={`tel:${tel}`}><Phone size={14} aria-hidden /> Hotline đặt nước: <strong>{settings?.phone}</strong></a>}
-            {hours && <span className="af-shop-topbar-hours"><Clock3 size={14} aria-hidden /> Mở cửa {hours}</span>}
-          </div>
+      <div className="af-shop-topbar">
+        <div className="af-shop-topbar-inner">
+          {tel && <a href={`tel:${tel}`}><Phone size={14} aria-hidden /> Hotline đặt nước: <strong>{settings?.phone}</strong></a>}
+          {hours && <span className="af-shop-topbar-hours"><Clock3 size={14} aria-hidden /> Mở cửa {hours}</span>}
+          <span className="af-shop-topbar-account"><AccountMenu variant="text" /></span>
         </div>
-      )}
+      </div>
       <header className="af-shop-header">
         <div className="af-shop-header-inner">
           <Link to="/shop" className="af-shop-brand">

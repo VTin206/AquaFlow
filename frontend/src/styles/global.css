@@ -1218,6 +1218,9 @@ body {
 .af-shop-topbar-inner { max-width: 1180px; margin: 0 auto; padding: 6px 16px; display: flex; align-items: center; gap: 8px 24px; flex-wrap: wrap; }
 .af-shop-topbar-inner > * { display: inline-flex; align-items: center; gap: 6px; color: inherit; }
 .af-shop-topbar a:hover, .af-shop-topbar a:focus-visible { color: inherit; text-decoration: underline; }
+.af-shop-topbar-account { margin-left: auto; }
+.af-shop-topbar-link.ant-btn { height: auto; padding: 0; color: inherit; font-size: 13px; font-weight: 600; }
+.af-shop-topbar-link.ant-btn:hover, .af-shop-topbar-link.ant-btn:focus-visible { color: inherit; text-decoration: underline; }
 /* Tối: nền xanh sáng không đủ tương phản với chữ trắng, đổi sang nền xanh trầm, chữ xanh. */
 :root[data-theme="dark"] .af-shop-topbar { background: var(--af-primary-soft); color: var(--af-primary); border-bottom: 1px solid var(--af-border); }
 .af-shop-header { position: sticky; top: 0; z-index: 10; background: var(--af-chrome); box-shadow: 0 2px 8px var(--af-shadow-chrome); border-bottom: 1px solid var(--af-border); }
@@ -1229,7 +1232,6 @@ body {
 .af-shop-icons { display: flex; align-items: center; gap: 2px; margin-left: auto; }
 .af-shop-icons .ant-btn { color: var(--af-text-strong); }
 .af-shop-icons .ant-btn:hover { color: var(--af-primary); }
-.af-shop-login.ant-btn { padding-inline: 10px; font-weight: 600; }
 .af-shop-greeting { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .af-shop-header-inner { max-width: 1180px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 16px; }
 .af-shop-brand { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--af-text-strong); }
@@ -1454,7 +1456,6 @@ body {
 @media (max-width: 640px) {
   .af-shop-header-inner { gap: 8px; }
   .af-shop-cart-label { display: none; }
-  .af-shop-topbar-inner { justify-content: center; }
   .af-shop-topbar-hours { display: none; }
   .af-shop-hero ul { display: none; }
 }
