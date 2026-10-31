@@ -7,7 +7,7 @@ import { devAccounts, type DevAccount } from '../../auth/devAccounts'
 import { useAuth } from '../../auth/useAuth'
 import { useStaff } from '../../auth/useStaff'
 
-/** Icon tài khoản trên đầu trang khách: chưa đăng nhập thì sang trang tài khoản, đã đăng nhập thì xem thông tin tài khoản. */
+/** Tài khoản trên đầu trang khách: chưa đăng nhập thì hiện nút "Đăng nhập" có chữ, đã đăng nhập thì icon mở thông tin tài khoản. */
 export function AccountMenu() {
   const { isAuthenticated, user, logout, login, enterDemo } = useAuth()
   const { message } = App.useApp()
@@ -20,7 +20,7 @@ export function AccountMenu() {
   const icon = <UserRound size={20} />
 
   if (!isAuthenticated || !user) {
-    return <Button type="text" shape="circle" icon={icon} aria-label="Đăng nhập" title="Đăng nhập" onClick={() => navigate('/shop/account')} />
+    return <Button type="text" icon={icon} className="af-shop-login" onClick={() => navigate('/shop/account')}>Đăng nhập</Button>
   }
 
   // Dev: đổi tài khoản mà vẫn ở trang đang xem, để so cửa hàng dữ liệu thật với bản dùng thử; xóa cache để không lẫn dữ liệu.
