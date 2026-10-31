@@ -1,10 +1,8 @@
+import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import console from 'node:console'
 import { setTimeout } from 'node:timers'
 import ExcelJS from 'exceljs'
-import { createServer } from 'vite'
 
-const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
 const sample = {
   range: { from: '2026-09-30', to: '2026-10-01' },
   days: [
@@ -37,8 +35,9 @@ const sample = {
 }
 const sheetNames = ['Tổng quan', 'Theo ngày', 'Cọc và vỏ', 'Giao hàng', 'Bán hàng', 'Nhập xuất tồn', 'Khách hàng', 'Khách lâu chưa đặt', 'Kênh tiếp nhận']
 
-try {
-  const { buildReportWorkbook } = await server.ssrLoadModule('/src/features/reports/exportReport.ts')
+
+test('report Excel export: sheets, values, SKUs and empty data survive an XLSX round trip', async () => {
+  const { buildReportWorkbook } = await import('/src/features/reports/exportReport.ts')
   const before = globalThis.structuredClone(sample)
   const bytes = await buildReportWorkbook(sample, { channels: ['Website'], method: 'Giao tận nơi' }).xlsx.writeBuffer()
   assert.equal(bytes.slice(0, 2).toString(), 'PK', 'File must be an XLSX ZIP, not renamed text')
@@ -52,7 +51,7 @@ try {
     assert.ok(sheet.autoFilter)
     assert.equal(sheet.getCell('A4').font.bold, true)
   }
-  console.log('PASS serialized workbook has every report sheet, selected period, active filters and frozen headings')
+  // serialized workbook has every report sheet, selected period, active filters and frozen headings
 
   const summary = workbook.getWorksheet('Tổng quan')
   const valueOf = (sheet, label) => {
@@ -85,7 +84,7 @@ try {
   assert.equal(drivers.getCell('J5').value, 40000)
   assert.equal(workbook.getWorksheet('Kênh tiếp nhận').getCell('C5').value, 90000)
   assert.equal(workbook.getWorksheet('Khách lâu chưa đặt').getCell('C5').value, 42)
-  console.log('PASS numeric amounts, negative values, zero, dates, settlement and Vietnamese survive XLSX round trip')
+  // numeric amounts, negative values, zero, dates, settlement and Vietnamese survive XLSX round trip
 
   const products = workbook.getWorksheet('Bán hàng')
   assert.equal(products.getCell('A5').value, '0012')
@@ -96,7 +95,7 @@ try {
   const stock = workbook.getWorksheet('Nhập xuất tồn')
   assert.deepEqual([3, 4, 5, 6, 7, 8, 9].map((column) => stock.getCell(5, column).value), [4, 3, 1, 2, 6, 1, 120000])
   assert.deepEqual(sample, before, 'Export must not change report data')
-  console.log('PASS product codes preserve leading zero; formula-like names stay text; profit and stock movement are correct')
+  // product codes preserve leading zero; formula-like names stay text; profit and stock movement are correct
 
   const empty = globalThis.structuredClone(sample)
   empty.days = []
@@ -113,12 +112,12 @@ try {
     assert.ok(emptyWorkbook.getWorksheet(name).autoFilter)
   }
   assert.doesNotMatch(emptyWorkbook.getWorksheet('Tổng quan').getCell('A2').value, /Lọc:/)
-  console.log('PASS empty detail sheets still produce a readable workbook with headings; no filter note without filters')
+  // empty detail sheets still produce a readable workbook with headings; no filter note without filters
 
   // Đi qua service thật để phát hiện nhầm ID nội bộ với SKU trong dữ liệu xuất.
   globalThis.window = { setTimeout: (callback) => setTimeout(callback, 0) }
-  const { db } = await server.ssrLoadModule('/src/mocks/db.ts')
-  const { reportService } = await server.ssrLoadModule('/src/features/reports/reportService.ts')
+  const { db } = await import('/src/mocks/db.ts')
+  const { reportService } = await import('/src/features/reports/reportService.ts')
   const deliveredAt = '2026-09-30T05:00:00.000Z'
   const line = (productId, name) => ({ productId, name, unit: 'Bình', quantity: 1, unitPrice: 20000 })
   db.orders = [{
@@ -143,7 +142,5 @@ try {
   assert.ok(codes.includes('0012'), 'Catalog SKU is exported')
   assert.ok(codes.some((value) => [null, ''].includes(value)), 'Unknown SKU stays blank instead of exporting an internal ID')
   assert.ok(!codes.includes('P-INTERNAL') && !codes.includes('P-REMOVED'))
-  console.log('PASS report service exports catalog SKU, preserves leading zero and leaves missing SKU blank')
-} finally {
-  await server.close()
-}
+  // report service exports catalog SKU, preserves leading zero and leaves missing SKU blank
+})

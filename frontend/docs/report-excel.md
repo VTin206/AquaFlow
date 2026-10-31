@@ -35,7 +35,7 @@ Không thêm CSV vào menu Báo cáo; các chức năng CSV khác không đổi.
   trang Báo cáo. Build có cảnh báo kích thước chunk xuất Excel.
 - Nút hiển thị đang xử lý và khóa bộ chọn kỳ trong lúc tạo tệp; lỗi tạo
   tệp có thông báo, sau đó mở lại điều khiển.
-- `npm run test:report-excel`: ghi rồi đọc lại XLSX, kiểm tra kiểu số/ngày,
+- `npx vitest run tests/report-excel.test.mjs`: ghi rồi đọc lại XLSX, kiểm tra kiểu số/ngày,
   tiếng Việt, kỳ báo cáo, số âm/0, mã có số 0 đầu, tên giống công thức,
   dữ liệu rỗng và dữ liệu nguồn không bị sửa.
 - Lint và build (gồm TypeScript) đã qua.

@@ -1,10 +1,9 @@
+import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import console from 'node:console'
-import { createServer } from 'vite'
 
-const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
-try {
-  const { submitCheckoutOnce } = await vite.ssrLoadModule('/src/features/shop/checkoutSubmit.ts')
+
+test('checkout submit: no double submit, cart kept on failure, retry succeeds', async () => {
+  const { submitCheckoutOnce } = await import('/src/features/shop/checkoutSubmit.ts')
 
   let resolveRequest
   const pendingRequest = new Promise((resolve) => { resolveRequest = resolve })
@@ -38,7 +37,7 @@ try {
   assert.equal(displayedOrderCode, order.orderCode)
   assert.equal(cart.length, 0, 'The cart clears only after success')
   assert.equal(lock.current, false, 'The lock is released after success')
-  console.log('PASS checkout double-submit: deferred request called once; success handled once; cart cleared after success')
+  // checkout double-submit: deferred request called once; success handled once; cart cleared after success
 
   const retryCart = [{ productId: '12', quantity: 2 }]
   let attemptCount = 0
@@ -67,7 +66,5 @@ try {
   assert.equal(attemptCount, 2, 'A failed checkout can be retried')
   assert.equal(retryOrderCode, order.orderCode)
   assert.equal(retryCart.length, 0, 'The retried successful request clears the cart')
-  console.log('PASS checkout failure/retry: error surfaced, cart preserved, lock released, retry succeeds')
-} finally {
-  await vite.close()
-}
+  // checkout failure/retry: error surfaced, cart preserved, lock released, retry succeeds
+})
