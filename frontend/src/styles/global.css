@@ -1,85 +1,15 @@
 /*
  * CSS toàn cục: chỉ chứa bố cục mà Ant Design không có sẵn.
- * Màu, font, bo góc của component được đặt trong src/app/theme.ts.
+ * Màu nằm ở src/app/palette.ts; font, bo góc của component Ant Design ở src/app/theme.ts.
  * Mọi class tự đặt dùng tiền tố "af-" để không đụng class của Ant Design.
  */
 @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');
 
 :root {
-  --af-primary: #087fad;
-  --af-primary-soft: #eaf5fb;
-  --af-text: #263e53;
-  --af-text-strong: #16324f;
-  --af-text-secondary: #52687b;
-  --af-text-tertiary: #687d8e;
-  --af-border: #e7eef4;
-  --af-bg: #f4f7fb;
-  --af-warning: #b86b0a;
-  --af-danger: #c34444;
-  /* Màu tiền: xem shared/components/Money.tsx. */
-  --af-money-due: #a65f08;
-  --af-money-paid: #1f7a60;
-  --af-money-refund: #c34444;
-  --af-money-deposit: #087fad;
-  /* Màu nhấn cho những thứ cần chú ý: đơn mới, số đếm khẩn. */
-  --af-accent: #b86b0a;
-  /* Bề mặt: nền thẻ/ô, nền nhạt, nền chìm (ô đếm, cột bảng giao). Chế độ tối chỉ cần khai báo lại nhóm này. */
-  --af-surface: #fff;
-  --af-surface-muted: #f8fafc;
-  --af-surface-hover: #f2f4f7;
-  --af-surface-sunken: #eaf0f5;
-  --af-border-strong: #e1e9f1;
-  /* Thanh trên cùng và chân trang cửa hàng. */
-  --af-chrome: #f5fbfe;
-  --af-accent-soft: #fff1dc;
-  /* Màu trạng thái cho bộ lọc (ToneLabel): đang dùng / cần chú ý / lỗi. */
-  --af-success: #1f7a60;
-  /* Chữ/nút trắng đặt trên nền màu thương hiệu; giữ trắng ở mọi chế độ. */
-  --af-on-primary: #fff;
-  /* Khung ảnh sản phẩm, logo, QR: ảnh có nền trắng nên khung luôn trắng. */
-  --af-image-bg: #fff;
-  --af-brand-deep: #0a5f8f;
-  --af-brand-light: #36b3dc;
-  --af-chart-bar: #b9deee;
-  --af-chart-bar-hover: #81c2df;
-  --af-shadow-chrome: #087fad0a;
-  --af-shadow-primary: #087fad26;
-  --af-shadow-card: #16324f03;
+  /* Màu --af-* được gắn từ src/app/palette.ts (cùng nguồn với theme Ant Design); ở đây chỉ giữ biến không phải màu. */
   --af-topbar-height: 72px;
 }
 
-/* Chế độ tối (khu quản lý, màn hình tài xế): chỉ khai báo lại biến; ảnh, QR và màu thương hiệu giữ nguyên. */
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --af-primary: #3aa6d6;
-  --af-primary-soft: #13213a;
-  --af-text: #cbd5e1;
-  --af-text-strong: #e2e8f0;
-  --af-text-secondary: #94a3b8;
-  --af-text-tertiary: #718096;
-  --af-border: #1c2333;
-  --af-bg: #0a0f1a;
-  --af-warning: #e2a03f;
-  --af-danger: #f07171;
-  --af-money-due: #e8a24a;
-  --af-money-paid: #4cc39a;
-  --af-money-refund: #f07171;
-  --af-money-deposit: #5bb8e3;
-  --af-accent: #e2a03f;
-  --af-surface: #0f1626;
-  --af-surface-muted: #121a2c;
-  --af-surface-hover: #151f33;
-  --af-surface-sunken: #0b111d;
-  --af-border-strong: #273042;
-  --af-chrome: #080c15;
-  --af-accent-soft: #3a2a12;
-  --af-success: #4cc39a;
-  --af-chart-bar: #24597a;
-  --af-chart-bar-hover: #3a7fa8;
-  --af-shadow-chrome: #0006;
-  --af-shadow-primary: #0006;
-  --af-shadow-card: #0003;
-}
 /* Tối: sidebar cùng màu thanh trên cùng, nội dung nằm trên nền navy. */
 :root[data-theme="dark"] .af-nav { background: var(--af-chrome); }
 
