@@ -52,7 +52,8 @@ export function RegisterForm({ size = 'large' }: { size?: 'middle' | 'large' }) 
             name="password"
             rules={[
               { required: true, message: 'Nhập mật khẩu.' },
-              { min: 8, max: 128, message: 'Mật khẩu có từ 8 đến 128 ký tự.' },
+              { min: 8, message: 'Mật khẩu tối thiểu 8 ký tự.' },
+              { max: 128, message: 'Mật khẩu tối đa 128 ký tự.' },
             ]}
           >
             <Input.Password
