@@ -1,0 +1,44 @@
+/* Trang báo cáo và biểu đồ Recharts. Biến màu và phần dùng chung nằm trong styles/global.css. */
+
+.af-report-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.af-report-range { width: 286px; max-width: 100%; }
+/* Báo cáo */
+.af-report-subhead { display: block; margin: 12px 0 4px; }
+.af-report-delta { display: flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 12px; }
+.af-report-filter { min-width: 160px; max-width: 100%; }
+.af-report-filter-hint { margin: -8px 0 16px; }
+.af-report-tabs > .ant-tabs-nav { margin-bottom: 16px; }
+.af-report-tabs .ant-card-head-wrapper { flex-wrap: wrap; gap: 4px 12px; }
+.af-report-tabs .ant-card-head-title { min-width: 0; white-space: normal; }
+@media (max-width: 575px) {
+  .af-report-actions > .af-report-range { flex-basis: 100%; }
+  .af-report-tabs .ant-card-extra { margin-inline-start: 0; padding-bottom: 8px; }
+  .af-report-kpis .ant-statistic-content { font-size: 19px; }
+}
+.af-report-table-hint { margin: 0; padding: 10px 16px; }
+.af-report-delivery { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+@media (max-width: 640px) {
+  .af-report-delivery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ---------- Biểu đồ báo cáo (Recharts) ---------- */
+.af-chart { display: flex; flex-direction: column; gap: 8px; }
+.af-chart .recharts-surface:focus, .af-chart .recharts-wrapper:focus { outline: none; }
+.af-chart-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; color: var(--af-text-secondary); font-size: 12.5px; }
+.af-chart-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.af-chart-legend i { width: 10px; height: 10px; border-radius: 3px; }
+.af-chart-legend i.is-line { height: 3px; width: 14px; border-radius: 2px; }
+.af-chart-legend b { color: var(--af-text); font-weight: 600; }
+.af-chart-tooltip { min-width: 180px; padding: 8px 12px; border: 1px solid var(--af-border); border-radius: 8px; background: var(--af-surface); box-shadow: 0 6px 20px rgb(0 0 0 / 12%); font-size: 13px; color: var(--af-text); }
+.af-chart-tooltip strong { display: block; margin-bottom: 4px; color: var(--af-text-strong); }
+.af-chart-tooltip-row { display: flex; align-items: center; gap: 8px; line-height: 1.7; }
+.af-chart-tooltip-row i { flex: none; width: 10px; height: 10px; border-radius: 3px; }
+.af-chart-tooltip-row i.is-line { height: 3px; width: 12px; }
+.af-chart-tooltip-row span { flex: 1; color: var(--af-text-secondary); }
+.af-chart-tooltip-row b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.af-report-delivery + .af-chart { margin: 4px 0 16px; }
+.af-share { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.af-share-bar { display: flex; gap: 2px; height: 10px; overflow: hidden; border-radius: 5px; background: var(--af-surface-sunken); }
+.af-share-bar span { min-width: 4px; }
+.af-inline-bar { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.af-inline-bar i { display: block; height: 4px; min-width: 2px; border-radius: 2px; background: var(--af-chart-bar-hover); }

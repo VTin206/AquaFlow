@@ -13,6 +13,7 @@ import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
 import { DriverDeliveryChart, InlineBar, RevenueChart, ShareBar, TopProductsChart } from './charts'
 import { autoGranularity, granularityLabels, groupRevenue, type Granularity } from './periods'
 import { previousRange, reportChannels, useReport, type CustomerReportRow, type DriverReportRow, type InventoryReportRow, type ProductReportRow, type ReportFilters, type ReportRange } from './reportService'
+import './reports.css'
 
 const FORMAT = 'YYYY-MM-DD'
 const toRange = ([from, to]: [Dayjs, Dayjs]): ReportRange => ({ from: from.format(FORMAT), to: to.format(FORMAT) })

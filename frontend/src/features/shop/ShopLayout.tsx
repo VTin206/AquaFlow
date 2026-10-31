@@ -10,6 +10,7 @@ import { CartDrawer } from './components/CartDrawer'
 import { UkFlag, VietnamFlag } from './components/Flags'
 import { ShopFooter } from './components/ShopFooter'
 import { useShopDemo } from './shopService'
+import './shop.css'
 
 // Bản thật chưa có API cài đặt công khai: hotline và giờ mở cửa tạm lấy từ biến môi trường.
 const liveContact = { phone: import.meta.env.VITE_SHOP_HOTLINE, openingHours: import.meta.env.VITE_SHOP_HOURS }

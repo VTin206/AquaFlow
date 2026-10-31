@@ -6,6 +6,7 @@ import { canOpen, homeOf } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/useStaff'
 import { ThemeToggle } from './ThemeToggle'
 import { initialsOf, useAccountMenuItems, useMockSession } from './useAccountMenu'
+import '@/features/delivery/driver.css'
 
 /**
  * Khung riêng cho nhân viên giao hàng: chỉ có màn hình chuyến, không sidebar, vừa màn hình điện thoại.
