@@ -6,15 +6,11 @@
   "scripts": {
     "dev": "vite",
     "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "tsc -b",
-    "test": "npm run test:orders && npm run test:operations && npm run test:after-sales && npm run test:ux && npm run test:report-excel && npm run test:live-api && npm run test:checkout",
-    "test:checkout": "node scripts/test-checkout-submit.mjs",
-    "test:live-api": "node scripts/test-live-api.mjs",
-    "test:orders": "node scripts/test-orders.mjs",
-    "test:operations": "node scripts/test-operations.mjs",
-    "test:after-sales": "node scripts/test-after-sales.mjs",
-    "test:ux": "node scripts/test-ux.mjs",
-    "test:report-excel": "node scripts/test-report-excel.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "build": "tsc -b && vite build",
     "preview": "vite preview"
   },
@@ -39,8 +35,10 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
     "globals": "^17.13.0",
+    "prettier": "3.9.10",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.71.2",
-    "vite": "^8.3.4"
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
   }
 }

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Grid } from 'antd'
 import { Bar, BarChart, CartesianGrid, ComposedChart, LabelList, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { compactCurrency, currency } from '../../shared/utils/format'
+import { compactCurrency, currency } from '@/shared/utils/format'
 import type { RevenueBucket } from './periods'
 import type { DriverReportRow, ProductReportRow } from './reportService'
 
@@ -10,7 +10,17 @@ const axisTick = { fill: 'var(--af-text-tertiary)', fontSize: 12 }
 const hoverCursor = { fill: 'var(--af-surface-hover)' }
 
 /** Nhãn trục danh mục một dòng, cắt bớt nếu dài (Recharts mặc định tự xuống dòng). */
-function CategoryTick({ x, y, payload, maxLength }: { x?: number | string; y?: number | string; payload?: { value: string }; maxLength: number }) {
+function CategoryTick({
+  x,
+  y,
+  payload,
+  maxLength,
+}: {
+  x?: number | string
+  y?: number | string
+  payload?: { value: string }
+  maxLength: number
+}) {
   const value = payload?.value ?? ''
   return (
     <text x={x} y={y} dy={4} textAnchor="end" fill="var(--af-text)" fontSize={13}>
@@ -60,7 +70,10 @@ export function RevenueChart({ data }: { data: RevenueBucket[] }) {
   return (
     <div className="af-chart">
       <ChartLegend items={[revenueSeries, collectedSeries]} />
-      <div role="img" aria-label={`Biểu đồ doanh thu và tiền thu. ${data.map((bucket) => `${bucket.title}: doanh thu ${compactCurrency(bucket.revenue)}, thu ${compactCurrency(bucket.collected)}`).join('; ')}`}>
+      <div
+        role="img"
+        aria-label={`Biểu đồ doanh thu và tiền thu. ${data.map((bucket) => `${bucket.title}: doanh thu ${compactCurrency(bucket.revenue)}, thu ${compactCurrency(bucket.collected)}`).join('; ')}`}
+      >
         <ResponsiveContainer width="100%" height={260}>
           <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap="22%">
             <CartesianGrid vertical={false} stroke="var(--af-border)" />
@@ -81,7 +94,14 @@ export function RevenueChart({ data }: { data: RevenueBucket[] }) {
                 ) : null
               }}
             />
-            <Bar dataKey="revenue" fill={revenueSeries.color} activeBar={{ fill: 'var(--af-chart-bar-hover)' }} radius={[4, 4, 0, 0]} maxBarSize={40} isAnimationActive={false} />
+            <Bar
+              dataKey="revenue"
+              fill={revenueSeries.color}
+              activeBar={{ fill: 'var(--af-chart-bar-hover)' }}
+              radius={[4, 4, 0, 0]}
+              maxBarSize={40}
+              isAnimationActive={false}
+            />
             <Line
               dataKey="collected"
               type="linear"
@@ -104,13 +124,26 @@ const TOP_PRODUCTS = 8
 export function TopProductsChart({ rows }: { rows: ProductReportRow[] }) {
   // Màn hẹp thu cột tên lại để thanh còn đủ dài mà so.
   const wide = Grid.useBreakpoint().md !== false
-  const data = rows.filter((row) => row.revenue > 0).sort((a, b) => b.revenue - a.revenue).slice(0, TOP_PRODUCTS)
+  const data = rows
+    .filter((row) => row.revenue > 0)
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, TOP_PRODUCTS)
   return (
-    <div role="img" aria-label={`Sản phẩm doanh thu cao nhất. ${data.map((row) => `${row.name}: ${compactCurrency(row.revenue)}`).join('; ')}`}>
+    <div
+      role="img"
+      aria-label={`Sản phẩm doanh thu cao nhất. ${data.map((row) => `${row.name}: ${compactCurrency(row.revenue)}`).join('; ')}`}
+    >
       <ResponsiveContainer width="100%" height={data.length * 36 + 8}>
         <BarChart layout="vertical" data={data} margin={{ top: 4, right: 56, bottom: 4, left: 0 }} barCategoryGap={8}>
           <XAxis type="number" hide domain={[0, 'dataMax']} />
-          <YAxis type="category" dataKey="name" width={wide ? 230 : 120} tickLine={false} axisLine={false} tick={(props) => <CategoryTick {...props} maxLength={wide ? 30 : 15} />} />
+          <YAxis
+            type="category"
+            dataKey="name"
+            width={wide ? 230 : 120}
+            tickLine={false}
+            axisLine={false}
+            tick={(props) => <CategoryTick {...props} maxLength={wide ? 30 : 15} />}
+          />
           <Tooltip
             cursor={hoverCursor}
             content={({ active, payload }) => {
@@ -127,7 +160,12 @@ export function TopProductsChart({ rows }: { rows: ProductReportRow[] }) {
             }}
           />
           <Bar dataKey="revenue" fill="var(--af-primary)" radius={[0, 4, 4, 0]} maxBarSize={20} isAnimationActive={false}>
-            <LabelList dataKey="revenue" position="right" formatter={(value) => compactCurrency(Number(value))} style={{ fill: 'var(--af-text-secondary)', fontSize: 12 }} />
+            <LabelList
+              dataKey="revenue"
+              position="right"
+              formatter={(value) => compactCurrency(Number(value))}
+              style={{ fill: 'var(--af-text-secondary)', fontSize: 12 }}
+            />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -148,32 +186,66 @@ type DriverBar = { driver: string; onTime: number; late: number; failed: number 
 /** Lượt giao của từng tài xế: đúng hẹn + trễ hẹn = giao thành công, cộng thêm lần thất bại. */
 export function DriverDeliveryChart({ rows }: { rows: DriverReportRow[] }) {
   const wide = Grid.useBreakpoint().md !== false
-  const data: DriverBar[] = rows.map((row) => ({ driver: row.driver, onTime: Math.max(0, row.delivered - row.late), late: row.late, failed: row.failed }))
+  const data: DriverBar[] = rows.map((row) => ({
+    driver: row.driver,
+    onTime: Math.max(0, row.delivered - row.late),
+    late: row.late,
+    failed: row.failed,
+  }))
   return (
     <div className="af-chart">
       <ChartLegend items={[...deliverySeries]} />
-      <div role="img" aria-label={`Lượt giao theo tài xế. ${data.map((row) => `${row.driver}: ${row.onTime} đúng hẹn, ${row.late} trễ hẹn, ${row.failed} thất bại`).join('; ')}`}>
+      <div
+        role="img"
+        aria-label={`Lượt giao theo tài xế. ${data.map((row) => `${row.driver}: ${row.onTime} đúng hẹn, ${row.late} trễ hẹn, ${row.failed} thất bại`).join('; ')}`}
+      >
         <ResponsiveContainer width="100%" height={data.length * 44 + 8}>
           <BarChart layout="vertical" data={data} margin={{ top: 4, right: 16, bottom: 4, left: 0 }} barCategoryGap={10}>
             <XAxis type="number" hide allowDecimals={false} />
-            <YAxis type="category" dataKey="driver" width={wide ? 130 : 96} tickLine={false} axisLine={false} tick={(props) => <CategoryTick {...props} maxLength={wide ? 18 : 12} />} />
+            <YAxis
+              type="category"
+              dataKey="driver"
+              width={wide ? 130 : 96}
+              tickLine={false}
+              axisLine={false}
+              tick={(props) => <CategoryTick {...props} maxLength={wide ? 18 : 12} />}
+            />
             <Tooltip
               cursor={hoverCursor}
               content={({ active, payload }) => {
                 const row = active ? (payload?.[0]?.payload as DriverBar | undefined) : undefined
-                return row ? <ChartTooltip title={row.driver} rows={deliverySeries.map((series) => ({ ...series, value: row[series.key] }))} /> : null
+                return row ? (
+                  <ChartTooltip title={row.driver} rows={deliverySeries.map((series) => ({ ...series, value: row[series.key] }))} />
+                ) : null
               }}
             />
             {deliverySeries.map((series) => (
               // Viền màu nền tạo khe 2px giữa các đoạn.
-              <Bar key={series.key} dataKey={series.key} stackId="trips" fill={series.color} stroke="var(--af-surface)" strokeWidth={2} maxBarSize={24} isAnimationActive={false}>
+              <Bar
+                key={series.key}
+                dataKey={series.key}
+                stackId="trips"
+                fill={series.color}
+                stroke="var(--af-surface)"
+                strokeWidth={2}
+                maxBarSize={24}
+                isAnimationActive={false}
+              >
                 <LabelList
                   dataKey={series.key}
                   content={({ x, y, width, height, value }) => {
                     // Đoạn quá hẹp thì bỏ số để không dính vào đoạn bên cạnh; tooltip vẫn có đủ.
                     if (!Number(value) || Number(width) < 22) return null
                     return (
-                      <text x={Number(x) + Number(width) / 2} y={Number(y) + Number(height) / 2} dy={4} textAnchor="middle" fill="var(--af-surface)" fontSize={12} fontWeight={600}>
+                      <text
+                        x={Number(x) + Number(width) / 2}
+                        y={Number(y) + Number(height) / 2}
+                        dy={4}
+                        textAnchor="middle"
+                        fill="var(--af-surface)"
+                        fontSize={12}
+                        fontWeight={600}
+                      >
                         {value}
                       </text>
                     )

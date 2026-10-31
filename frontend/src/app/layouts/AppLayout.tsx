@@ -1,8 +1,8 @@
 import { Suspense, useState } from 'react'
 import { Drawer, Layout, Spin } from 'antd'
 import { Navigate, Outlet, useLocation } from 'react-router'
-import { canOpen, homeOf } from '../features/auth/permissions'
-import { useStaff } from '../features/auth/useStaff'
+import { canOpen, homeOf } from '@/features/auth/permissions'
+import { useStaff } from '@/features/auth/useStaff'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 import { useMockSession } from './useAccountMenu'
@@ -46,7 +46,14 @@ export function AppLayout() {
         <Layout.Sider width={224} collapsedWidth={72} collapsed={collapsed} trigger={null} className="af-sider">
           <Sidebar collapsed={collapsed} onToggleCollapse={toggleCollapsed} />
         </Layout.Sider>
-        <Drawer open={navOpen} onClose={() => setNavOpen(false)} placement="left" size={260} title="AquaFlow" styles={{ body: { padding: 0 } }}>
+        <Drawer
+          open={navOpen}
+          onClose={() => setNavOpen(false)}
+          placement="left"
+          size={260}
+          title="AquaFlow"
+          styles={{ body: { padding: 0 } }}
+        >
           <Sidebar onNavigate={() => setNavOpen(false)} />
         </Drawer>
         <Layout.Content className="af-content">

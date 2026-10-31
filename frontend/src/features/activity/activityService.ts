@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { db } from '../../mocks/db'
-import { mockRequest } from '../../mocks/mockRequest'
-import { requireRole } from '../../mocks/session'
+import { db } from '@/mocks/db'
+import { mockRequest } from '@/mocks/mockRequest'
+import { requireRole } from '@/mocks/session'
 
-export type { ActivityArea, ActivityEntry } from '../../mocks/session'
+export type { ActivityArea, ActivityEntry } from '@/mocks/session'
 
 // Backend thật ghi nhật ký bất biến phía máy chủ; giao diện chỉ đọc, không có sửa/xóa.
 export const activityService = {

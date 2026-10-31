@@ -1,4 +1,4 @@
-import type { TripRecord } from '../features/delivery/types'
+import type { TripRecord } from '@/features/delivery/types'
 import { initialOrders } from './data'
 
 // Một chuyến mẫu đang chạy, gồm các đơn giao tận nơi đang ở trạng thái "Đang giao".

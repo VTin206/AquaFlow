@@ -16,28 +16,48 @@ export function ArticlePage({ kind = 'news' }: { kind?: 'news' | 'policy' }) {
   }, [article])
 
   if (!article) {
-    return <div className="af-shop-page af-shop-narrow">
-      <Card><Empty description="Không tìm thấy bài viết."><Link to="/shop"><Button type="primary">Về trang chủ</Button></Link></Empty></Card>
-    </div>
+    return (
+      <div className="af-shop-page af-shop-narrow">
+        <Card>
+          <Empty description="Không tìm thấy bài viết.">
+            <Link to="/shop">
+              <Button type="primary">Về trang chủ</Button>
+            </Link>
+          </Empty>
+        </Card>
+      </div>
+    )
   }
   const Icon = article.icon
   const others = list.filter((item) => item.slug !== article.slug).slice(0, 3)
-  return <div className="af-shop-page af-shop-narrow af-shop-article">
-    <article>
-      <div className="af-shop-article-cover" aria-hidden><Icon size={56} strokeWidth={1.4} /></div>
-      <h1>{article.title}</h1>
-      {article.publishedOn && <time dateTime={article.publishedOn}>{articleDate(article.publishedOn)}</time>}
-      <p className="af-shop-article-lead">{article.summary}</p>
-      {article.body.map((paragraph) => paragraph.startsWith('## ')
-        ? <h2 key={paragraph}>{paragraph.slice(3)}</h2>
-        : <p key={paragraph}>{paragraph}</p>)}
-      <Link to="/shop"><Button type="primary" icon={<ShoppingCart size={16} />}>Đặt nước ngay</Button></Link>
-    </article>
-    <section className="af-shop-article-more" aria-labelledby="af-shop-more-title">
-      <h2 id="af-shop-more-title">{kind === 'policy' ? 'Chính sách khác' : 'Bài viết khác'}</h2>
-      <ul>
-        {others.map((item) => <li key={item.slug}><Link to={`/shop/${kind}/${item.slug}`}>{item.title}</Link></li>)}
-      </ul>
-    </section>
-  </div>
+  return (
+    <div className="af-shop-page af-shop-narrow af-shop-article">
+      <article>
+        <div className="af-shop-article-cover" aria-hidden>
+          <Icon size={56} strokeWidth={1.4} />
+        </div>
+        <h1>{article.title}</h1>
+        {article.publishedOn && <time dateTime={article.publishedOn}>{articleDate(article.publishedOn)}</time>}
+        <p className="af-shop-article-lead">{article.summary}</p>
+        {article.body.map((paragraph) =>
+          paragraph.startsWith('## ') ? <h2 key={paragraph}>{paragraph.slice(3)}</h2> : <p key={paragraph}>{paragraph}</p>,
+        )}
+        <Link to="/shop">
+          <Button type="primary" icon={<ShoppingCart size={16} />}>
+            Đặt nước ngay
+          </Button>
+        </Link>
+      </article>
+      <section className="af-shop-article-more" aria-labelledby="af-shop-more-title">
+        <h2 id="af-shop-more-title">{kind === 'policy' ? 'Chính sách khác' : 'Bài viết khác'}</h2>
+        <ul>
+          {others.map((item) => (
+            <li key={item.slug}>
+              <Link to={`/shop/${kind}/${item.slug}`}>{item.title}</Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  )
 }

@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { Badge, Button, Card, Col, Empty, Row, Segmented, Skeleton, Typography } from 'antd'
 import { Clock3, Eye, MapPin, Package, Phone } from 'lucide-react'
-import { Page } from '../../shared/components/Page'
-import { QueryError } from '../../shared/components/QueryError'
-import { Money } from '../../shared/components/Money'
-import { dueTone } from '../../shared/utils/money'
-import { AdvanceStatusButton } from '../orders/components/AdvanceStatusButton'
-import { amountDue, type Order, type OrderStatus } from '../orders/types'
-import { useOrders } from '../orders/useOrders'
-import { OrderDetailsModal } from '../orders/components/OrderDetailsModal'
+import { Page } from '@/shared/components/Page'
+import { QueryError } from '@/shared/components/QueryError'
+import { Money } from '@/shared/components/Money'
+import { dueTone } from '@/shared/utils/money'
+import { AdvanceStatusButton } from '@/features/orders/components/AdvanceStatusButton'
+import { amountDue, type Order, type OrderStatus } from '@/features/orders/types'
+import { useOrders } from '@/features/orders/useOrders'
+import { OrderDetailsModal } from '@/features/orders/components/OrderDetailsModal'
 import { TripsPanel } from './components/TripsPanel'
 
 // Bảng giao hàng: mỗi cột là một bước, đơn đi từ trái sang phải.
@@ -51,7 +51,9 @@ function DeliveryCard({ order, onDetails }: { order: Order; onDetails: () => voi
         </Typography.Paragraph>
       )}
       <div className="af-delivery-footer">
-        <Button size="small" icon={<Eye size={15} />} onClick={onDetails} aria-label={`Chi tiết đơn ${order.id}`}>Chi tiết</Button>
+        <Button size="small" icon={<Eye size={15} />} onClick={onDetails} aria-label={`Chi tiết đơn ${order.id}`}>
+          Chi tiết
+        </Button>
         <AdvanceStatusButton order={order} />
       </div>
     </Card>

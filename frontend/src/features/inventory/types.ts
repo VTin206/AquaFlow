@@ -24,7 +24,6 @@ export type ProductDraft = {
   image?: string
 }
 
-
 export const isLowStock = (product: Product) => product.stock <= product.threshold
 
 /** Lô hàng đạt yêu cầu đã nhập kho. Ngày dạng ISO "yyyy-mm-dd". */

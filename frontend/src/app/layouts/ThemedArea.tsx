@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { App as AntApp, ConfigProvider } from 'antd'
-import { useColorMode } from '../app/colorMode'
-import { appTheme, darkTheme } from '../app/theme'
+import { useColorMode } from '@/app/colorMode'
+import { appTheme, darkTheme } from '@/app/theme'
 
 /**
  * Vùng theo chế độ sáng/tối (khu quản lý, màn hình tài xế); cửa hàng và đăng nhập luôn sáng.

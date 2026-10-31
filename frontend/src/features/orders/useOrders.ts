@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { customerKeys } from '../customers/useCustomers'
-import { productKeys } from '../inventory/useProducts'
+import { customerKeys } from '@/features/customers/useCustomers'
+import { productKeys } from '@/features/inventory/useProducts'
 import { orderService } from './orderService'
 import type { DeliveryResult, Order, PaymentDraft, RefundDraft, ReturnDraft, ReturnInspectionDraft } from './types'
 

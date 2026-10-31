@@ -1,25 +1,42 @@
 import { useState } from 'react'
-import { Alert, Badge, Button, Card, Col, ConfigProvider, Empty, Input, Progress, Row, Segmented, Statistic, Table, Tag, Typography, type TableColumnsType } from 'antd'
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Col,
+  ConfigProvider,
+  Empty,
+  Input,
+  Progress,
+  Row,
+  Segmented,
+  Statistic,
+  Table,
+  Tag,
+  Typography,
+  type TableColumnsType,
+} from 'antd'
 import { FilePlus2, PackagePlus, Search } from 'lucide-react'
-import { CountLabel } from '../../shared/components/CountLabel'
-import { Page } from '../../shared/components/Page'
-import { QueryError } from '../../shared/components/QueryError'
-import { UNSUPPORTED_HINT, Unsupported } from '../../shared/components/Unsupported'
-import { useFeature } from '../../shared/features'
-import { awaitingReturnInspection } from '../orders/types'
-import { useOrders } from '../orders/useOrders'
-import { useColumnSort } from '../../shared/components/sortableColumn'
-import { currency } from '../../shared/utils/format'
-import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
+import { CountLabel } from '@/shared/components/CountLabel'
+import { Page } from '@/shared/components/Page'
+import { QueryError } from '@/shared/components/QueryError'
+import { UNSUPPORTED_HINT, Unsupported } from '@/shared/components/Unsupported'
+import { useFeature } from '@/shared/features'
+import { awaitingReturnInspection } from '@/features/orders/types'
+import { useOrders } from '@/features/orders/useOrders'
+import { useColumnSort } from '@/shared/components/sortableColumn'
+import { currency } from '@/shared/utils/format'
+import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
 import { LotsPanel } from './components/LotsPanel'
 import { MovementsPanel } from './components/MovementsPanel'
 import { ReturnsPanel } from './components/ReturnsPanel'
 import { ReceiptsPanel } from './components/ReceiptsPanel'
 import { ReceiveStockModal } from './components/ReceiveStockModal'
-import { useExpiryWarningDays } from '../settings/settingsService'
+import { useExpiryWarningDays } from '@/features/settings/settingsService'
 import { daysUntilExpiry, expiryStatus, isoToVnDate } from './expiry'
-import { matchesSearch } from '../../shared/utils/search'
-import { useReceiptViews, useStockItems, type ReceiptView, type StockItem } from './inventoryData'
+import { matchesSearch } from '@/shared/utils/search'
+import { useReceiptViews, useStockItems, type ReceiptView, type StockItem } from './useInventory'
 
 type Filter = 'all' | 'low' | 'expiring' | 'expired'
 type View = 'stock' | 'lots' | 'receipts' | 'returns' | 'movements'
@@ -43,11 +60,21 @@ export function InventoryPage() {
   const hasThreshold = products.some((item) => item.threshold !== undefined)
   const lowStock = products.filter(isLow)
   const expiring = products.filter((item) => item.onHand > 0 && expiryStatus(expiryText(item), warningDays) === 'expiring')
-  const expired = products.filter((item) => item.expiredOnHand > 0 || (item.onHand > 0 && expiryStatus(expiryText(item), warningDays) === 'expired'))
+  const expired = products.filter(
+    (item) => item.expiredOnHand > 0 || (item.onHand > 0 && expiryStatus(expiryText(item), warningDays) === 'expired'),
+  )
   const drafts = (receiptsQuery.data ?? []).filter((receipt) => receipt.status === 'DRAFT').length
   const lowLabel = hasThreshold ? 'Sắp hết' : 'Hết hàng'
   const visible = products
-    .filter((item) => (filter === 'low' ? isLow(item) : filter === 'expiring' ? expiring.includes(item) : filter === 'expired' ? expired.includes(item) : true))
+    .filter((item) =>
+      filter === 'low'
+        ? isLow(item)
+        : filter === 'expiring'
+          ? expiring.includes(item)
+          : filter === 'expired'
+            ? expired.includes(item)
+            : true,
+    )
     .filter((item) => matchesSearch(query, `${item.name} ${item.sku} ${item.brand ?? ''}`))
 
   const sort = useColumnSort<StockItem>()
@@ -57,7 +84,9 @@ export function InventoryPage() {
       dataIndex: 'name',
       render: (_, product) => (
         <div className="af-cell-stack">
-          <span className="af-cell-truncate" title={product.name}>{product.name}</span>
+          <span className="af-cell-truncate" title={product.name}>
+            {product.name}
+          </span>
           <small className="af-cell-truncate" title={[product.sku, product.brand].filter(Boolean).join(' · ')}>
             {[product.sku, product.brand].filter(Boolean).join(' · ')}
           </small>
@@ -76,7 +105,13 @@ export function InventoryPage() {
               {product.onHand} <Typography.Text type="secondary">{product.unit?.toLowerCase()}</Typography.Text>
             </span>
             <small>
-              {product.threshold !== undefined ? `Tối thiểu ${product.threshold}` : <>Khả dụng {product.available} · <Unsupported label="tối thiểu: chưa hỗ trợ" /></>}
+              {product.threshold !== undefined ? (
+                `Tối thiểu ${product.threshold}`
+              ) : (
+                <>
+                  Khả dụng {product.available} · <Unsupported label="tối thiểu: chưa hỗ trợ" />
+                </>
+              )}
               {product.reserved > 0 && ` · giữ ${product.reserved}`}
             </small>
           </div>
@@ -101,7 +136,9 @@ export function InventoryPage() {
         return (
           <div className="af-cell-stack">
             <span>{expiry}</span>
-            <small className={days < 0 ? 'af-text-danger' : days <= warningDays ? 'af-text-warning' : undefined}>{days < 0 ? 'Đã hết hạn' : days === 0 ? 'Hết hạn hôm nay' : `Còn ${days} ngày`}</small>
+            <small className={days < 0 ? 'af-text-danger' : days <= warningDays ? 'af-text-warning' : undefined}>
+              {days < 0 ? 'Đã hết hạn' : days === 0 ? 'Hết hạn hôm nay' : `Còn ${days} ngày`}
+            </small>
           </div>
         )
       },
@@ -110,18 +147,28 @@ export function InventoryPage() {
       title: 'Trạng thái',
       key: 'state',
       width: 130,
-      render: (_, product) => expired.includes(product)
-        ? <Tag color="red">Có lô hết hạn</Tag>
-        : expiring.includes(product)
-          ? <Tag color="gold">Sắp hết hạn</Tag>
-          : isLow(product) ? <Tag color="red">{lowLabel}</Tag> : <Tag color="green">Đủ hàng</Tag>,
+      render: (_, product) =>
+        expired.includes(product) ? (
+          <Tag color="red">Có lô hết hạn</Tag>
+        ) : expiring.includes(product) ? (
+          <Tag color="gold">Sắp hết hạn</Tag>
+        ) : isLow(product) ? (
+          <Tag color="red">{lowLabel}</Tag>
+        ) : (
+          <Tag color="green">Đủ hàng</Tag>
+        ),
     },
     {
       title: 'Thao tác',
       key: 'action',
       width: 145,
       render: (_, product) => (
-        <Button size="small" icon={<PackagePlus size={15} />} type={isLow(product) ? 'primary' : 'default'} onClick={() => setReceiving({ productId: product.id })}>
+        <Button
+          size="small"
+          icon={<PackagePlus size={15} />}
+          type={isLow(product) ? 'primary' : 'default'}
+          onClick={() => setReceiving({ productId: product.id })}
+        >
           Nhập thêm
         </Button>
       ),
@@ -150,10 +197,16 @@ export function InventoryPage() {
               showIcon
               style={{ marginBottom: 12 }}
               title={`Có ${drafts} phiếu nhập nháp chưa nhập kho.`}
-              action={<Button size="small" onClick={() => setView('receipts')}>Xem phiếu</Button>}
+              action={
+                <Button size="small" onClick={() => setView('receipts')}>
+                  Xem phiếu
+                </Button>
+              }
             />
           )}
-          <ConfigProvider theme={{ components: { Card: { bodyPadding: 12 }, Statistic: { titleFontSize: 12, contentFontSize: 20, lineHeight: 1.4 } } }}>
+          <ConfigProvider
+            theme={{ components: { Card: { bodyPadding: 12 }, Statistic: { titleFontSize: 12, contentFontSize: 20, lineHeight: 1.4 } } }}
+          >
             <Row gutter={[12, 12]} className="af-stat-row af-inventory-stats">
               <Col xs={12} lg={4}>
                 <Card loading={stockQuery.isPending}>
@@ -162,22 +215,37 @@ export function InventoryPage() {
               </Col>
               <Col xs={12} lg={4}>
                 <Card loading={stockQuery.isPending}>
-                  <Statistic title={hasThreshold ? 'Tồn kho thấp' : 'Hết hàng bán được'} value={lowStock.length} className={lowStock.length ? 'af-stat-danger' : undefined} />
+                  <Statistic
+                    title={hasThreshold ? 'Tồn kho thấp' : 'Hết hàng bán được'}
+                    value={lowStock.length}
+                    className={lowStock.length ? 'af-stat-danger' : undefined}
+                  />
                 </Card>
               </Col>
               <Col xs={12} lg={4}>
                 <Card loading={stockQuery.isPending}>
-                  <Statistic title={`Hết hạn trong ${warningDays} ngày`} value={expiring.length} className={expiring.length ? 'af-stat-warning' : undefined} />
+                  <Statistic
+                    title={`Hết hạn trong ${warningDays} ngày`}
+                    value={expiring.length}
+                    className={expiring.length ? 'af-stat-warning' : undefined}
+                  />
                 </Card>
               </Col>
               <Col xs={12} lg={4}>
                 <Card loading={stockQuery.isPending}>
-                  <Statistic title="Mã hàng có lô hết hạn" value={expired.length} className={expired.length ? 'af-stat-danger' : undefined} />
+                  <Statistic
+                    title="Mã hàng có lô hết hạn"
+                    value={expired.length}
+                    className={expired.length ? 'af-stat-danger' : undefined}
+                  />
                 </Card>
               </Col>
               <Col xs={24} lg={8}>
                 <Card loading={stockQuery.isPending}>
-                  <Statistic title="Giá trị tồn (giá bán)" value={currency(products.reduce((sum, item) => sum + item.onHand * (item.salePrice ?? 0), 0))} />
+                  <Statistic
+                    title="Giá trị tồn (giá bán)"
+                    value={currency(products.reduce((sum, item) => sum + item.onHand * (item.salePrice ?? 0), 0))}
+                  />
                 </Card>
               </Col>
             </Row>
@@ -192,12 +260,27 @@ export function InventoryPage() {
               { key: 'stock', label: 'Tồn kho' },
               { key: 'lots', label: 'Lô hàng' },
               { key: 'receipts', label: 'Phiếu nhập' },
-              { key: 'returns', label: <Badge count={returnsCount} size="small" offset={[8, -2]}>Hàng hoàn</Badge> },
+              {
+                key: 'returns',
+                label: (
+                  <Badge count={returnsCount} size="small" offset={[8, -2]}>
+                    Hàng hoàn
+                  </Badge>
+                ),
+              },
               { key: 'movements', label: 'Xuất / nhập kho' },
             ]}
           >
             {(view === 'returns' || view === 'movements') && !showReturns ? (
-              <Empty className="af-unsupported-empty" description={<><strong>Chưa hỗ trợ</strong><div className="af-text-muted">{UNSUPPORTED_HINT}</div></>} />
+              <Empty
+                className="af-unsupported-empty"
+                description={
+                  <>
+                    <strong>Chưa hỗ trợ</strong>
+                    <div className="af-text-muted">{UNSUPPORTED_HINT}</div>
+                  </>
+                }
+              />
             ) : view === 'returns' ? (
               <ReturnsPanel />
             ) : view === 'movements' ? (
@@ -238,7 +321,11 @@ export function InventoryPage() {
                   dataSource={visible}
                   loading={stockQuery.isPending}
                   pagination={tablePagination}
-                  locale={{ emptyText: products.length ? 'Không có sản phẩm phù hợp.' : 'Chưa có sản phẩm. Thêm sản phẩm ở trang Sản phẩm trước khi nhập kho.' }}
+                  locale={{
+                    emptyText: products.length
+                      ? 'Không có sản phẩm phù hợp.'
+                      : 'Chưa có sản phẩm. Thêm sản phẩm ở trang Sản phẩm trước khi nhập kho.',
+                  }}
                   scroll={{ x: 1000, y: tableScrollHeight }}
                 />
               </>
@@ -246,7 +333,13 @@ export function InventoryPage() {
           </Card>
         </>
       )}
-      <ReceiveStockModal key={receiving?.receipt?.id ?? 'new'} open={receiving !== null} defaultProductId={receiving?.productId} receipt={receiving?.receipt} onClose={() => setReceiving(null)} />
+      <ReceiveStockModal
+        key={receiving?.receipt?.id ?? 'new'}
+        open={receiving !== null}
+        defaultProductId={receiving?.productId}
+        receipt={receiving?.receipt}
+        onClose={() => setReceiving(null)}
+      />
     </Page>
   )
 }

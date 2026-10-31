@@ -1,4 +1,16 @@
-import { Boxes, Building2, FileBarChart, History, LayoutDashboard, type LucideIcon, Package, ShoppingBag, Smartphone, Truck, Users } from 'lucide-react'
+import {
+  Boxes,
+  Building2,
+  FileBarChart,
+  History,
+  LayoutDashboard,
+  type LucideIcon,
+  Package,
+  ShoppingBag,
+  Smartphone,
+  Truck,
+  Users,
+} from 'lucide-react'
 
 export type NavItem = { path: string; label: string; icon: LucideIcon }
 

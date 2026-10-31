@@ -5,7 +5,7 @@ import viVN from 'antd/locale/vi_VN'
 import dayjs from 'dayjs'
 import 'dayjs/locale/vi'
 import { BrowserRouter } from 'react-router'
-import { AuthProvider } from '../features/auth/AuthProvider'
+import { AuthProvider } from '@/features/auth/AuthProvider'
 import { appTheme } from './theme'
 
 // Tên thứ/tháng tiếng Việt trong bộ chọn ngày.
@@ -21,7 +21,11 @@ const queryClient = new QueryClient({
 const requiredMark = (label: ReactNode, { required }: { required: boolean }) => (
   <>
     {label}
-    {required && <span className="af-required-mark" aria-hidden>*</span>}
+    {required && (
+      <span className="af-required-mark" aria-hidden>
+        *
+      </span>
+    )}
   </>
 )
 

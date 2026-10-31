@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { Input, Segmented, Table, Tag, Typography } from 'antd'
 import { Search } from 'lucide-react'
-import { CountLabel } from '../../../shared/components/CountLabel'
-import { QueryError } from '../../../shared/components/QueryError'
-import { currency } from '../../../shared/utils/format'
-import { tablePagination, tableScrollHeight } from '../../../shared/utils/table'
-import { useExpiryWarningDays } from '../../settings/settingsService'
+import { CountLabel } from '@/shared/components/CountLabel'
+import { QueryError } from '@/shared/components/QueryError'
+import { currency } from '@/shared/utils/format'
+import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
+import { useExpiryWarningDays } from '@/features/settings/settingsService'
 import { daysUntilExpiry, expiryStatus, isoToVnDate } from '../expiry'
-import { matchesSearch } from '../../../shared/utils/search'
-import { useLotItems, type LotItem } from '../inventoryData'
+import { matchesSearch } from '@/shared/utils/search'
+import { useLotItems, type LotItem } from '../useInventory'
 
 type LotFilter = 'stock' | 'expiring' | 'expired' | 'all'
 
@@ -46,7 +46,15 @@ export function LotsPanel() {
             { value: 'all', label: <CountLabel label="Tất cả lô" count={lots.length} /> },
           ]}
         />
-        <Input allowClear aria-label="Tìm lô hàng" prefix={<Search size={16} className="af-input-icon" />} placeholder="Tìm mã lô, sản phẩm, phiếu nhập..." value={query} onChange={(event) => setQuery(event.target.value)} className="af-search" />
+        <Input
+          allowClear
+          aria-label="Tìm lô hàng"
+          prefix={<Search size={16} className="af-input-icon" />}
+          placeholder="Tìm mã lô, sản phẩm, phiếu nhập..."
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          className="af-search"
+        />
       </div>
       <Table<LotItem>
         key={`${filter}:${query}`}
@@ -64,7 +72,9 @@ export function LotsPanel() {
             key: 'lot',
             render: (_, lot) => (
               <div className="af-cell-stack">
-                <span className="af-cell-truncate" title={lot.productName}>{lot.productName}</span>
+                <span className="af-cell-truncate" title={lot.productName}>
+                  {lot.productName}
+                </span>
                 <small>Lô {lot.lotCode}</small>
               </div>
             ),
@@ -80,7 +90,9 @@ export function LotsPanel() {
               return (
                 <div className="af-cell-stack">
                   <span>{isoToVnDate(lot.expiryDate!)}</span>
-                  <small className={days < 0 ? 'af-text-danger' : days <= warningDays ? 'af-text-warning' : undefined}>{days < 0 ? 'Đã hết hạn' : days === 0 ? 'Hết hạn hôm nay' : `Còn ${days} ngày`}</small>
+                  <small className={days < 0 ? 'af-text-danger' : days <= warningDays ? 'af-text-warning' : undefined}>
+                    {days < 0 ? 'Đã hết hạn' : days === 0 ? 'Hết hạn hôm nay' : `Còn ${days} ngày`}
+                  </small>
                 </div>
               )
             },
@@ -96,28 +108,54 @@ export function LotsPanel() {
               </span>
             ),
           },
-          ...(hasReserved ? [{ title: 'Đã giữ', dataIndex: 'reserved', width: 90, align: 'right' as const, render: (value: number) => (value ? <Typography.Text type="warning">{value}</Typography.Text> : 0) }] : []),
-          { title: 'Giá vốn', dataIndex: 'costPrice', width: 120, align: 'right', render: (cost?: number) => (cost === undefined ? '—' : currency(cost)) },
+          ...(hasReserved
+            ? [
+                {
+                  title: 'Đã giữ',
+                  dataIndex: 'reserved',
+                  width: 90,
+                  align: 'right' as const,
+                  render: (value: number) => (value ? <Typography.Text type="warning">{value}</Typography.Text> : 0),
+                },
+              ]
+            : []),
+          {
+            title: 'Giá vốn',
+            dataIndex: 'costPrice',
+            width: 120,
+            align: 'right',
+            render: (cost?: number) => (cost === undefined ? '—' : currency(cost)),
+          },
           {
             title: 'Nguồn',
             key: 'source',
             width: 150,
-            render: (_, lot) => lot.receiptCode ? (
-              <div className="af-cell-stack">
-                <span>{lot.receiptCode}</span>
-                {lot.receivedAt && <small>{isoToVnDate(lot.receivedAt)}</small>}
-              </div>
-            ) : '—',
+            render: (_, lot) =>
+              lot.receiptCode ? (
+                <div className="af-cell-stack">
+                  <span>{lot.receiptCode}</span>
+                  {lot.receivedAt && <small>{isoToVnDate(lot.receivedAt)}</small>}
+                </div>
+              ) : (
+                '—'
+              ),
           },
           {
             title: 'Xuất',
             key: 'state',
             width: 120,
             render: (_, lot) =>
-              lot.onHand === 0 ? <Tag>Đã hết</Tag>
-                : stateOf(lot) === 'expired' ? <Tag color="red">Không xuất</Tag>
-                  : lot.available === 0 ? <Tag color="gold">Đã giữ hết</Tag>
-                    : lot.id === eligible.find((item) => item.productId === lot.productId)?.id ? <Tag color="blue">Xuất trước</Tag> : <Tag color="default">Chờ</Tag>,
+              lot.onHand === 0 ? (
+                <Tag>Đã hết</Tag>
+              ) : stateOf(lot) === 'expired' ? (
+                <Tag color="red">Không xuất</Tag>
+              ) : lot.available === 0 ? (
+                <Tag color="gold">Đã giữ hết</Tag>
+              ) : lot.id === eligible.find((item) => item.productId === lot.productId)?.id ? (
+                <Tag color="blue">Xuất trước</Tag>
+              ) : (
+                <Tag color="default">Chờ</Tag>
+              ),
           },
         ]}
       />

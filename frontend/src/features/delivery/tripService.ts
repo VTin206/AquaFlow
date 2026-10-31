@@ -1,8 +1,8 @@
-import { db } from '../../mocks/db'
-import { mockError, mockRequest } from '../../mocks/mockRequest'
-import { logActivity, mockActor, requireRole } from '../../mocks/session'
-import { beginDelivery, canDispatch } from '../orders/orderService'
-import type { Order } from '../orders/types'
+import { db } from '@/mocks/db'
+import { mockError, mockRequest } from '@/mocks/mockRequest'
+import { logActivity, mockActor, requireRole } from '@/mocks/session'
+import { beginDelivery, canDispatch } from '@/features/orders/orderService'
+import type { Order } from '@/features/orders/types'
 import { drivers, type SettlementDraft, type Trip, type TripDraft, type TripRecord } from './types'
 
 // Bản mô phỏng trong bộ nhớ; API thật cần transaction để một đơn không nằm ở hai chuyến.
@@ -12,14 +12,17 @@ const findTrip = (id: string) => {
   if (!trip) throw mockError(404, 'Không tìm thấy chuyến giao.')
   return trip
 }
-const ordersOf = (trip: TripRecord) => trip.orderIds.map((id) => db.orders.find((order) => order.id === id)).filter((order): order is Order => Boolean(order))
+const ordersOf = (trip: TripRecord) =>
+  trip.orderIds.map((id) => db.orders.find((order) => order.id === id)).filter((order): order is Order => Boolean(order))
 
 /** Đơn đã xuất kho trong chuyến này. Dữ liệu mẫu cũ chưa ghi lần xuất thì coi chuyến đã xuất phát là đã xuất. */
 export const dispatchedIn = (trip: TripRecord, order: Order) =>
   order.dispatches?.length ? order.dispatches.some((dispatch) => dispatch.tripId === trip.id) : Boolean(trip.departedAt)
 /** Đơn còn việc trong chuyến: chờ xuất kho, hoặc đang giao theo lần xuất của chuyến này. */
 export const openIn = (trip: TripRecord, order: Order) =>
-  dispatchedIn(trip, order) ? order.status === 'Đang giao' && (order.dispatches?.at(-1)?.tripId ?? trip.id) === trip.id : order.status === 'Đang chuẩn bị'
+  dispatchedIn(trip, order)
+    ? order.status === 'Đang giao' && (order.dispatches?.at(-1)?.tripId ?? trip.id) === trip.id
+    : order.status === 'Đang chuẩn bị'
 
 export const tripStatus = (trip: TripRecord): Trip['status'] => {
   if (trip.settlement) return 'Đã đối soát'
@@ -53,7 +56,9 @@ export function expectedHandover(trip: TripRecord) {
       .flatMap((order) => order.payments)
       .filter((payment) => payment.method === 'Tiền mặt' && !payment.refund && payment.recordedAt >= since)
       .reduce((sum, payment) => sum + payment.amount, 0),
-    bottles: orders.filter((order) => ['Đã giao', 'Đã hoàn tất'].includes(order.status)).reduce((sum, order) => sum + (order.bottles?.returned ?? 0), 0),
+    bottles: orders
+      .filter((order) => ['Đã giao', 'Đã hoàn tất'].includes(order.status))
+      .reduce((sum, order) => sum + (order.bottles?.returned ?? 0), 0),
   }
 }
 
@@ -91,7 +96,8 @@ export const tripService = {
       if (!orders.length) throw mockError(400, 'Không còn đơn chờ xuất kho.')
       // Kiểm tra mọi đơn trước khi xuất để không xuất dở dang.
       const blocked = orders.filter((order) => !canDispatch(order) || dispatchedIn(trip, order))
-      if (blocked.length) throw mockError(400, `Bỏ các đơn không còn chờ giao trước khi xuất kho: ${blocked.map((order) => order.id).join(', ')}.`)
+      if (blocked.length)
+        throw mockError(400, `Bỏ các đơn không còn chờ giao trước khi xuất kho: ${blocked.map((order) => order.id).join(', ')}.`)
       orders.forEach((order) => beginDelivery(order, `chuyến ${trip.id}, tài xế ${trip.driver}`, trip.id))
       trip.departedAt ??= new Date().toISOString()
       logActivity('Giao hàng', trip.id, `Xuất kho ${orders.map((order) => order.id).join(', ')} (${mockActor()})`)
@@ -141,7 +147,8 @@ export const tripService = {
       if (tripStatus(trip) !== 'Chờ đối soát') throw mockError(400, 'Chỉ đối soát khi mọi đơn trong chuyến đã có kết quả giao.')
       const { cashHandedOver, bottlesHandedOver } = draft
       if (!Number.isSafeInteger(cashHandedOver) || cashHandedOver < 0) throw mockError(400, 'Tiền mặt bàn giao phải là số nguyên không âm.')
-      if (!Number.isSafeInteger(bottlesHandedOver) || bottlesHandedOver < 0) throw mockError(400, 'Số vỏ bàn giao phải là số nguyên không âm.')
+      if (!Number.isSafeInteger(bottlesHandedOver) || bottlesHandedOver < 0)
+        throw mockError(400, 'Số vỏ bàn giao phải là số nguyên không âm.')
       const expected = expectedHandover(trip)
       const mismatch = cashHandedOver !== expected.cash || bottlesHandedOver !== expected.bottles
       if (mismatch && !draft.note?.trim()) throw mockError(400, 'Có chênh lệch so với sổ, ghi rõ lý do để xử lý.')

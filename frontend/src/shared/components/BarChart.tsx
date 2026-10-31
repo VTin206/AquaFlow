@@ -24,7 +24,10 @@ export function BarChart({ data, formatValue, height = 200 }: BarChartProps) {
         {data.map((item, index) => (
           <Tooltip key={item.label} title={`${item.title ?? item.label}: ${formatValue(item.value)}`}>
             <div className="af-bar-column">
-              <div className={`af-bar ${index === data.length - 1 ? 'is-latest' : ''}`} style={{ height: `${(Math.max(0, item.value) / max) * 100}%` }} />
+              <div
+                className={`af-bar ${index === data.length - 1 ? 'is-latest' : ''}`}
+                style={{ height: `${(Math.max(0, item.value) / max) * 100}%` }}
+              />
               {(index % labelStep === 0 || index === data.length - 1) && <span className="af-bar-label">{item.label}</span>}
             </div>
           </Tooltip>

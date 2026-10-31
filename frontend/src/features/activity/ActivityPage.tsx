@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { Button, Card, DatePicker, Input, Select, Table, Tag, type TableColumnsType } from 'antd'
 import type { Dayjs } from 'dayjs'
 import { Download, Search } from 'lucide-react'
-import { Page } from '../../shared/components/Page'
-import { QueryError } from '../../shared/components/QueryError'
-import { downloadCsv } from '../../shared/utils/csv'
-import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
-import { OrderDetailsModal } from '../orders/components/OrderDetailsModal'
-import { useOrders } from '../orders/useOrders'
-import { localDay } from '../reports/reportService'
+import { Page } from '@/shared/components/Page'
+import { QueryError } from '@/shared/components/QueryError'
+import { downloadCsv } from '@/shared/utils/csv'
+import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
+import { OrderDetailsModal } from '@/features/orders/components/OrderDetailsModal'
+import { useOrders } from '@/features/orders/useOrders'
+import { localDay } from '@/features/reports/reportService'
 import { useActivity, type ActivityArea, type ActivityEntry } from './activityService'
 
 const ALL = 'Tất cả'
@@ -82,7 +82,10 @@ export function ActivityPage() {
           icon={<Download size={16} />}
           disabled={!visible.length}
           onClick={() =>
-            downloadCsv('nhat-ky-hoat-dong.csv', [['Thời điểm', 'Người thực hiện', 'Khu vực', 'Đối tượng', 'Nội dung'], ...visible.map((entry) => [new Date(entry.at).toLocaleString('vi-VN'), entry.by, entry.area, entry.target, entry.action])])
+            downloadCsv('nhat-ky-hoat-dong.csv', [
+              ['Thời điểm', 'Người thực hiện', 'Khu vực', 'Đối tượng', 'Nội dung'],
+              ...visible.map((entry) => [new Date(entry.at).toLocaleString('vi-VN'), entry.by, entry.area, entry.target, entry.action]),
+            ])
           }
         >
           Xuất CSV
@@ -96,7 +99,13 @@ export function ActivityPage() {
           <>
             <div className="af-toolbar">
               <div className="af-order-filters">
-                <Select aria-label="Lọc khu vực" value={area} onChange={setArea} style={{ minWidth: 150 }} options={[ALL, ...Object.keys(areaColors)].map((value) => ({ value, label: value === ALL ? 'Mọi khu vực' : value }))} />
+                <Select
+                  aria-label="Lọc khu vực"
+                  value={area}
+                  onChange={setArea}
+                  style={{ minWidth: 150 }}
+                  options={[ALL, ...Object.keys(areaColors)].map((value) => ({ value, label: value === ALL ? 'Mọi khu vực' : value }))}
+                />
                 <Select
                   aria-label="Lọc người thực hiện"
                   showSearch
@@ -105,7 +114,12 @@ export function ActivityPage() {
                   style={{ minWidth: 190 }}
                   options={[{ value: ALL, label: 'Mọi người' }, ...people.map((value) => ({ value, label: value }))]}
                 />
-                <DatePicker.RangePicker aria-label="Lọc theo ngày" format="DD/MM/YYYY" value={dates} onChange={(value) => setDates(value?.[0] && value[1] ? [value[0], value[1]] : null)} />
+                <DatePicker.RangePicker
+                  aria-label="Lọc theo ngày"
+                  format="DD/MM/YYYY"
+                  value={dates}
+                  onChange={(value) => setDates(value?.[0] && value[1] ? [value[0], value[1]] : null)}
+                />
               </div>
               <Input
                 allowClear
@@ -124,7 +138,10 @@ export function ActivityPage() {
               dataSource={visible}
               loading={activityQuery.isPending}
               pagination={{ ...tablePagination, defaultPageSize: 20 }}
-              locale={{ emptyText: keyword || area !== ALL || person !== ALL || dates ? 'Không có hoạt động phù hợp bộ lọc.' : 'Chưa có hoạt động nào.' }}
+              locale={{
+                emptyText:
+                  keyword || area !== ALL || person !== ALL || dates ? 'Không có hoạt động phù hợp bộ lọc.' : 'Chưa có hoạt động nào.',
+              }}
               scroll={{ x: 900, y: tableScrollHeight }}
             />
           </>

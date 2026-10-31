@@ -58,7 +58,7 @@ Không dự đoán URL hoặc tự gửi request vào endpoint chưa có.
 
 ## Kiểm thử
 
-- `npm test` bao gồm `test:live-api`: dùng HTTP server fixture theo DTO hiện tại,
+- `npm test` bao gồm `tests/live-api.test.mjs`: dùng HTTP server fixture theo DTO hiện tại,
   kiểm đường dẫn/query, mapping SKU/giá, tồn chưa biết, dữ liệu đơn và lỗi 403/404.
   Bổ sung kiểm tạo loại vỏ, update chỉ gửi tiền cọc, lỗi trùng tên 409,
   xóa mềm 204, bộ lọc và làm mới cache giữa các màn.

@@ -1,8 +1,8 @@
-import type { TripRecord } from '../features/delivery/types'
-import type { Order, OrderLine } from '../features/orders/types'
-import type { CustomerRecord } from '../features/customers/types'
-import type { Product } from '../features/inventory/types'
-import { suggestedDeliveryFee } from '../shared/policy'
+import type { TripRecord } from '@/features/delivery/types'
+import type { Order, OrderLine } from '@/features/orders/types'
+import type { CustomerRecord } from '@/features/customers/types'
+import type { Product } from '@/features/inventory/types'
+import { suggestedDeliveryFee } from '@/shared/policy'
 import type { ActivityArea, ActivityEntry } from './session'
 
 // Đơn đã đóng của các ngày trước, sinh ngẫu nhiên có hạt giống cố định để báo cáo theo kỳ có số liệu.
@@ -28,7 +28,7 @@ const addMinutes = (iso: string, minutes: number) => new Date(Date.parse(iso) + 
 
 export function archivedOrders(products: Product[], customers: CustomerRecord[]): Order[] {
   const next = random(20261016)
-  const pick = <T,>(items: T[]) => items[Math.floor(next() * items.length)]
+  const pick = <T>(items: T[]) => items[Math.floor(next() * items.length)]
   const sellable = products.filter((product) => product.sku !== 'VO-20L' && product.price > 0)
   // Hàng bán chạy xuất hiện nhiều hơn.
   const popular = sellable.filter((product) => ['P-004', 'P-009', 'P-010', 'P-012', 'P-016'].includes(product.id))
@@ -62,13 +62,19 @@ export function archivedOrders(products: Product[], customers: CustomerRecord[])
       const createdAt = new Date(day.getTime() + (7 * 60 + Math.floor(next() * 11 * 60)) * 60_000).toISOString()
       const channel: Order['channel'] = delivery ? pick(['Điện thoại', 'Điện thoại', 'Tin nhắn', 'Website'] as const) : 'Tại quầy'
       const id = `AF-${String(sequence++).padStart(4, '0')}`
-      const history: Order['history'] = [{ at: createdAt, message: channel === 'Website' ? 'Khách đặt qua website.' : 'Tiếp nhận yêu cầu.', by: channel === 'Website' ? `${customer.name} (khách, website)` : SALES }]
+      const history: Order['history'] = [
+        {
+          at: createdAt,
+          message: channel === 'Website' ? 'Khách đặt qua website.' : 'Tiếp nhận yêu cầu.',
+          by: channel === 'Website' ? `${customer.name} (khách, website)` : SALES,
+        },
+      ]
       const order: Order = {
         id,
         customerId: customer.id,
         customer: customer.name,
         phone: customer.phone,
-        address: delivery ? customer.addresses[0] ?? customer.area : 'Nhận tại cửa hàng',
+        address: delivery ? (customer.addresses[0] ?? customer.area) : 'Nhận tại cửa hàng',
         items: lines.map((line) => `${line.quantity} ${line.unit.toLowerCase()} ${line.name}`).join(', '),
         total,
         time: new Date(createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
@@ -103,7 +109,11 @@ export function archivedOrders(products: Product[], customers: CustomerRecord[])
           handoverAt = addMinutes(createdAt, 45 + Math.floor(next() * 120))
         }
         const late = order.appointment ? Math.max(0, Math.floor((Date.parse(handoverAt) - Date.parse(order.appointment)) / 60_000)) : 0
-        history.push({ at: handoverAt, message: `Giao thành công · Người nhận: ${customer.name}${late ? ` · Trễ ${late} phút so với giờ hẹn` : ''}`, by: driver })
+        history.push({
+          at: handoverAt,
+          message: `Giao thành công · Người nhận: ${customer.name}${late ? ` · Trễ ${late} phút so với giờ hẹn` : ''}`,
+          by: driver,
+        })
       } else {
         history.push({ at: handoverAt, message: `Khách nhận tại quầy · Người nhận: ${customer.name}`, by: SALES })
       }
@@ -125,7 +135,17 @@ export function archivedOrders(products: Product[], customers: CustomerRecord[])
         const returnedAt = addMinutes(handoverAt, 24 * 60)
         const value = line.unitPrice
         order.total -= value
-        order.returns = [{ id: `TH-${order.id}-1`, at: returnedAt, by: ADMIN, lines: [{ ...line, quantity: 1 }], reason: 'Bình móp, rò nước.', restocked: false, refunded: value }]
+        order.returns = [
+          {
+            id: `TH-${order.id}-1`,
+            at: returnedAt,
+            by: ADMIN,
+            lines: [{ ...line, quantity: 1 }],
+            reason: 'Bình móp, rò nước.',
+            restocked: false,
+            refunded: value,
+          },
+        ]
         order.payments.push({ id: `HT-${order.id}-1`, amount: value, method: 'Tiền mặt', recordedAt: returnedAt, refund: true, by: ADMIN })
         history.push({ at: returnedAt, message: `Nhận trả 1 ${line.unit.toLowerCase()} ${line.name}: Bình móp, rò nước.`, by: ADMIN })
       }
@@ -153,8 +173,14 @@ export function archivedTrips(orders: Order[]): TripRecord[] {
     .map(([key, list], index) => {
       const [, driver] = key.split('|')
       const departures = list.map((order) => order.history.find((event) => event.message.startsWith('Bắt đầu giao'))!.at).sort()
-      const last = list.map((order) => order.deliveredAt!).sort().at(-1)!
-      const cash = list.flatMap((order) => order.payments).filter((payment) => payment.method === 'Tiền mặt' && !payment.refund).reduce((sum, payment) => sum + payment.amount, 0)
+      const last = list
+        .map((order) => order.deliveredAt!)
+        .sort()
+        .at(-1)!
+      const cash = list
+        .flatMap((order) => order.payments)
+        .filter((payment) => payment.method === 'Tiền mặt' && !payment.refund)
+        .reduce((sum, payment) => sum + payment.amount, 0)
       const short = cash > 0 && next() < 0.08 ? Math.min(cash, (1 + Math.floor(next() * 5)) * 10_000) : 0
       return {
         id: `CG-L${String(index + 1).padStart(4, '0')}`,
@@ -179,8 +205,18 @@ const areaOf = (message: string): ActivityArea => (/^(Ghi nhận|Hoàn)/.test(me
 
 /** Nhật ký ban đầu dựng từ lịch sử các đơn mẫu (gần nhất trước). */
 export function seedActivity(orders: Order[]): ActivityEntry[] {
-  const entries = orders.flatMap((order) => order.history.map((event) => ({ at: event.at, by: event.by ?? ADMIN, area: areaOf(event.message), target: order.id, action: event.message })))
-  return entries.sort((a, b) => a.at.localeCompare(b.at)).map((entry, index) => ({ ...entry, id: `NK-${String(index + 1).padStart(5, '0')}` }))
+  const entries = orders.flatMap((order) =>
+    order.history.map((event) => ({
+      at: event.at,
+      by: event.by ?? ADMIN,
+      area: areaOf(event.message),
+      target: order.id,
+      action: event.message,
+    })),
+  )
+  return entries
+    .sort((a, b) => a.at.localeCompare(b.at))
+    .map((entry, index) => ({ ...entry, id: `NK-${String(index + 1).padStart(5, '0')}` }))
 }
 
 /** Gán người thao tác cho lịch sử đơn mẫu đang xử lý và lấy thời điểm khách nhận hàng từ lịch sử. */
@@ -197,6 +233,10 @@ export function withActors(orders: Order[]): Order[] {
             : SALES),
     }))
     const handover = [...history].reverse().find((event) => /^(Giao thành công|Khách nhận)/.test(event.message))
-    return { ...order, history, deliveredAt: order.deliveredAt ?? (['Đã giao', 'Đã hoàn tất'].includes(order.status) ? handover?.at : undefined) }
+    return {
+      ...order,
+      history,
+      deliveredAt: order.deliveredAt ?? (['Đã giao', 'Đã hoàn tất'].includes(order.status) ? handover?.at : undefined),
+    }
   })
 }

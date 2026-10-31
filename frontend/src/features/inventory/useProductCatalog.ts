@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api } from '../../shared/api/client'
-import { useIsDemo } from '../../shared/features'
-import { useStaff } from '../auth/useStaff'
-import { inventoryApi } from '../live/inventoryApi'
-import { invalidateLiveData } from '../live/invalidateLiveData'
+import { api } from '@/shared/api/client'
+import { useIsDemo } from '@/shared/features'
+import { useStaff } from '@/features/auth/useStaff'
+import { inventoryApi } from '@/features/live/inventoryApi'
+import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { productService } from './productService'
 import { resolveProductImage } from './productImages'
 import { isLowStock, type Product } from './types'
@@ -25,29 +25,73 @@ export type CatalogItem = Pick<Product, 'id' | 'sku' | 'name' | 'brand' | 'unit'
   bottleTypeName?: string
 }
 export type ProductStatus = 'active' | 'inactive' | 'all'
-export type ProductForm = { sku: string; name: string; brand?: string; unit: string; price: number; stock?: number; image?: string; unitsPerCase?: number; bottleTypeId?: number; threshold?: number }
+export type ProductForm = {
+  sku: string
+  name: string
+  brand?: string
+  unit: string
+  price: number
+  stock?: number
+  image?: string
+  unitsPerCase?: number
+  bottleTypeId?: number
+  threshold?: number
+}
 
 type ProductResponse = {
-  id: number; sku: string; name: string; brand: string | null; unit: string; image: string | null
-  unitsPerCase: number | null; bottleTypeId: number | null; bottleTypeName: string | null; salePrice: number; active: boolean
+  id: number
+  sku: string
+  name: string
+  brand: string | null
+  unit: string
+  image: string | null
+  unitsPerCase: number | null
+  bottleTypeId: number | null
+  bottleTypeName: string | null
+  salePrice: number
+  active: boolean
   lowStockThreshold?: number
 }
 
 const fromDemo = (product: Product): CatalogItem => ({
-  id: product.id, sku: product.sku, name: product.name, brand: product.brand, unit: product.unit, price: product.price, image: product.image, catalog: product.catalog,
-  active: product.active !== false, stock: product.stock, lowStock: isLowStock(product),
+  id: product.id,
+  sku: product.sku,
+  name: product.name,
+  brand: product.brand,
+  unit: product.unit,
+  price: product.price,
+  image: product.image,
+  catalog: product.catalog,
+  active: product.active !== false,
+  stock: product.stock,
+  lowStock: isLowStock(product),
 })
 
 const fromResponse = (product: ProductResponse, available?: number): CatalogItem => ({
-  id: String(product.id), sku: product.sku, name: product.name, brand: product.brand ?? 'Chưa có thương hiệu', unit: product.unit, price: Number(product.salePrice),
-  active: product.active, stock: available, image: resolveProductImage(product), threshold: product.lowStockThreshold,
+  id: String(product.id),
+  sku: product.sku,
+  name: product.name,
+  brand: product.brand ?? 'Chưa có thương hiệu',
+  unit: product.unit,
+  price: Number(product.salePrice),
+  active: product.active,
+  stock: available,
+  image: resolveProductImage(product),
+  threshold: product.lowStockThreshold,
   lowStock: available !== undefined && (product.lowStockThreshold === undefined ? available === 0 : available <= product.lowStockThreshold),
-  unitsPerCase: product.unitsPerCase ?? undefined, bottleTypeId: product.bottleTypeId ?? undefined, bottleTypeName: product.bottleTypeName ?? undefined,
+  unitsPerCase: product.unitsPerCase ?? undefined,
+  bottleTypeId: product.bottleTypeId ?? undefined,
+  bottleTypeName: product.bottleTypeName ?? undefined,
 })
 
 const toRequest = (form: ProductForm) => ({
-  name: form.name.trim(), brand: form.brand?.trim() || null, unit: form.unit, salePrice: form.price,
-  unitsPerCase: form.unitsPerCase ?? null, bottleTypeId: form.bottleTypeId ?? null, image: form.image ?? null,
+  name: form.name.trim(),
+  brand: form.brand?.trim() || null,
+  unit: form.unit,
+  salePrice: form.price,
+  unitsPerCase: form.unitsPerCase ?? null,
+  bottleTypeId: form.bottleTypeId ?? null,
+  image: form.image ?? null,
   lowStockThreshold: form.threshold ?? null,
 })
 
@@ -58,7 +102,7 @@ async function liveCatalog(status: ProductStatus) {
     inventoryApi.stock().catch(() => undefined),
   ])
   const available = new Map(stock?.map((item) => [item.productId, item.available]))
-  return products.map((product) => fromResponse(product, stock ? available.get(product.id) ?? 0 : undefined))
+  return products.map((product) => fromResponse(product, stock ? (available.get(product.id) ?? 0) : undefined))
 }
 
 /** Bản dùng thử: quản lý và bán hàng được sửa; tài khoản thật: theo BE, chỉ ADMIN. */
@@ -73,9 +117,10 @@ export function useCatalog(status: ProductStatus) {
   const staff = useStaff()
   return useQuery({
     queryKey: demo ? [...productKeys.all, 'catalog', status] : ['live', 'products', staff?.name, staff?.role, status],
-    queryFn: async () => demo
-      ? (await productService.listAll()).map(fromDemo).filter((item) => status === 'all' || item.active === (status === 'active'))
-      : liveCatalog(status),
+    queryFn: async () =>
+      demo
+        ? (await productService.listAll()).map(fromDemo).filter((item) => status === 'all' || item.active === (status === 'active'))
+        : liveCatalog(status),
   })
 }
 
@@ -94,7 +139,9 @@ export function useSaveProduct() {
         const draft = { name: form.name, brand: form.brand, unit: form.unit, price: form.price, image: form.image }
         return id ? productService.update(id, draft) : productService.create({ ...draft, sku: form.sku, stock: form.stock ?? 0 })
       }
-      return id ? api.put<ProductResponse>(`/products/${id}`, toRequest(form)) : api.post<ProductResponse>('/products', { sku: form.sku.trim(), ...toRequest(form) })
+      return id
+        ? api.put<ProductResponse>(`/products/${id}`, toRequest(form))
+        : api.post<ProductResponse>('/products', { sku: form.sku.trim(), ...toRequest(form) })
     },
     onSuccess: () => void invalidate(),
   })

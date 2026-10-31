@@ -3,11 +3,11 @@ import { App, type MenuProps } from 'antd'
 import { Check, LogOut } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { roleNames, type RoleCode } from '../features/auth/permissions'
-import { useAuth } from '../features/auth/useAuth'
-import { devAccounts, type DevAccount } from '../features/auth/devAccounts'
-import { setDemoRole, useStaff, type Staff } from '../features/auth/useStaff'
-import { setMockSession } from '../mocks/session'
+import { roleNames, type RoleCode } from '@/features/auth/permissions'
+import { useAuth } from '@/features/auth/useAuth'
+import { devAccounts, type DevAccount } from '@/features/auth/devAccounts'
+import { setDemoRole, useStaff, type Staff } from '@/features/auth/useStaff'
+import { setMockSession } from '@/mocks/session'
 
 /** Mục trong menu tài khoản, dùng chung cho khung quản lý và khung giao hàng. */
 export function useAccountMenuItems(): MenuProps['items'] {
@@ -29,23 +29,42 @@ export function useAccountMenuItems(): MenuProps['items'] {
   }
   const switchTargets: NonNullable<MenuProps['items']> = [
     ...(staff && !staff.isDemo
-      ? [{ key: 'switch:demo', label: 'Bản dùng thử', onClick: () => { enterDemo(); queryClient.clear(); navigate('/', { replace: true }) } }]
+      ? [
+          {
+            key: 'switch:demo',
+            label: 'Bản dùng thử',
+            onClick: () => {
+              enterDemo()
+              queryClient.clear()
+              navigate('/', { replace: true })
+            },
+          },
+        ]
       : []),
     // Không liệt kê tài khoản đang đăng nhập.
-    ...devAccounts.filter((account) => account.email.toLowerCase() !== user?.email?.toLowerCase()).map((account) => ({
-      key: `switch:${account.email}`,
-      label: account.label,
-      title: account.email,
-      onClick: () => void switchTo(account),
-    })),
+    ...devAccounts
+      .filter((account) => account.email.toLowerCase() !== user?.email?.toLowerCase())
+      .map((account) => ({
+        key: `switch:${account.email}`,
+        label: account.label,
+        title: account.email,
+        onClick: () => void switchTo(account),
+      })),
   ]
-  const switchItems: MenuProps['items'] = import.meta.env.DEV && switchTargets.length
-    ? [
-        { type: 'group', key: 'switch', label: 'Đổi tài khoản (dev)', children: switchTargets },
-        { type: 'divider' },
-      ]
-    : []
-  const logoutItem = { key: 'logout', danger: true, icon: <LogOut size={16} />, label: 'Đăng xuất', onClick: () => { logout(); navigate('/shop', { replace: true }) } }
+  const switchItems: MenuProps['items'] =
+    import.meta.env.DEV && switchTargets.length
+      ? [{ type: 'group', key: 'switch', label: 'Đổi tài khoản (dev)', children: switchTargets }, { type: 'divider' }]
+      : []
+  const logoutItem = {
+    key: 'logout',
+    danger: true,
+    icon: <LogOut size={16} />,
+    label: 'Đăng xuất',
+    onClick: () => {
+      logout()
+      navigate('/shop', { replace: true })
+    },
+  }
   // Bản dùng thử: đổi vai trò để xem menu và quyền của từng nhân viên.
   return staff?.isDemo
     ? [
@@ -76,4 +95,10 @@ export function useMockSession(staff: Staff | null) {
   }, [staffName, staffRole])
 }
 
-export const initialsOf = (name: string) => name.split(/\s+/).map((part) => part[0]).slice(-2).join('').toUpperCase()
+export const initialsOf = (name: string) =>
+  name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .slice(-2)
+    .join('')
+    .toUpperCase()

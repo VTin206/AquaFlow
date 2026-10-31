@@ -1,16 +1,23 @@
 import { App, AutoComplete, Button, Col, Form, Input, InputNumber, Modal, Row, Select, Typography } from 'antd'
 import { Plus, Trash2 } from 'lucide-react'
-import { currency } from '../../../shared/utils/format'
-import { FREE_DELIVERY_MIN_UNITS, SMALL_ORDER_FEE, stairsSurcharge, suggestedDeliveryFee } from '../../../shared/policy'
-import { normalizePhone } from '../../customers/types'
-import { useCustomers } from '../../customers/useCustomers'
-import { daysUntilExpiry } from '../../inventory/expiry'
-import { useProducts } from '../../inventory/useProducts'
+import { currency } from '@/shared/utils/format'
+import { FREE_DELIVERY_MIN_UNITS, SMALL_ORDER_FEE, stairsSurcharge, suggestedDeliveryFee } from '@/shared/policy'
+import { normalizePhone } from '@/features/customers/types'
+import { useCustomers } from '@/features/customers/useCustomers'
+import { daysUntilExpiry } from '@/features/inventory/expiry'
+import { useProducts } from '@/features/inventory/useProducts'
 import type { Order, OrderDraft } from '../types'
 import { useCreateOrder } from '../useOrders'
-import { useConfirmDiscard } from '../../../shared/hooks/useConfirmDiscard'
+import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 
-type CreateOrderModalProps = { open: boolean; onClose: () => void; onCreated?: (order: Order) => void; defaultCustomer?: string; defaultPhone?: string; defaultAddress?: string }
+type CreateOrderModalProps = {
+  open: boolean
+  onClose: () => void
+  onCreated?: (order: Order) => void
+  defaultCustomer?: string
+  defaultPhone?: string
+  defaultAddress?: string
+}
 
 export function CreateOrderModal(props: CreateOrderModalProps) {
   return props.open ? <CreateOrderDialog {...props} /> : null
@@ -30,12 +37,19 @@ function CreateOrderDialog({ open, onClose, onCreated, defaultCustomer, defaultP
   const phone: string = Form.useWatch('phone', form) ?? ''
   const floor: number = Form.useWatch('floor', form) ?? 0
   const units = lines.reduce((sum, line) => sum + (line?.quantity ?? 0), 0)
-  const jugs = lines.reduce((sum, line) => sum + (products.find((product) => product.id === line?.productId)?.unit === 'Bình' ? line?.quantity ?? 0 : 0), 0)
+  const jugs = lines.reduce(
+    (sum, line) => sum + (products.find((product) => product.id === line?.productId)?.unit === 'Bình' ? (line?.quantity ?? 0) : 0),
+    0,
+  )
   const suggestedFee = suggestedDeliveryFee({ units, jugs, floor })
   // Khách đã có hồ sơ: gợi ý các địa chỉ giao đã lưu.
   const knownCustomer = phone ? customers.find((customer) => normalizePhone(customer.phone) === normalizePhone(phone)) : undefined
-  const needsCustomer = method === 'Giao tận nơi' || lines.some((line) => products.find((product) => product.id === line?.productId)?.unit === 'Bình')
-  const total = lines.reduce((sum, line) => sum + (products.find((product) => product.id === line?.productId)?.price ?? 0) * (line?.quantity ?? 0), 0)
+  const needsCustomer =
+    method === 'Giao tận nơi' || lines.some((line) => products.find((product) => product.id === line?.productId)?.unit === 'Bình')
+  const total = lines.reduce(
+    (sum, line) => sum + (products.find((product) => product.id === line?.productId)?.price ?? 0) * (line?.quantity ?? 0),
+    0,
+  )
   return (
     <Modal
       open={open}
@@ -128,7 +142,8 @@ function CreateOrderDialog({ open, onClose, onCreated, defaultCustomer, defaultP
             </Form.Item>
             {knownCustomer && (
               <p className="af-form-hint af-known-customer">
-                Khách {knownCustomer.id} · đang giữ {knownCustomer.bottlesHeld} vỏ{knownCustomer.debt > 0 ? ` · còn nợ ${currency(knownCustomer.debt)}` : ''}
+                Khách {knownCustomer.id} · đang giữ {knownCustomer.bottlesHeld} vỏ
+                {knownCustomer.debt > 0 ? ` · còn nợ ${currency(knownCustomer.debt)}` : ''}
               </p>
             )}
             <Form.Item
@@ -137,7 +152,9 @@ function CreateOrderDialog({ open, onClose, onCreated, defaultCustomer, defaultP
               rules={[
                 {
                   validator: (_, value) =>
-                    !value || Date.parse(value) > Date.now() ? Promise.resolve() : Promise.reject(new Error('Chọn thời gian trong tương lai.')),
+                    !value || Date.parse(value) > Date.now()
+                      ? Promise.resolve()
+                      : Promise.reject(new Error('Chọn thời gian trong tương lai.')),
                 },
               ]}
             >
@@ -148,13 +165,19 @@ function CreateOrderDialog({ open, onClose, onCreated, defaultCustomer, defaultP
         <div className="af-form-section-title">2. Sản phẩm đặt mua</div>
         <Form.List
           name="lines"
-          rules={[{ validator: (_, value) => (value?.length ? Promise.resolve() : Promise.reject(new Error('Thêm ít nhất một sản phẩm.'))) }]}
+          rules={[
+            { validator: (_, value) => (value?.length ? Promise.resolve() : Promise.reject(new Error('Thêm ít nhất một sản phẩm.'))) },
+          ]}
         >
           {(fields, { add, remove }, { errors }) => (
             <>
               {fields.map((field, index) => (
                 <div className="af-order-line-form" key={field.key}>
-                  <Form.Item name={[field.name, 'productId']} label={`Sản phẩm ${index + 1}`} rules={[{ required: true, message: 'Chọn sản phẩm.' }]}>
+                  <Form.Item
+                    name={[field.name, 'productId']}
+                    label={`Sản phẩm ${index + 1}`}
+                    rules={[{ required: true, message: 'Chọn sản phẩm.' }]}
+                  >
                     <Select
                       loading={loadingProducts}
                       showSearch={{ optionFilterProp: 'label' }}
@@ -202,7 +225,10 @@ function CreateOrderDialog({ open, onClose, onCreated, defaultCustomer, defaultP
                   <Select
                     options={[
                       { value: 0, label: 'Tầng trệt / có thang máy' },
-                      ...[1, 2, 3, 4].map((value) => ({ value, label: `Lầu ${value} · +${stairsSurcharge(value, 1).toLocaleString('vi-VN')} ₫/bình` })),
+                      ...[1, 2, 3, 4].map((value) => ({
+                        value,
+                        label: `Lầu ${value} · +${stairsSurcharge(value, 1).toLocaleString('vi-VN')} ₫/bình`,
+                      })),
                     ]}
                   />
                 </Form.Item>

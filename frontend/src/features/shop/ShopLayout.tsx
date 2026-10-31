@@ -2,14 +2,15 @@ import { useState } from 'react'
 import { Alert, Badge, Button, Dropdown } from 'antd'
 import { ArrowLeft, ChevronDown, Clock3, PackageSearch, Phone, Search, ShoppingCart, Waves } from 'lucide-react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router'
-import { useAuth } from '../auth/useAuth'
-import { useSettings } from '../settings/settingsService'
+import { useAuth } from '@/features/auth/useAuth'
+import { useSettings } from '@/features/settings/settingsService'
 import { useCart } from './cart'
 import { AccountMenu } from './components/AccountMenu'
 import { CartDrawer } from './components/CartDrawer'
 import { UkFlag, VietnamFlag } from './components/Flags'
 import { ShopFooter } from './components/ShopFooter'
 import { useShopDemo } from './shopService'
+import './shop.css'
 
 // Bản thật chưa có API cài đặt công khai: hotline và giờ mở cửa tạm lấy từ biến môi trường.
 const liveContact = { phone: import.meta.env.VITE_SHOP_HOTLINE, openingHours: import.meta.env.VITE_SHOP_HOURS }
@@ -39,12 +40,36 @@ export function ShopLayout() {
       {/* Thanh hotline cuộn đi theo trang, chỉ header bên dưới dính lại. */}
       <div className="af-shop-topbar">
         <div className="af-shop-topbar-inner">
-          {tel && <a href={`tel:${tel}`}><Phone size={14} aria-hidden /> <span className="af-shop-topbar-label">Hotline đặt nước:</span> <strong>{settings?.phone}</strong></a>}
-          {hours && <span className="af-shop-topbar-hours"><Clock3 size={14} aria-hidden /> Mở cửa {hours}</span>}
-          <span className="af-shop-topbar-account"><AccountMenu variant="text" /></span>
+          {tel && (
+            <a href={`tel:${tel}`}>
+              <Phone size={14} aria-hidden /> <span className="af-shop-topbar-label">Hotline đặt nước:</span>{' '}
+              <strong>{settings?.phone}</strong>
+            </a>
+          )}
+          {hours && (
+            <span className="af-shop-topbar-hours">
+              <Clock3 size={14} aria-hidden /> Mở cửa {hours}
+            </span>
+          )}
+          <span className="af-shop-topbar-account">
+            <AccountMenu variant="text" />
+          </span>
           {/* Chưa có bản dịch: chỉ Tiếng Việt, English để chỗ sẵn. */}
-          <Dropdown trigger={['click']} placement="bottomRight" menu={{ selectable: true, selectedKeys: ['vi'], items: [{ key: 'vi', icon: <VietnamFlag />, label: 'Tiếng Việt' }, { key: 'en', icon: <UkFlag />, label: 'English (sắp có)', disabled: true }] }}>
-            <Button type="link" className="af-shop-topbar-link af-shop-topbar-lang" aria-label="Ngôn ngữ: Tiếng Việt"><VietnamFlag /> VI <ChevronDown size={14} aria-hidden /></Button>
+          <Dropdown
+            trigger={['click']}
+            placement="bottomRight"
+            menu={{
+              selectable: true,
+              selectedKeys: ['vi'],
+              items: [
+                { key: 'vi', icon: <VietnamFlag />, label: 'Tiếng Việt' },
+                { key: 'en', icon: <UkFlag />, label: 'English (sắp có)', disabled: true },
+              ],
+            }}
+          >
+            <Button type="link" className="af-shop-topbar-link af-shop-topbar-lang" aria-label="Ngôn ngữ: Tiếng Việt">
+              <VietnamFlag /> VI <ChevronDown size={14} aria-hidden />
+            </Button>
           </Dropdown>
         </div>
       </div>
@@ -57,22 +82,64 @@ export function ShopLayout() {
             <strong>AquaFlow</strong>
           </Link>
           <div className="af-shop-icons">
-            <Button type="text" shape="circle" icon={<Search size={24} />} aria-label="Tìm sản phẩm" title="Tìm sản phẩm" onClick={() => navigate('/shop', { state: { focusSearch: Date.now() } })} />
+            <Button
+              type="text"
+              shape="circle"
+              icon={<Search size={24} />}
+              aria-label="Tìm sản phẩm"
+              title="Tìm sản phẩm"
+              onClick={() => navigate('/shop', { state: { focusSearch: Date.now() } })}
+            />
             {/* Tra cứu đơn chỉ có ở bản dùng thử; tài khoản thật chờ API tra đơn công khai. */}
-            {demo && <Button type="text" shape="circle" icon={<PackageSearch size={24} />} aria-label="Tra cứu đơn" title="Tra cứu đơn" onClick={() => navigate('/track')} />}
+            {demo && (
+              <Button
+                type="text"
+                shape="circle"
+                icon={<PackageSearch size={24} />}
+                aria-label="Tra cứu đơn"
+                title="Tra cứu đơn"
+                onClick={() => navigate('/track')}
+              />
+            )}
             <AccountMenu />
           </div>
           <Badge count={count} size="small" offset={[-4, 4]}>
-            <Button type="primary" size="large" icon={<ShoppingCart size={20} />} onClick={() => setCartOpen(true)} aria-label={`Giỏ hàng, ${count} sản phẩm`}>
+            <Button
+              type="primary"
+              size="large"
+              icon={<ShoppingCart size={20} />}
+              onClick={() => setCartOpen(true)}
+              aria-label={`Giỏ hàng, ${count} sản phẩm`}
+            >
               <span className="af-shop-cart-label">Giỏ hàng</span>
             </Button>
           </Badge>
         </div>
       </header>
       <main className="af-shop-main">
-        {demo && <Alert type="warning" showIcon title={demoGuest ? 'Đang xem như khách — dữ liệu mẫu, không gửi đơn tới cửa hàng' : 'Bản dùng thử — dữ liệu mẫu, không gửi đơn tới cửa hàng'} action={demoGuest ? <Button size="small" onClick={logout}>Thoát</Button> : undefined} style={{ marginBottom: 16 }} />}
+        {demo && (
+          <Alert
+            type="warning"
+            showIcon
+            title={
+              demoGuest
+                ? 'Đang xem như khách — dữ liệu mẫu, không gửi đơn tới cửa hàng'
+                : 'Bản dùng thử — dữ liệu mẫu, không gửi đơn tới cửa hàng'
+            }
+            action={
+              demoGuest ? (
+                <Button size="small" onClick={logout}>
+                  Thoát
+                </Button>
+              ) : undefined
+            }
+            style={{ marginBottom: 16 }}
+          />
+        )}
         {location.pathname !== '/shop' && (
-          <Button type="link" className="af-shop-back" icon={<ArrowLeft size={16} />} onClick={goBack}>Quay lại</Button>
+          <Button type="link" className="af-shop-back" icon={<ArrowLeft size={16} />} onClick={goBack}>
+            Quay lại
+          </Button>
         )}
         <Outlet context={{ openCart: () => setCartOpen(true) }} />
       </main>

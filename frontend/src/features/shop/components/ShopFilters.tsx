@@ -1,7 +1,7 @@
 import type { Ref } from 'react'
 import { Button, Input, Select, Typography, type InputRef } from 'antd'
 import { Droplets, FunnelX, LayoutGrid, Search } from 'lucide-react'
-import { brandGroups, catalogCategories, normalizeSearch } from '../../inventory/catalog'
+import { brandGroups, catalogCategories, normalizeSearch } from '@/features/inventory/catalogGroups'
 import { ALL, brandOf, categoryOf, countBy, emptyFilters, shopGroups, type ShopFilterState } from '../shopGroups'
 import type { ShopProduct } from '../shopService'
 
@@ -44,9 +44,16 @@ export function ShopFilters({ products, filters, visibleCount, onChange, searchR
         />
       </div>
       <div className="af-brand-filters" role="group" aria-label="Lọc theo thương hiệu">
-        <button type="button" className={`af-brand-filter${filters.brand === ALL ? ' is-active' : ''}`} aria-pressed={filters.brand === ALL} onClick={() => onChange({ brand: ALL })}>
+        <button
+          type="button"
+          className={`af-brand-filter${filters.brand === ALL ? ' is-active' : ''}`}
+          aria-pressed={filters.brand === ALL}
+          onClick={() => onChange({ brand: ALL })}
+        >
           <LayoutGrid size={25} aria-hidden />
-          <span>Tất cả <small>{countBy(products, filters, 'brand', () => true)}</small></span>
+          <span>
+            Tất cả <small>{countBy(products, filters, 'brand', () => true)}</small>
+          </span>
         </button>
         {brands.map((item) => (
           <button
@@ -57,18 +64,31 @@ export function ShopFilters({ products, filters, visibleCount, onChange, searchR
             onClick={() => onChange({ brand: filters.brand === item.name ? ALL : item.name })}
           >
             {item.logo ? <img src={item.logo} alt="" /> : <Droplets size={25} aria-hidden />}
-            <span>{item.name} <small>{item.count}</small></span>
+            <span>
+              {item.name} <small>{item.count}</small>
+            </span>
           </button>
         ))}
       </div>
       <div className="af-catalog-filters">
-        <Input ref={searchRef} aria-label="Tìm sản phẩm" allowClear prefix={<Search size={16} className="af-input-icon" />} placeholder="Tìm tên sản phẩm, thương hiệu..." value={filters.query} onChange={(event) => onChange({ query: event.target.value })} />
+        <Input
+          ref={searchRef}
+          aria-label="Tìm sản phẩm"
+          allowClear
+          prefix={<Search size={16} className="af-input-icon" />}
+          placeholder="Tìm tên sản phẩm, thương hiệu..."
+          value={filters.query}
+          onChange={(event) => onChange({ query: event.target.value })}
+        />
         <Select
           aria-label="Loại nước"
           allowClear
           placeholder="Tất cả loại nước"
           value={filters.category === ALL ? undefined : filters.category}
-          options={categories.map((value) => ({ value, label: `${value} (${countBy(products, filters, 'category', (product) => categoryOf(product) === value)})` }))}
+          options={categories.map((value) => ({
+            value,
+            label: `${value} (${countBy(products, filters, 'category', (product) => categoryOf(product) === value)})`,
+          }))}
           onChange={(value) => onChange({ category: value ?? ALL })}
         />
         <Select
@@ -81,8 +101,14 @@ export function ShopFilters({ products, filters, visibleCount, onChange, searchR
         />
       </div>
       <div className="af-catalog-results">
-        <Typography.Text type="secondary">Hiển thị {visibleCount} sản phẩm{brandValue ? ` · ${brandValue}` : ''}</Typography.Text>
-        {hasFilters && <Button type="link" size="small" className="af-clear-filter" icon={<FunnelX size={14} />} onClick={() => onChange(emptyFilters)}>Xóa bộ lọc</Button>}
+        <Typography.Text type="secondary">
+          Hiển thị {visibleCount} sản phẩm{brandValue ? ` · ${brandValue}` : ''}
+        </Typography.Text>
+        {hasFilters && (
+          <Button type="link" size="small" className="af-clear-filter" icon={<FunnelX size={14} />} onClick={() => onChange(emptyFilters)}>
+            Xóa bộ lọc
+          </Button>
+        )}
       </div>
     </div>
   )

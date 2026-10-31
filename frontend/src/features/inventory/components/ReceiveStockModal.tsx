@@ -1,12 +1,20 @@
 import { useState } from 'react'
 import { App, Button, Col, Form, Input, InputNumber, Modal, Result, Row, Select, Space, Table, Typography } from 'antd'
 import { Plus, Trash2 } from 'lucide-react'
-import { QueryError } from '../../../shared/components/QueryError'
-import { currency } from '../../../shared/utils/format'
+import { QueryError } from '@/shared/components/QueryError'
+import { currency } from '@/shared/utils/format'
 import { isoToVnDate, localToday } from '../expiry'
 import { tracksExpiry } from '../types'
-import { receiptToForm, useInventoryCaps, useReceiptOptions, useSaveReceipt, type ReceiptForm, type ReceiptLineView, type ReceiptView } from '../inventoryData'
-import { useConfirmDiscard } from '../../../shared/hooks/useConfirmDiscard'
+import {
+  receiptToForm,
+  useInventoryCaps,
+  useReceiptOptions,
+  useSaveReceipt,
+  type ReceiptForm,
+  type ReceiptLineView,
+  type ReceiptView,
+} from '../useInventory'
+import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 
 type ReceiveStockModalProps = { open: boolean; onClose: () => void; defaultProductId?: string; receipt?: ReceiptView }
 
@@ -21,7 +29,12 @@ export function ReceiptResult({ receipt, onClose }: { receipt: ReceiptView; onCl
   const damaged = receipt.lines.reduce((sum, line) => sum + line.damaged, 0)
   return (
     <>
-      <Result status="success" title={`Đã nhập kho phiếu ${receipt.code}`} subTitle={`${receipt.supplierName} · cộng ${good} đơn vị vào tồn bán được${damaged ? `, ${damaged} hỏng không nhập` : ''}.`} style={{ paddingBlock: 16 }} />
+      <Result
+        status="success"
+        title={`Đã nhập kho phiếu ${receipt.code}`}
+        subTitle={`${receipt.supplierName} · cộng ${good} đơn vị vào tồn bán được${damaged ? `, ${damaged} hỏng không nhập` : ''}.`}
+        style={{ paddingBlock: 16 }}
+      />
       <Table<ReceiptLineView>
         rowKey={(line) => `${line.productId}-${line.lotCode}`}
         size="small"
@@ -32,9 +45,27 @@ export function ReceiptResult({ receipt, onClose }: { receipt: ReceiptView; onCl
           { title: 'Sản phẩm', dataIndex: 'productName', ellipsis: true },
           { title: 'Mã lô', dataIndex: 'lotCode', width: 130, render: (code?: string) => code ?? '—' },
           { title: 'Hạn dùng', dataIndex: 'expiryDate', width: 110, render: (date?: string) => (date ? isoToVnDate(date) : '—') },
-          { title: 'Nhập kho', key: 'good', width: 90, align: 'right', render: (_, line) => <strong>{line.received - line.damaged}</strong> },
-          { title: 'Hỏng', dataIndex: 'damaged', width: 70, align: 'right', render: (value: number) => (value ? <Typography.Text type="danger">{value}</Typography.Text> : 0) },
-          { title: 'Thành tiền', key: 'total', width: 130, align: 'right', render: (_, line) => currency((line.received - line.damaged) * line.costPrice) },
+          {
+            title: 'Nhập kho',
+            key: 'good',
+            width: 90,
+            align: 'right',
+            render: (_, line) => <strong>{line.received - line.damaged}</strong>,
+          },
+          {
+            title: 'Hỏng',
+            dataIndex: 'damaged',
+            width: 70,
+            align: 'right',
+            render: (value: number) => (value ? <Typography.Text type="danger">{value}</Typography.Text> : 0),
+          },
+          {
+            title: 'Thành tiền',
+            key: 'total',
+            width: 130,
+            align: 'right',
+            render: (_, line) => currency((line.received - line.damaged) * line.costPrice),
+          },
         ]}
       />
       <div className="af-order-summary" style={{ marginTop: 12 }}>
@@ -42,7 +73,9 @@ export function ReceiptResult({ receipt, onClose }: { receipt: ReceiptView; onCl
         <strong>{currency(receipt.total)}</strong>
       </div>
       <div style={{ marginTop: 16, textAlign: 'right' }}>
-        <Button type="primary" onClick={onClose}>Xong</Button>
+        <Button type="primary" onClick={onClose}>
+          Xong
+        </Button>
       </div>
     </>
   )
@@ -75,7 +108,10 @@ function ReceiptDialog({ open, onClose, defaultProductId, receipt }: ReceiveStoc
               message.success(`Đã lưu nháp phiếu ${saved.code}. Tồn kho chưa thay đổi.`)
               onClose()
             },
-            onError: (error) => message.error(savedId === undefined || !caps.drafts ? error.message : `Phiếu đã lưu nháp nhưng chưa nhập kho: ${error.message}`),
+            onError: (error) =>
+              message.error(
+                savedId === undefined || !caps.drafts ? error.message : `Phiếu đã lưu nháp nhưng chưa nhập kho: ${error.message}`,
+              ),
           },
         ),
       () => undefined,
@@ -84,9 +120,22 @@ function ReceiptDialog({ open, onClose, defaultProductId, receipt }: ReceiveStoc
   const title = result ? 'Kết quả nhập kho' : savedId !== undefined ? 'Sửa phiếu nhập nháp' : 'Tạo phiếu nhập kho'
   const footer = result ? null : (
     <Space wrap>
-      <Button onClick={discard} disabled={save.isPending}>Hủy</Button>
-      {caps.drafts && <Button loading={save.isPending && !save.variables?.confirm} disabled={save.isPending} onClick={() => void submit(false)}>Lưu nháp</Button>}
-      <Button type="primary" loading={save.isPending && save.variables?.confirm} disabled={save.isPending} onClick={() => void submit(true)}>Xác nhận nhập kho</Button>
+      <Button onClick={discard} disabled={save.isPending}>
+        Hủy
+      </Button>
+      {caps.drafts && (
+        <Button loading={save.isPending && !save.variables?.confirm} disabled={save.isPending} onClick={() => void submit(false)}>
+          Lưu nháp
+        </Button>
+      )}
+      <Button
+        type="primary"
+        loading={save.isPending && save.variables?.confirm}
+        disabled={save.isPending}
+        onClick={() => void submit(true)}
+      >
+        Xác nhận nhập kho
+      </Button>
     </Space>
   )
 
@@ -101,18 +150,26 @@ function ReceiptDialog({ open, onClose, defaultProductId, receipt }: ReceiveStoc
       maskClosable={!save.isPending}
       destroyOnHidden
     >
-      {result ? <ReceiptResult receipt={result} onClose={onClose} /> : options.error ? <QueryError error={options.error} onRetry={options.retry} /> : (
+      {result ? (
+        <ReceiptResult receipt={result} onClose={onClose} />
+      ) : options.error ? (
+        <QueryError error={options.error} onRetry={options.retry} />
+      ) : (
         <Form<ReceiptForm>
           name="receive-stock"
           form={form}
           layout="vertical"
           disabled={save.isPending}
           scrollToFirstError={{ block: 'center', focus: true }}
-          initialValues={receipt ? receiptToForm(receipt) : {
-            receivedAt: today,
-            receiver: caps.receiver ? 'Nguyễn An' : undefined,
-            lines: [{ productId: defaultProductId, received: 1, damaged: 0, costPrice: 0 }],
-          }}
+          initialValues={
+            receipt
+              ? receiptToForm(receipt)
+              : {
+                  receivedAt: today,
+                  receiver: caps.receiver ? 'Nguyễn An' : undefined,
+                  lines: [{ productId: defaultProductId, received: 1, damaged: 0, costPrice: 0 }],
+                }
+          }
         >
           <div className="af-form-section-title">1. Thông tin kiểm nhận</div>
           <Row gutter={16}>
@@ -130,14 +187,24 @@ function ReceiptDialog({ open, onClose, defaultProductId, receipt }: ReceiveStoc
               <Form.Item
                 name="receivedAt"
                 label="Ngày nhận"
-                rules={[{ required: true, message: 'Chọn ngày nhận.' }, { validator: (_, value) => (!value || value <= today ? Promise.resolve() : Promise.reject(new Error('Không chọn ngày tương lai.'))) }]}
+                rules={[
+                  { required: true, message: 'Chọn ngày nhận.' },
+                  {
+                    validator: (_, value) =>
+                      !value || value <= today ? Promise.resolve() : Promise.reject(new Error('Không chọn ngày tương lai.')),
+                  },
+                ]}
               >
                 <Input type="date" max={today} />
               </Form.Item>
             </Col>
             {caps.receiver && (
               <Col xs={12} md={8}>
-                <Form.Item name="receiver" label="Người kiểm nhận" rules={[{ required: true, whitespace: true, message: 'Nhập người kiểm nhận.' }]}>
+                <Form.Item
+                  name="receiver"
+                  label="Người kiểm nhận"
+                  rules={[{ required: true, whitespace: true, message: 'Nhập người kiểm nhận.' }]}
+                >
                   <Input />
                 </Form.Item>
               </Col>
@@ -145,7 +212,12 @@ function ReceiptDialog({ open, onClose, defaultProductId, receipt }: ReceiveStoc
           </Row>
 
           <div className="af-form-section-title">2. Hàng nhận theo lô</div>
-          <Form.List name="lines" rules={[{ validator: (_, value) => (value?.length ? Promise.resolve() : Promise.reject(new Error('Thêm ít nhất một dòng hàng.'))) }]}>
+          <Form.List
+            name="lines"
+            rules={[
+              { validator: (_, value) => (value?.length ? Promise.resolve() : Promise.reject(new Error('Thêm ít nhất một dòng hàng.'))) },
+            ]}
+          >
             {(fields, { add, remove }, { errors }) => (
               <>
                 {fields.map((field, index) => {
@@ -156,16 +228,31 @@ function ReceiptDialog({ open, onClose, defaultProductId, receipt }: ReceiveStoc
                     <div className="af-receipt-line" key={field.key}>
                       <div className="af-receipt-line-head">
                         <strong>Dòng {index + 1}</strong>
-                        <Button type="text" danger size="small" icon={<Trash2 size={15} />} aria-label={`Xóa dòng ${index + 1}`} disabled={fields.length === 1} onClick={() => remove(field.name)} />
+                        <Button
+                          type="text"
+                          danger
+                          size="small"
+                          icon={<Trash2 size={15} />}
+                          aria-label={`Xóa dòng ${index + 1}`}
+                          disabled={fields.length === 1}
+                          onClick={() => remove(field.name)}
+                        />
                       </div>
                       <Row gutter={12}>
                         <Col xs={24} md={12}>
-                          <Form.Item name={[field.name, 'productId']} label="Sản phẩm" rules={[{ required: true, message: 'Chọn sản phẩm.' }]}>
+                          <Form.Item
+                            name={[field.name, 'productId']}
+                            label="Sản phẩm"
+                            rules={[{ required: true, message: 'Chọn sản phẩm.' }]}
+                          >
                             <Select
                               loading={options.loadingProducts}
                               showSearch={{ optionFilterProp: 'label' }}
                               placeholder="Chọn sản phẩm"
-                              options={options.products.map((item) => ({ value: item.id, label: `${item.name} (${item.sku}) · tồn ${item.onHand}` }))}
+                              options={options.products.map((item) => ({
+                                value: item.id,
+                                label: `${item.name} (${item.sku}) · tồn ${item.onHand}`,
+                              }))}
                             />
                           </Form.Item>
                         </Col>
@@ -178,7 +265,13 @@ function ReceiptDialog({ open, onClose, defaultProductId, receipt }: ReceiveStoc
                               { max: caps.lotAlwaysRequired ? 100 : 40 },
                               {
                                 validator: (_, value?: string) =>
-                                  !value || !lines.some((other, at) => at !== field.name && other?.productId === line?.productId && other?.lotCode?.trim().toLowerCase() === value.trim().toLowerCase())
+                                  !value ||
+                                  !lines.some(
+                                    (other, at) =>
+                                      at !== field.name &&
+                                      other?.productId === line?.productId &&
+                                      other?.lotCode?.trim().toLowerCase() === value.trim().toLowerCase(),
+                                  )
                                     ? Promise.resolve()
                                     : Promise.reject(new Error('Lô này đã có ở dòng khác.')),
                               },
@@ -193,7 +286,14 @@ function ReceiptDialog({ open, onClose, defaultProductId, receipt }: ReceiveStoc
                               <Form.Item
                                 name={[field.name, 'mfgDate']}
                                 label="Ngày sản xuất"
-                                rules={[{ validator: (_, value) => (!value || !receivedAt || value <= receivedAt ? Promise.resolve() : Promise.reject(new Error('Sau ngày nhận.'))) }]}
+                                rules={[
+                                  {
+                                    validator: (_, value) =>
+                                      !value || !receivedAt || value <= receivedAt
+                                        ? Promise.resolve()
+                                        : Promise.reject(new Error('Sau ngày nhận.')),
+                                  },
+                                ]}
                               >
                                 <Input type="date" max={receivedAt} />
                               </Form.Item>
@@ -205,10 +305,15 @@ function ReceiptDialog({ open, onClose, defaultProductId, receipt }: ReceiveStoc
                                 dependencies={[['lines', field.name, 'mfgDate']]}
                                 rules={[
                                   { required: true, message: 'Nhập hạn dùng.' },
-                                  { validator: (_, value) => (!value || value > today ? Promise.resolve() : Promise.reject(new Error('Lô đã hết hạn.'))) },
                                   {
                                     validator: (_, value) =>
-                                      !value || !line?.mfgDate || value > line.mfgDate ? Promise.resolve() : Promise.reject(new Error('Phải sau ngày sản xuất.')),
+                                      !value || value > today ? Promise.resolve() : Promise.reject(new Error('Lô đã hết hạn.')),
+                                  },
+                                  {
+                                    validator: (_, value) =>
+                                      !value || !line?.mfgDate || value > line.mfgDate
+                                        ? Promise.resolve()
+                                        : Promise.reject(new Error('Phải sau ngày sản xuất.')),
                                   },
                                 ]}
                               >
@@ -218,7 +323,14 @@ function ReceiptDialog({ open, onClose, defaultProductId, receipt }: ReceiveStoc
                           </>
                         )}
                         <Col xs={8} md={4}>
-                          <Form.Item name={[field.name, 'received']} label="Thực nhận" rules={[{ required: true, message: 'Nhập số.' }, { type: 'integer', min: 1, message: '≥ 1' }]}>
+                          <Form.Item
+                            name={[field.name, 'received']}
+                            label="Thực nhận"
+                            rules={[
+                              { required: true, message: 'Nhập số.' },
+                              { type: 'integer', min: 1, message: '≥ 1' },
+                            ]}
+                          >
                             <InputNumber min={1} precision={0} style={{ width: '100%' }} />
                           </Form.Item>
                         </Col>
@@ -229,21 +341,39 @@ function ReceiptDialog({ open, onClose, defaultProductId, receipt }: ReceiveStoc
                             dependencies={[['lines', field.name, 'received']]}
                             rules={[
                               { type: 'integer', min: 0, message: '≥ 0' },
-                              { validator: (_, value) => ((value ?? 0) <= (line?.received ?? 0) ? Promise.resolve() : Promise.reject(new Error('Vượt số nhận.'))) },
+                              {
+                                validator: (_, value) =>
+                                  (value ?? 0) <= (line?.received ?? 0) ? Promise.resolve() : Promise.reject(new Error('Vượt số nhận.')),
+                              },
                             ]}
                           >
                             <InputNumber min={0} precision={0} style={{ width: '100%' }} />
                           </Form.Item>
                         </Col>
                         <Col xs={8} md={needsLot ? 5 : 17}>
-                          <Form.Item name={[field.name, 'costPrice']} label="Giá vốn / đơn vị" rules={[{ required: true, message: 'Nhập giá.' }, { type: 'integer', min: 0 }]}>
-                            <InputNumber<number> min={0} step={1000} precision={0} style={{ width: '100%' }} formatter={(value) => `${value ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')} parser={(value) => Number(value?.replace(/\./g, '') ?? 0)} />
+                          <Form.Item
+                            name={[field.name, 'costPrice']}
+                            label="Giá vốn / đơn vị"
+                            rules={[
+                              { required: true, message: 'Nhập giá.' },
+                              { type: 'integer', min: 0 },
+                            ]}
+                          >
+                            <InputNumber<number>
+                              min={0}
+                              step={1000}
+                              precision={0}
+                              style={{ width: '100%' }}
+                              formatter={(value) => `${value ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
+                              parser={(value) => Number(value?.replace(/\./g, '') ?? 0)}
+                            />
                           </Form.Item>
                         </Col>
                       </Row>
                       {product && (
                         <small className="af-receipt-line-hint">
-                          Đạt {Math.max(0, (line?.received ?? 0) - (line?.damaged ?? 0))} {product.unit?.toLowerCase() ?? 'đơn vị'} → tồn {product.onHand} → <strong>{product.onHand + Math.max(0, (line?.received ?? 0) - (line?.damaged ?? 0))}</strong>
+                          Đạt {Math.max(0, (line?.received ?? 0) - (line?.damaged ?? 0))} {product.unit?.toLowerCase() ?? 'đơn vị'} → tồn{' '}
+                          {product.onHand} → <strong>{product.onHand + Math.max(0, (line?.received ?? 0) - (line?.damaged ?? 0))}</strong>
                           {caps.drafts && ' sau khi nhập kho'}
                         </small>
                       )}

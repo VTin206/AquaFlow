@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useAuth } from '../auth/useAuth'
-import { useStaff } from '../auth/useStaff'
-import { invalidateLiveData } from '../live/invalidateLiveData'
+import { useAuth } from '@/features/auth/useAuth'
+import { useStaff } from '@/features/auth/useStaff'
+import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { supplierApi, supplierService, type SupplierStatus } from './supplierService'
 import type { SupplierDraft } from './types'
 
@@ -21,9 +21,10 @@ export function useSuppliers(status: SupplierStatus = 'active') {
   const staff = useStaff()
   return useQuery({
     queryKey: demo ? [...supplierKeys.all, status] : ['live', 'suppliers', staff?.name, staff?.role, status],
-    queryFn: async () => demo
-      ? (await supplierService.list()).filter((supplier) => status === 'all' || supplier.active === (status === 'active'))
-      : supplierApi.list(status),
+    queryFn: async () =>
+      demo
+        ? (await supplierService.list()).filter((supplier) => status === 'all' || supplier.active === (status === 'active'))
+        : supplierApi.list(status),
   })
 }
 

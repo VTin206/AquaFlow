@@ -32,14 +32,16 @@ export function AdvanceStatusButton({ order, menu = false, size = 'small' }: { o
         <Dropdown trigger={['click']} menu={{ items: [{ key: 'advance', label, disabled: pendingThisOrder, onClick: handleAdvance }] }}>
           <Button size="small" icon={<Ellipsis size={16} />} loading={pendingThisOrder} aria-label={`Thao tác đơn ${order.id}`} />
         </Dropdown>
-      ) : <Button
-        size={size}
-        type={order.status === 'Chờ xác nhận' ? 'primary' : 'default'}
-        loading={pendingThisOrder}
-        onClick={handleAdvance}
-      >
-        {label}
-      </Button>}
+      ) : (
+        <Button
+          size={size}
+          type={order.status === 'Chờ xác nhận' ? 'primary' : 'default'}
+          loading={pendingThisOrder}
+          onClick={handleAdvance}
+        >
+          {label}
+        </Button>
+      )}
       <ReceiveOrderModal order={order} open={receiving} onClose={() => setReceiving(false)} />
     </>
   )

@@ -1,6 +1,6 @@
 import { App, Form, Input, Modal, Select } from 'antd'
-import { currency } from '../../../shared/utils/format'
-import { amountDue, jugCount, type Order } from '../../orders/types'
+import { currency } from '@/shared/utils/format'
+import { amountDue, jugCount, type Order } from '@/features/orders/types'
 import { drivers, type TripDraft } from '../types'
 import { useTripAction } from '../useTrips'
 
