@@ -9,10 +9,17 @@ import { ThemeToggle } from './ThemeToggle'
 import { initialsOf, useAccountMenuItems } from './useAccountMenu'
 
 const dateFormatter = new Intl.DateTimeFormat('vi-VN', {
-  timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric',
+  timeZone: 'Asia/Ho_Chi_Minh',
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
 })
 const timeFormatter = new Intl.DateTimeFormat('vi-VN', {
-  timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+  timeZone: 'Asia/Ho_Chi_Minh',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
 })
 
 function TopbarClock() {
@@ -40,7 +47,13 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
   return (
     <header className="af-topbar">
       <div className="af-topbar-left">
-        <Button type="text" className="af-topbar-icon af-nav-toggle" aria-label="Mở menu" icon={<MenuIcon size={20} />} onClick={onOpenNav} />
+        <Button
+          type="text"
+          className="af-topbar-icon af-nav-toggle"
+          aria-label="Mở menu"
+          icon={<MenuIcon size={20} />}
+          onClick={onOpenNav}
+        />
         <Link to="/" className="af-topbar-brand">
           <span className="af-brand-mark">
             <Waves size={22} strokeWidth={2.2} />
@@ -57,16 +70,15 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
             <ShoppingCart size={19} aria-hidden />
           </Link>
         </Tooltip>
-        {showNotifications ? <NotificationPopover /> : (
+        {showNotifications ? (
+          <NotificationPopover />
+        ) : (
           <Tooltip title="Thông báo: backend chưa hỗ trợ">
             <Button type="text" className="af-topbar-icon" aria-label="Thông báo (chưa hỗ trợ)" icon={<Bell size={19} />} disabled />
           </Tooltip>
         )}
         <ThemeToggle />
-        <Dropdown
-          trigger={['click']}
-          menu={{ items: menuItems }}
-        >
+        <Dropdown trigger={['click']} menu={{ items: menuItems }}>
           <button type="button" className="af-topbar-user af-account-menu" aria-label="Menu tài khoản">
             <Avatar className="af-avatar">{initialsOf(staff?.name ?? 'A')}</Avatar>
             <div className="af-topbar-user-text">

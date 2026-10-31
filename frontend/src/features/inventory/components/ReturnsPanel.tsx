@@ -46,12 +46,18 @@ export function ReturnsPanel() {
             title: 'Lý do giao thất bại',
             key: 'reason',
             ellipsis: true,
-            render: (_, item) => deliveryAttempts(item).filter((attempt) => !attempt.success).at(-1)?.reason ?? '—',
+            render: (_, item) =>
+              deliveryAttempts(item)
+                .filter((attempt) => !attempt.success)
+                .at(-1)?.reason ?? '—',
           },
           {
             title: 'Hàng mang về',
             key: 'lines',
-            render: (_, item) => returnLinesOf(item).map((line) => `${line.quantity} ${line.unit.toLowerCase()} ${line.name}`).join(', '),
+            render: (_, item) =>
+              returnLinesOf(item)
+                .map((line) => `${line.quantity} ${line.unit.toLowerCase()} ${line.name}`)
+                .join(', '),
           },
           {
             title: 'Thao tác',
@@ -82,13 +88,16 @@ function ReturnInspectionModal({ order, onClose }: { order: Order; onClose: () =
 
   const submit = ({ sellable: values, note }: FormValues) => {
     const draft: ReturnInspectionDraft = { sellable: values.map((value) => value ?? 0), note }
-    action.mutate({ kind: 'inspectReturn', id: order.id, draft }, {
-      onSuccess: () => {
-        message.success(`Đã kiểm hàng hoàn đơn ${order.id}.`)
-        onClose()
+    action.mutate(
+      { kind: 'inspectReturn', id: order.id, draft },
+      {
+        onSuccess: () => {
+          message.success(`Đã kiểm hàng hoàn đơn ${order.id}.`)
+          onClose()
+        },
+        onError: (error) => message.error(error.message),
       },
-      onError: (error) => message.error(error.message),
-    })
+    )
   }
 
   return (
@@ -116,12 +125,15 @@ function ReturnInspectionModal({ order, onClose }: { order: Order; onClose: () =
               title: 'Lô',
               key: 'lot',
               width: 130,
-              render: (_, line) => (line.lotCode ? (
-                <div className="af-cell-stack">
-                  <span>{line.lotCode}</span>
-                  {line.expiryDate && <small>HSD {isoToVnDate(line.expiryDate)}</small>}
-                </div>
-              ) : <Typography.Text type="secondary">Không theo lô</Typography.Text>),
+              render: (_, line) =>
+                line.lotCode ? (
+                  <div className="af-cell-stack">
+                    <span>{line.lotCode}</span>
+                    {line.expiryDate && <small>HSD {isoToVnDate(line.expiryDate)}</small>}
+                  </div>
+                ) : (
+                  <Typography.Text type="secondary">Không theo lô</Typography.Text>
+                ),
             },
             { title: 'Mang về', dataIndex: 'quantity', align: 'right', width: 80 },
             {
@@ -130,7 +142,13 @@ function ReturnInspectionModal({ order, onClose }: { order: Order; onClose: () =
               width: 120,
               render: (_, line, index) => (
                 <Form.Item name={['sellable', index]} noStyle rules={[{ required: true }]}>
-                  <InputNumber min={0} max={line.quantity} precision={0} aria-label={`Số bán lại được ${line.name}`} style={{ width: 90 }} />
+                  <InputNumber
+                    min={0}
+                    max={line.quantity}
+                    precision={0}
+                    aria-label={`Số bán lại được ${line.name}`}
+                    style={{ width: 90 }}
+                  />
                 </Form.Item>
               ),
             },

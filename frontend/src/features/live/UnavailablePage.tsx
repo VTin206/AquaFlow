@@ -9,12 +9,15 @@ export function UnavailablePage({ title }: { title: string }) {
     <Page title={title} description={UNSUPPORTED_HINT}>
       <Card>
         <Empty
-          description={<>
-            <strong>Chưa hỗ trợ</strong>
-            <div className="af-text-muted">
-              Hiện đã dùng được <Link to="/orders">Đơn hàng</Link>, <Link to="/inventory">Kho hàng</Link>, <Link to="/products">Sản phẩm</Link>, <Link to="/suppliers">Nhà cung cấp</Link> và <Link to="/customers">Khách hàng</Link>.
-            </div>
-          </>}
+          description={
+            <>
+              <strong>Chưa hỗ trợ</strong>
+              <div className="af-text-muted">
+                Hiện đã dùng được <Link to="/orders">Đơn hàng</Link>, <Link to="/inventory">Kho hàng</Link>,{' '}
+                <Link to="/products">Sản phẩm</Link>, <Link to="/suppliers">Nhà cung cấp</Link> và <Link to="/customers">Khách hàng</Link>.
+              </div>
+            </>
+          }
         />
       </Card>
     </Page>

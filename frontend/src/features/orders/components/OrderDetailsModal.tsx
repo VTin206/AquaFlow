@@ -1,5 +1,25 @@
 import { useState } from 'react'
-import { Alert, App, Button, Checkbox, Descriptions, Divider, Dropdown, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Timeline, Tooltip, Typography, theme } from 'antd'
+import {
+  Alert,
+  App,
+  Button,
+  Checkbox,
+  Descriptions,
+  Divider,
+  Dropdown,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Select,
+  Space,
+  Table,
+  Tag,
+  Timeline,
+  Tooltip,
+  Typography,
+  theme,
+} from 'antd'
 import { Printer } from 'lucide-react'
 import { Money } from '@/shared/components/Money'
 import { OrderTotals } from '@/shared/components/OrderTotals'
@@ -12,13 +32,29 @@ import { useStaff } from '@/features/auth/useStaff'
 import { useSettings } from '@/features/settings/settingsService'
 import { canCancel as cancellable, returnableQuantity } from '../orderService'
 import { DeliverySlipDocument, InvoiceDocument } from '../print/OrderDocuments'
-import { amountDue, awaitingReturnInspection, paidAmount, paymentLabel, returnedValue, type OrderLine, type Payment, type PaymentDraft, type RefundDraft } from '../types'
+import {
+  amountDue,
+  awaitingReturnInspection,
+  paidAmount,
+  paymentLabel,
+  returnedValue,
+  type OrderLine,
+  type Payment,
+  type PaymentDraft,
+  type RefundDraft,
+} from '../types'
 import { useOrderAction, useOrders } from '../useOrders'
 import { AdvanceStatusButton } from './AdvanceStatusButton'
 import { LateTag } from './LateTag'
 import { OrderStatusTag } from './OrderStatusTag'
 
-type ReturnForm = { quantities: Record<string, number | null>; reason: string; restock: boolean; refundMethod?: Payment['method']; refundReference?: string }
+type ReturnForm = {
+  quantities: Record<string, number | null>
+  reason: string
+  restock: boolean
+  refundMethod?: Payment['method']
+  refundReference?: string
+}
 const paymentMethods = ['Tiền mặt', 'Chuyển khoản'].map((value) => ({ value, label: value }))
 
 export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClose: () => void }) {
@@ -46,7 +82,10 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
   const canPay = !['Chờ xác nhận', 'Đã hủy', 'Đã hoàn tất'].includes(order.status) && due > 0
   const canCancel = cancellable(order) && !awaitingReturnInspection(order) && can(role, 'cancelOrder')
   const needsRefundRight = paid > 0 && !can(role, 'refund')
-  const canReturn = ['Đã giao', 'Đã hoàn tất'].includes(order.status) && can(role, 'refund') && order.lines.some((line) => returnableQuantity(order, line.productId) > 0)
+  const canReturn =
+    ['Đã giao', 'Đã hoàn tất'].includes(order.status) &&
+    can(role, 'refund') &&
+    order.lines.some((line) => returnableQuantity(order, line.productId) > 0)
   // Giá trị hàng trả và số phải hoàn tính ngay khi nhập, giống cách backend sẽ tính.
   const returnValue = order.lines.reduce((sum, line) => sum + (returnValues?.quantities?.[line.productId] ?? 0) * line.unitPrice, 0)
   const returnRefund = Math.max(0, paid - (order.total - returnValue))
@@ -92,9 +131,19 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
             trigger={['click']}
             menu={{
               items: [
-                { key: 'invoice', label: 'Hóa đơn bán lẻ', onClick: () => printer.print(<InvoiceDocument order={order} settings={settings} />) },
+                {
+                  key: 'invoice',
+                  label: 'Hóa đơn bán lẻ',
+                  onClick: () => printer.print(<InvoiceDocument order={order} settings={settings} />),
+                },
                 ...(order.method === 'Giao tận nơi'
-                  ? [{ key: 'slip', label: 'Phiếu giao hàng', onClick: () => printer.print(<DeliverySlipDocument order={order} settings={settings} />) }]
+                  ? [
+                      {
+                        key: 'slip',
+                        label: 'Phiếu giao hàng',
+                        onClick: () => printer.print(<DeliverySlipDocument order={order} settings={settings} />),
+                      },
+                    ]
                   : []),
               ],
             }}
@@ -129,7 +178,12 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
             { key: 'phone', label: 'Điện thoại', children: order.phone || 'Không cung cấp' },
             { key: 'method', label: 'Nhận hàng', children: order.method },
             { key: 'channel', label: 'Kênh tiếp nhận', children: order.channel },
-            { key: 'address', label: 'Địa chỉ đã lưu', children: order.floor ? `${order.address} · lầu ${order.floor} (thang bộ)` : order.address, span: 'filled' as const },
+            {
+              key: 'address',
+              label: 'Địa chỉ đã lưu',
+              children: order.floor ? `${order.address} · lầu ${order.floor} (thang bộ)` : order.address,
+              span: 'filled' as const,
+            },
             {
               key: 'time',
               label: 'Giờ hẹn',
@@ -154,7 +208,9 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
           ]}
         />
         <Divider style={{ marginBlock: 16 }} />
-        <Typography.Title level={5}>{order.status === 'Chờ xác nhận' ? 'Sản phẩm & giá dự kiến' : 'Sản phẩm & giá đã chốt'}</Typography.Title>
+        <Typography.Title level={5}>
+          {order.status === 'Chờ xác nhận' ? 'Sản phẩm & giá dự kiến' : 'Sản phẩm & giá đã chốt'}
+        </Typography.Title>
         <Table<OrderLine>
           rowKey="productId"
           size="small"
@@ -171,24 +227,36 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
         <OrderTotals
           rows={[
             { label: 'Tiền hàng', value: currency(order.lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0)) },
-            ...(order.method === 'Giao tận nơi' ? [{ label: 'Phí giao', value: order.deliveryFee > 0 ? currency(order.deliveryFee) : 'Miễn phí' }] : []),
+            ...(order.method === 'Giao tận nơi'
+              ? [{ label: 'Phí giao', value: order.deliveryFee > 0 ? currency(order.deliveryFee) : 'Miễn phí' }]
+              : []),
             ...(order.returns?.length ? [{ label: 'Hàng khách trả lại', value: `−${currency(returnedValue(order))}` }] : []),
           ]}
           total={{ label: 'Tổng cộng', value: currency(order.total) }}
-          after={cancelled ? (
-            <div className="is-status"><Tag>Đã hủy</Tag></div>
-          ) : (
-            <>
-              <div className="is-after-total">
-                <dt>Đã thu</dt>
-                <dd><Money value={paid} tone={paid > 0 ? 'paid' : 'neutral'} /></dd>
+          after={
+            cancelled ? (
+              <div className="is-status">
+                <Tag>Đã hủy</Tag>
               </div>
-              <div>
-                <dt>Còn phải thu</dt>
-                <dd><strong><Money value={due} tone={dueTone(due)} /></strong></dd>
-              </div>
-            </>
-          )}
+            ) : (
+              <>
+                <div className="is-after-total">
+                  <dt>Đã thu</dt>
+                  <dd>
+                    <Money value={paid} tone={paid > 0 ? 'paid' : 'neutral'} />
+                  </dd>
+                </div>
+                <div>
+                  <dt>Còn phải thu</dt>
+                  <dd>
+                    <strong>
+                      <Money value={due} tone={dueTone(due)} />
+                    </strong>
+                  </dd>
+                </div>
+              </>
+            )
+          }
         />
         <Divider style={{ marginBlock: 16 }} />
         <Typography.Title level={5}>Lịch sử thanh toán</Typography.Title>
@@ -200,13 +268,26 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
             dataSource={order.payments}
             scroll={{ x: 560 }}
             columns={[
-              { title: 'Phiếu', dataIndex: 'id', render: (id: string, payment) => (payment.refund ? <Space size={4}>{id}<Tag color="volcano">Hoàn</Tag></Space> : id) },
+              {
+                title: 'Phiếu',
+                dataIndex: 'id',
+                render: (id: string, payment) =>
+                  payment.refund ? (
+                    <Space size={4}>
+                      {id}
+                      <Tag color="volcano">Hoàn</Tag>
+                    </Space>
+                  ) : (
+                    id
+                  ),
+              },
               { title: 'Phương thức', dataIndex: 'method' },
               {
                 title: 'Số tiền',
                 dataIndex: 'amount',
                 align: 'right',
-                render: (amount: number, payment) => (payment.refund ? <span style={{ color: token.colorErrorText }}>−{currency(amount)}</span> : currency(amount)),
+                render: (amount: number, payment) =>
+                  payment.refund ? <span style={{ color: token.colorErrorText }}>−{currency(amount)}</span> : currency(amount),
               },
               {
                 title: 'Thời điểm / tham chiếu',
@@ -284,7 +365,10 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
           <Form.Item
             name="amount"
             label={`Số tiền nhận (còn ${currency(due)})`}
-            rules={[{ required: true }, { type: 'integer', min: 1, max: due, message: 'Số tiền phải dương và không vượt số còn phải thu.' }]}
+            rules={[
+              { required: true },
+              { type: 'integer', min: 1, max: due, message: 'Số tiền phải dương và không vượt số còn phải thu.' },
+            ]}
           >
             <InputNumber min={1} max={due} precision={0} style={{ width: '100%' }} />
           </Form.Item>
@@ -327,18 +411,34 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
           preserve={false}
           initialValues={{ method: 'Tiền mặt' }}
           onFinish={({ reason, method, reference }) =>
-            action.mutate({ kind: 'cancel', id: order.id, reason, refund: paid > 0 && method ? { method, reference } : undefined }, callbacks)
+            action.mutate(
+              { kind: 'cancel', id: order.id, reason, refund: paid > 0 && method ? { method, reference } : undefined },
+              callbacks,
+            )
           }
         >
-          <p>{order.status === 'Giao thất bại' ? 'Hàng mang về đã được xử lý khi kiểm hàng hoàn.' : 'Hàng đang giữ cho đơn sẽ được trả lại số lượng có thể bán.'}</p>
+          <p>
+            {order.status === 'Giao thất bại'
+              ? 'Hàng mang về đã được xử lý khi kiểm hàng hoàn.'
+              : 'Hàng đang giữ cho đơn sẽ được trả lại số lượng có thể bán.'}
+          </p>
           {paid > 0 && (
             <>
-              <Alert type="warning" showIcon title={`Đơn đã thu ${currency(paid)}. Hủy đơn sẽ ghi phiếu hoàn toàn bộ số này cho khách.`} style={{ marginBottom: 16 }} />
+              <Alert
+                type="warning"
+                showIcon
+                title={`Đơn đã thu ${currency(paid)}. Hủy đơn sẽ ghi phiếu hoàn toàn bộ số này cho khách.`}
+                style={{ marginBottom: 16 }}
+              />
               <Form.Item name="method" label="Cách hoàn tiền" rules={[{ required: true }]}>
                 <Select options={paymentMethods} />
               </Form.Item>
               {cancelRefundMethod === 'Chuyển khoản' && (
-                <Form.Item name="reference" label="Mã giao dịch hoàn tiền" rules={[{ required: true, whitespace: true, message: 'Nhập mã giao dịch.' }]}>
+                <Form.Item
+                  name="reference"
+                  label="Mã giao dịch hoàn tiền"
+                  rules={[{ required: true, whitespace: true, message: 'Nhập mã giao dịch.' }]}
+                >
                   <Input />
                 </Form.Item>
               )}
@@ -413,7 +513,11 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
                 <Select options={paymentMethods} style={{ minWidth: 160 }} />
               </Form.Item>
               {returnValues?.refundMethod === 'Chuyển khoản' && (
-                <Form.Item name="refundReference" label="Mã giao dịch hoàn tiền" rules={[{ required: true, whitespace: true, message: 'Nhập mã giao dịch.' }]}>
+                <Form.Item
+                  name="refundReference"
+                  label="Mã giao dịch hoàn tiền"
+                  rules={[{ required: true, whitespace: true, message: 'Nhập mã giao dịch.' }]}
+                >
                   <Input />
                 </Form.Item>
               )}

@@ -18,9 +18,39 @@ const original = globalThis.structuredClone(db)
 const seed = {
   ...globalThis.structuredClone(db),
   products: [
-    { id: 'P-001', name: 'Bình kiểm thử 20L', brand: 'Kiểm thử', unit: 'Bình', stock: 30, threshold: 5, price: 70000, expiry: '31/12/2099', sku: 'TEST-20L' },
-    { id: 'P-002', name: 'Vỏ bình kiểm thử', brand: 'Kiểm thử', unit: 'Vỏ', stock: 10, threshold: 5, price: 50000, expiry: '—', sku: 'TEST-VO' },
-    { id: 'P-003', name: 'Thùng kiểm thử', brand: 'Kiểm thử', unit: 'Thùng', stock: 40, threshold: 5, price: 90000, expiry: '31/12/2099', sku: 'TEST-500' },
+    {
+      id: 'P-001',
+      name: 'Bình kiểm thử 20L',
+      brand: 'Kiểm thử',
+      unit: 'Bình',
+      stock: 30,
+      threshold: 5,
+      price: 70000,
+      expiry: '31/12/2099',
+      sku: 'TEST-20L',
+    },
+    {
+      id: 'P-002',
+      name: 'Vỏ bình kiểm thử',
+      brand: 'Kiểm thử',
+      unit: 'Vỏ',
+      stock: 10,
+      threshold: 5,
+      price: 50000,
+      expiry: '—',
+      sku: 'TEST-VO',
+    },
+    {
+      id: 'P-003',
+      name: 'Thùng kiểm thử',
+      brand: 'Kiểm thử',
+      unit: 'Thùng',
+      stock: 40,
+      threshold: 5,
+      price: 90000,
+      expiry: '31/12/2099',
+      sku: 'TEST-500',
+    },
   ],
   orders: [],
   customers: [],
@@ -61,13 +91,25 @@ const today = () => localDate(new Date())
 
 assert.equal(future(1, new Date(2026, 9, 23, 0, 15)), '2026-10-24', 'Tomorrow stays tomorrow after local midnight')
 test('customer profiles: unique phone, edit, auto-link from orders', async () => {
-  const created = await customerService.create({ name: 'Nguyễn Kiểm Thử', phone: '0911 222 333', type: 'Cá nhân', area: 'Quận 3', addresses: ['5 Đường B', ' ', '5 Đường B'] })
+  const created = await customerService.create({
+    name: 'Nguyễn Kiểm Thử',
+    phone: '0911 222 333',
+    type: 'Cá nhân',
+    area: 'Quận 3',
+    addresses: ['5 Đường B', ' ', '5 Đường B'],
+  })
   assert.equal(created.id, 'KH-001')
   assert.deepEqual(created.addresses, ['5 Đường B'])
   await assert.rejects(customerService.create({ name: 'Trùng', phone: '0911222333', type: 'Cá nhân', addresses: [] }), /đã thuộc khách/)
   await assert.rejects(customerService.create({ name: ' ', phone: '0911000000', type: 'Cá nhân', addresses: [] }))
   await assert.rejects(customerService.create({ name: 'Sai số', phone: '123', type: 'Cá nhân', addresses: [] }))
-  const updated = await customerService.update(created.id, { name: 'Nguyễn Kiểm Thử', phone: '0911222333', type: 'Doanh nghiệp', area: 'Quận 3', addresses: ['7 Đường C'] })
+  const updated = await customerService.update(created.id, {
+    name: 'Nguyễn Kiểm Thử',
+    phone: '0911222333',
+    type: 'Doanh nghiệp',
+    area: 'Quận 3',
+    addresses: ['7 Đường C'],
+  })
   assert.equal(updated.type, 'Doanh nghiệp')
 
   const order = await orderService.create(delivery({ customer: 'Nguyễn Kiểm Thử', phone: '0911 222 333', address: '9 Đường D' }))
@@ -76,7 +118,12 @@ test('customer profiles: unique phone, edit, auto-link from orders', async () =>
   const guest = await orderService.create(delivery({ customer: 'Khách mới', phone: '0988 777 666' }))
   assert.equal(db.customers.length, 2)
   assert.equal(guest.customerId, db.customers[0].id)
-  const counter = await orderService.create({ method: 'Tại quầy', channel: 'Tại quầy', deliveryFee: 0, lines: [{ productId: 'P-003', quantity: 1 }] })
+  const counter = await orderService.create({
+    method: 'Tại quầy',
+    channel: 'Tại quầy',
+    deliveryFee: 0,
+    lines: [{ productId: 'P-003', quantity: 1 }],
+  })
   assert.equal(counter.customerId, undefined)
 })
 
@@ -84,7 +131,12 @@ test('bottle ledger on delivery: delivered, returned, deposit kept out of order 
   const order = await dispatched()
   await assert.rejects(orderService.receive(order.id, { success: true, receiver: 'Chủ quán', bottlesReturned: 3 }), /chỉ có 2 vỏ/)
   await assert.rejects(orderService.receive(order.id, { success: true, receiver: 'Chủ quán', bottlesReturned: -1 }))
-  const received = await orderService.receive(order.id, { success: true, receiver: 'Chủ quán', bottlesReturned: 1, depositCollected: DEPOSIT_PER_BOTTLE })
+  const received = await orderService.receive(order.id, {
+    success: true,
+    receiver: 'Chủ quán',
+    bottlesReturned: 1,
+    depositCollected: DEPOSIT_PER_BOTTLE,
+  })
   assert.deepEqual(received.bottles, { delivered: 2, returned: 1, deposit: DEPOSIT_PER_BOTTLE })
   assert.equal(received.total, 140000)
   const [customer] = await customerService.list()
@@ -98,7 +150,12 @@ test('bottle ledger on delivery: delivered, returned, deposit kept out of order 
 
 test('bottle actions: return limits, refund only for returned bottles, loss forfeits deposit', async () => {
   const order = await dispatched({ lines: [{ productId: 'P-001', quantity: 3 }] })
-  await orderService.receive(order.id, { success: true, receiver: 'Chủ quán', bottlesReturned: 0, depositCollected: 3 * DEPOSIT_PER_BOTTLE })
+  await orderService.receive(order.id, {
+    success: true,
+    receiver: 'Chủ quán',
+    bottlesReturned: 0,
+    depositCollected: 3 * DEPOSIT_PER_BOTTLE,
+  })
   const id = order.customerId
   await assert.rejects(customerService.recordBottles(id, { kind: 'Hoàn cọc', deposit: 1 }), /Thu vỏ trước/)
   await assert.rejects(customerService.recordBottles(id, { kind: 'Thu vỏ', bottles: 4 }), /chỉ đang giữ 3/)
@@ -116,15 +173,29 @@ test('bottle actions: return limits, refund only for returned bottles, loss forf
 
 test('receipts: validate every line first, damaged and expired goods never become sellable', async () => {
   const base = { supplierId: 'NCC-001', receivedAt: today(), receiver: 'Thủ kho' }
-  const good = { productId: 'P-001', lotCode: 'L-01', mfgDate: today(), expiryDate: future(200), received: 10, damaged: 2, costPrice: 40000 }
-  await assert.rejects(productService.createReceipt({ ...base, lines: [good, { ...good, productId: 'P-003', lotCode: 'L-X', expiryDate: today() }] }), /hết hạn/)
+  const good = {
+    productId: 'P-001',
+    lotCode: 'L-01',
+    mfgDate: today(),
+    expiryDate: future(200),
+    received: 10,
+    damaged: 2,
+    costPrice: 40000,
+  }
+  await assert.rejects(
+    productService.createReceipt({ ...base, lines: [good, { ...good, productId: 'P-003', lotCode: 'L-X', expiryDate: today() }] }),
+    /hết hạn/,
+  )
   assert.equal(db.products[0].stock, 30)
   assert.equal(db.lots.length, 0)
   await assert.rejects(productService.createReceipt({ ...base, lines: [{ ...good, lotCode: '' }] }), /mã lô/)
   await assert.rejects(productService.createReceipt({ ...base, lines: [{ ...good, damaged: 11 }] }))
   await assert.rejects(productService.createReceipt({ ...base, receivedAt: future(1), lines: [good] }))
   await assert.rejects(productService.createReceipt({ ...base, supplierId: 'NCC-404', lines: [good] }))
-  const receipt = await productService.createReceipt({ ...base, lines: [good, { productId: 'P-002', received: 5, damaged: 0, costPrice: 50000 }] })
+  const receipt = await productService.createReceipt({
+    ...base,
+    lines: [good, { productId: 'P-002', received: 5, damaged: 0, costPrice: 50000 }],
+  })
   assert.equal(receipt.total, 8 * 40000 + 5 * 50000)
   assert.equal(db.products[0].stock, 38)
   assert.equal(db.products[1].stock, 15)
@@ -144,7 +215,13 @@ test('lots follow FEFO and product expiry tracks the earliest remaining lot', as
   const order = await orderService.create(delivery({ lines: [{ productId: 'P-001', quantity: 6 }] }))
   await orderService.advanceStatus(order.id)
   const lots = (await productService.lots()).filter((lot) => lot.productId === 'P-001')
-  assert.deepEqual(lots.map((lot) => [lot.lotCode, lot.remaining]), [['EARLY', 0], ['LATE', 3]])
+  assert.deepEqual(
+    lots.map((lot) => [lot.lotCode, lot.remaining]),
+    [
+      ['EARLY', 0],
+      ['LATE', 3],
+    ],
+  )
   const [product] = await productService.list()
   assert.equal(product.expiry, future(300).split('-').reverse().join('/'))
 })
@@ -202,7 +279,10 @@ test('failed stop goes back to the queue only after return inspection and redeli
   await tripService.dispatch(retry.id)
   const current = db.orders.find((item) => item.id === order.id)
   assert.match(current.history.at(-1).message, /lần giao lại/)
-  assert.deepEqual(current.dispatches.map((dispatch) => dispatch.tripId), [trip.id, retry.id])
+  assert.deepEqual(
+    current.dispatches.map((dispatch) => dispatch.tripId),
+    [trip.id, retry.id],
+  )
   assert.equal((await tripService.list()).find((item) => item.id === trip.id).status, 'Chờ đối soát')
 })
 
@@ -221,19 +301,33 @@ test('dispatch records the FEFO lots that were reserved for the order', async ()
   const trip = await tripService.create({ driver: 'Trần Văn Tài', orderIds: [order.id] })
   await tripService.dispatch(trip.id)
   const lines = db.orders.find((item) => item.id === order.id).dispatches.at(-1).lines
-  assert.deepEqual(lines.map((line) => [line.lotCode, line.quantity]), [['L-EARLY', 4], ['L-LATE', 2]])
+  assert.deepEqual(
+    lines.map((line) => [line.lotCode, line.quantity]),
+    [
+      ['L-EARLY', 4],
+      ['L-LATE', 2],
+    ],
+  )
 })
 
 test('iWater-style policy: delivery fee, stairs surcharge, pickup fee taken from deposit', async () => {
   assert.equal(suggestedDeliveryFee({ units: 3, jugs: 3, floor: 0 }), 0)
   assert.equal(suggestedDeliveryFee({ units: 2, jugs: 2, floor: 0 }), 15000)
-  assert.deepEqual([1, 2, 3, 4].map((floor) => stairsSurcharge(floor, 2)), [4000, 8000, 16000, 24000])
+  assert.deepEqual(
+    [1, 2, 3, 4].map((floor) => stairsSurcharge(floor, 2)),
+    [4000, 8000, 16000, 24000],
+  )
   assert.equal(suggestedDeliveryFee({ units: 4, jugs: 4, floor: 3 }), 32000)
   await assert.rejects(orderService.create(delivery({ floor: -1 })))
   assert.equal((await orderService.create(delivery({ floor: 2 }))).floor, 2)
 
   const order = await dispatched({ lines: [{ productId: 'P-001', quantity: 2 }] })
-  await orderService.receive(order.id, { success: true, receiver: 'Chủ quán', bottlesReturned: 0, depositCollected: 2 * DEPOSIT_PER_BOTTLE })
+  await orderService.receive(order.id, {
+    success: true,
+    receiver: 'Chủ quán',
+    bottlesReturned: 0,
+    depositCollected: 2 * DEPOSIT_PER_BOTTLE,
+  })
   let customer = await customerService.recordBottles(order.customerId, { kind: 'Thu vỏ', bottles: 2, pickup: true })
   assert.equal(customer.bottlesHeld, 0)
   assert.equal(customer.depositHeld, 2 * DEPOSIT_PER_BOTTLE - PICKUP_FEE)
@@ -241,6 +335,6 @@ test('iWater-style policy: delivery fee, stairs surcharge, pickup fee taken from
   assert.equal(customer.depositHeld, 0)
 })
 afterAll(() => {
-Object.assign(db, original)
-delete globalThis.window
+  Object.assign(db, original)
+  delete globalThis.window
 })

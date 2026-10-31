@@ -65,7 +65,11 @@ function SettingsForm({ settings }: { settings: StoreSettings }) {
           <Card className="af-card af-settings-card" title="Thông tin cửa hàng">
             <Row gutter={16}>
               <Col xs={24} md={14}>
-                <Form.Item name="storeName" label="Tên cửa hàng" rules={[{ required: true, whitespace: true, message: 'Nhập tên cửa hàng.' }, { max: 120 }]}>
+                <Form.Item
+                  name="storeName"
+                  label="Tên cửa hàng"
+                  rules={[{ required: true, whitespace: true, message: 'Nhập tên cửa hàng.' }, { max: 120 }]}
+                >
                   <Input />
                 </Form.Item>
               </Col>
@@ -79,7 +83,11 @@ function SettingsForm({ settings }: { settings: StoreSettings }) {
                 </Form.Item>
               </Col>
             </Row>
-            <Form.Item name="address" label="Địa chỉ" rules={[{ required: true, whitespace: true, message: 'Nhập địa chỉ.' }, { max: 255 }]}>
+            <Form.Item
+              name="address"
+              label="Địa chỉ"
+              rules={[{ required: true, whitespace: true, message: 'Nhập địa chỉ.' }, { max: 255 }]}
+            >
               <Input />
             </Form.Item>
             <Row gutter={16}>
@@ -91,7 +99,9 @@ function SettingsForm({ settings }: { settings: StoreSettings }) {
                     { required: true, message: 'Nhập số điện thoại.' },
                     {
                       validator: (_, value?: string) =>
-                        !value || /^(?:0\d{9,10}|84\d{9,10})$/.test(value.replace(/\D/g, '')) ? Promise.resolve() : Promise.reject(new Error('Số điện thoại không hợp lệ.')),
+                        !value || /^(?:0\d{9,10}|84\d{9,10})$/.test(value.replace(/\D/g, ''))
+                          ? Promise.resolve()
+                          : Promise.reject(new Error('Số điện thoại không hợp lệ.')),
                     },
                   ]}
                 >
@@ -113,7 +123,12 @@ function SettingsForm({ settings }: { settings: StoreSettings }) {
             <Row gutter={16}>
               <Col xs={24} md={8}>
                 <Form.Item name="bankName" label="Ngân hàng" tooltip="Ngân hàng trong danh sách VietQR để tạo mã QR chuyển khoản theo đơn.">
-                  <Select showSearch allowClear placeholder="Chọn ngân hàng" options={vietQrBanks.map((bank) => ({ value: bank.name, label: bank.name }))} />
+                  <Select
+                    showSearch
+                    allowClear
+                    placeholder="Chọn ngân hàng"
+                    options={vietQrBanks.map((bank) => ({ value: bank.name, label: bank.name }))}
+                  />
                 </Form.Item>
               </Col>
               <Col xs={24} md={8}>
@@ -177,7 +192,10 @@ function SettingsForm({ settings }: { settings: StoreSettings }) {
 
           <Card className="af-card af-settings-card" title="Mã QR chuyển khoản (thử)">
             <TransferQr settings={preview} amount={100000} note="AF1000" size={140} />
-            <p className="af-form-hint">Mỗi đơn có mã QR riêng với số tiền còn phải thu và nội dung là mã đơn. Quét thử bằng ứng dụng ngân hàng để kiểm tra tên tài khoản.</p>
+            <p className="af-form-hint">
+              Mỗi đơn có mã QR riêng với số tiền còn phải thu và nội dung là mã đơn. Quét thử bằng ứng dụng ngân hàng để kiểm tra tên tài
+              khoản.
+            </p>
           </Card>
 
           <Card className="af-card af-settings-card" title="Chính sách vỏ & giao hàng">
@@ -193,7 +211,11 @@ function SettingsForm({ settings }: { settings: StoreSettings }) {
                   label: 'Phí giao',
                   children: `Miễn phí từ ${FREE_DELIVERY_MIN_UNITS} bình/thùng; ít hơn ${currency(SMALL_ORDER_FEE.min)}–${currency(SMALL_ORDER_FEE.max)}`,
                 },
-                { key: 'stairs', label: 'Thang bộ / bình', children: [1, 2, 3, 4].map((floor) => `L${floor}: ${currency(stairsSurcharge(floor, 1))}`).join(' · ') },
+                {
+                  key: 'stairs',
+                  label: 'Thang bộ / bình',
+                  children: [1, 2, 3, 4].map((floor) => `L${floor}: ${currency(stairsSurcharge(floor, 1))}`).join(' · '),
+                },
               ]}
             />
             <Typography.Paragraph type="secondary" className="af-form-hint">

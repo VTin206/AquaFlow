@@ -21,9 +21,10 @@ export function useSuppliers(status: SupplierStatus = 'active') {
   const staff = useStaff()
   return useQuery({
     queryKey: demo ? [...supplierKeys.all, status] : ['live', 'suppliers', staff?.name, staff?.role, status],
-    queryFn: async () => demo
-      ? (await supplierService.list()).filter((supplier) => status === 'all' || supplier.active === (status === 'active'))
-      : supplierApi.list(status),
+    queryFn: async () =>
+      demo
+        ? (await supplierService.list()).filter((supplier) => status === 'all' || supplier.active === (status === 'active'))
+        : supplierApi.list(status),
   })
 }
 

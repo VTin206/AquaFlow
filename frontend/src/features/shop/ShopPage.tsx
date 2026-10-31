@@ -33,7 +33,10 @@ export function ShopPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(12)
   // Đổi bộ lọc thì về trang 1 để không rơi vào trang trống.
-  const updateFilters = (next: Partial<ShopFilterState>) => { setFilters((current) => ({ ...current, ...next })); setPage(1) }
+  const updateFilters = (next: Partial<ShopFilterState>) => {
+    setFilters((current) => ({ ...current, ...next }))
+    setPage(1)
+  }
   const catalogRef = useRef<HTMLElement>(null)
   const searchRef = useRef<InputRef>(null)
   const goToCatalog = () => catalogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -46,7 +49,7 @@ export function ShopPage() {
   }, [focusSearch])
 
   useEffect(() => {
-    document.title = `Đặt nước | ${demo ? settings?.storeName ?? 'AquaFlow' : 'AquaFlow'}`
+    document.title = `Đặt nước | ${demo ? (settings?.storeName ?? 'AquaFlow') : 'AquaFlow'}`
   }, [demo, settings?.storeName])
 
   const products = productsQuery.data ?? []
@@ -67,8 +70,14 @@ export function ShopPage() {
       <section ref={catalogRef} className="af-shop-catalog" aria-labelledby="af-shop-catalog-title">
         <div className="af-shop-hero">
           <div>
-            <Typography.Title level={2} id="af-shop-catalog-title">Sản phẩm</Typography.Title>
-            <p>{demo ? 'Bản dùng thử: đặt đơn không cần tài khoản khách hàng và xem trạng thái mô phỏng.' : 'Chọn sản phẩm và đặt hàng không cần tài khoản.'}</p>
+            <Typography.Title level={2} id="af-shop-catalog-title">
+              Sản phẩm
+            </Typography.Title>
+            <p>
+              {demo
+                ? 'Bản dùng thử: đặt đơn không cần tài khoản khách hàng và xem trạng thái mô phỏng.'
+                : 'Chọn sản phẩm và đặt hàng không cần tài khoản.'}
+            </p>
           </div>
         </div>
 
@@ -129,7 +138,11 @@ export function ShopPage() {
             pageSizeOptions={[12, 24, 48]}
             showSizeChanger
             responsive
-            onChange={(next, size) => { setPage(size !== pageSize ? 1 : next); setPageSize(size); goToCatalog() }}
+            onChange={(next, size) => {
+              setPage(size !== pageSize ? 1 : next)
+              setPageSize(size)
+              goToCatalog()
+            }}
           />
         )}
       </section>

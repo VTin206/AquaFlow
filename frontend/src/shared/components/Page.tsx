@@ -18,10 +18,7 @@ export function Page({ title, description, actions, children }: PageProps) {
           <Breadcrumb
             className="af-breadcrumb"
             aria-label="Đường dẫn trang"
-            items={[
-              { title: <Link to="/">Trang chủ</Link> },
-              { title: <span aria-current="page">{title}</span> },
-            ]}
+            items={[{ title: <Link to="/">Trang chủ</Link> }, { title: <span aria-current="page">{title}</span> }]}
           />
         )}
         <div>

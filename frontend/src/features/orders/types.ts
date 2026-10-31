@@ -1,5 +1,6 @@
 import { relativeDateTime } from '@/shared/utils/format'
-export type OrderStatus = 'Chờ xác nhận' | 'Đã xác nhận' | 'Đang chuẩn bị' | 'Đang giao' | 'Đã giao' | 'Giao thất bại' | 'Đã hoàn tất' | 'Đã hủy'
+export type OrderStatus =
+  'Chờ xác nhận' | 'Đã xác nhận' | 'Đang chuẩn bị' | 'Đang giao' | 'Đã giao' | 'Giao thất bại' | 'Đã hoàn tất' | 'Đã hủy'
 
 export type OrderLine = { productId: string; name: string; unit: string; quantity: number; unitPrice: number }
 export type Payment = {
@@ -103,13 +104,22 @@ export type OrderDraft = {
   note?: string
 }
 
-export const paidAmount = (order: Order) => order.payments.reduce((sum, payment) => sum + (payment.refund ? -payment.amount : payment.amount), 0)
+export const paidAmount = (order: Order) =>
+  order.payments.reduce((sum, payment) => sum + (payment.refund ? -payment.amount : payment.amount), 0)
 export const amountDue = (order: Order) => Math.max(0, order.total - paidAmount(order))
 export const paymentLabel = (order: Order) =>
-  order.paymentStatusLabel ?? (order.status === 'Đã hủy' ? 'Đã hủy' : amountDue(order) === 0 ? 'Đã thanh toán' : paidAmount(order) > 0 ? 'Thanh toán một phần' : 'Chưa thanh toán')
+  order.paymentStatusLabel ??
+  (order.status === 'Đã hủy'
+    ? 'Đã hủy'
+    : amountDue(order) === 0
+      ? 'Đã thanh toán'
+      : paidAmount(order) > 0
+        ? 'Thanh toán một phần'
+        : 'Chưa thanh toán')
 
 /** Số bình (có vỏ luân chuyển) trong đơn. */
-export const jugCount = (order: Pick<Order, 'lines'>) => order.lines.filter((line) => line.unit === 'Bình').reduce((sum, line) => sum + line.quantity, 0)
+export const jugCount = (order: Pick<Order, 'lines'>) =>
+  order.lines.filter((line) => line.unit === 'Bình').reduce((sum, line) => sum + line.quantity, 0)
 
 export const createdAtOf = (order: Pick<Order, 'history'>) => order.history[0]?.at
 
@@ -164,13 +174,21 @@ export function appointmentOf(order: Order, now = Date.now()) {
   if (order.method !== 'Giao tận nơi' || !order.appointment || !OPEN_DELIVERY.includes(order.status)) return null
   const minutesLeft = (Date.parse(order.appointment) - now) / 60_000
   const tone = isOverdue(order, now) ? 'danger' : minutesLeft <= 60 ? 'warning' : 'muted'
-  return { label: `Hẹn ${relativeDateTime(order.appointment, new Date(now))}`, full: new Date(order.appointment).toLocaleString('vi-VN'), tone } as const
+  return {
+    label: `Hẹn ${relativeDateTime(order.appointment, new Date(now))}`,
+    full: new Date(order.appointment).toLocaleString('vi-VN'),
+    tone,
+  } as const
 }
 
-export const lateLabel = (minutes: number) => (minutes >= 60 ? `${Math.floor(minutes / 60)} giờ ${minutes % 60 ? `${minutes % 60} phút` : ''}`.trim() : `${minutes} phút`)
+export const lateLabel = (minutes: number) =>
+  minutes >= 60 ? `${Math.floor(minutes / 60)} giờ ${minutes % 60 ? `${minutes % 60} phút` : ''}`.trim() : `${minutes} phút`
 
 /** Thông tin đơn khách xem được trên trang tra cứu. */
-export type PublicOrder = Pick<Order, 'id' | 'customer' | 'address' | 'status' | 'method' | 'lines' | 'deliveryFee' | 'total' | 'appointment' | 'deliveredAt' | 'trackingToken'> & {
+export type PublicOrder = Pick<
+  Order,
+  'id' | 'customer' | 'address' | 'status' | 'method' | 'lines' | 'deliveryFee' | 'total' | 'appointment' | 'deliveredAt' | 'trackingToken'
+> & {
   paid: number
   due: number
   createdAt?: string

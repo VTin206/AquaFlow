@@ -79,7 +79,11 @@ const writeDemoGuest = (on: boolean) => {
   }
 }
 
-const toAuthUser = (user: { fullName: string; email: string; role: string }): AuthUser => ({ name: user.fullName || user.email, email: user.email, role: roleLabel(user.role) })
+const toAuthUser = (user: { fullName: string; email: string; role: string }): AuthUser => ({
+  name: user.fullName || user.email,
+  email: user.email,
+  role: roleLabel(user.role),
+})
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { message } = App.useApp()
@@ -169,15 +173,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setDemoGuest(true)
   }, [clearSession])
 
-  const value = useMemo<AuthContextValue>(() => ({
-    user,
-    isAuthenticated: Boolean(user && (token || user.isDemo)),
-    login,
-    enterDemo,
-    demoGuest,
-    enterDemoGuest,
-    logout: clearSession,
-  }), [token, user, demoGuest, clearSession, enterDemoGuest])
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      isAuthenticated: Boolean(user && (token || user.isDemo)),
+      login,
+      enterDemo,
+      demoGuest,
+      enterDemoGuest,
+      logout: clearSession,
+    }),
+    [token, user, demoGuest, clearSession, enterDemoGuest],
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

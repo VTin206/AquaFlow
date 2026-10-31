@@ -21,7 +21,11 @@ const queryClient = new QueryClient({
 const requiredMark = (label: ReactNode, { required }: { required: boolean }) => (
   <>
     {label}
-    {required && <span className="af-required-mark" aria-hidden>*</span>}
+    {required && (
+      <span className="af-required-mark" aria-hidden>
+        *
+      </span>
+    )}
   </>
 )
 

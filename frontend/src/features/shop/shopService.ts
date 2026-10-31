@@ -14,7 +14,12 @@ import type { PublicOrder } from '@/features/orders/types'
 // Kênh công khai cho khách; live checkout gửi đơn qua guest order API.
 
 /** Thông tin sản phẩm khách được xem: không lộ số tồn hay giá vốn. */
-export type ShopProduct = Pick<Product, 'id' | 'name' | 'brand' | 'unit' | 'price' | 'image' | 'catalog'> & { sku: string; available: boolean | null; unitsPerCase?: number | null; bottleTypeName?: string | null }
+export type ShopProduct = Pick<Product, 'id' | 'name' | 'brand' | 'unit' | 'price' | 'image' | 'catalog'> & {
+  sku: string
+  available: boolean | null
+  unitsPerCase?: number | null
+  bottleTypeName?: string | null
+}
 
 /** Dữ liệu mẫu khi đăng nhập bản dùng thử, hoặc khi dev chọn "xem như khách". */
 export const useShopDemo = () => {
@@ -23,9 +28,16 @@ export const useShopDemo = () => {
 }
 
 export const toShopProduct = (product: CatalogProduct): ShopProduct => ({
-  id: String(product.id), sku: product.sku, name: product.name, brand: product.brand ?? '',
-  unit: product.unit, price: product.salePrice, available: product.active ? null : false,
-  unitsPerCase: product.unitsPerCase, bottleTypeName: product.bottleTypeName, image: resolveProductImage(product),
+  id: String(product.id),
+  sku: product.sku,
+  name: product.name,
+  brand: product.brand ?? '',
+  unit: product.unit,
+  price: product.salePrice,
+  available: product.active ? null : false,
+  unitsPerCase: product.unitsPerCase,
+  bottleTypeName: product.bottleTypeName,
+  image: resolveProductImage(product),
   catalog: inferCatalog(product.name, product.unit),
 })
 
@@ -54,7 +66,7 @@ export const useShopProducts = () => {
   const demo = useShopDemo()
   return useQuery<ShopProduct[]>({
     queryKey: [...shopKeys.products, demo ? 'demo' : 'live'],
-    queryFn: () => demo ? shopService.products() : catalogApi.products().then((products) => products.map(toShopProduct)),
+    queryFn: () => (demo ? shopService.products() : catalogApi.products().then((products) => products.map(toShopProduct))),
   })
 }
 
@@ -103,7 +115,8 @@ export function usePlaceWebOrder() {
     onSuccess: () => {
       if (demo) {
         // Làm mới các màn quản lý dùng chung dữ liệu mẫu.
-        for (const key of [['orders'], ['customers'], ['products'], ['activity'], shopKeys.products]) queryClient.invalidateQueries({ queryKey: key })
+        for (const key of [['orders'], ['customers'], ['products'], ['activity'], shopKeys.products])
+          queryClient.invalidateQueries({ queryKey: key })
       } else {
         queryClient.invalidateQueries({ queryKey: ['live', 'orders'] })
       }

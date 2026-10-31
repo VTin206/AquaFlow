@@ -23,7 +23,10 @@ const validPhone = (phone: string) => /^(?:0\d{9,10}|84\d{9,10})$/.test(normaliz
 export const bottleBalance = (customerId: string) =>
   db.bottleLedger
     .filter((entry) => entry.customerId === customerId)
-    .reduce((balance, entry) => ({ bottles: balance.bottles + entry.bottles, deposit: balance.deposit + entry.deposit }), { bottles: 0, deposit: 0 })
+    .reduce((balance, entry) => ({ bottles: balance.bottles + entry.bottles, deposit: balance.deposit + entry.deposit }), {
+      bottles: 0,
+      deposit: 0,
+    })
 
 /** Tiền cọc có thể hoàn: phần cọc vượt quá số vỏ khách vẫn đang giữ. */
 export const refundableDeposit = (customerId: string) => {
@@ -35,11 +38,18 @@ export function addBottleEntry(entry: Omit<BottleEntry, 'id' | 'at'>) {
   const next = Math.max(0, ...db.bottleLedger.map((item) => Number(item.id.replace('SV-', '')) || 0)) + 1
   const saved: BottleEntry = { ...entry, id: `SV-${String(next).padStart(4, '0')}`, at: new Date().toISOString(), by: mockActor() }
   db.bottleLedger.push(saved)
-  if (!entry.orderId) logActivity('Khách hàng', entry.customerId, `Sổ vỏ: ${entry.kind}${entry.bottles ? ` ${entry.bottles > 0 ? '+' : ''}${entry.bottles} vỏ` : ''}${entry.deposit ? ` · cọc ${entry.deposit.toLocaleString('vi-VN')} ₫` : ''}`, saved.at)
+  if (!entry.orderId)
+    logActivity(
+      'Khách hàng',
+      entry.customerId,
+      `Sổ vỏ: ${entry.kind}${entry.bottles ? ` ${entry.bottles > 0 ? '+' : ''}${entry.bottles} vỏ` : ''}${entry.deposit ? ` · cọc ${entry.deposit.toLocaleString('vi-VN')} ₫` : ''}`,
+      saved.at,
+    )
   return saved
 }
 
-export const findCustomerByPhone = (phone: string) => db.customers.find((customer) => customer.active !== false && normalizePhone(customer.phone) === normalizePhone(phone))
+export const findCustomerByPhone = (phone: string) =>
+  db.customers.find((customer) => customer.active !== false && normalizePhone(customer.phone) === normalizePhone(phone))
 
 /** Gắn đơn với hồ sơ khách theo số điện thoại; tạo hồ sơ mới nếu chưa có. */
 export function ensureCustomer(name: string, phone: string, address?: string) {
@@ -61,7 +71,8 @@ export function ensureCustomer(name: string, phone: string, address?: string) {
   return customer
 }
 
-const nextCustomerId = () => `KH-${String(Math.max(0, ...db.customers.map((customer) => Number(customer.id.replace('KH-', '')) || 0)) + 1).padStart(3, '0')}`
+const nextCustomerId = () =>
+  `KH-${String(Math.max(0, ...db.customers.map((customer) => Number(customer.id.replace('KH-', '')) || 0)) + 1).padStart(3, '0')}`
 
 const toView = (record: CustomerRecord): Customer => {
   const orders = db.orders.filter((order) => order.customerId === record.id)
@@ -153,10 +164,23 @@ export const customerService = {
       if (action.kind === 'Thu vỏ') {
         if (!Number.isSafeInteger(bottles) || bottles <= 0) throw mockError(400, 'Số vỏ thu về phải là số nguyên dương.')
         if (bottles > balance.bottles) throw mockError(400, `Khách chỉ đang giữ ${balance.bottles} vỏ.`)
-        addBottleEntry({ customerId, kind: action.kind, bottles: -bottles, deposit: 0, note: note ?? (action.pickup ? 'Thu hồi tận nơi' : 'Khách mang vỏ đến cửa hàng') })
+        addBottleEntry({
+          customerId,
+          kind: action.kind,
+          bottles: -bottles,
+          deposit: 0,
+          note: note ?? (action.pickup ? 'Thu hồi tận nơi' : 'Khách mang vỏ đến cửa hàng'),
+        })
         // Thu hồi tận nơi dưới 10 vỏ: phí mỗi lần, cấn trừ vào tiền cọc đang giữ.
         const fee = action.pickup && bottles < PICKUP_FEE_BELOW ? Math.min(PICKUP_FEE, balance.deposit) : 0
-        if (fee > 0) addBottleEntry({ customerId, kind: 'Phí thu hồi', bottles: 0, deposit: -fee, note: `Thu hồi ${bottles} vỏ tận nơi (dưới ${PICKUP_FEE_BELOW} vỏ)` })
+        if (fee > 0)
+          addBottleEntry({
+            customerId,
+            kind: 'Phí thu hồi',
+            bottles: 0,
+            deposit: -fee,
+            note: `Thu hồi ${bottles} vỏ tận nơi (dưới ${PICKUP_FEE_BELOW} vỏ)`,
+          })
       } else if (action.kind === 'Báo mất/vỡ') {
         if (!Number.isSafeInteger(bottles) || bottles <= 0) throw mockError(400, 'Số vỏ mất/vỡ phải là số nguyên dương.')
         if (bottles > balance.bottles) throw mockError(400, `Khách chỉ đang giữ ${balance.bottles} vỏ.`)
@@ -171,7 +195,10 @@ export const customerService = {
         const refundable = refundableDeposit(customerId)
         if (!Number.isSafeInteger(deposit) || deposit <= 0) throw mockError(400, 'Tiền hoàn cọc phải lớn hơn 0.')
         if (deposit > refundable)
-          throw mockError(400, `Chỉ hoàn được ${refundable.toLocaleString('vi-VN')} ₫ vì khách còn giữ ${balance.bottles} vỏ. Thu vỏ trước khi hoàn cọc.`)
+          throw mockError(
+            400,
+            `Chỉ hoàn được ${refundable.toLocaleString('vi-VN')} ₫ vì khách còn giữ ${balance.bottles} vỏ. Thu vỏ trước khi hoàn cọc.`,
+          )
         addBottleEntry({ customerId, kind: action.kind, bottles: 0, deposit: -deposit, note })
       } else {
         throw mockError(400, 'Nghiệp vụ vỏ không hợp lệ.')

@@ -106,19 +106,23 @@ export function MovementsPanel() {
             title: 'Loại',
             dataIndex: 'type',
             width: 140,
-            render: (value: MovementType) => (value === 'DISPATCH' ? <Tag color="blue">Xuất giao</Tag> : <Tag color="green">Nhập hàng hoàn</Tag>),
+            render: (value: MovementType) =>
+              value === 'DISPATCH' ? <Tag color="blue">Xuất giao</Tag> : <Tag color="green">Nhập hàng hoàn</Tag>,
           },
           { title: 'Sản phẩm', dataIndex: 'name', ellipsis: true },
           {
             title: 'Lô',
             key: 'lot',
             width: 140,
-            render: (_, movement) => (movement.lotCode ? (
-              <div className="af-cell-stack">
-                <span>{movement.lotCode}</span>
-                {movement.expiryDate && <small>HSD {isoToVnDate(movement.expiryDate)}</small>}
-              </div>
-            ) : <Typography.Text type="secondary">—</Typography.Text>),
+            render: (_, movement) =>
+              movement.lotCode ? (
+                <div className="af-cell-stack">
+                  <span>{movement.lotCode}</span>
+                  {movement.expiryDate && <small>HSD {isoToVnDate(movement.expiryDate)}</small>}
+                </div>
+              ) : (
+                <Typography.Text type="secondary">—</Typography.Text>
+              ),
           },
           {
             title: 'Số lượng',
@@ -127,7 +131,9 @@ export function MovementsPanel() {
             width: 130,
             render: (quantity: number, movement) => (
               <div className="af-cell-stack">
-                <span className={quantity < 0 ? 'af-text-danger' : undefined}>{quantity > 0 ? `+${quantity}` : quantity} {movement.unit.toLowerCase()}</span>
+                <span className={quantity < 0 ? 'af-text-danger' : undefined}>
+                  {quantity > 0 ? `+${quantity}` : quantity} {movement.unit.toLowerCase()}
+                </span>
                 {movement.damaged ? <small>hỏng {movement.damaged}</small> : null}
               </div>
             ),

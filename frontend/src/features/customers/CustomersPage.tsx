@@ -39,20 +39,36 @@ export function CustomersPage() {
   const [orderFor, setOrderFor] = useState<Customer | null>(null)
 
   const customers = customersQuery.data ?? []
-  const visible = customers.filter((customer) => matchesSearch(query, `${customerCode(customer)} ${customer.name} ${customer.phone} ${customer.area}`, customer.phone))
+  const visible = customers.filter((customer) =>
+    matchesSearch(query, `${customerCode(customer)} ${customer.name} ${customer.phone} ${customer.area}`, customer.phone),
+  )
   const totalBottles = customers.reduce((sum, customer) => sum + customer.bottlesHeld, 0)
   const totalDeposit = customers.reduce((sum, customer) => sum + customer.depositHeld, 0)
   const totalDebt = customers.reduce((sum, customer) => sum + customer.debt, 0)
 
-  const archived = (archivedQuery.data ?? []).filter((customer) => matchesSearch(query, `${customerCode(customer)} ${customer.name} ${customer.phone} ${customer.area}`, customer.phone))
+  const archived = (archivedQuery.data ?? []).filter((customer) =>
+    matchesSearch(query, `${customerCode(customer)} ${customer.name} ${customer.phone} ${customer.area}`, customer.phone),
+  )
   const restore = (customer: Customer) =>
-    activate.mutateAsync(customer.id).then(() => { message.success(`Đã khôi phục hồ sơ ${customer.name}.`) }, (error: Error) => { message.error(error.message) })
+    activate.mutateAsync(customer.id).then(
+      () => {
+        message.success(`Đã khôi phục hồ sơ ${customer.name}.`)
+      },
+      (error: Error) => {
+        message.error(error.message)
+      },
+    )
   const archivedColumns: TableColumnsType<Customer> = [
     {
-      title: 'Khách hàng', dataIndex: 'name', minWidth: 260,
+      title: 'Khách hàng',
+      dataIndex: 'name',
+      minWidth: 260,
       render: (_, customer) => (
         <div className="af-cell-stack">
-          <span className="af-name-with-tag"><span className="af-cell-truncate">{customer.name}</span><Tag className="af-inactive-tag">Đã lưu trữ</Tag></span>
+          <span className="af-name-with-tag">
+            <span className="af-cell-truncate">{customer.name}</span>
+            <Tag className="af-inactive-tag">Đã lưu trữ</Tag>
+          </span>
           <small>{customerCode(customer)}</small>
         </div>
       ),
@@ -60,9 +76,16 @@ export function CustomersPage() {
     { title: 'Số điện thoại', dataIndex: 'phone', width: 160, render: (phone: string) => phone || '—' },
     { title: 'Khu vực', dataIndex: 'area', width: 160, render: (area: string) => area || '—' },
     {
-      title: 'Thao tác', key: 'action', width: 90,
+      title: 'Thao tác',
+      key: 'action',
+      width: 90,
       render: (_, customer) => (
-        <Dropdown trigger={['click']} menu={{ items: [{ key: 'restore', label: 'Khôi phục hồ sơ', disabled: activate.isPending, onClick: () => void restore(customer) }] }}>
+        <Dropdown
+          trigger={['click']}
+          menu={{
+            items: [{ key: 'restore', label: 'Khôi phục hồ sơ', disabled: activate.isPending, onClick: () => void restore(customer) }],
+          }}
+        >
           <Button size="small" type="text" icon={<Ellipsis size={16} />} aria-label={`Thao tác khác với ${customer.name}`} />
         </Dropdown>
       ),
@@ -73,9 +96,36 @@ export function CustomersPage() {
   const unsupported = (title: string) => <Statistic title={title} valueRender={() => <Unsupported />} />
   const stats = [
     { key: 'count', node: <Statistic title="Khách hàng" value={customers.length} /> },
-    { key: 'debt', node: showDebt ? <Statistic className={totalDebt > 0 ? 'af-stat-due' : 'af-stat-paid'} title="Còn phải thu" value={totalDebt} formatter={(value) => currency(Number(value))} /> : unsupported('Còn phải thu') },
-    { key: 'bottles', node: showBottles ? <Statistic title="Vỏ khách đang giữ" value={totalBottles} suffix="vỏ" /> : unsupported('Vỏ khách đang giữ') },
-    { key: 'deposit', node: showBottles ? <Statistic className="af-stat-deposit" title="Tiền cọc đang giữ" value={totalDeposit} formatter={(value) => currency(Number(value))} /> : unsupported('Tiền cọc đang giữ') },
+    {
+      key: 'debt',
+      node: showDebt ? (
+        <Statistic
+          className={totalDebt > 0 ? 'af-stat-due' : 'af-stat-paid'}
+          title="Còn phải thu"
+          value={totalDebt}
+          formatter={(value) => currency(Number(value))}
+        />
+      ) : (
+        unsupported('Còn phải thu')
+      ),
+    },
+    {
+      key: 'bottles',
+      node: showBottles ? <Statistic title="Vỏ khách đang giữ" value={totalBottles} suffix="vỏ" /> : unsupported('Vỏ khách đang giữ'),
+    },
+    {
+      key: 'deposit',
+      node: showBottles ? (
+        <Statistic
+          className="af-stat-deposit"
+          title="Tiền cọc đang giữ"
+          value={totalDeposit}
+          formatter={(value) => currency(Number(value))}
+        />
+      ) : (
+        unsupported('Tiền cọc đang giữ')
+      ),
+    },
   ]
 
   const columns: TableColumnsType<Customer> = [
@@ -87,7 +137,12 @@ export function CustomersPage() {
       sorter: (a, b) => a.name.localeCompare(b.name, 'vi'),
       render: (_, customer) => (
         <div className="af-cell-stack">
-          <button type="button" className="af-link-button af-cell-truncate" title={`Xem hồ sơ ${customer.name}`} onClick={() => setProfileId(customer.id)}>
+          <button
+            type="button"
+            className="af-link-button af-cell-truncate"
+            title={`Xem hồ sơ ${customer.name}`}
+            onClick={() => setProfileId(customer.id)}
+          >
             {customer.name}
           </button>
           <small>
@@ -97,22 +152,32 @@ export function CustomersPage() {
       ),
     },
     { title: 'Khu vực', dataIndex: 'area', ellipsis: true, render: (area: string) => (showArea ? area : <Unsupported />) },
-    { ...sort.column('Số đơn', 'orders', 'number'), dataIndex: 'orders', align: 'right', width: 100, sorter: (a, b) => a.orders - b.orders },
-    showDebt ? {
-      ...sort.column('Còn phải thu', 'debt', 'number'),
-      dataIndex: 'debt',
+    {
+      ...sort.column('Số đơn', 'orders', 'number'),
+      dataIndex: 'orders',
       align: 'right',
-      width: 140,
-      sorter: (a, b) => a.debt - b.debt,
-      render: (debt: number) => (debt > 0 ? <Money value={debt} tone="due" /> : <span className="af-text-muted">—</span>),
-    } : { title: 'Còn phải thu', key: 'debt', align: 'right', width: 140, render: () => <Unsupported /> },
-    showBottles ? {
-      ...sort.column('Vỏ đang giữ', 'bottlesHeld', 'number'),
-      dataIndex: 'bottlesHeld',
-      width: 130,
-      sorter: (a, b) => a.bottlesHeld - b.bottlesHeld,
-      render: (count: number) => (count > 0 ? <Tag color="orange">{count} vỏ</Tag> : <Tag>Không</Tag>),
-    } : { title: 'Vỏ đang giữ', key: 'bottlesHeld', width: 130, render: () => <Unsupported /> },
+      width: 100,
+      sorter: (a, b) => a.orders - b.orders,
+    },
+    showDebt
+      ? {
+          ...sort.column('Còn phải thu', 'debt', 'number'),
+          dataIndex: 'debt',
+          align: 'right',
+          width: 140,
+          sorter: (a, b) => a.debt - b.debt,
+          render: (debt: number) => (debt > 0 ? <Money value={debt} tone="due" /> : <span className="af-text-muted">—</span>),
+        }
+      : { title: 'Còn phải thu', key: 'debt', align: 'right', width: 140, render: () => <Unsupported /> },
+    showBottles
+      ? {
+          ...sort.column('Vỏ đang giữ', 'bottlesHeld', 'number'),
+          dataIndex: 'bottlesHeld',
+          width: 130,
+          sorter: (a, b) => a.bottlesHeld - b.bottlesHeld,
+          render: (count: number) => (count > 0 ? <Tag color="orange">{count} vỏ</Tag> : <Tag>Không</Tag>),
+        }
+      : { title: 'Vỏ đang giữ', key: 'bottlesHeld', width: 130, render: () => <Unsupported /> },
     {
       title: 'Thao tác',
       key: 'action',
@@ -120,7 +185,12 @@ export function CustomersPage() {
       render: (_, customer) => (
         <span className="af-row-actions">
           <Tooltip title="Xem hồ sơ">
-            <Button size="small" icon={<Eye size={15} />} aria-label={`Xem hồ sơ ${customer.name}`} onClick={() => setProfileId(customer.id)} />
+            <Button
+              size="small"
+              icon={<Eye size={15} />}
+              aria-label={`Xem hồ sơ ${customer.name}`}
+              onClick={() => setProfileId(customer.id)}
+            />
           </Tooltip>
           <Button size="small" onClick={() => setOrderFor(customer)}>
             Tạo đơn
@@ -160,7 +230,19 @@ export function CustomersPage() {
                 onChange={setView}
                 options={[
                   { value: 'active', label: <ToneLabel tone="success">Đang hoạt động</ToneLabel> },
-                  { value: 'archived', label: canReactivate ? <ToneLabel tone="danger">Đã lưu trữ</ToneLabel> : <Tooltip title="Backend chưa hỗ trợ xem khách đã lưu trữ"><span><ToneLabel tone="danger">Đã lưu trữ</ToneLabel></span></Tooltip>, disabled: !canReactivate },
+                  {
+                    value: 'archived',
+                    label: canReactivate ? (
+                      <ToneLabel tone="danger">Đã lưu trữ</ToneLabel>
+                    ) : (
+                      <Tooltip title="Backend chưa hỗ trợ xem khách đã lưu trữ">
+                        <span>
+                          <ToneLabel tone="danger">Đã lưu trữ</ToneLabel>
+                        </span>
+                      </Tooltip>
+                    ),
+                    disabled: !canReactivate,
+                  },
                 ]}
               />
               <Input
@@ -173,7 +255,9 @@ export function CustomersPage() {
               />
             </div>
             {view === 'archived' ? (
-              archivedQuery.isError ? <QueryError error={archivedQuery.error} onRetry={archivedQuery.refetch} /> : (
+              archivedQuery.isError ? (
+                <QueryError error={archivedQuery.error} onRetry={archivedQuery.refetch} />
+              ) : (
                 <Table<Customer>
                   className="af-data-table af-table-flush"
                   size="middle"
@@ -196,18 +280,20 @@ export function CustomersPage() {
                 onProfile={setProfileId}
                 onCreateOrder={setOrderFor}
               />
-            ) : <Table<Customer>
-              key={query}
-              className="af-data-table af-table-flush"
-              size="middle"
-              rowKey="id"
-              columns={columns}
-              dataSource={visible}
-              loading={customersQuery.isPending}
-              pagination={tablePagination}
-              locale={{ emptyText: query.trim() ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.' }}
-              scroll={{ x: 920, y: tableScrollHeight }}
-            />}
+            ) : (
+              <Table<Customer>
+                key={query}
+                className="af-data-table af-table-flush"
+                size="middle"
+                rowKey="id"
+                columns={columns}
+                dataSource={visible}
+                loading={customersQuery.isPending}
+                pagination={tablePagination}
+                locale={{ emptyText: query.trim() ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.' }}
+                scroll={{ x: 920, y: tableScrollHeight }}
+              />
+            )}
           </Card>
         </>
       )}

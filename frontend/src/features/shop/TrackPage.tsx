@@ -32,7 +32,15 @@ function LookupForm({ supported }: { supported: boolean }) {
   const [error, setError] = useState<string>()
   const [loading, setLoading] = useState(false)
   const submit = (
-    <Button type="primary" size="large" htmlType="submit" loading={loading} disabled={!supported} icon={<Search size={18} />} className="af-shop-account-submit">
+    <Button
+      type="primary"
+      size="large"
+      htmlType="submit"
+      loading={loading}
+      disabled={!supported}
+      icon={<Search size={18} />}
+      className="af-shop-account-submit"
+    >
       {supported ? 'Tra cứu' : 'Tra cứu (chưa hỗ trợ)'}
     </Button>
   )
@@ -44,7 +52,14 @@ function LookupForm({ supported }: { supported: boolean }) {
       </header>
       <div className="af-shop-account-grid">
         <section aria-label="Tra cứu đơn">
-          {!supported && <Alert type="info" showIcon style={{ marginBottom: 20 }} title="Tra cứu đơn trực tuyến chưa hỗ trợ: backend chưa có API tra đơn theo mã đơn và số điện thoại. Vui lòng gọi cửa hàng để hỏi tình trạng đơn." />}
+          {!supported && (
+            <Alert
+              type="info"
+              showIcon
+              style={{ marginBottom: 20 }}
+              title="Tra cứu đơn trực tuyến chưa hỗ trợ: backend chưa có API tra đơn theo mã đơn và số điện thoại. Vui lòng gọi cửa hàng để hỏi tình trạng đơn."
+            />
+          )}
           <Form
             layout="vertical"
             requiredMark={false}
@@ -62,21 +77,44 @@ function LookupForm({ supported }: { supported: boolean }) {
               }
             }}
           >
-            <Form.Item name="id" label="Mã đơn" extra="Mã đơn có trong màn hình đặt hàng thành công, ví dụ AF-1070." rules={[{ required: true, whitespace: true, message: 'Nhập mã đơn, ví dụ AF-1070.' }]}>
+            <Form.Item
+              name="id"
+              label="Mã đơn"
+              extra="Mã đơn có trong màn hình đặt hàng thành công, ví dụ AF-1070."
+              rules={[{ required: true, whitespace: true, message: 'Nhập mã đơn, ví dụ AF-1070.' }]}
+            >
               <Input size="large" prefix={<Hash size={17} aria-hidden />} placeholder="AF-1070" autoCapitalize="characters" />
             </Form.Item>
-            <Form.Item name="phone" label="Số điện thoại đặt hàng" rules={[{ required: true, message: 'Nhập số điện thoại đã dùng khi đặt.' }]}>
+            <Form.Item
+              name="phone"
+              label="Số điện thoại đặt hàng"
+              rules={[{ required: true, message: 'Nhập số điện thoại đã dùng khi đặt.' }]}
+            >
               <Input size="large" prefix={<Phone size={17} aria-hidden />} inputMode="tel" placeholder="0901 234 567" />
             </Form.Item>
             {error && <Alert type="error" showIcon title={error} style={{ marginBottom: 16 }} />}
-            {supported ? submit : <Tooltip title={UNSUPPORTED_HINT}><span style={{ display: 'inline-block' }}>{submit}</span></Tooltip>}
+            {supported ? (
+              submit
+            ) : (
+              <Tooltip title={UNSUPPORTED_HINT}>
+                <span style={{ display: 'inline-block' }}>{submit}</span>
+              </Tooltip>
+            )}
           </Form>
         </section>
         <section className="af-shop-account-side" aria-label="Lựa chọn khác">
           <p>Có tài khoản? Đăng nhập để xem mọi đơn đã đặt.</p>
-          <Link to="/shop/account"><Button size="large" block icon={<LogIn size={18} />}>Đăng nhập</Button></Link>
+          <Link to="/shop/account">
+            <Button size="large" block icon={<LogIn size={18} />}>
+              Đăng nhập
+            </Button>
+          </Link>
           <p>Chưa đặt đơn nào?</p>
-          <Link to="/shop"><Button size="large" block icon={<ShoppingBag size={18} />}>Mua hàng không cần tài khoản</Button></Link>
+          <Link to="/shop">
+            <Button size="large" block icon={<ShoppingBag size={18} />}>
+              Mua hàng không cần tài khoản
+            </Button>
+          </Link>
         </section>
       </div>
     </div>
@@ -117,7 +155,14 @@ function TrackedOrder({ token }: { token: string }) {
 
   return (
     <div className="af-shop-track">
-      {placed && <Alert type="success" showIcon title={`Đã gửi đơn ${order.id}`} description="Lưu lại trang này (hoặc chụp màn hình mã đơn) để theo dõi. Cửa hàng sẽ gọi xác nhận trong giờ làm việc." />}
+      {placed && (
+        <Alert
+          type="success"
+          showIcon
+          title={`Đã gửi đơn ${order.id}`}
+          description="Lưu lại trang này (hoặc chụp màn hình mã đơn) để theo dõi. Cửa hàng sẽ gọi xác nhận trong giờ làm việc."
+        />
+      )}
       <Card
         className="af-shop-track-card"
         title={`Đơn ${order.id}`}
@@ -132,17 +177,42 @@ function TrackedOrder({ token }: { token: string }) {
         }
       >
         {cancelled ? (
-          <Alert type="warning" showIcon title="Đơn đã hủy" description="Liên hệ cửa hàng nếu cần đặt lại hoặc hỏi về khoản đã thanh toán." />
+          <Alert
+            type="warning"
+            showIcon
+            title="Đơn đã hủy"
+            description="Liên hệ cửa hàng nếu cần đặt lại hoặc hỏi về khoản đã thanh toán."
+          />
         ) : (
           <Steps
             size="small"
             current={stepOf[order.status]}
             status={failed ? 'error' : stepOf[order.status] === 3 ? 'finish' : 'process'}
             items={[
-              { title: 'Đã đặt', content: order.createdAt ? new Date(order.createdAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : undefined },
+              {
+                title: 'Đã đặt',
+                content: order.createdAt
+                  ? new Date(order.createdAt).toLocaleString('vi-VN', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      day: '2-digit',
+                      month: '2-digit',
+                    })
+                  : undefined,
+              },
               { title: 'Đã xác nhận' },
               { title: failed ? 'Giao chưa thành công' : 'Đang giao', content: failed ? 'Cửa hàng sẽ liên hệ hẹn lại' : undefined },
-              { title: 'Đã nhận hàng', content: order.deliveredAt ? new Date(order.deliveredAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : undefined },
+              {
+                title: 'Đã nhận hàng',
+                content: order.deliveredAt
+                  ? new Date(order.deliveredAt).toLocaleString('vi-VN', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      day: '2-digit',
+                      month: '2-digit',
+                    })
+                  : undefined,
+              },
             ]}
           />
         )}
@@ -154,7 +224,14 @@ function TrackedOrder({ token }: { token: string }) {
           {order.appointment && (
             <>
               <dt>Giờ hẹn</dt>
-              <dd>{new Date(order.appointment).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</dd>
+              <dd>
+                {new Date(order.appointment).toLocaleString('vi-VN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  day: '2-digit',
+                  month: '2-digit',
+                })}
+              </dd>
             </>
           )}
         </dl>
@@ -196,11 +273,18 @@ function TrackedOrder({ token }: { token: string }) {
       {canTransfer && (
         <Card className="af-shop-track-card" title="Chuyển khoản">
           <TransferQr settings={settings} amount={order.due} note={order.id} />
-          <p className="af-form-hint">Quét mã bằng ứng dụng ngân hàng, giữ nguyên nội dung để cửa hàng đối chiếu. Hoặc trả tiền mặt khi nhận hàng.</p>
+          <p className="af-form-hint">
+            Quét mã bằng ứng dụng ngân hàng, giữ nguyên nội dung để cửa hàng đối chiếu. Hoặc trả tiền mặt khi nhận hàng.
+          </p>
         </Card>
       )}
       {order.status === 'Chờ xác nhận' && (
-        <Alert type="info" showIcon title="Chờ cửa hàng xác nhận" description="Giá được chốt khi xác nhận. Sau đó trang này sẽ hiện mã QR nếu bạn muốn chuyển khoản trước." />
+        <Alert
+          type="info"
+          showIcon
+          title="Chờ cửa hàng xác nhận"
+          description="Giá được chốt khi xác nhận. Sau đó trang này sẽ hiện mã QR nếu bạn muốn chuyển khoản trước."
+        />
       )}
 
       <div className="af-shop-track-actions">
@@ -238,5 +322,18 @@ export function TrackPage() {
     if (!token) document.title = 'Tra cứu đơn hàng'
   }, [token])
   if (!token) return <LookupForm supported={demo} />
-  return <div className="af-shop-page af-shop-narrow">{demo ? <TrackedOrder token={token} /> : <Result status="info" title="Tra cứu đơn trực tuyến chưa hỗ trợ" subTitle="Backend chưa có API tra đơn công khai." extra={<Link to="/track">Về trang tra cứu</Link>} />}</div>
+  return (
+    <div className="af-shop-page af-shop-narrow">
+      {demo ? (
+        <TrackedOrder token={token} />
+      ) : (
+        <Result
+          status="info"
+          title="Tra cứu đơn trực tuyến chưa hỗ trợ"
+          subTitle="Backend chưa có API tra đơn công khai."
+          extra={<Link to="/track">Về trang tra cứu</Link>}
+        />
+      )}
+    </div>
+  )
 }

@@ -22,7 +22,11 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
   const [image, setImage] = useState<string | undefined>(product?.image)
   const save = useSaveProduct()
   // Loại vỏ và quy cách thùng chỉ có ở BE; tồn ban đầu chỉ ở bản dùng thử (BE tăng tồn qua phiếu nhập).
-  const bottleTypes = useQuery({ queryKey: ['live', 'bottle-types', 'product-form'], queryFn: () => bottleTypeApi.list(), enabled: open && !demo })
+  const bottleTypes = useQuery({
+    queryKey: ['live', 'bottle-types', 'product-form'],
+    queryFn: () => bottleTypeApi.list(),
+    enabled: open && !demo,
+  })
 
   const close = () => {
     setImage(undefined)
@@ -76,16 +80,34 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
         form={form}
         layout="vertical"
         disabled={save.isPending}
-        initialValues={product
-          ? { sku: product.sku, name: product.name, brand: product.brand === 'Chưa có thương hiệu' ? undefined : product.brand, unit: product.unit, price: product.price, unitsPerCase: product.unitsPerCase, bottleTypeId: product.bottleTypeId, threshold: product.threshold }
-          : { unit: 'Bình', price: 0, stock: 0, threshold: 10 }}
+        initialValues={
+          product
+            ? {
+                sku: product.sku,
+                name: product.name,
+                brand: product.brand === 'Chưa có thương hiệu' ? undefined : product.brand,
+                unit: product.unit,
+                price: product.price,
+                unitsPerCase: product.unitsPerCase,
+                bottleTypeId: product.bottleTypeId,
+                threshold: product.threshold,
+              }
+            : { unit: 'Bình', price: 0, stock: 0, threshold: 10 }
+        }
         onFinish={submit}
         preserve={false}
       >
         {/* Ảnh bên trái, thông tin bên phải; màn hình hẹp thì xếp chồng. */}
         <div className="af-product-form">
           <div className="af-product-form-image">
-            <Upload accept="image/*" listType="picture-card" maxCount={1} showUploadList={false} beforeUpload={readImage} disabled={!showImage}>
+            <Upload
+              accept="image/*"
+              listType="picture-card"
+              maxCount={1}
+              showUploadList={false}
+              beforeUpload={readImage}
+              disabled={!showImage}
+            >
               {image ? (
                 <img src={image} alt="Ảnh xem trước" className="af-upload-preview" />
               ) : (
@@ -95,13 +117,22 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
                 </span>
               )}
             </Upload>
-            <p className="af-form-hint">{showImage ? `PNG, JPG hoặc WEBP, tối đa ${MAX_IMAGE_MB} MB. Bấm vào ảnh để đổi.` : UNSUPPORTED_HINT}</p>
+            <p className="af-form-hint">
+              {showImage ? `PNG, JPG hoặc WEBP, tối đa ${MAX_IMAGE_MB} MB. Bấm vào ảnh để đổi.` : UNSUPPORTED_HINT}
+            </p>
           </div>
 
           <div className="af-product-form-fields">
             <section>
               <h4>Thông tin chung</h4>
-              <Form.Item name="name" label="Tên sản phẩm" rules={[{ required: true, whitespace: true, message: 'Nhập tên sản phẩm.' }, { max: 200, message: 'Tên tối đa 200 ký tự.' }]}>
+              <Form.Item
+                name="name"
+                label="Tên sản phẩm"
+                rules={[
+                  { required: true, whitespace: true, message: 'Nhập tên sản phẩm.' },
+                  { max: 200, message: 'Tên tối đa 200 ký tự.' },
+                ]}
+              >
                 <Input autoFocus placeholder="Ví dụ: Nước tinh khiết bình 20L" />
               </Form.Item>
               <Row gutter={12}>
@@ -170,7 +201,12 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
                   {!demo && (
                     <>
                       <Col xs={24} sm={8}>
-                        <Form.Item name="threshold" label="Tồn tối thiểu" tooltip="Khả dụng từ mức này trở xuống được cảnh báo sắp hết." rules={[{ required: true, message: 'Nhập tồn tối thiểu.' }]}>
+                        <Form.Item
+                          name="threshold"
+                          label="Tồn tối thiểu"
+                          tooltip="Khả dụng từ mức này trở xuống được cảnh báo sắp hết."
+                          rules={[{ required: true, message: 'Nhập tồn tối thiểu.' }]}
+                        >
                           <InputNumber min={0} precision={0} style={{ width: '100%' }} />
                         </Form.Item>
                       </Col>
@@ -180,7 +216,13 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
                             allowClear
                             loading={bottleTypes.isPending}
                             placeholder="Không dùng vỏ"
-                            options={(bottleTypes.data ?? []).filter((type) => type.active || type.id === product?.bottleTypeId).map((type) => ({ value: type.id, label: `${type.name}${type.active ? '' : ' (ngừng lưu hành)'}`, disabled: !type.active }))}
+                            options={(bottleTypes.data ?? [])
+                              .filter((type) => type.active || type.id === product?.bottleTypeId)
+                              .map((type) => ({
+                                value: type.id,
+                                label: `${type.name}${type.active ? '' : ' (ngừng lưu hành)'}`,
+                                disabled: !type.active,
+                              }))}
                           />
                         </Form.Item>
                       </Col>

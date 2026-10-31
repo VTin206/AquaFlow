@@ -27,7 +27,7 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: Sid
   const supported = usePageSupported()
   const allowed = (path: string) => !staff || canOpen(staff.role, path)
   const pendingCount = staff?.isDemo ? orders.filter((order) => order.status === 'Chờ xác nhận').length : 0
-  const storeName = staff?.isDemo ? settings?.storeName ?? 'Cửa hàng' : 'Cửa hàng'
+  const storeName = staff?.isDemo ? (settings?.storeName ?? 'Cửa hàng') : 'Cửa hàng'
 
   const groups = navGroups
     .map((group) => ({ ...group, items: group.items.filter((item) => allowed(item.path)) }))
@@ -37,7 +37,14 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: Sid
     return {
       key: path,
       // Thu gọn thì nhãn ẩn vào tooltip, số đơn chờ chuyển thành chấm trên icon.
-      icon: collapsed && pending ? <Badge dot color="var(--af-primary)"><Icon size={18} strokeWidth={1.8} /></Badge> : <Icon size={18} strokeWidth={1.8} />,
+      icon:
+        collapsed && pending ? (
+          <Badge dot color="var(--af-primary)">
+            <Icon size={18} strokeWidth={1.8} />
+          </Badge>
+        ) : (
+          <Icon size={18} strokeWidth={1.8} />
+        ),
       label: (
         <span className="af-menu-label">
           {label}
@@ -48,13 +55,28 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: Sid
     }
   }
   // Giữ nguyên nhóm ở cả hai chế độ để menu không vẽ lại khi thu gọn/mở rộng; tiêu đề nhóm co lại bằng CSS.
-  const items: MenuProps['items'] = groups.map((group) => ({ type: 'group' as const, key: group.label, label: group.label, children: group.items.map(toItem) }))
+  const items: MenuProps['items'] = groups.map((group) => ({
+    type: 'group' as const,
+    key: group.label,
+    label: group.label,
+    children: group.items.map(toItem),
+  }))
 
   const footerLink = (label: string, icon: ReactNode, onClick: () => void, extra?: ReactNode, active = false) => (
     <Tooltip title={collapsed ? label : undefined} placement="right">
-      <button className={`af-sider-link${active ? ' is-active' : ''}`} aria-current={active ? 'page' : undefined} aria-label={collapsed ? label : undefined} onClick={onClick}>
+      <button
+        className={`af-sider-link${active ? ' is-active' : ''}`}
+        aria-current={active ? 'page' : undefined}
+        aria-label={collapsed ? label : undefined}
+        onClick={onClick}
+      >
         {icon}
-        {!collapsed && <span className="af-sider-link-text">{label}{extra}</span>}
+        {!collapsed && (
+          <span className="af-sider-link-text">
+            {label}
+            {extra}
+          </span>
+        )}
       </button>
     </Tooltip>
   )
@@ -70,13 +92,21 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: Sid
         </Tooltip>
         {!collapsed && (
           <div className="af-workspace-text">
-            <strong className="af-cell-truncate" title={storeName}>{storeName}</strong>
+            <strong className="af-cell-truncate" title={storeName}>
+              {storeName}
+            </strong>
             <small>Đại lý nước</small>
           </div>
         )}
         {onToggleCollapse && (
           <Tooltip title={collapsed ? 'Mở rộng menu' : 'Thu gọn menu'} placement="right">
-            <button type="button" className="af-sider-toggle" aria-label={collapsed ? 'Mở rộng menu' : 'Thu gọn menu'} aria-expanded={!collapsed} onClick={onToggleCollapse}>
+            <button
+              type="button"
+              className="af-sider-toggle"
+              aria-label={collapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
+              aria-expanded={!collapsed}
+              onClick={onToggleCollapse}
+            >
               {collapsed ? <PanelLeftOpen size={16} strokeWidth={1.8} /> : <PanelLeftClose size={16} strokeWidth={1.8} />}
             </button>
           </Tooltip>
@@ -104,7 +134,9 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: Sid
             !supported('/settings') && <small className="af-menu-soon">Chưa hỗ trợ</small>,
             location.pathname === '/settings',
           )}
-        {footerLink('Trợ giúp', <CircleQuestionMark size={18} strokeWidth={1.8} />, () => message.info('Hướng dẫn sử dụng sẽ được bổ sung.'))}
+        {footerLink('Trợ giúp', <CircleQuestionMark size={18} strokeWidth={1.8} />, () =>
+          message.info('Hướng dẫn sử dụng sẽ được bổ sung.'),
+        )}
       </div>
     </div>
   )

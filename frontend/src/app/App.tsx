@@ -39,7 +39,6 @@ function BackendPage({ path, title, children }: { path: string; title: string; c
 const pageFallback = (
   <div className="af-page-loading">
     <Spin size="large" />
-
   </div>
 )
 
@@ -62,22 +61,76 @@ export function App() {
           <Route path="track/:token" element={<TrackPage />} />
         </Route>
         <Route element={<RequireAuth />}>
-          <Route element={<ThemedArea><AppLayout /></ThemedArea>}>
-            <Route index element={<BackendPage path="/" title="Tổng quan"><DashboardPage /></BackendPage>} />
+          <Route
+            element={
+              <ThemedArea>
+                <AppLayout />
+              </ThemedArea>
+            }
+          >
+            <Route
+              index
+              element={
+                <BackendPage path="/" title="Tổng quan">
+                  <DashboardPage />
+                </BackendPage>
+              }
+            />
             <Route path="orders" element={<OrdersPage />} />
             <Route path="inventory" element={<InventoryPage />} />
             <Route path="products" element={<ProductsPage />} />
             <Route path="customers" element={<CustomersPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
-            <Route path="delivery" element={<BackendPage path="/delivery" title="Giao hàng"><DeliveryPage /></BackendPage>} />
-            <Route path="reports" element={<BackendPage path="/reports" title="Báo cáo"><ReportsPage /></BackendPage>} />
-            <Route path="activity" element={<BackendPage path="/activity" title="Nhật ký"><ActivityPage /></BackendPage>} />
-            <Route path="settings" element={<BackendPage path="/settings" title="Cài đặt"><SettingsPage /></BackendPage>} />
+            <Route
+              path="delivery"
+              element={
+                <BackendPage path="/delivery" title="Giao hàng">
+                  <DeliveryPage />
+                </BackendPage>
+              }
+            />
+            <Route
+              path="reports"
+              element={
+                <BackendPage path="/reports" title="Báo cáo">
+                  <ReportsPage />
+                </BackendPage>
+              }
+            />
+            <Route
+              path="activity"
+              element={
+                <BackendPage path="/activity" title="Nhật ký">
+                  <ActivityPage />
+                </BackendPage>
+              }
+            />
+            <Route
+              path="settings"
+              element={
+                <BackendPage path="/settings" title="Cài đặt">
+                  <SettingsPage />
+                </BackendPage>
+              }
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
           {/* Nhân viên giao hàng dùng khung riêng, không vào trang quản lý. */}
-          <Route element={<ThemedArea><DriverLayout /></ThemedArea>}>
-            <Route path="driver" element={<BackendPage path="/driver" title="Chuyến của tôi"><DriverPage /></BackendPage>} />
+          <Route
+            element={
+              <ThemedArea>
+                <DriverLayout />
+              </ThemedArea>
+            }
+          >
+            <Route
+              path="driver"
+              element={
+                <BackendPage path="/driver" title="Chuyến của tôi">
+                  <DriverPage />
+                </BackendPage>
+              }
+            />
           </Route>
         </Route>
       </Routes>

@@ -18,7 +18,12 @@ export function TransferQr({ settings, amount, note, size = 168, compact }: Tran
   const bin = bankBinOf(settings?.bankName)
   if (!settings?.bankAccount || !bin) {
     return compact ? null : (
-      <Alert type="info" showIcon title="Chưa tạo được mã QR" description="Chọn ngân hàng hỗ trợ VietQR và nhập số tài khoản trong Cài đặt cửa hàng." />
+      <Alert
+        type="info"
+        showIcon
+        title="Chưa tạo được mã QR"
+        description="Chọn ngân hàng hỗ trợ VietQR và nhập số tài khoản trong Cài đặt cửa hàng."
+      />
     )
   }
   const content = transferNote(note)

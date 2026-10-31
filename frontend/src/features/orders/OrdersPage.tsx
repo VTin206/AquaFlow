@@ -19,7 +19,11 @@ export function OrdersPage() {
   const demo = useIsDemo()
   const showPayments = useFeature('orderPayments')
   const ordersQuery = useOrderList()
-  const { filters: { query, status, method, payment }, updateFilters, resetFilters } = useOrderFilters()
+  const {
+    filters: { query, status, method, payment },
+    updateFilters,
+    resetFilters,
+  } = useOrderFilters()
   const [creating, setCreating] = useState(false)
   // Điện thoại: chỉ hiện lọc trạng thái và tìm kiếm, hai bộ lọc còn lại gom vào nút "Lọc thêm" để đơn hiện sớm hơn.
   const narrow = Grid.useBreakpoint().md === false
@@ -38,7 +42,8 @@ export function OrdersPage() {
     (order) =>
       (status === ALL || order.status === status) &&
       (method === ALL || order.method === method) &&
-      (paymentFilter === ALL || (order.status !== 'Đã hủy' && (paymentFilter === 'Còn phải thu' ? amountDue(order) > 0 : amountDue(order) === 0))) &&
+      (paymentFilter === ALL ||
+        (order.status !== 'Đã hủy' && (paymentFilter === 'Còn phải thu' ? amountDue(order) > 0 : amountDue(order) === 0))) &&
       matchesSearch(query, `${order.code ?? order.id} ${order.customer} ${order.phone} ${order.items}`, order.phone),
   )
 
@@ -58,7 +63,11 @@ export function OrdersPage() {
           showIcon
           style={{ marginBottom: 12 }}
           title={`Có ${pending} đơn đang chờ xác nhận.`}
-          action={<Button size="small" onClick={() => updateFilters({ status: 'Chờ xác nhận' })}>Xem đơn chờ</Button>}
+          action={
+            <Button size="small" onClick={() => updateFilters({ status: 'Chờ xác nhận' })}>
+              Xem đơn chờ
+            </Button>
+          }
         />
       )}
       <Card className="af-card" styles={{ body: { padding: 0 } }}>
@@ -79,29 +88,41 @@ export function OrdersPage() {
                   }))}
                 />
                 {narrow && (
-                  <Button icon={<SlidersHorizontal size={16} />} aria-expanded={moreFilters} onClick={() => setMoreFilters((open) => !open)}>
+                  <Button
+                    icon={<SlidersHorizontal size={16} />}
+                    aria-expanded={moreFilters}
+                    onClick={() => setMoreFilters((open) => !open)}
+                  >
                     Lọc thêm{extraActive ? ` (${extraActive})` : ''}
                   </Button>
                 )}
-                {(!narrow || moreFilters) && <>
-                <Select
-                  aria-label="Lọc hình thức nhận"
-                  value={method}
-                  onChange={(value) => updateFilters({ method: value })}
-                  style={{ minWidth: 160 }}
-                  options={[{ value: ALL, label: 'Mọi hình thức nhận' }, ...['Tại quầy', 'Giao tận nơi'].map((value) => ({ value, label: value }))]}
-                />
-                <Tooltip title={showPayments ? undefined : 'Backend chưa hỗ trợ phiếu thu'}>
-                  <Select
-                    aria-label="Lọc thanh toán"
-                    value={paymentFilter}
-                    disabled={!showPayments}
-                    onChange={(value) => updateFilters({ payment: value })}
-                    style={{ minWidth: 165 }}
-                    options={[{ value: ALL, label: showPayments ? 'Mọi thanh toán' : 'Thanh toán (chưa hỗ trợ)' }, ...['Còn phải thu', 'Đã thanh toán'].map((value) => ({ value, label: value }))]}
-                  />
-                </Tooltip>
-                </>}
+                {(!narrow || moreFilters) && (
+                  <>
+                    <Select
+                      aria-label="Lọc hình thức nhận"
+                      value={method}
+                      onChange={(value) => updateFilters({ method: value })}
+                      style={{ minWidth: 160 }}
+                      options={[
+                        { value: ALL, label: 'Mọi hình thức nhận' },
+                        ...['Tại quầy', 'Giao tận nơi'].map((value) => ({ value, label: value })),
+                      ]}
+                    />
+                    <Tooltip title={showPayments ? undefined : 'Backend chưa hỗ trợ phiếu thu'}>
+                      <Select
+                        aria-label="Lọc thanh toán"
+                        value={paymentFilter}
+                        disabled={!showPayments}
+                        onChange={(value) => updateFilters({ payment: value })}
+                        style={{ minWidth: 165 }}
+                        options={[
+                          { value: ALL, label: showPayments ? 'Mọi thanh toán' : 'Thanh toán (chưa hỗ trợ)' },
+                          ...['Còn phải thu', 'Đã thanh toán'].map((value) => ({ value, label: value })),
+                        ]}
+                      />
+                    </Tooltip>
+                  </>
+                )}
               </div>
               <Input
                 allowClear
@@ -115,15 +136,17 @@ export function OrdersPage() {
             </div>
             <div className="af-filter-summary">
               <span role="status">{ordersQuery.isPending ? 'Đang tải đơn hàng…' : `${visible.length} / ${orders.length} đơn hàng`}</span>
-              {hasFilters && <Button type="link" size="small" className="af-clear-filter" icon={<FunnelX size={14} />} onClick={resetFilters}>Xóa bộ lọc</Button>}
+              {hasFilters && (
+                <Button type="link" size="small" className="af-clear-filter" icon={<FunnelX size={14} />} onClick={resetFilters}>
+                  Xóa bộ lọc
+                </Button>
+              )}
             </div>
             <OrdersTable
               filterKey={JSON.stringify([query, status, method, paymentFilter])}
               orders={visible}
               loading={ordersQuery.isPending}
-              emptyText={
-                hasFilters ? 'Không có đơn phù hợp. Thử đổi từ khóa hoặc xóa bộ lọc.' : 'Chưa có đơn hàng nào.'
-              }
+              emptyText={hasFilters ? 'Không có đơn phù hợp. Thử đổi từ khóa hoặc xóa bộ lọc.' : 'Chưa có đơn hàng nào.'}
             />
           </>
         )}
@@ -131,7 +154,15 @@ export function OrdersPage() {
       {demo ? (
         <CreateOrderModal open={creating} onClose={() => setCreating(false)} />
       ) : (
-        creating && <LiveOrderDraftModal onClose={() => setCreating(false)} onCreated={(order) => { setCreating(false); setCreated(order.id) }} />
+        creating && (
+          <LiveOrderDraftModal
+            onClose={() => setCreating(false)}
+            onCreated={(order) => {
+              setCreating(false)
+              setCreated(order.id)
+            }}
+          />
+        )
       )}
       {created !== null && <LiveOrderDetails key={created} id={created} onClose={() => setCreated(null)} />}
     </Page>

@@ -6,6 +6,11 @@ export function RequireAuth() {
   const location = useLocation()
 
   // Khách vào trang chủ thì thấy cửa hàng; trang quản lý khác vẫn đòi đăng nhập rồi quay lại đúng trang.
-  if (!isAuthenticated) return location.pathname === '/' ? <Navigate to="/shop" replace /> : <Navigate to="/login" replace state={{ from: location.pathname }} />
+  if (!isAuthenticated)
+    return location.pathname === '/' ? (
+      <Navigate to="/shop" replace />
+    ) : (
+      <Navigate to="/login" replace state={{ from: location.pathname }} />
+    )
   return <Outlet />
 }

@@ -51,7 +51,9 @@ function DeliveryCard({ order, onDetails }: { order: Order; onDetails: () => voi
         </Typography.Paragraph>
       )}
       <div className="af-delivery-footer">
-        <Button size="small" icon={<Eye size={15} />} onClick={onDetails} aria-label={`Chi tiết đơn ${order.id}`}>Chi tiết</Button>
+        <Button size="small" icon={<Eye size={15} />} onClick={onDetails} aria-label={`Chi tiết đơn ${order.id}`}>
+          Chi tiết
+        </Button>
         <AdvanceStatusButton order={order} />
       </div>
     </Card>

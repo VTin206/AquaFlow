@@ -67,7 +67,15 @@ export type DriverReportRow = {
   pendingCash: number
 }
 
-export type CustomerReportRow = { key: string; name: string; phone: string; orders: number; revenue: number; lastOrder?: string; daysSince?: number }
+export type CustomerReportRow = {
+  key: string
+  name: string
+  phone: string
+  orders: number
+  revenue: number
+  lastOrder?: string
+  daysSince?: number
+}
 
 export type PeriodReport = {
   range: ReportRange
@@ -136,7 +144,8 @@ export const localDay = (iso: string) => {
 
 const daysBetween = ({ from, to }: ReportRange) => {
   const days: string[] = []
-  for (let day = new Date(`${from}T00:00:00`); localDay(day.toISOString()) <= to; day.setDate(day.getDate() + 1)) days.push(localDay(day.toISOString()))
+  for (let day = new Date(`${from}T00:00:00`); localDay(day.toISOString()) <= to; day.setDate(day.getDate() + 1))
+    days.push(localDay(day.toISOString()))
   return days
 }
 
@@ -162,10 +171,14 @@ type StockMove = { productId: string; day: string; received?: number; restocked?
  */
 function buildInventory(range: ReportRange, orders: Order[]): PeriodReport['inventory'] {
   const moves: StockMove[] = [
-    ...db.receipts.flatMap((receipt) => receipt.lines.map((line) => ({ productId: line.productId, day: receipt.receivedAt, received: line.received - line.damaged }))),
+    ...db.receipts.flatMap((receipt) =>
+      receipt.lines.map((line) => ({ productId: line.productId, day: receipt.receivedAt, received: line.received - line.damaged })),
+    ),
     ...orders
       .filter((order) => order.status !== 'Đã hủy' && order.deliveredAt)
-      .flatMap((order) => order.lines.map((line) => ({ productId: line.productId, day: localDay(order.deliveredAt!), issued: line.quantity }))),
+      .flatMap((order) =>
+        order.lines.map((line) => ({ productId: line.productId, day: localDay(order.deliveredAt!), issued: line.quantity })),
+      ),
     ...orders
       .flatMap((order) => order.returns ?? [])
       .filter((item) => item.restocked)
@@ -218,7 +231,15 @@ function buildCustomers(range: ReportRange, orders: Order[], inRange: (iso?: str
   for (const order of orders.filter((item) => item.status !== 'Đã hủy' && item.deliveredAt && Date.parse(item.deliveredAt) <= end)) {
     const key = keyOf(order)
     const profile = order.customerId ? db.customers.find((customer) => customer.id === order.customerId) : undefined
-    const row = rows.get(key) ?? { key, name: profile?.name ?? order.customer, phone: order.phone, orders: 0, revenue: 0, total: 0, legacy: profile?.legacyOrders ?? 0 }
+    const row = rows.get(key) ?? {
+      key,
+      name: profile?.name ?? order.customer,
+      phone: order.phone,
+      orders: 0,
+      revenue: 0,
+      total: 0,
+      legacy: profile?.legacyOrders ?? 0,
+    }
     row.total++
     const created = createdAtOf(order) ?? order.deliveredAt!
     if (!row.first || created < row.first) row.first = created
@@ -230,13 +251,27 @@ function buildCustomers(range: ReportRange, orders: Order[], inRange: (iso?: str
     row.revenue -= returnsOfOrder(order, inRange)
     rows.set(key, row)
   }
-  const all = [...rows.values()].map((row) => ({ ...row, daysSince: row.lastOrder ? Math.floor((end - Date.parse(row.lastOrder)) / 86_400_000) : undefined }))
-  const strip = ({ key, name, phone, orders, revenue, lastOrder, daysSince }: (typeof all)[number]): CustomerReportRow => ({ key, name, phone, orders, revenue, lastOrder, daysSince })
+  const all = [...rows.values()].map((row) => ({
+    ...row,
+    daysSince: row.lastOrder ? Math.floor((end - Date.parse(row.lastOrder)) / 86_400_000) : undefined,
+  }))
+  const strip = ({ key, name, phone, orders, revenue, lastOrder, daysSince }: (typeof all)[number]): CustomerReportRow => ({
+    key,
+    name,
+    phone,
+    orders,
+    revenue,
+    lastOrder,
+    daysSince,
+  })
   const active = all.filter((row) => row.orders > 0)
   return {
     active: active.length,
     new: active.filter((row) => !row.legacy && row.first && inRange(row.first)).length,
-    top: [...active].sort((a, b) => b.revenue - a.revenue).slice(0, 10).map(strip),
+    top: [...active]
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10)
+      .map(strip),
     lapsed: all
       .filter((row) => row.total + row.legacy >= 2 && (row.daysSince ?? 0) >= LAPSED_DAYS)
       .sort((a, b) => (a.daysSince ?? 0) - (b.daysSince ?? 0))
@@ -249,11 +284,13 @@ const returnsOfOrder = (order: Order, inRange: (iso?: string) => boolean) =>
   (order.returns ?? []).filter((item) => inRange(item.at)).reduce((sum, item) => sum + valueOf(item.lines), 0)
 
 function buildReport(range: ReportRange, filters: ReportFilters = {}): PeriodReport {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(range.from) || !/^\d{4}-\d{2}-\d{2}$/.test(range.to) || range.from > range.to) throw mockError(400, 'Khoảng thời gian không hợp lệ.')
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(range.from) || !/^\d{4}-\d{2}-\d{2}$/.test(range.to) || range.from > range.to)
+    throw mockError(400, 'Khoảng thời gian không hợp lệ.')
   const inRange = (iso?: string) => Boolean(iso) && localDay(iso!) >= range.from && localDay(iso!) <= range.to
   const everyOrder = allOrders()
   const orders = everyOrder.filter(
-    (order) => (!filters.channels?.length || filters.channels.includes(order.channel)) && (!filters.method || order.method === filters.method),
+    (order) =>
+      (!filters.channels?.length || filters.channels.includes(order.channel)) && (!filters.method || order.method === filters.method),
   )
   const created = orders.filter((order) => inRange(createdAtOf(order)))
   // Doanh thu ghi nhận khi khách nhận hàng; đơn đã hủy không tính. Hàng trả trừ vào kỳ khách trả.
@@ -267,7 +304,9 @@ function buildReport(range: ReportRange, filters: ReportFilters = {}): PeriodRep
     revenue:
       delivered.filter((order) => localDay(order.deliveredAt!) === date).reduce((sum, order) => sum + grossOf(order), 0) -
       returns.filter((item) => localDay(item.at) === date).reduce((sum, item) => sum + valueOf(item.lines), 0),
-    collected: payments.filter((payment) => localDay(payment.recordedAt) === date).reduce((sum, payment) => sum + (payment.refund ? -payment.amount : payment.amount), 0),
+    collected: payments
+      .filter((payment) => localDay(payment.recordedAt) === date)
+      .reduce((sum, payment) => sum + (payment.refund ? -payment.amount : payment.amount), 0),
     orders: created.filter((order) => localDay(createdAtOf(order)!) === date).length,
   }))
 
@@ -275,26 +314,49 @@ function buildReport(range: ReportRange, filters: ReportFilters = {}): PeriodRep
   const deliveryFees = delivered.reduce((sum, order) => sum + order.deliveryFee, 0)
   const returnsValue = returns.reduce((sum, item) => sum + valueOf(item.lines), 0)
   const sumOf = (method: string, refund: boolean) =>
-    payments.filter((payment) => payment.method === method && Boolean(payment.refund) === refund).reduce((sum, payment) => sum + payment.amount, 0)
+    payments
+      .filter((payment) => payment.method === method && Boolean(payment.refund) === refund)
+      .reduce((sum, payment) => sum + payment.amount, 0)
   const refunds = payments.filter((payment) => payment.refund).reduce((sum, payment) => sum + payment.amount, 0)
 
   const ledger = db.bottleLedger.filter((entry) => inRange(entry.at))
   const balances = new Map<string, BottleHolderRow>()
   for (const entry of db.bottleLedger.filter((item) => localDay(item.at) <= range.to)) {
-    const row = balances.get(entry.customerId) ?? { customerId: entry.customerId, name: db.customers.find((customer) => customer.id === entry.customerId)?.name ?? entry.customerId, bottles: 0, deposit: 0 }
+    const row = balances.get(entry.customerId) ?? {
+      customerId: entry.customerId,
+      name: db.customers.find((customer) => customer.id === entry.customerId)?.name ?? entry.customerId,
+      bottles: 0,
+      deposit: 0,
+    }
     row.bottles += entry.bottles
     row.deposit += entry.deposit
     balances.set(entry.customerId, row)
   }
   const holders = [...balances.values()].filter((row) => row.bottles > 0 || row.deposit > 0)
-  const ledgerSum = (kind: string, field: 'bottles' | 'deposit') => ledger.filter((entry) => entry.kind === kind).reduce((sum, entry) => sum + Math.abs(entry[field]), 0)
+  const ledgerSum = (kind: string, field: 'bottles' | 'deposit') =>
+    ledger.filter((entry) => entry.kind === kind).reduce((sum, entry) => sum + Math.abs(entry[field]), 0)
 
-  const handovers = orders.flatMap((order) => order.history.filter((event) => inRange(event.at) && /^Giao (thành công|thất bại)/.test(event.message)).map((event) => ({ order, event })))
+  const handovers = orders.flatMap((order) =>
+    order.history
+      .filter((event) => inRange(event.at) && /^Giao (thành công|thất bại)/.test(event.message))
+      .map((event) => ({ order, event })),
+  )
   const homeDeliveries = delivered.filter((order) => order.method === 'Giao tận nơi')
   const lateMinutes = homeDeliveries.map((order) => minutesLate(order)).filter((minutes) => minutes > 0)
   const drivers = new Map<string, DriverReportRow>()
   const driverRow = (driver: string) => {
-    const row = drivers.get(driver) ?? { driver, delivered: 0, failed: 0, late: 0, settledTrips: 0, cashExpected: 0, cashHandedOver: 0, cashShort: 0, pendingTrips: 0, pendingCash: 0 }
+    const row = drivers.get(driver) ?? {
+      driver,
+      delivered: 0,
+      failed: 0,
+      late: 0,
+      settledTrips: 0,
+      cashExpected: 0,
+      cashHandedOver: 0,
+      cashShort: 0,
+      pendingTrips: 0,
+      pendingCash: 0,
+    }
     drivers.set(driver, row)
     return row
   }
@@ -321,13 +383,15 @@ function buildReport(range: ReportRange, filters: ReportFilters = {}): PeriodRep
   }
   const driverRows = [...drivers.values()].filter((row) => row.delivered || row.failed || row.settledTrips || row.pendingTrips)
 
-  const channels = reportChannels.filter((channel) => !filters.channels?.length || filters.channels.includes(channel)).map((channel) => ({
-    channel,
-    orders: created.filter((order) => order.channel === channel).length,
-    revenue:
-      delivered.filter((order) => order.channel === channel).reduce((sum, order) => sum + grossOf(order), 0) -
-      returnsOf(orders.filter((order) => order.channel === channel)).reduce((sum, item) => sum + valueOf(item.lines), 0),
-  }))
+  const channels = reportChannels
+    .filter((channel) => !filters.channels?.length || filters.channels.includes(channel))
+    .map((channel) => ({
+      channel,
+      orders: created.filter((order) => order.channel === channel).length,
+      revenue:
+        delivered.filter((order) => order.channel === channel).reduce((sum, order) => sum + grossOf(order), 0) -
+        returnsOf(orders.filter((order) => order.channel === channel)).reduce((sum, item) => sum + valueOf(item.lines), 0),
+    }))
 
   const receipts = db.receipts.filter((receipt) => receipt.receivedAt >= range.from && receipt.receivedAt <= range.to)
   const products = new Map<string, ProductReportRow>()
@@ -374,7 +438,12 @@ function buildReport(range: ReportRange, filters: ReportFilters = {}): PeriodRep
       net: goods + deliveryFees - returnsValue,
       averageOrder: delivered.length ? Math.round((goods + deliveryFees) / delivered.length) : 0,
     },
-    cash: { collected: payments.reduce((sum, payment) => sum + (payment.refund ? -payment.amount : payment.amount), 0), cash: sumOf('Tiền mặt', false), transfer: sumOf('Chuyển khoản', false), refunds },
+    cash: {
+      collected: payments.reduce((sum, payment) => sum + (payment.refund ? -payment.amount : payment.amount), 0),
+      cash: sumOf('Tiền mặt', false),
+      transfer: sumOf('Chuyển khoản', false),
+      refunds,
+    },
     deposits: {
       collected: ledgerSum('Thu cọc', 'deposit'),
       refunded: ledgerSum('Hoàn cọc', 'deposit'),
@@ -414,7 +483,8 @@ export const reportService = {
 
 export const reportKeys = {
   all: ['reports'] as const,
-  summary: (range: ReportRange, filters: ReportFilters = {}) => ['reports', 'summary', range.from, range.to, filters.channels?.join('|') ?? '', filters.method ?? ''] as const,
+  summary: (range: ReportRange, filters: ReportFilters = {}) =>
+    ['reports', 'summary', range.from, range.to, filters.channels?.join('|') ?? '', filters.method ?? ''] as const,
 }
 
 /** Kỳ liền trước, cùng số ngày. */

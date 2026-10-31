@@ -9,32 +9,88 @@ const sample = {
     { date: '2026-09-30', revenue: 90000, collected: -20000, orders: 2 },
     { date: '2026-10-01', revenue: 0, collected: 0, orders: 0 },
   ],
-  sales: { orders: 2, delivered: 1, cancelled: 1, goods: 100000, deliveryFees: 10000, returnsValue: 20000, net: 90000, averageOrder: 110000 },
+  sales: {
+    orders: 2,
+    delivered: 1,
+    cancelled: 1,
+    goods: 100000,
+    deliveryFees: 10000,
+    returnsValue: 20000,
+    net: 90000,
+    averageOrder: 110000,
+  },
   cash: { collected: -20000, cash: 0, transfer: 0, refunds: 20000 },
   deposits: {
-    collected: 50000, refunded: 100000, bottlesOut: 1, bottlesBack: 2, bottlesLost: 0,
+    collected: 50000,
+    refunded: 100000,
+    bottlesOut: 1,
+    bottlesBack: 2,
+    bottlesLost: 0,
     held: { bottles: 3, deposit: 150000, customers: 2, uncoveredBottles: 1, top: [] },
   },
   delivery: {
-    delivered: 1, failedAttempts: 2, withAppointment: 1, late: 1, averageLateMinutes: 15, cashShort: 5000, pendingTrips: 1,
-    drivers: [{ driver: 'Nguyễn An', delivered: 1, failed: 2, late: 1, settledTrips: 1, cashExpected: 110000, cashHandedOver: 105000, cashShort: 5000, pendingTrips: 1, pendingCash: 40000 }],
+    delivered: 1,
+    failedAttempts: 2,
+    withAppointment: 1,
+    late: 1,
+    averageLateMinutes: 15,
+    cashShort: 5000,
+    pendingTrips: 1,
+    drivers: [
+      {
+        driver: 'Nguyễn An',
+        delivered: 1,
+        failed: 2,
+        late: 1,
+        settledTrips: 1,
+        cashExpected: 110000,
+        cashHandedOver: 105000,
+        cashShort: 5000,
+        pendingTrips: 1,
+        pendingCash: 40000,
+      },
+    ],
   },
   customers: {
-    active: 1, new: 1,
+    active: 1,
+    new: 1,
     top: [{ key: 'C-1', name: 'Chị Lan', phone: '0901000001', orders: 1, revenue: 90000 }],
     lapsed: [{ key: 'C-2', name: 'Anh Minh', phone: '0901000002', orders: 3, revenue: 0, daysSince: 42 }],
   },
   channels: [{ channel: 'Website', orders: 2, revenue: 90000 }],
   products: [{ productId: 'P-012', sku: '0012', name: '=1+1', unit: 'Bình', sold: 1, returned: 1, revenue: 100000, cost: 120000 }],
   inventory: {
-    rows: [{ productId: 'P-012', name: 'Nước kiểm thử', unit: 'Bình', opening: 4, received: 3, restocked: 1, issued: 2, closing: 6, damaged: 1, closingValue: 120000 }],
-    openingValue: 80000, closingValue: 120000,
+    rows: [
+      {
+        productId: 'P-012',
+        name: 'Nước kiểm thử',
+        unit: 'Bình',
+        opening: 4,
+        received: 3,
+        restocked: 1,
+        issued: 2,
+        closing: 6,
+        damaged: 1,
+        closingValue: 120000,
+      },
+    ],
+    openingValue: 80000,
+    closingValue: 120000,
   },
   receipts: { count: 1, value: 360000 },
   profit: { goodsRevenue: 100000, cost: 120000, gross: -20000 },
 }
-const sheetNames = ['Tổng quan', 'Theo ngày', 'Cọc và vỏ', 'Giao hàng', 'Bán hàng', 'Nhập xuất tồn', 'Khách hàng', 'Khách lâu chưa đặt', 'Kênh tiếp nhận']
-
+const sheetNames = [
+  'Tổng quan',
+  'Theo ngày',
+  'Cọc và vỏ',
+  'Giao hàng',
+  'Bán hàng',
+  'Nhập xuất tồn',
+  'Khách hàng',
+  'Khách lâu chưa đặt',
+  'Kênh tiếp nhận',
+]
 
 test('report Excel export: sheets, values, SKUs and empty data survive an XLSX round trip', async () => {
   const { buildReportWorkbook } = await import('/src/features/reports/exportReport.ts')
@@ -43,7 +99,10 @@ test('report Excel export: sheets, values, SKUs and empty data survive an XLSX r
   assert.equal(bytes.slice(0, 2).toString(), 'PK', 'File must be an XLSX ZIP, not renamed text')
   const workbook = new ExcelJS.Workbook()
   await workbook.xlsx.load(bytes)
-  assert.deepEqual(workbook.worksheets.map((sheet) => sheet.name), sheetNames)
+  assert.deepEqual(
+    workbook.worksheets.map((sheet) => sheet.name),
+    sheetNames,
+  )
   for (const sheet of workbook.worksheets) {
     assert.match(sheet.getCell('A2').value, /30\/09\/2026 – 01\/10\/2026/)
     assert.match(sheet.getCell('A2').value, /Lọc: kênh Website · giao tận nơi/)
@@ -56,13 +115,21 @@ test('report Excel export: sheets, values, SKUs and empty data survive an XLSX r
   const summary = workbook.getWorksheet('Tổng quan')
   const valueOf = (sheet, label) => {
     let cell
-    sheet.eachRow((row) => { if (row.getCell(1).value === label) cell = row.getCell(2) })
+    sheet.eachRow((row) => {
+      if (row.getCell(1).value === label) cell = row.getCell(2)
+    })
     assert.ok(cell, label)
     return cell
   }
   for (const [label, value] of [
-    ['Tiền hàng (đơn đã giao)', 100000], ['Trừ hàng khách trả trong kỳ', -20000], ['Doanh thu thuần', 90000],
-    ['Tiền thực thu (sau hoàn)', -20000], ['Lãi gộp ước tính', -20000], ['Phiếu nhập trong kỳ', 1], ['Đơn hủy', 1], ['Khách mới', 1],
+    ['Tiền hàng (đơn đã giao)', 100000],
+    ['Trừ hàng khách trả trong kỳ', -20000],
+    ['Doanh thu thuần', 90000],
+    ['Tiền thực thu (sau hoàn)', -20000],
+    ['Lãi gộp ước tính', -20000],
+    ['Phiếu nhập trong kỳ', 1],
+    ['Đơn hủy', 1],
+    ['Khách mới', 1],
   ]) {
     assert.equal(valueOf(summary, label).value, value)
     assert.equal(valueOf(summary, label).type, ExcelJS.ValueType.Number)
@@ -93,7 +160,10 @@ test('report Excel export: sheets, values, SKUs and empty data survive an XLSX r
   assert.equal(products.getCell('B5').type, ExcelJS.ValueType.String)
   assert.equal(products.getCell('H5').value, -20000)
   const stock = workbook.getWorksheet('Nhập xuất tồn')
-  assert.deepEqual([3, 4, 5, 6, 7, 8, 9].map((column) => stock.getCell(5, column).value), [4, 3, 1, 2, 6, 1, 120000])
+  assert.deepEqual(
+    [3, 4, 5, 6, 7, 8, 9].map((column) => stock.getCell(5, column).value),
+    [4, 3, 1, 2, 6, 1, 120000],
+  )
   assert.deepEqual(sample, before, 'Export must not change report data')
   // product codes preserve leading zero; formula-like names stay text; profit and stock movement are correct
 
@@ -120,12 +190,23 @@ test('report Excel export: sheets, values, SKUs and empty data survive an XLSX r
   const { reportService } = await import('/src/features/reports/reportService.ts')
   const deliveredAt = '2026-09-30T05:00:00.000Z'
   const line = (productId, name) => ({ productId, name, unit: 'Bình', quantity: 1, unitPrice: 20000 })
-  db.orders = [{
-    id: 'DH-T1', customer: 'Khách kiểm thử', phone: '0901000009', address: '', channel: 'Tại quầy', method: 'Tại quầy', status: 'Đã giao',
-    deliveryFee: 0, deliveredAt, payments: [], returns: [],
-    lines: [line('P-INTERNAL', 'Nước kiểm thử'), line('P-REMOVED', 'Sản phẩm cũ')],
-    history: [{ at: deliveredAt, by: 'Kiểm thử', message: 'Tạo đơn' }],
-  }]
+  db.orders = [
+    {
+      id: 'DH-T1',
+      customer: 'Khách kiểm thử',
+      phone: '0901000009',
+      address: '',
+      channel: 'Tại quầy',
+      method: 'Tại quầy',
+      status: 'Đã giao',
+      deliveryFee: 0,
+      deliveredAt,
+      payments: [],
+      returns: [],
+      lines: [line('P-INTERNAL', 'Nước kiểm thử'), line('P-REMOVED', 'Sản phẩm cũ')],
+      history: [{ at: deliveredAt, by: 'Kiểm thử', message: 'Tạo đơn' }],
+    },
+  ]
   db.archivedOrders = []
   db.lots = []
   db.receipts = []
@@ -140,7 +221,10 @@ test('report Excel export: sheets, values, SKUs and empty data survive an XLSX r
   const serviceProducts = serviceWorkbook.getWorksheet('Bán hàng')
   const codes = [5, 6].map((row) => serviceProducts.getCell(row, 1).value)
   assert.ok(codes.includes('0012'), 'Catalog SKU is exported')
-  assert.ok(codes.some((value) => [null, ''].includes(value)), 'Unknown SKU stays blank instead of exporting an internal ID')
+  assert.ok(
+    codes.some((value) => [null, ''].includes(value)),
+    'Unknown SKU stays blank instead of exporting an internal ID',
+  )
   assert.ok(!codes.includes('P-INTERNAL') && !codes.includes('P-REMOVED'))
   // report service exports catalog SKU, preserves leading zero and leaves missing SKU blank
 })

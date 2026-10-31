@@ -15,22 +15,38 @@ export const customerKeys = {
 
 // Tài khoản thật: CustomerController; địa chỉ giao quản lý riêng theo từng khách.
 type CustomerResponse = {
-  id: number; fullName: string; phone: string | null; createdAt: string
-  customerType?: Customer['type'] | null; area?: string | null; note?: string | null
+  id: number
+  fullName: string
+  phone: string | null
+  createdAt: string
+  customerType?: Customer['type'] | null
+  area?: string | null
+  note?: string | null
 }
 
 /** Sổ vỏ, công nợ BE chưa có nên để giá trị trung tính; giao diện ẩn chúng qua `useFeature`. */
 const fromResponse = (customer: CustomerResponse, orders: number): Customer => ({
-  id: String(customer.id), name: customer.fullName, phone: customer.phone ?? '', type: customer.customerType ?? 'Cá nhân', area: customer.area ?? '',
-  note: customer.note ?? undefined, addresses: [],
-  legacyOrders: 0, initials: initialsOf(customer.fullName), orders, bottlesHeld: 0, depositHeld: 0, debt: 0,
+  id: String(customer.id),
+  name: customer.fullName,
+  phone: customer.phone ?? '',
+  type: customer.customerType ?? 'Cá nhân',
+  area: customer.area ?? '',
+  note: customer.note ?? undefined,
+  addresses: [],
+  legacyOrders: 0,
+  initials: initialsOf(customer.fullName),
+  orders,
+  bottlesHeld: 0,
+  depositHeld: 0,
+  debt: 0,
 })
 
 /** Số đơn tính từ đơn thật (không tính đơn đã hủy). */
 async function liveCustomers() {
   const [customers, orders] = await Promise.all([api.get<CustomerResponse[]>('/sales/customers'), orderApi.list()])
   const counts = new Map<number, number>()
-  for (const order of orders) if (order.customerId !== null && order.status !== 'CANCELLED') counts.set(order.customerId, (counts.get(order.customerId) ?? 0) + 1)
+  for (const order of orders)
+    if (order.customerId !== null && order.status !== 'CANCELLED') counts.set(order.customerId, (counts.get(order.customerId) ?? 0) + 1)
   return customers.map((customer) => fromResponse(customer, counts.get(customer.id) ?? 0))
 }
 
@@ -42,7 +58,10 @@ const useLiveKey = () => {
 export function useCustomers() {
   const demo = useIsDemo()
   const who = useLiveKey()
-  return useQuery({ queryKey: demo ? customerKeys.all : ['live', 'customers', ...who], queryFn: demo ? customerService.list : liveCustomers })
+  return useQuery({
+    queryKey: demo ? customerKeys.all : ['live', 'customers', ...who],
+    queryFn: demo ? customerService.list : liveCustomers,
+  })
 }
 
 /** Sổ vỏ chỉ có ở bản dùng thử. */
@@ -54,7 +73,11 @@ export const useBottleLedger = (customerId: string) => {
 /** Địa chỉ giao của khách (tài khoản thật); bản dùng thử lưu địa chỉ ngay trên hồ sơ. */
 export const useLiveAddresses = (customerId: string) => {
   const demo = useIsDemo()
-  return useQuery({ queryKey: ['live', 'customer-addresses', Number(customerId)], queryFn: () => customerApi.addresses(Number(customerId)), enabled: !demo })
+  return useQuery({
+    queryKey: ['live', 'customer-addresses', Number(customerId)],
+    queryFn: () => customerApi.addresses(Number(customerId)),
+    enabled: !demo,
+  })
 }
 
 /** Đơn thật của một khách, dùng ở hồ sơ khách. */
@@ -65,7 +88,8 @@ export const useLiveCustomerOrders = (customerId: string) => {
     queryKey: ['live', 'orders', ...who],
     queryFn: orderApi.list,
     enabled: !demo,
-    select: (orders) => orders.filter((order) => order.customerId === Number(customerId)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    select: (orders) =>
+      orders.filter((order) => order.customerId === Number(customerId)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
   })
 }
 
@@ -76,8 +100,11 @@ const useInvalidateCustomers = () => {
 
 // Chuỗi rỗng để BE xóa khu vực/ghi chú cũ; null là giữ nguyên.
 const toRequest = (draft: CustomerDraft) => ({
-  fullName: draft.name.trim(), phone: draft.phone?.replace(/[\s().-]/g, '') || null,
-  customerType: draft.type, area: draft.area?.trim() ?? '', note: draft.note?.trim() ?? '',
+  fullName: draft.name.trim(),
+  phone: draft.phone?.replace(/[\s().-]/g, '') || null,
+  customerType: draft.type,
+  area: draft.area?.trim() ?? '',
+  note: draft.note?.trim() ?? '',
 })
 
 /** Thêm mới khi không có `id`, cập nhật khi có. */
@@ -87,7 +114,9 @@ export function useSaveCustomer() {
   return useMutation({
     mutationFn: async ({ id, draft }: { id?: string; draft: CustomerDraft }): Promise<Customer> => {
       if (demo) return id ? customerService.update(id, draft) : customerService.create(draft)
-      const saved = id ? await api.put<CustomerResponse>(`/sales/customers/${id}`, toRequest(draft)) : await api.post<CustomerResponse>('/sales/customers', toRequest(draft))
+      const saved = id
+        ? await api.put<CustomerResponse>(`/sales/customers/${id}`, toRequest(draft))
+        : await api.post<CustomerResponse>('/sales/customers', toRequest(draft))
       return fromResponse(saved, 0)
     },
     onSuccess: () => void invalidate(),

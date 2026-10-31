@@ -58,7 +58,11 @@ export function ReceiveOrderModal({ order, open, onClose }: { order: Order; open
         )}
         {success ? (
           <>
-            <Form.Item name="receiver" label="Người nhận thực tế" rules={[{ required: !counter, whitespace: true, message: 'Nhập người nhận.' }]}>
+            <Form.Item
+              name="receiver"
+              label="Người nhận thực tế"
+              rules={[{ required: !counter, whitespace: true, message: 'Nhập người nhận.' }]}
+            >
               <Input />
             </Form.Item>
             {tracksBottles && (
@@ -70,13 +74,20 @@ export function ReceiveOrderModal({ order, open, onClose }: { order: Order; open
                       name="bottlesReturned"
                       label="Vỏ rỗng đổi bù"
                       tooltip={`Nhận vỏ cùng dung tích của: ${EXCHANGEABLE_BRANDS.join(', ')}.`}
-                      rules={[{ required: true, message: 'Nhập số vỏ thu về.' }, { type: 'integer', min: 0, message: 'Số nguyên không âm.' }]}
+                      rules={[
+                        { required: true, message: 'Nhập số vỏ thu về.' },
+                        { type: 'integer', min: 0, message: 'Số nguyên không âm.' },
+                      ]}
                     >
                       <InputNumber min={0} precision={0} style={{ width: '100%' }} />
                     </Form.Item>
                   </Col>
                   <Col xs={24} sm={12}>
-                    <Form.Item name="depositCollected" label="Tiền cọc thu thêm (₫)" rules={[{ type: 'integer', min: 0, message: 'Số nguyên không âm.' }]}>
+                    <Form.Item
+                      name="depositCollected"
+                      label="Tiền cọc thu thêm (₫)"
+                      rules={[{ type: 'integer', min: 0, message: 'Số nguyên không âm.' }]}
+                    >
                       <InputNumber min={0} step={DEPOSIT_PER_BOTTLE} precision={0} style={{ width: '100%' }} />
                     </Form.Item>
                   </Col>
@@ -98,7 +109,8 @@ export function ReceiveOrderModal({ order, open, onClose }: { order: Order; open
           </Form.Item>
         )}
         <p className="af-form-hint">
-          Xác nhận nhận hàng không đồng nghĩa với đã thanh toán. Đơn chỉ hoàn tất sau khi đã nhận hàng và thu đủ tiền. Tiền cọc ghi vào sổ vỏ của khách, không tính vào tiền hàng.
+          Xác nhận nhận hàng không đồng nghĩa với đã thanh toán. Đơn chỉ hoàn tất sau khi đã nhận hàng và thu đủ tiền. Tiền cọc ghi vào sổ
+          vỏ của khách, không tính vào tiền hàng.
         </p>
       </Form>
     </Modal>

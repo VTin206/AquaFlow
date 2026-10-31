@@ -28,7 +28,15 @@ function useLowStock(demo: boolean) {
   const products = useProducts(demo)
   const stock = useStockItems(!demo)
   if (demo) {
-    const rows = (products.data ?? []).filter(isLowStock).map((product): LowStockRow => ({ id: product.id, name: product.name, unit: product.unit, stock: product.stock, threshold: product.threshold }))
+    const rows = (products.data ?? [])
+      .filter(isLowStock)
+      .map((product): LowStockRow => ({
+        id: product.id,
+        name: product.name,
+        unit: product.unit,
+        stock: product.stock,
+        threshold: product.threshold,
+      }))
     return { ...products, rows }
   }
   const rows = (stock.data ?? [])
@@ -49,7 +57,14 @@ const appointmentLabel = (iso?: string) => {
   return localDay(iso) === dayFromToday() ? timeOfDay(iso) : `${shortDate(localDay(iso)).slice(3)} ${timeOfDay(iso)}`
 }
 
-type Task = { key: string; kind: 'failed' | 'pending' | 'unpaid' | 'stock'; title: ReactNode; detail: ReactNode; amount?: ReactNode; action: ReactNode }
+type Task = {
+  key: string
+  kind: 'failed' | 'pending' | 'unpaid' | 'stock'
+  title: ReactNode
+  detail: ReactNode
+  amount?: ReactNode
+  action: ReactNode
+}
 const taskTags: Record<Task['kind'], { label: string; color: string }> = {
   failed: { label: 'Giao thất bại', color: 'red' },
   pending: { label: 'Chờ xác nhận', color: 'gold' },
@@ -80,22 +95,87 @@ export function DashboardPage() {
   const lastWeek = days.slice(-7)
   const today = days.at(-1)
   const yesterday = days.at(-2)
-  const todayOrders = orders.filter((order) => { const at = createdAtOf(order); return at !== undefined && localDay(at) === dayFromToday() }).length
+  const todayOrders = orders.filter((order) => {
+    const at = createdAtOf(order)
+    return at !== undefined && localDay(at) === dayFromToday()
+  }).length
 
   const openButton = (order: Order, label = 'Xem đơn') =>
-    demo ? <Link to="/orders"><Button size="small">{label}</Button></Link> : <Button size="small" onClick={() => setOpenedOrder(Number(order.id))}>{label}</Button>
+    demo ? (
+      <Link to="/orders">
+        <Button size="small">{label}</Button>
+      </Link>
+    ) : (
+      <Button size="small" onClick={() => setOpenedOrder(Number(order.id))}>
+        {label}
+      </Button>
+    )
   const orderTask = (order: Order, kind: Task['kind'], detail: ReactNode, action: ReactNode): Task => ({
-    key: `${kind}:${order.id}`, kind, title: <>{order.customer} <small>{order.code ?? order.id}</small></>, detail, amount: currency(kind === 'unpaid' && demo ? amountDue(order) : order.total), action,
+    key: `${kind}:${order.id}`,
+    kind,
+    title: (
+      <>
+        {order.customer} <small>{order.code ?? order.id}</small>
+      </>
+    ),
+    detail,
+    amount: currency(kind === 'unpaid' && demo ? amountDue(order) : order.total),
+    action,
   })
   // Gấp nhất lên trước: giao lỗi cần hẹn lại, đơn mới chờ khách, tiền chưa thu, rồi mới tới nhập hàng.
   const tasks: Task[] = [
-    ...failed.map((order) => orderTask(order, 'failed', order.items, <Link to="/delivery"><Button size="small" type="primary">Xử lý</Button></Link>)),
-    ...pending.map((order) => orderTask(order, 'pending', `${orderedAtOf(order).label} · ${order.items}`, demo ? <AdvanceStatusButton order={order} /> : <Button size="small" type="primary" onClick={() => setOpenedOrder(Number(order.id))}>Xem đơn</Button>)),
-    ...unpaid.map((order) => orderTask(order, 'unpaid', demo ? `Đã thu ${currency(order.total - amountDue(order))} / ${currency(order.total)}` : order.paymentStatusLabel, openButton(order, 'Thu tiền'))),
+    ...failed.map((order) =>
+      orderTask(
+        order,
+        'failed',
+        order.items,
+        <Link to="/delivery">
+          <Button size="small" type="primary">
+            Xử lý
+          </Button>
+        </Link>,
+      ),
+    ),
+    ...pending.map((order) =>
+      orderTask(
+        order,
+        'pending',
+        `${orderedAtOf(order).label} · ${order.items}`,
+        demo ? (
+          <AdvanceStatusButton order={order} />
+        ) : (
+          <Button size="small" type="primary" onClick={() => setOpenedOrder(Number(order.id))}>
+            Xem đơn
+          </Button>
+        ),
+      ),
+    ),
+    ...unpaid.map((order) =>
+      orderTask(
+        order,
+        'unpaid',
+        demo ? `Đã thu ${currency(order.total - amountDue(order))} / ${currency(order.total)}` : order.paymentStatusLabel,
+        openButton(order, 'Thu tiền'),
+      ),
+    ),
     ...lowStock.map((product): Task => ({
-      key: `stock:${product.id}`, kind: 'stock', title: product.name,
-      detail: <>Còn <strong className="af-text-warning">{product.stock} {product.unit.toLowerCase()}</strong>{product.threshold !== undefined && ` · tối thiểu ${product.threshold}`}</>,
-      action: <Button size="small" icon={<PackagePlus size={15} />} onClick={() => setReceiving({ productId: product.id })}>Nhập thêm</Button>,
+      key: `stock:${product.id}`,
+      kind: 'stock',
+      title: product.name,
+      detail: (
+        <>
+          Còn{' '}
+          <strong className="af-text-warning">
+            {product.stock} {product.unit.toLowerCase()}
+          </strong>
+          {product.threshold !== undefined && ` · tối thiểu ${product.threshold}`}
+        </>
+      ),
+      action: (
+        <Button size="small" icon={<PackagePlus size={15} />} onClick={() => setReceiving({ productId: product.id })}>
+          Nhập thêm
+        </Button>
+      ),
     })),
   ]
 
@@ -138,7 +218,19 @@ export function DashboardPage() {
 
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={16}>
-          <Card title={<PanelHeading title={<span className="af-panel-title">Việc cần làm <span className="af-count">{ordersQuery.isError ? '—' : tasks.length}</span></span>} />} className="af-card af-fill" loading={loadingTasks}>
+          <Card
+            title={
+              <PanelHeading
+                title={
+                  <span className="af-panel-title">
+                    Việc cần làm <span className="af-count">{ordersQuery.isError ? '—' : tasks.length}</span>
+                  </span>
+                }
+              />
+            }
+            className="af-card af-fill"
+            loading={loadingTasks}
+          >
             {ordersQuery.isError ? (
               <QueryError error={ordersQuery.error} onRetry={ordersQuery.refetch} />
             ) : tasks.length === 0 ? (
@@ -147,7 +239,9 @@ export function DashboardPage() {
               <ul className="af-dash-tasks">
                 {tasks.slice(0, TASK_LIMIT).map((task) => (
                   <li key={task.key}>
-                    <Tag color={taskTags[task.kind].color} variant="filled">{taskTags[task.kind].label}</Tag>
+                    <Tag color={taskTags[task.kind].color} variant="filled">
+                      {taskTags[task.kind].label}
+                    </Tag>
                     <div className="af-cell-stack">
                       <span>{task.title}</span>
                       <small>{task.detail}</small>
@@ -158,12 +252,29 @@ export function DashboardPage() {
                 ))}
               </ul>
             )}
-            {tasks.length > TASK_LIMIT && <p className="af-dash-more">Còn {tasks.length - TASK_LIMIT} việc khác — xem ở <Link to="/orders">Đơn hàng</Link> và <Link to="/inventory">Kho</Link>.</p>}
+            {tasks.length > TASK_LIMIT && (
+              <p className="af-dash-more">
+                Còn {tasks.length - TASK_LIMIT} việc khác — xem ở <Link to="/orders">Đơn hàng</Link> và <Link to="/inventory">Kho</Link>.
+              </p>
+            )}
           </Card>
         </Col>
         <Col xs={24} xl={8}>
           <Card
-            title={<PanelHeading title={<span className="af-panel-title">Đang giao <span className="af-count">{ordersQuery.isError ? '—' : shipping.length}</span></span>} extra={<Link to="/delivery" className="af-text-link">Bảng giao hàng <ArrowRight size={14} /></Link>} />}
+            title={
+              <PanelHeading
+                title={
+                  <span className="af-panel-title">
+                    Đang giao <span className="af-count">{ordersQuery.isError ? '—' : shipping.length}</span>
+                  </span>
+                }
+                extra={
+                  <Link to="/delivery" className="af-text-link">
+                    Bảng giao hàng <ArrowRight size={14} />
+                  </Link>
+                }
+              />
+            }
             className="af-card af-fill"
             loading={ordersQuery.isPending}
           >
@@ -177,7 +288,9 @@ export function DashboardPage() {
                   <li key={order.id}>
                     <time>{appointmentLabel(order.appointment)}</time>
                     <div className="af-cell-stack">
-                      <span>{order.customer} <small>{order.code ?? order.id}</small></span>
+                      <span>
+                        {order.customer} <small>{order.code ?? order.id}</small>
+                      </span>
                       <small>{order.address || order.items}</small>
                     </div>
                   </li>
@@ -198,7 +311,10 @@ export function DashboardPage() {
           <>
             <div>
               <dt>Doanh thu hôm nay</dt>
-              <dd>{today ? currency(today.revenue) : '—'}{yesterday && <small>Hôm qua {currency(yesterday.revenue)}</small>}</dd>
+              <dd>
+                {today ? currency(today.revenue) : '—'}
+                {yesterday && <small>Hôm qua {currency(yesterday.revenue)}</small>}
+              </dd>
             </div>
             <div>
               <dt>Đã thu hôm nay</dt>
@@ -206,7 +322,10 @@ export function DashboardPage() {
             </div>
             <div>
               <dt>Còn phải thu</dt>
-              <dd>{currency(unpaid.reduce((sum, order) => sum + amountDue(order), 0))}<small>{unpaid.length} đơn</small></dd>
+              <dd>
+                {currency(unpaid.reduce((sum, order) => sum + amountDue(order), 0))}
+                <small>{unpaid.length} đơn</small>
+              </dd>
             </div>
           </>
         )}
@@ -215,14 +334,31 @@ export function DashboardPage() {
       <Row gutter={[16, 16]}>
         {demo && (
           <Col xs={24} xl={9}>
-            <Card title={<PanelHeading title="Doanh thu 7 ngày" extra={<Link to="/reports" className="af-text-link">Báo cáo <ArrowRight size={14} /></Link>} />} className="af-card af-fill" loading={revenueQuery.isPending}>
+            <Card
+              title={
+                <PanelHeading
+                  title="Doanh thu 7 ngày"
+                  extra={
+                    <Link to="/reports" className="af-text-link">
+                      Báo cáo <ArrowRight size={14} />
+                    </Link>
+                  }
+                />
+              }
+              className="af-card af-fill"
+              loading={revenueQuery.isPending}
+            >
               {revenueQuery.isError ? (
                 <QueryError error={revenueQuery.error} onRetry={revenueQuery.refetch} />
               ) : lastWeek.length === 0 ? (
                 <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có dữ liệu doanh thu." />
               ) : (
                 <>
-                  <Statistic title="Tổng trong kỳ" value={currency(lastWeek.reduce((sum, day) => sum + day.revenue, 0))} className="af-chart-total" />
+                  <Statistic
+                    title="Tổng trong kỳ"
+                    value={currency(lastWeek.reduce((sum, day) => sum + day.revenue, 0))}
+                    className="af-chart-total"
+                  />
                   <BarChart
                     data={lastWeek.map((day) => ({ label: shortDate(day.date).slice(3), value: day.revenue }))}
                     formatValue={compactCurrency}
@@ -256,7 +392,15 @@ export function DashboardPage() {
       {demo ? (
         <CreateOrderModal open={creatingOrder} onClose={() => setCreatingOrder(false)} />
       ) : (
-        creatingOrder && <LiveOrderDraftModal onClose={() => setCreatingOrder(false)} onCreated={(order) => { setCreatingOrder(false); setOpenedOrder(order.id) }} />
+        creatingOrder && (
+          <LiveOrderDraftModal
+            onClose={() => setCreatingOrder(false)}
+            onCreated={(order) => {
+              setCreatingOrder(false)
+              setOpenedOrder(order.id)
+            }}
+          />
+        )
       )}
       {openedOrder !== null && <LiveOrderDetails key={openedOrder} id={openedOrder} onClose={() => setOpenedOrder(null)} />}
       <ReceiveStockModal open={receiving !== null} defaultProductId={receiving?.productId} onClose={() => setReceiving(null)} />

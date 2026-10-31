@@ -28,8 +28,10 @@ export function groupRevenue(days: DailyRevenue[], granularity: Granularity): Re
   for (const day of days) {
     const key = granularity === 'day' ? day.date : granularity === 'week' ? weekStart(day.date) : day.date.slice(0, 7)
     const [year, month] = key.split('-')
-    const label = granularity === 'day' ? shortDate(day.date).slice(3) : granularity === 'week' ? shortDate(key).slice(3) : `T${Number(month)}/${year}`
-    const title = granularity === 'day' ? shortDate(day.date) : granularity === 'week' ? `Tuần từ ${shortDate(key)}` : `Tháng ${Number(month)}/${year}`
+    const label =
+      granularity === 'day' ? shortDate(day.date).slice(3) : granularity === 'week' ? shortDate(key).slice(3) : `T${Number(month)}/${year}`
+    const title =
+      granularity === 'day' ? shortDate(day.date) : granularity === 'week' ? `Tuần từ ${shortDate(key)}` : `Tháng ${Number(month)}/${year}`
     const bucket = buckets.get(key) ?? { key, label, title, revenue: 0, collected: 0 }
     bucket.revenue += day.revenue
     bucket.collected += day.collected

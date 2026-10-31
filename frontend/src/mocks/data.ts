@@ -61,7 +61,8 @@ const originalOrders: Order[] = [
     method: 'Tại quầy',
   },
 ].map((fixture) => {
-  const quantity = fixture.id === 'AF-1047' ? 10 : fixture.id === 'AF-1044' ? 3 : fixture.id === 'AF-1045' ? 5 : fixture.id === 'AF-1048' ? 2 : 1
+  const quantity =
+    fixture.id === 'AF-1047' ? 10 : fixture.id === 'AF-1044' ? 3 : fixture.id === 'AF-1045' ? 5 : fixture.id === 'AF-1048' ? 2 : 1
   const bottled = fixture.id === 'AF-1045'
   const lines = [
     {
@@ -96,10 +97,24 @@ export const initialProducts: Product[] = [
     ...product,
     stock: ['P-004', 'P-009', 'P-010', 'P-012', 'P-016'].includes(product.id)
       ? 48 + index * 2
-      : index % 11 === 0 ? 0 : index % 5 === 0 ? 4 : 20 + index * 3 % 65,
+      : index % 11 === 0
+        ? 0
+        : index % 5 === 0
+          ? 4
+          : 20 + ((index * 3) % 65),
     expiry: index % 9 === 0 ? '30/11/2026' : index % 7 === 0 ? '31/01/2027' : '30/09/2027',
   })),
-  { id: 'P-002', name: 'Vỏ bình 20L', brand: 'Dùng luân chuyển', unit: 'Vỏ', stock: 28, threshold: 35, price: 50000, expiry: '—', sku: 'VO-20L' },
+  {
+    id: 'P-002',
+    name: 'Vỏ bình 20L',
+    brand: 'Dùng luân chuyển',
+    unit: 'Vỏ',
+    stock: 28,
+    threshold: 35,
+    price: 50000,
+    expiry: '—',
+    sku: 'VO-20L',
+  },
 ]
 
 const seedCustomers: SeedCustomer[] = [
@@ -113,7 +128,13 @@ const seedCustomers: SeedCustomer[] = [
 const allOrders = [...additionalOrders, ...originalOrders]
 
 export const customers: CustomerRecord[] = seedCustomers.map((seed, index) => {
-  const addresses = [...new Set(allOrders.filter((order) => normalizePhone(order.phone) === normalizePhone(seed.phone) && order.method === 'Giao tận nơi').map((order) => order.address))]
+  const addresses = [
+    ...new Set(
+      allOrders
+        .filter((order) => normalizePhone(order.phone) === normalizePhone(seed.phone) && order.method === 'Giao tận nơi')
+        .map((order) => order.address),
+    ),
+  ]
   const ordersInSystem = allOrders.filter((order) => normalizePhone(order.phone) === normalizePhone(seed.phone)).length
   return {
     id: `KH-${String(index + 1).padStart(3, '0')}`,
@@ -129,15 +150,17 @@ export const customers: CustomerRecord[] = seedCustomers.map((seed, index) => {
 /** Số vỏ khách đang giữ khi bắt đầu dùng hệ thống, kèm tiền cọc tương ứng. */
 export const bottleLedger: BottleEntry[] = seedCustomers.flatMap((seed, index) =>
   seed.bottlesHeld > 0
-    ? [{
-        id: `SV-${String(index + 1).padStart(4, '0')}`,
-        customerId: customers[index].id,
-        at: '2026-10-01T08:00:00+07:00',
-        kind: 'Số dư đầu kỳ' as const,
-        bottles: seed.bottlesHeld,
-        deposit: seed.bottlesHeld * DEPOSIT_PER_BOTTLE,
-        note: 'Chuyển số dư từ sổ tay.',
-      }]
+    ? [
+        {
+          id: `SV-${String(index + 1).padStart(4, '0')}`,
+          customerId: customers[index].id,
+          at: '2026-10-01T08:00:00+07:00',
+          kind: 'Số dư đầu kỳ' as const,
+          bottles: seed.bottlesHeld,
+          deposit: seed.bottlesHeld * DEPOSIT_PER_BOTTLE,
+          note: 'Chuyển số dư từ sổ tay.',
+        },
+      ]
     : [],
 )
 

@@ -9,9 +9,39 @@ const { amountDue } = await import('/src/features/orders/types.ts')
 const seed = globalThis.structuredClone(db)
 // Fixture độc lập với danh mục minh họa để kiểm thử không phụ thuộc thương hiệu/giá nhập từ nguồn ngoài.
 seed.products = [
-  { id: 'P-001', name: 'Bình nước kiểm thử 20L', brand: 'Kiểm thử', unit: 'Bình', stock: 12, threshold: 20, price: 70000, expiry: '31/12/2099', sku: 'TEST-20L' },
-  { id: 'P-002', name: 'Vỏ bình kiểm thử', brand: 'Kiểm thử', unit: 'Vỏ', stock: 28, threshold: 35, price: 50000, expiry: '—', sku: 'TEST-VO' },
-  { id: 'P-003', name: 'Thùng nước kiểm thử', brand: 'Kiểm thử', unit: 'Thùng', stock: 64, threshold: 24, price: 90000, expiry: '31/12/2099', sku: 'TEST-500' },
+  {
+    id: 'P-001',
+    name: 'Bình nước kiểm thử 20L',
+    brand: 'Kiểm thử',
+    unit: 'Bình',
+    stock: 12,
+    threshold: 20,
+    price: 70000,
+    expiry: '31/12/2099',
+    sku: 'TEST-20L',
+  },
+  {
+    id: 'P-002',
+    name: 'Vỏ bình kiểm thử',
+    brand: 'Kiểm thử',
+    unit: 'Vỏ',
+    stock: 28,
+    threshold: 35,
+    price: 50000,
+    expiry: '—',
+    sku: 'TEST-VO',
+  },
+  {
+    id: 'P-003',
+    name: 'Thùng nước kiểm thử',
+    brand: 'Kiểm thử',
+    unit: 'Thùng',
+    stock: 64,
+    threshold: 24,
+    price: 90000,
+    expiry: '31/12/2099',
+    sku: 'TEST-500',
+  },
 ]
 const reset = () => {
   Object.assign(db, globalThis.structuredClone(seed))
@@ -188,6 +218,6 @@ test('partial receipts, transfer references, overpayment and prepayment completi
   await assert.rejects(orderService.pay(order.id, { amount: 1, method: 'Tiền mặt' }))
 })
 afterAll(() => {
-Object.assign(db, seed)
-delete globalThis.window
+  Object.assign(db, seed)
+  delete globalThis.window
 })

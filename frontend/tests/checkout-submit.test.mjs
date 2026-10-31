@@ -1,12 +1,13 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 
-
 test('checkout submit: no double submit, cart kept on failure, retry succeeds', async () => {
   const { submitCheckoutOnce } = await import('/src/features/shop/checkoutSubmit.ts')
 
   let resolveRequest
-  const pendingRequest = new Promise((resolve) => { resolveRequest = resolve })
+  const pendingRequest = new Promise((resolve) => {
+    resolveRequest = resolve
+  })
   const lock = { current: false }
   const cart = [{ productId: '12', quantity: 1 }]
   let requestCount = 0
@@ -14,19 +15,35 @@ test('checkout submit: no double submit, cart kept on failure, retry succeeds', 
   let displayedOrderCode
   const order = { orderCode: 'WEB-TEST-001', status: 'PENDING' }
 
-  const firstSubmit = submitCheckoutOnce(lock, () => {
-    requestCount += 1
-    return pendingRequest
-  }, (createdOrder) => {
-    successCount += 1
-    displayedOrderCode = createdOrder.orderCode
-    cart.splice(0)
-  }, (error) => { throw error })
+  const firstSubmit = submitCheckoutOnce(
+    lock,
+    () => {
+      requestCount += 1
+      return pendingRequest
+    },
+    (createdOrder) => {
+      successCount += 1
+      displayedOrderCode = createdOrder.orderCode
+      cart.splice(0)
+    },
+    (error) => {
+      throw error
+    },
+  )
 
-  const secondSubmit = await submitCheckoutOnce(lock, async () => {
-    requestCount += 1
-    return order
-  }, () => { successCount += 1 }, (error) => { throw error })
+  const secondSubmit = await submitCheckoutOnce(
+    lock,
+    async () => {
+      requestCount += 1
+      return order
+    },
+    () => {
+      successCount += 1
+    },
+    (error) => {
+      throw error
+    },
+  )
 
   assert.equal(secondSubmit, false, 'A second submit while the request is pending is ignored')
   assert.equal(requestCount, 1, 'Only one API request starts')
@@ -42,12 +59,19 @@ test('checkout submit: no double submit, cart kept on failure, retry succeeds', 
   const retryCart = [{ productId: '12', quantity: 2 }]
   let attemptCount = 0
   let visibleError
-  await submitCheckoutOnce(lock, async () => {
-    attemptCount += 1
-    throw new Error('API unavailable')
-  }, () => {
-    retryCart.splice(0)
-  }, (error) => { visibleError = error.message })
+  await submitCheckoutOnce(
+    lock,
+    async () => {
+      attemptCount += 1
+      throw new Error('API unavailable')
+    },
+    () => {
+      retryCart.splice(0)
+    },
+    (error) => {
+      visibleError = error.message
+    },
+  )
 
   assert.equal(attemptCount, 1)
   assert.equal(visibleError, 'API unavailable')
@@ -55,13 +79,20 @@ test('checkout submit: no double submit, cart kept on failure, retry succeeds', 
   assert.equal(lock.current, false, 'The lock is released after failure')
 
   let retryOrderCode
-  await submitCheckoutOnce(lock, async () => {
-    attemptCount += 1
-    return order
-  }, (createdOrder) => {
-    retryOrderCode = createdOrder.orderCode
-    retryCart.splice(0)
-  }, (error) => { throw error })
+  await submitCheckoutOnce(
+    lock,
+    async () => {
+      attemptCount += 1
+      return order
+    },
+    (createdOrder) => {
+      retryOrderCode = createdOrder.orderCode
+      retryCart.splice(0)
+    },
+    (error) => {
+      throw error
+    },
+  )
 
   assert.equal(attemptCount, 2, 'A failed checkout can be retried')
   assert.equal(retryOrderCode, order.orderCode)

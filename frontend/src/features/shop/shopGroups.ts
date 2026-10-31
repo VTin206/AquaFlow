@@ -36,5 +36,9 @@ export const filterProducts = (products: ShopProduct[], filters: ShopFilterState
   products.filter((product) => matches(product, filters)).sort((a, b) => Number(b.available) - Number(a.available))
 
 /** Số sản phẩm của mỗi lựa chọn, tính theo các bộ lọc khác đang chọn để không dẫn tới danh sách rỗng. */
-export const countBy = (products: ShopProduct[], filters: ShopFilterState, key: keyof ShopFilterState, value: (product: ShopProduct) => boolean) =>
-  products.filter((product) => matches(product, filters, key) && value(product)).length
+export const countBy = (
+  products: ShopProduct[],
+  filters: ShopFilterState,
+  key: keyof ShopFilterState,
+  value: (product: ShopProduct) => boolean,
+) => products.filter((product) => matches(product, filters, key) && value(product)).length

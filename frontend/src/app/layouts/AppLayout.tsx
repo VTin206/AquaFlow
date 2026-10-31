@@ -46,7 +46,14 @@ export function AppLayout() {
         <Layout.Sider width={224} collapsedWidth={72} collapsed={collapsed} trigger={null} className="af-sider">
           <Sidebar collapsed={collapsed} onToggleCollapse={toggleCollapsed} />
         </Layout.Sider>
-        <Drawer open={navOpen} onClose={() => setNavOpen(false)} placement="left" size={260} title="AquaFlow" styles={{ body: { padding: 0 } }}>
+        <Drawer
+          open={navOpen}
+          onClose={() => setNavOpen(false)}
+          placement="left"
+          size={260}
+          title="AquaFlow"
+          styles={{ body: { padding: 0 } }}
+        >
           <Sidebar onNavigate={() => setNavOpen(false)} />
         </Drawer>
         <Layout.Content className="af-content">

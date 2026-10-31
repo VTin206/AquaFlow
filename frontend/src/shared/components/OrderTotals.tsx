@@ -7,7 +7,17 @@ export type TotalsRow = { label: ReactNode; value: ReactNode }
  * Dòng thường chữ nhạt, dòng tổng đậm có kẻ trên; `after` cho các dòng sau tổng (đã thu, còn phải thu, trạng thái).
  * `wide`: chiếm hết chiều ngang (dùng trong thẻ hẹp như báo cáo).
  */
-export function OrderTotals({ rows, total, after, wide = false }: { rows: TotalsRow[]; total: TotalsRow; after?: ReactNode; wide?: boolean }) {
+export function OrderTotals({
+  rows,
+  total,
+  after,
+  wide = false,
+}: {
+  rows: TotalsRow[]
+  total: TotalsRow
+  after?: ReactNode
+  wide?: boolean
+}) {
   return (
     <dl className={`af-totals${wide ? ' is-wide' : ''}`}>
       {rows.map((row, index) => (
