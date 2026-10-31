@@ -534,11 +534,6 @@ body {
 /* Dấu * của trường bắt buộc, đặt sau nhãn. */
 .af-required-mark { margin-left: 4px; color: var(--af-danger); font-weight: 600; }
 
-/* ---------- Form trong hộp thoại ---------- */
-/* Hộp thoại nhiều trường: dồn khoảng cách để thấy hết form, ít phải cuộn. Lỗi vẫn hiện ngay dưới ô. */
-.ant-modal .ant-form-item { margin-bottom: 14px; }
-.ant-modal .ant-form-vertical .ant-form-item-label { padding-bottom: 4px; }
-
 /* ---------- Ô trong bảng ---------- */
 /* Nội dung hộp xác nhận: tên đối tượng in đậm, mỗi ý một đoạn ngắn. */
 .af-confirm-body p { margin: 0; color: var(--af-text-secondary); line-height: 1.6; }
@@ -1326,7 +1321,6 @@ body {
 .af-shop-account-page > header p { margin: 8px 0 0; color: var(--af-text-secondary); }
 .af-shop-account-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px 56px; align-items: start; }
 .af-shop-account-grid > section { padding: 24px; border: 1px solid var(--af-border); border-radius: 16px; background: var(--af-surface); }
-.af-shop-account-grid .ant-form-item { margin-bottom: 16px; }
 .af-shop-account-page .af-register-passwords { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; }
 .af-shop-account-forgot.ant-btn { padding: 0; margin-bottom: 20px; }
 .af-shop-account-submit { display: flex; min-width: 200px; }
