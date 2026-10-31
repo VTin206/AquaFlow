@@ -1,9 +1,9 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 import { Spin } from 'antd'
 import { Navigate, Route, Routes } from 'react-router'
-import { AppLayout } from '@/layouts/AppLayout'
-import { DriverLayout } from '@/layouts/DriverLayout'
-import { ThemedArea } from '@/layouts/ThemedArea'
+import { AppLayout } from '@/app/layouts/AppLayout'
+import { DriverLayout } from '@/app/layouts/DriverLayout'
+import { ThemedArea } from '@/app/layouts/ThemedArea'
 import { RequireAuth } from './RequireAuth'
 import { usePageSupported } from '@/shared/features'
 
