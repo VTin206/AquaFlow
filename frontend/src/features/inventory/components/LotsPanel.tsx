@@ -8,7 +8,7 @@ import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
 import { useExpiryWarningDays } from '@/features/settings/settingsService'
 import { daysUntilExpiry, expiryStatus, isoToVnDate } from '../expiry'
 import { matchesSearch } from '@/shared/utils/search'
-import { useLotItems, type LotItem } from '../inventoryData'
+import { useLotItems, type LotItem } from '../useInventory'
 
 type LotFilter = 'stock' | 'expiring' | 'expired' | 'all'
 

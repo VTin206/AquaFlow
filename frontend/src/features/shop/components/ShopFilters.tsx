@@ -1,7 +1,7 @@
 import type { Ref } from 'react'
 import { Button, Input, Select, Typography, type InputRef } from 'antd'
 import { Droplets, FunnelX, LayoutGrid, Search } from 'lucide-react'
-import { brandGroups, catalogCategories, normalizeSearch } from '@/features/inventory/catalog'
+import { brandGroups, catalogCategories, normalizeSearch } from '@/features/inventory/catalogGroups'
 import { ALL, brandOf, categoryOf, countBy, emptyFilters, shopGroups, type ShopFilterState } from '../shopGroups'
 import type { ShopProduct } from '../shopService'
 

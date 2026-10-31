@@ -5,7 +5,7 @@ import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { isoToVnDate, localToday } from '../expiry'
 import { tracksExpiry } from '../types'
-import { receiptToForm, useInventoryCaps, useReceiptOptions, useSaveReceipt, type ReceiptForm, type ReceiptLineView, type ReceiptView } from '../inventoryData'
+import { receiptToForm, useInventoryCaps, useReceiptOptions, useSaveReceipt, type ReceiptForm, type ReceiptLineView, type ReceiptView } from '../useInventory'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 
 type ReceiveStockModalProps = { open: boolean; onClose: () => void; defaultProductId?: string; receipt?: ReceiptView }

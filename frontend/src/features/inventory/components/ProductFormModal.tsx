@@ -5,7 +5,7 @@ import { ImagePlus } from 'lucide-react'
 import { useFeature, useIsDemo } from '@/shared/features'
 import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 import { bottleTypeApi } from '@/features/live/bottleTypeApi'
-import { useSaveProduct, type CatalogItem, type ProductForm } from '../productCatalog'
+import { useSaveProduct, type CatalogItem, type ProductForm } from '../useProductCatalog'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 
 const MAX_IMAGE_MB = 5

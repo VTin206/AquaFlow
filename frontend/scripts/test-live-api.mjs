@@ -94,7 +94,7 @@ try {
   console.log('PASS order list/detail preserve backend status, item prices, discount and total')
   console.log('PASS live cancel and prepare actions match backend policy; cancel stays unavailable after dispatch')
 
-  const { inferCatalog } = await vite.ssrLoadModule('/src/features/inventory/catalog.ts')
+  const { inferCatalog } = await vite.ssrLoadModule('/src/features/inventory/catalogGroups.ts')
   const { shopGroups } = await vite.ssrLoadModule('/src/features/shop/shopGroups.ts')
   const groupOf = (name, unit) => shopGroups.find((group) => group.match({ name, unit, catalog: inferCatalog(name, unit) }))?.key
   assert.deepEqual(inferCatalog('Nước khoáng Vĩnh Hảo 20 Lít (Vòi)', 'Bình'), { category: 'Nước khoáng', packaging: 'Bình có vòi', capacity: '18,5–20L', volumeMl: 20000 })

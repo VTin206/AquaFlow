@@ -7,9 +7,9 @@ import { QueryError } from '@/shared/components/QueryError'
 import { useFeature, useIsDemo } from '@/shared/features'
 import { currency } from '@/shared/utils/format'
 import { LiveBottleTypes } from '@/features/live/LiveBottleTypes'
-import { brandGroups, capacityGroups, catalogCategories, getBrandGroup, getCatalogDetails, normalizeSearch } from './catalog'
+import { brandGroups, capacityGroups, catalogCategories, getBrandGroup, getCatalogDetails, normalizeSearch } from './catalogGroups'
 import { ProductFormModal } from './components/ProductFormModal'
-import { useActivateProduct, useCanManageProducts, useCatalog, useDeactivateProduct, type CatalogItem, type ProductStatus } from './productCatalog'
+import { useActivateProduct, useCanManageProducts, useCatalog, useDeactivateProduct, type CatalogItem, type ProductStatus } from './useProductCatalog'
 
 
 function ProductImage({ product }: { product: CatalogItem }) {

@@ -19,7 +19,7 @@ import { ReceiveStockModal } from './components/ReceiveStockModal'
 import { useExpiryWarningDays } from '@/features/settings/settingsService'
 import { daysUntilExpiry, expiryStatus, isoToVnDate } from './expiry'
 import { matchesSearch } from '@/shared/utils/search'
-import { useReceiptViews, useStockItems, type ReceiptView, type StockItem } from './inventoryData'
+import { useReceiptViews, useStockItems, type ReceiptView, type StockItem } from './useInventory'
 
 type Filter = 'all' | 'low' | 'expiring' | 'expired'
 type View = 'stock' | 'lots' | 'receipts' | 'returns' | 'movements'

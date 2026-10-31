@@ -6,7 +6,7 @@ import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
 import { isoToVnDate } from '../expiry'
-import { useInventoryCaps, useReceiptAction, useReceiptViews, type ReceiptLineView, type ReceiptStatus, type ReceiptView } from '../inventoryData'
+import { useInventoryCaps, useReceiptAction, useReceiptViews, type ReceiptLineView, type ReceiptStatus, type ReceiptView } from '../useInventory'
 import { ReceiptResult } from './ReceiveStockModal'
 
 type ReceiptFilter = 'all' | ReceiptStatus
