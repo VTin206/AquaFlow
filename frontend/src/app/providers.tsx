@@ -29,7 +29,7 @@ const requiredMark = (label: ReactNode, { required }: { required: boolean }) => 
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <ConfigProvider locale={viVN} theme={appTheme} form={{ requiredMark }}>
+      <ConfigProvider locale={viVN} theme={appTheme} form={{ requiredMark }} modal={{ centered: true }}>
         <AntApp message={{ maxCount: 3 }}>
           <AuthProvider>
             <BrowserRouter>{children}</BrowserRouter>

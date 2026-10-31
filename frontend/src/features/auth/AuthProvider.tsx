@@ -6,6 +6,7 @@ import { AuthContext, type AuthContextValue, type AuthUser } from './authContext
 import { roleLabel, STAFF_ROLES } from './roles'
 const USER_KEY = 'aquaflow.auth.user'
 const EXPIRES_KEY = 'aquaflow.auth.expires-at'
+const DEMO_GUEST_KEY = 'aquaflow.auth.demo-guest'
 const EXPIRED_MESSAGE = 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.'
 
 const readExpiry = () => {
@@ -59,6 +60,25 @@ const saveUser = (user: AuthUser | null) => {
   }
 }
 
+// Chế độ "khách dùng thử" chỉ có khi dev, bản build bỏ qua cờ này.
+const readDemoGuest = () => {
+  if (!import.meta.env.DEV) return false
+  try {
+    return localStorage.getItem(DEMO_GUEST_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+const writeDemoGuest = (on: boolean) => {
+  try {
+    if (on) localStorage.setItem(DEMO_GUEST_KEY, '1')
+    else localStorage.removeItem(DEMO_GUEST_KEY)
+  } catch {
+    // Bỏ qua.
+  }
+}
+
 const toAuthUser = (user: { fullName: string; email: string; role: string }): AuthUser => ({ name: user.fullName || user.email, email: user.email, role: roleLabel(user.role) })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -66,14 +86,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState(readStoredToken)
   const [user, setUser] = useState<AuthUser | null>(readStoredUser)
   const [expiresAt, setExpiresAt] = useState(readExpiry)
+  const [demoGuest, setDemoGuest] = useState(readDemoGuest)
 
   const clearSession = useCallback(() => {
     storeAuthToken(null)
     writeExpiry(null)
     saveUser(null)
+    writeDemoGuest(false)
     setToken(null)
     setExpiresAt(null)
     setUser(null)
+    setDemoGuest(false)
   }, [])
 
   // Hết phiên thì xóa dữ liệu đăng nhập; RequireAuth tự đưa về trang đăng nhập.
@@ -121,6 +144,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     storeAuthToken(response.accessToken)
     writeExpiry(nextExpiry)
     saveUser(nextUser)
+    writeDemoGuest(false)
+    setDemoGuest(false)
     setToken(response.accessToken)
     setExpiresAt(nextExpiry)
     setUser(nextUser)
@@ -131,18 +156,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     writeExpiry(null)
     const demoUser = { name: 'Nguyễn An', role: 'Bản dùng thử', isDemo: true }
     saveUser(demoUser)
+    writeDemoGuest(false)
+    setDemoGuest(false)
     setToken(null)
     setExpiresAt(null)
     setUser(demoUser)
   }
+
+  const enterDemoGuest = useCallback(() => {
+    clearSession()
+    writeDemoGuest(true)
+    setDemoGuest(true)
+  }, [clearSession])
 
   const value = useMemo<AuthContextValue>(() => ({
     user,
     isAuthenticated: Boolean(user && (token || user.isDemo)),
     login,
     enterDemo,
+    demoGuest,
+    enterDemoGuest,
     logout: clearSession,
-  }), [token, user, clearSession])
+  }), [token, user, demoGuest, clearSession, enterDemoGuest])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

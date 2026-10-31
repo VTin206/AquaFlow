@@ -57,7 +57,7 @@ export const appTheme: ThemeConfig = {
       cellPaddingInlineMD: 20,
     },
     Segmented: { trackBg: '#f0f4f8', itemSelectedColor: '#087fad', trackPadding: 4 },
-    Form: { labelColor: '#263e53', labelFontSize: 13, verticalLabelPadding: '0 0 8px' },
+    Form: { labelColor: '#263e53', labelFontSize: 13, verticalLabelPadding: '0 0 4px', itemMarginBottom: 14 },
     Modal: { titleFontSize: 18 },
   },
 }

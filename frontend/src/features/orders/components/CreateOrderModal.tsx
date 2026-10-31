@@ -41,7 +41,6 @@ function CreateOrderDialog({ open, onClose, onCreated, defaultCustomer, defaultP
       open={open}
       title="Tiếp nhận đơn hàng"
       width={740}
-      style={{ top: 24 }}
       styles={{ body: { maxHeight: 'calc(100dvh - 200px)', overflowY: 'auto', paddingRight: 8 } }}
       okText="Tạo đơn chờ xác nhận"
       cancelText="Hủy"

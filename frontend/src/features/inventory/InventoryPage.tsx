@@ -214,9 +214,9 @@ export function InventoryPage() {
                     onChange={setFilter}
                     options={[
                       { value: 'all', label: <CountLabel label="Tất cả" count={products.length} /> },
-                      { value: 'low', label: <CountLabel label={lowLabel} count={lowStock.length} urgent /> },
-                      { value: 'expiring', label: <CountLabel label="Sắp hết hạn" count={expiring.length} urgent /> },
-                      { value: 'expired', label: <span className="af-text-danger"><CountLabel label="Đã hết hạn" count={expired.length} /></span> },
+                      { value: 'low', label: <CountLabel label={lowLabel} count={lowStock.length} urgent tone="warning" /> },
+                      { value: 'expiring', label: <CountLabel label="Sắp hết hạn" count={expiring.length} urgent tone="warning" /> },
+                      { value: 'expired', label: <CountLabel label="Đã hết hạn" count={expired.length} tone="danger" /> },
                     ]}
                   />
                   <Input

@@ -40,9 +40,9 @@ export function LotsPanel() {
           value={filter}
           onChange={setFilter}
           options={[
-            { value: 'stock', label: <CountLabel label="Còn hàng" count={inStock.length} /> },
-            { value: 'expiring', label: <CountLabel label="Sắp hết hạn" count={expiring.length} urgent /> },
-            { value: 'expired', label: <span className="af-text-danger"><CountLabel label="Đã hết hạn" count={expired.length} /></span> },
+            { value: 'stock', label: <CountLabel label="Còn hàng" count={inStock.length} tone="success" /> },
+            { value: 'expiring', label: <CountLabel label="Sắp hết hạn" count={expiring.length} urgent tone="warning" /> },
+            { value: 'expired', label: <CountLabel label="Đã hết hạn" count={expired.length} tone="danger" /> },
             { value: 'all', label: <CountLabel label="Tất cả lô" count={lots.length} /> },
           ]}
         />
