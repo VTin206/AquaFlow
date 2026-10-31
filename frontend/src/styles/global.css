@@ -1219,7 +1219,8 @@ body {
 .af-shop-topbar-inner > * { display: inline-flex; align-items: center; gap: 6px; color: inherit; }
 .af-shop-topbar a:hover, .af-shop-topbar a:focus-visible { color: inherit; text-decoration: underline; }
 .af-shop-topbar-account { margin-left: auto; display: inline-flex; align-items: center; gap: 24px; }
-.af-shop-topbar-link.af-shop-topbar-lang.ant-btn { gap: 2px; padding-left: 20px; border-left: 1px solid rgba(255, 255, 255, 0.35); border-radius: 0; }
+.af-flag { flex: none; width: 20px; height: 14px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12); }
+.af-shop-topbar-link.af-shop-topbar-lang.ant-btn { gap: 6px; padding-left: 20px; border-left: 1px solid rgba(255, 255, 255, 0.35); border-radius: 0; }
 :root[data-theme="dark"] .af-shop-topbar-link.af-shop-topbar-lang.ant-btn { border-left-color: var(--af-border); }
 .af-shop-topbar-link.ant-btn { height: auto; padding-block: 0; padding-inline: 0; color: inherit; font-size: 13px; font-weight: 600; }
 .af-shop-topbar-link.ant-btn:hover, .af-shop-topbar-link.ant-btn:focus-visible { color: inherit; text-decoration: underline; }

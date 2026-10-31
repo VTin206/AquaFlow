@@ -7,6 +7,7 @@ import { useSettings } from '../settings/settingsService'
 import { useCart } from './cart'
 import { AccountMenu } from './components/AccountMenu'
 import { CartDrawer } from './components/CartDrawer'
+import { UkFlag, VietnamFlag } from './components/Flags'
 import { ShopFooter } from './components/ShopFooter'
 import { useShopDemo } from './shopService'
 
@@ -42,8 +43,8 @@ export function ShopLayout() {
           {hours && <span className="af-shop-topbar-hours"><Clock3 size={14} aria-hidden /> Mở cửa {hours}</span>}
           <span className="af-shop-topbar-account"><AccountMenu variant="text" /></span>
           {/* Chưa có bản dịch: chỉ Tiếng Việt, English để chỗ sẵn. */}
-          <Dropdown trigger={['click']} placement="bottomRight" menu={{ selectable: true, selectedKeys: ['vi'], items: [{ key: 'vi', label: 'Tiếng Việt' }, { key: 'en', label: 'English (sắp có)', disabled: true }] }}>
-            <Button type="link" className="af-shop-topbar-link af-shop-topbar-lang" aria-label="Ngôn ngữ: Tiếng Việt">VI <ChevronDown size={14} aria-hidden /></Button>
+          <Dropdown trigger={['click']} placement="bottomRight" menu={{ selectable: true, selectedKeys: ['vi'], items: [{ key: 'vi', icon: <VietnamFlag />, label: 'Tiếng Việt' }, { key: 'en', icon: <UkFlag />, label: 'English (sắp có)', disabled: true }] }}>
+            <Button type="link" className="af-shop-topbar-link af-shop-topbar-lang" aria-label="Ngôn ngữ: Tiếng Việt"><VietnamFlag /> VI <ChevronDown size={14} aria-hidden /></Button>
           </Dropdown>
         </div>
       </div>
