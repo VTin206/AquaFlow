@@ -2,12 +2,16 @@ import { useState } from 'react'
 import { Alert, Badge, Button } from 'antd'
 import { ArrowLeft, Clock3, PackageSearch, Phone, Search, ShoppingCart, Waves } from 'lucide-react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router'
+import { useAuth } from '../auth/useAuth'
 import { useSettings } from '../settings/settingsService'
 import { useCart } from './cart'
 import { AccountMenu } from './components/AccountMenu'
 import { CartDrawer } from './components/CartDrawer'
 import { ShopFooter } from './components/ShopFooter'
 import { useShopDemo } from './shopService'
+
+// Bản thật chưa có API cài đặt công khai: hotline và giờ mở cửa tạm lấy từ biến môi trường.
+const liveContact = { phone: import.meta.env.VITE_SHOP_HOTLINE, openingHours: import.meta.env.VITE_SHOP_HOURS }
 
 /**
  * Khung trang công khai cho khách, cũng là trang chủ khi chưa đăng nhập.
@@ -16,7 +20,8 @@ import { useShopDemo } from './shopService'
 export function ShopLayout() {
   const demo = useShopDemo()
   const settingsQuery = useSettings(demo)
-  const settings = demo ? settingsQuery.data : undefined
+  const settings = demo ? settingsQuery.data : liveContact
+  const { demoGuest, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   // Có trang trước trong app thì quay lại; mở thẳng bằng link hoặc vừa đặt đơn xong thì về trang chủ cửa hàng.
@@ -30,7 +35,7 @@ export function ShopLayout() {
 
   return (
     <div className="af-shop">
-      {/* Thanh hotline cuộn đi theo trang, chỉ header bên dưới dính lại. Tài khoản thật chưa có API cài đặt nên chưa hiện. */}
+      {/* Thanh hotline cuộn đi theo trang, chỉ header bên dưới dính lại. */}
       {(tel || hours) && (
         <div className="af-shop-topbar">
           <div className="af-shop-topbar-inner">
@@ -61,7 +66,7 @@ export function ShopLayout() {
         </div>
       </header>
       <main className="af-shop-main">
-        {demo && <Alert type="warning" showIcon title="Bản dùng thử — dữ liệu mẫu, không gửi đơn tới cửa hàng" style={{ marginBottom: 16 }} />}
+        {demo && <Alert type="warning" showIcon title={demoGuest ? 'Đang xem như khách — dữ liệu mẫu, không gửi đơn tới cửa hàng' : 'Bản dùng thử — dữ liệu mẫu, không gửi đơn tới cửa hàng'} action={demoGuest ? <Button size="small" onClick={logout}>Thoát</Button> : undefined} style={{ marginBottom: 16 }} />}
         {location.pathname !== '/shop' && (
           <Button type="link" className="af-shop-back" icon={<ArrowLeft size={16} />} onClick={goBack}>Quay lại</Button>
         )}

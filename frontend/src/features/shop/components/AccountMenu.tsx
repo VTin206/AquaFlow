@@ -9,7 +9,7 @@ import { useStaff } from '../../auth/useStaff'
 
 /** Tài khoản trên đầu trang khách: chưa đăng nhập thì hiện nút "Đăng nhập", đã đăng nhập thì lời chào mở thông tin tài khoản. */
 export function AccountMenu() {
-  const { isAuthenticated, user, logout, login, enterDemo } = useAuth()
+  const { isAuthenticated, user, logout, login, enterDemo, enterDemoGuest } = useAuth()
   const { message } = App.useApp()
   const queryClient = useQueryClient()
   // Tên vai trò lấy giống thanh trên của trang quản lý.
@@ -35,8 +35,9 @@ export function AccountMenu() {
     }
   }
   const switchToDemo = () => { setOpen(false); enterDemo(); queryClient.clear() }
+  const switchToDemoGuest = () => { setOpen(false); enterDemoGuest(); queryClient.clear() }
   const otherAccounts = devAccounts.filter((account) => account.email.toLowerCase() !== user.email?.toLowerCase())
-  const showSwitch = import.meta.env.DEV && (otherAccounts.length > 0 || !user.isDemo)
+  const showSwitch = import.meta.env.DEV
 
   const content = (
     <div className="af-shop-account">
@@ -53,6 +54,7 @@ export function AccountMenu() {
         <div className="af-shop-account-switch">
           <small>Đổi tài khoản (dev)</small>
           {!user.isDemo && <Button block size="small" onClick={switchToDemo}>Bản dùng thử</Button>}
+          <Button block size="small" title="Dữ liệu mẫu, chưa đăng nhập" onClick={switchToDemoGuest}>Xem như khách (dữ liệu mẫu)</Button>
           {otherAccounts.map((account) => (
             <Button key={account.email} block size="small" title={account.email} onClick={() => void switchTo(account)}>{account.label}</Button>
           ))}

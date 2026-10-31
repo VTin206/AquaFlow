@@ -8,6 +8,9 @@ export type AuthContextValue = {
   isAuthenticated: boolean
   login: (credentials: LoginCredentials) => Promise<void>
   enterDemo: () => void
+  /** Chỉ khi dev: xem cửa hàng như khách chưa đăng nhập nhưng vẫn dùng dữ liệu mẫu. */
+  demoGuest: boolean
+  enterDemoGuest: () => void
   logout: () => void
 }
 

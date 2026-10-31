@@ -16,7 +16,11 @@ import type { PublicOrder } from '../orders/types'
 /** Thông tin sản phẩm khách được xem: không lộ số tồn hay giá vốn. */
 export type ShopProduct = Pick<Product, 'id' | 'name' | 'brand' | 'unit' | 'price' | 'image' | 'catalog'> & { sku: string; available: boolean | null; unitsPerCase?: number | null; bottleTypeName?: string | null }
 
-export const useShopDemo = () => Boolean(useAuth().user?.isDemo)
+/** Dữ liệu mẫu khi đăng nhập bản dùng thử, hoặc khi dev chọn "xem như khách". */
+export const useShopDemo = () => {
+  const { user, demoGuest } = useAuth()
+  return Boolean(user?.isDemo || demoGuest)
+}
 
 export const toShopProduct = (product: CatalogProduct): ShopProduct => ({
   id: String(product.id), sku: product.sku, name: product.name, brand: product.brand ?? '',
