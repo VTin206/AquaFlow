@@ -36,7 +36,7 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
   const longestCode = Math.max(0, ...orders.map((order) => (order.code ?? order.id).length))
   const codeWidth = Math.max(compact ? 110 : 150, longestCode * 9 + (compact ? 24 : 64))
   // Độ rộng tối thiểu của bảng = tổng các cột, để không tự giãn rồi che cột cố định bên phải.
-  const tableMinWidth = codeWidth + (compact ? 180 + 150 + 170 + 80 : 220 + 130 + 160 + 170 + 112)
+  const tableMinWidth = codeWidth + (compact ? 180 + 150 + 170 + 80 : 220 + 170 + 160 + 170 + 112)
   const columns: TableColumnsType<Order> = [
     {
       title: 'Mã đơn',
@@ -73,12 +73,12 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
           {
             ...sort.column('Hẹn giao', 'due', 'time'),
             dataIndex: 'appointment',
-            width: 130,
+            width: 170,
             sorter: compareDeliveryDue,
             render: (_: string, order: Order) => {
               const { main, sub } = deliveryTimingOf(order)
               return (
-                <div className="af-cell-stack">
+                <div className="af-cell-stack af-timing-cell">
                   <span className={`af-timing is-${main.tone}`} title={main.title}>
                     {main.label}
                   </span>

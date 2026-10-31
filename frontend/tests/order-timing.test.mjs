@@ -39,6 +39,9 @@ test('no appointment, counter sale, delivered and pending orders', () => {
   expect(
     deliveryTimingOf(order({ status: 'Chờ xác nhận', history: [{ at: at(9, 35), by: 'Web', message: 'Tạo đơn' }] }), now).sub.label,
   ).toBe('chờ 25 phút')
+  expect(
+    deliveryTimingOf(order({ status: 'Chờ xác nhận', history: [{ at: at(9, 0, -15), by: 'Web', message: 'Tạo đơn' }] }), now).sub.label,
+  ).toBe('chờ 15 ngày')
 })
 
 test('sorting puts open orders first by due time, then finished orders newest first', () => {

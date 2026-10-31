@@ -686,6 +686,9 @@ body {
 .af-cell-stack > .af-timing {
   font-weight: 400;
 }
+.af-timing-cell > * {
+  white-space: nowrap;
+}
 .af-timing.is-normal {
   color: var(--af-text);
 }
