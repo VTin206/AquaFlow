@@ -28,15 +28,13 @@ function useLowStock(demo: boolean) {
   const products = useProducts(demo)
   const stock = useStockItems(!demo)
   if (demo) {
-    const rows = (products.data ?? [])
-      .filter(isLowStock)
-      .map((product): LowStockRow => ({
-        id: product.id,
-        name: product.name,
-        unit: product.unit,
-        stock: product.stock,
-        threshold: product.threshold,
-      }))
+    const rows = (products.data ?? []).filter(isLowStock).map((product): LowStockRow => ({
+      id: product.id,
+      name: product.name,
+      unit: product.unit,
+      stock: product.stock,
+      threshold: product.threshold,
+    }))
     return { ...products, rows }
   }
   const rows = (stock.data ?? [])
