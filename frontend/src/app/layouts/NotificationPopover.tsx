@@ -5,9 +5,15 @@ import { Link } from 'react-router'
 import { isOverdue } from '@/features/orders/types'
 import { useOrders } from '@/features/orders/useOrders'
 import { OrderDetailsModal } from '@/features/orders/components/OrderDetailsModal'
+import { useIsDemo } from '@/shared/features'
+import { LiveNotificationPopover } from '@/features/notifications/LiveNotificationPopover'
+
+export function NotificationPopover() {
+  return useIsDemo() ? <DemoNotificationPopover /> : <LiveNotificationPopover />
+}
 
 /** Các thông báo cần xử lý, suy ra từ dữ liệu đơn hàng hiện có. */
-export function NotificationPopover() {
+function DemoNotificationPopover() {
   const [open, setOpen] = useState(false)
   const [orderId, setOrderId] = useState<string | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)

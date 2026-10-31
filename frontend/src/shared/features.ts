@@ -30,8 +30,8 @@ export const backendFeatures = {
   deliveryReturns: false,
   /** Bật lại nhà cung cấp, loại vỏ đã ngừng và xem/khôi phục khách đã lưu trữ (BE mới có chiều ngừng). */
   reactivate: false,
-  /** Thông báo trên thanh trên cùng (chưa có API). */
-  notifications: false,
+  /** Hộp thông báo cá nhân qua NotificationController. */
+  notifications: true,
 } satisfies Record<string, boolean>
 
 export type BackendFeature = keyof typeof backendFeatures
