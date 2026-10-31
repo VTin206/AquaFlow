@@ -682,19 +682,21 @@ body {
   vertical-align: -2px;
 }
 
-/* Giờ hẹn dưới "Đặt lúc": xám bình thường, cam khi còn dưới 1 giờ, đỏ khi đã trễ. */
-.af-cell-stack > .af-ordered-at {
+/* Cột "Hẹn giao": màu chữ thường, xám khi đã xong/tại quầy, cam khi còn dưới 1 giờ, đỏ khi đã trễ. */
+.af-cell-stack > .af-timing {
   font-weight: 400;
+}
+.af-timing.is-normal {
   color: var(--af-text);
 }
-.af-appointment.is-muted {
+.af-timing.is-muted {
   color: var(--af-text-tertiary);
 }
-.af-appointment.is-warning {
+.af-timing.is-warning {
   color: var(--af-warning);
   font-weight: 500;
 }
-.af-appointment.is-danger {
+.af-timing.is-danger {
   color: var(--af-danger);
   font-weight: 500;
 }

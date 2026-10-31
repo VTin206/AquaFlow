@@ -5,7 +5,7 @@ import { MobileRecordList } from '@/shared/components/MobileRecordList'
 import { Money } from '@/shared/components/Money'
 import { useFeature, useIsDemo } from '@/shared/features'
 import { Unsupported } from '@/shared/components/Unsupported'
-import { amountDue, appointmentOf, orderedAtOf, paymentLabel, type Order } from '../types'
+import { amountDue, deliveryTimingOf, paymentLabel, type Order } from '../types'
 import { nextActionLabel } from '../orderStatus'
 import { AdvanceStatusButton } from './AdvanceStatusButton'
 import { LateTag } from './LateTag'
@@ -60,12 +60,7 @@ export function OrderCards({ orders, loading, compact, emptyText, onDetails, fil
         <article className="af-record" aria-label={`Đơn ${order.code ?? order.id}`}>
           <div className="af-record-heading">
             <strong>{order.code ?? order.id}</strong>
-            <span title={orderedAtOf(order).full}>
-              {orderedAtOf(order).label}
-              {appointmentOf(order) && (
-                <small className={`af-appointment is-${appointmentOf(order)!.tone}`}> · {appointmentOf(order)!.label}</small>
-              )}
-            </span>
+            <TimingLine order={order} />
           </div>
           <h3>{order.customer}</h3>
           <p className="af-record-meta">
@@ -98,5 +93,18 @@ export function OrderCards({ orders, loading, compact, emptyText, onDetails, fil
         </article>
       )}
     />
+  )
+}
+
+/** Giờ cần giao, kèm lúc đặt (hoặc thời gian chờ xác nhận) ở dòng nhỏ. */
+function TimingLine({ order }: { order: Order }) {
+  const { main, sub } = deliveryTimingOf(order)
+  return (
+    <span>
+      <span className={`af-timing is-${main.tone}`} title={main.title}>
+        {main.label}
+      </span>
+      <small title={sub.title}> · {sub.label}</small>
+    </span>
   )
 }

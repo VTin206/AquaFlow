@@ -6,7 +6,7 @@ import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
 import { useColumnSort } from '@/shared/components/sortableColumn'
 import { useFeature, useIsDemo } from '@/shared/features'
 import { LiveOrderDetails } from '@/features/live/LiveOrderDetails'
-import { amountDue, appointmentOf, createdAtOf, orderedAtOf, paymentLabel, type Order } from '../types'
+import { amountDue, compareDeliveryDue, deliveryTimingOf, paymentLabel, type Order } from '../types'
 import { AdvanceStatusButton } from './AdvanceStatusButton'
 import { LateTag } from './LateTag'
 import { OrderStatusTag } from './OrderStatusTag'
@@ -30,7 +30,8 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
   const showPayments = useFeature('orderPayments')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [pageSize, setPageSize] = useState(tablePagination.defaultPageSize ?? 10)
-  const sort = useColumnSort<Order>()
+  // Mặc định đưa đơn cần giao sớm nhất lên đầu.
+  const sort = useColumnSort<Order>(compact ? null : { key: 'due', order: 'ascend' })
   // Mã của BE (AF- + 20 ký tự) dài hơn mã mẫu nhiều, nên cột rộng theo mã dài nhất để không bị cắt.
   const longestCode = Math.max(0, ...orders.map((order) => (order.code ?? order.id).length))
   const codeWidth = Math.max(compact ? 110 : 150, longestCode * 9 + (compact ? 24 : 64))
@@ -70,23 +71,18 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
       ? []
       : [
           {
-            ...sort.column('Đặt lúc', 'time', 'time'),
-            dataIndex: 'time',
+            ...sort.column('Hẹn giao', 'due', 'time'),
+            dataIndex: 'appointment',
             width: 130,
-            sorter: (a: Order, b: Order) => (createdAtOf(a) ?? a.time).localeCompare(createdAtOf(b) ?? b.time),
+            sorter: compareDeliveryDue,
             render: (_: string, order: Order) => {
-              const at = orderedAtOf(order)
-              const appointment = appointmentOf(order)
+              const { main, sub } = deliveryTimingOf(order)
               return (
                 <div className="af-cell-stack">
-                  <span className="af-ordered-at" title={`Đặt lúc ${at.full}`}>
-                    {at.label}
+                  <span className={`af-timing is-${main.tone}`} title={main.title}>
+                    {main.label}
                   </span>
-                  {appointment && (
-                    <small className={`af-appointment is-${appointment.tone}`} title={`Hẹn giao ${appointment.full}`}>
-                      {appointment.label}
-                    </small>
-                  )}
+                  <small title={sub.title}>{sub.label}</small>
                 </div>
               )
             },

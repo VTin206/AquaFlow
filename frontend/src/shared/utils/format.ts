@@ -29,6 +29,7 @@ export const relativeDateTime = (iso: string, now = new Date()) => {
   const dayDiff = Math.round((new Date(now.toDateString()).getTime() - new Date(date.toDateString()).getTime()) / 86_400_000)
   if (dayDiff === 0) return timeOf(date)
   if (dayDiff === 1) return `Hôm qua ${timeOf(date)}`
+  if (dayDiff === -1) return `Mai ${timeOf(date)}`
   const day = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`
   return date.getFullYear() === now.getFullYear() ? `${day} ${timeOf(date)}` : `${day}/${date.getFullYear()}`
 }
