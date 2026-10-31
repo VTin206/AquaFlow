@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { App, Button, Card, Col, Dropdown, Grid, Input, Row, Segmented, Statistic, Table, Tag, Tooltip, type TableColumnsType } from 'antd'
 import { Ellipsis, Eye, Plus, Search } from 'lucide-react'
 import { Page } from '@/shared/components/Page'
+import { CountLabel } from '@/shared/components/CountLabel'
 import { ToneLabel } from '@/shared/components/ToneLabel'
 import { QueryError } from '@/shared/components/QueryError'
 import { useColumnSort } from '@/shared/components/sortableColumn'
@@ -30,7 +31,8 @@ export function CustomersPage() {
   const canReactivate = useFeature('reactivate')
   // Khách đã lưu trữ chỉ xem được khi BE có API (bản dùng thử thì luôn có).
   const [view, setView] = useState<'active' | 'archived'>('active')
-  const archivedQuery = useArchivedCustomers(canReactivate && view === 'archived')
+  // Tải sẵn để hiện số đếm trên bộ lọc.
+  const archivedQuery = useArchivedCustomers(canReactivate)
   const activate = useActivateCustomer()
   const [query, setQuery] = useState('')
   const [profileId, setProfileId] = useState<string | null>(null)
@@ -229,11 +231,11 @@ export function CustomersPage() {
                 value={view}
                 onChange={setView}
                 options={[
-                  { value: 'active', label: <ToneLabel tone="success">Đang hoạt động</ToneLabel> },
+                  { value: 'active', label: <CountLabel label="Đang hoạt động" count={customers.length} tone="success" /> },
                   {
                     value: 'archived',
                     label: canReactivate ? (
-                      <ToneLabel tone="danger">Đã lưu trữ</ToneLabel>
+                      <CountLabel label="Đã lưu trữ" count={archivedQuery.data?.length ?? 0} tone="danger" />
                     ) : (
                       <Tooltip title="Backend chưa hỗ trợ xem khách đã lưu trữ">
                         <span>
