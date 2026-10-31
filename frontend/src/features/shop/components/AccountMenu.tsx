@@ -7,7 +7,7 @@ import { devAccounts, type DevAccount } from '../../auth/devAccounts'
 import { useAuth } from '../../auth/useAuth'
 import { useStaff } from '../../auth/useStaff'
 
-/** Tài khoản trên đầu trang khách: chưa đăng nhập thì hiện nút "Đăng nhập" có chữ, đã đăng nhập thì icon mở thông tin tài khoản. */
+/** Tài khoản trên đầu trang khách: chưa đăng nhập thì hiện nút "Đăng nhập", đã đăng nhập thì lời chào mở thông tin tài khoản. */
 export function AccountMenu() {
   const { isAuthenticated, user, logout, login, enterDemo } = useAuth()
   const { message } = App.useApp()
@@ -64,7 +64,14 @@ export function AccountMenu() {
 
   return (
     <Popover content={content} trigger="click" placement="bottomRight" open={open} onOpenChange={setOpen} arrow={false}>
-      <Button type="text" shape="circle" icon={icon} aria-label="Tài khoản" title="Tài khoản" />
+      <Button type="text" icon={icon} className="af-shop-login" aria-label={`Tài khoản của ${user.name}`} title="Tài khoản">
+        <span className="af-shop-greeting">Chào, {givenName(user.name)}</span>
+      </Button>
     </Popover>
   )
+}
+
+/** Tên gọi theo kiểu Việt: chữ cuối của họ tên ("Nguyễn Văn An" → "An"). */
+function givenName(name: string) {
+  return name.trim().split(/\s+/).pop() || name
 }

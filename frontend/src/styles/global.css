@@ -1224,6 +1224,7 @@ body {
 .af-shop-icons .ant-btn { color: var(--af-text-strong); }
 .af-shop-icons .ant-btn:hover { color: var(--af-primary); }
 .af-shop-login.ant-btn { padding-inline: 10px; font-weight: 600; }
+.af-shop-greeting { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .af-shop-header-inner { max-width: 1180px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 16px; }
 .af-shop-brand { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--af-text-strong); }
 .af-shop-brand strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
