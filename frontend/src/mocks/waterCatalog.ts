@@ -1,4 +1,4 @@
-import type { Product } from '../features/inventory/types'
+import type { Product } from '@/features/inventory/types'
 
 // Danh mục mẫu tham khảo iWater ngày 16/10/2026. Giá minh họa, không đồng bộ trực tuyến.
 export const waterProducts: Product[] = [

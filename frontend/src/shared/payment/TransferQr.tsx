@@ -1,5 +1,5 @@
 import { Alert, QRCode } from 'antd'
-import type { StoreSettings } from '../../features/settings/types'
+import type { StoreSettings } from '@/features/settings/types'
 import { currency } from '../utils/format'
 import { bankBinOf, transferNote, vietQrPayload } from './vietqr'
 

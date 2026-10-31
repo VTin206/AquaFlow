@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { App } from 'antd'
 import { authService, type LoginCredentials } from './authService'
-import { getStoredAuthToken, setUnauthorizedHandler, storeAuthToken } from '../../shared/api/client'
+import { getStoredAuthToken, setUnauthorizedHandler, storeAuthToken } from '@/shared/api/client'
 import { AuthContext, type AuthContextValue, type AuthUser } from './authContext'
 import { roleLabel, STAFF_ROLES } from './roles'
 const USER_KEY = 'aquaflow.auth.user'

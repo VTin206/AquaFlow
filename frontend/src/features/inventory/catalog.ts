@@ -59,4 +59,4 @@ export function inferCatalog(name: string, unit: string): CatalogDetails {
   return { category, packaging, capacity: capacityOf(volumeMl), volumeMl }
 }
 
-export { normalizeSearch } from '../../shared/utils/search'
+export { normalizeSearch } from '@/shared/utils/search'

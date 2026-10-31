@@ -1,14 +1,14 @@
 import { App, AutoComplete, Button, Col, Form, Input, InputNumber, Modal, Row, Select, Typography } from 'antd'
 import { Plus, Trash2 } from 'lucide-react'
-import { currency } from '../../../shared/utils/format'
-import { FREE_DELIVERY_MIN_UNITS, SMALL_ORDER_FEE, stairsSurcharge, suggestedDeliveryFee } from '../../../shared/policy'
-import { normalizePhone } from '../../customers/types'
-import { useCustomers } from '../../customers/useCustomers'
-import { daysUntilExpiry } from '../../inventory/expiry'
-import { useProducts } from '../../inventory/useProducts'
+import { currency } from '@/shared/utils/format'
+import { FREE_DELIVERY_MIN_UNITS, SMALL_ORDER_FEE, stairsSurcharge, suggestedDeliveryFee } from '@/shared/policy'
+import { normalizePhone } from '@/features/customers/types'
+import { useCustomers } from '@/features/customers/useCustomers'
+import { daysUntilExpiry } from '@/features/inventory/expiry'
+import { useProducts } from '@/features/inventory/useProducts'
 import type { Order, OrderDraft } from '../types'
 import { useCreateOrder } from '../useOrders'
-import { useConfirmDiscard } from '../../../shared/hooks/useConfirmDiscard'
+import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 
 type CreateOrderModalProps = { open: boolean; onClose: () => void; onCreated?: (order: Order) => void; defaultCustomer?: string; defaultPhone?: string; defaultAddress?: string }
 

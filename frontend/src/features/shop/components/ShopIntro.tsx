@@ -1,8 +1,8 @@
 import { Button } from 'antd'
 import { ArrowRight, BadgeCheck, ClipboardList, Droplets, MapPin, PackageSearch, Phone, Recycle, ShoppingCart, Truck, UserRoundCheck } from 'lucide-react'
 import { Link } from 'react-router'
-import { DEPOSIT_PER_BOTTLE, FREE_DELIVERY_MIN_UNITS } from '../../../shared/policy'
-import { currency } from '../../../shared/utils/format'
+import { DEPOSIT_PER_BOTTLE, FREE_DELIVERY_MIN_UNITS } from '@/shared/policy'
+import { currency } from '@/shared/utils/format'
 import { articleDate, shopArticles } from '../shopNews'
 import type { ShopProduct } from '../shopService'
 

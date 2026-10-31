@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react'
 import { Alert, App, Avatar, Button, Divider, Form, Input } from 'antd'
 import { ArrowRight, FlaskConical, LayoutDashboard, LockKeyhole, LogOut, PackageSearch, ShoppingBag, UserRound, UserRoundPlus } from 'lucide-react'
 import { Link, useNavigate } from 'react-router'
-import { focusNextOnEnter } from '../../shared/utils/forms'
-import type { LoginCredentials } from '../auth/authService'
-import { devAccounts } from '../auth/devAccounts'
-import { RegisterForm } from '../auth/RegisterForm'
-import { useAuth } from '../auth/useAuth'
-import { useStaff } from '../auth/useStaff'
+import { focusNextOnEnter } from '@/shared/utils/forms'
+import type { LoginCredentials } from '@/features/auth/authService'
+import { devAccounts } from '@/features/auth/devAccounts'
+import { RegisterForm } from '@/features/auth/RegisterForm'
+import { useAuth } from '@/features/auth/useAuth'
+import { useStaff } from '@/features/auth/useStaff'
 
 /**
  * Trang tài khoản trong cửa hàng (bố cục kiểu Uniqlo): đăng nhập bên trái, tạo tài khoản hoặc mua không cần tài khoản bên phải.

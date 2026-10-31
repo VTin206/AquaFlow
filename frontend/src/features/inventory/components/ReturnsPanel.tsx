@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { App, Alert, Button, Empty, Form, Input, InputNumber, Modal, Table, Tag, Typography } from 'antd'
 import { PackageCheck } from 'lucide-react'
-import { awaitingReturnInspection, deliveryAttempts, returnLinesOf, type Order, type ReturnInspectionDraft } from '../../orders/types'
-import { useOrderAction, useOrders } from '../../orders/useOrders'
+import { awaitingReturnInspection, deliveryAttempts, returnLinesOf, type Order, type ReturnInspectionDraft } from '@/features/orders/types'
+import { useOrderAction, useOrders } from '@/features/orders/useOrders'
 import { isoToVnDate } from '../expiry'
 
 /** Đơn giao thất bại có hàng mang về: kiểm từng lô trước khi nhập lại kho. */

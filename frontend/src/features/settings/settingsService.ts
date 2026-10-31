@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { db } from '../../mocks/db'
-import { mockError, mockRequest } from '../../mocks/mockRequest'
-import { logActivity, requireRole } from '../../mocks/session'
-import { EXPIRY_WARNING_DAYS } from '../inventory/expiry'
+import { db } from '@/mocks/db'
+import { mockError, mockRequest } from '@/mocks/mockRequest'
+import { logActivity, requireRole } from '@/mocks/session'
+import { EXPIRY_WARNING_DAYS } from '@/features/inventory/expiry'
 import type { StoreSettings } from './types'
 
 // Dữ liệu trong bộ nhớ như các trang khác; thay bằng api.get/put khi backend có API cài đặt.

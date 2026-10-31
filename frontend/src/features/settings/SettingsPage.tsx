@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { App, Button, Card, Col, Descriptions, Form, Input, InputNumber, Row, Select, Skeleton, Space, Typography } from 'antd'
 import { Save } from 'lucide-react'
-import { Page } from '../../shared/components/Page'
-import { QueryError } from '../../shared/components/QueryError'
-import { TransferQr } from '../../shared/payment/TransferQr'
-import { vietQrBanks } from '../../shared/payment/vietqr'
+import { Page } from '@/shared/components/Page'
+import { QueryError } from '@/shared/components/QueryError'
+import { TransferQr } from '@/shared/payment/TransferQr'
+import { vietQrBanks } from '@/shared/payment/vietqr'
 import {
   DEPOSIT_PER_BOTTLE,
   EXCHANGEABLE_BRANDS,
@@ -13,8 +13,8 @@ import {
   PICKUP_FEE_BELOW,
   SMALL_ORDER_FEE,
   stairsSurcharge,
-} from '../../shared/policy'
-import { currency } from '../../shared/utils/format'
+} from '@/shared/policy'
+import { currency } from '@/shared/utils/format'
 import { useSettings, useUpdateSettings } from './settingsService'
 import type { StoreSettings } from './types'
 

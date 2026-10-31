@@ -1,4 +1,4 @@
-import { api } from '../../shared/api/client'
+import { api } from '@/shared/api/client'
 
 export type LiveCustomer = { id: number; fullName: string; phone: string | null; createdAt: string; customerType?: string | null; area?: string | null; note?: string | null }
 export type LiveAddress = { id: number; customerId: number; recipientName: string; recipientPhone: string; addressLine: string; area: string | null; isDefault: boolean }

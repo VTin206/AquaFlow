@@ -1,4 +1,4 @@
-import { relativeDateTime } from '../../shared/utils/format'
+import { relativeDateTime } from '@/shared/utils/format'
 export type OrderStatus = 'Chờ xác nhận' | 'Đã xác nhận' | 'Đang chuẩn bị' | 'Đang giao' | 'Đã giao' | 'Giao thất bại' | 'Đã hoàn tất' | 'Đã hủy'
 
 export type OrderLine = { productId: string; name: string; unit: string; quantity: number; unitPrice: number }

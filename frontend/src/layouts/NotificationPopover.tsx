@@ -2,9 +2,9 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Badge, Button, Empty, Popover, Spin } from 'antd'
 import { Bell, ChevronRight, ClipboardList, Clock3, Truck, X } from 'lucide-react'
 import { Link } from 'react-router'
-import { isOverdue } from '../features/orders/types'
-import { useOrders } from '../features/orders/useOrders'
-import { OrderDetailsModal } from '../features/orders/components/OrderDetailsModal'
+import { isOverdue } from '@/features/orders/types'
+import { useOrders } from '@/features/orders/useOrders'
+import { OrderDetailsModal } from '@/features/orders/components/OrderDetailsModal'
 
 /** Các thông báo cần xử lý, suy ra từ dữ liệu đơn hàng hiện có. */
 export function NotificationPopover() {

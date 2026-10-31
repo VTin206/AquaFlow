@@ -1,4 +1,4 @@
-import { shortDate } from '../../shared/utils/format'
+import { shortDate } from '@/shared/utils/format'
 import type { DailyRevenue, ReportRange } from './reportService'
 
 export type Granularity = 'day' | 'week' | 'month'

@@ -3,11 +3,11 @@ import { App, type MenuProps } from 'antd'
 import { Check, LogOut } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { roleNames, type RoleCode } from '../features/auth/permissions'
-import { useAuth } from '../features/auth/useAuth'
-import { devAccounts, type DevAccount } from '../features/auth/devAccounts'
-import { setDemoRole, useStaff, type Staff } from '../features/auth/useStaff'
-import { setMockSession } from '../mocks/session'
+import { roleNames, type RoleCode } from '@/features/auth/permissions'
+import { useAuth } from '@/features/auth/useAuth'
+import { devAccounts, type DevAccount } from '@/features/auth/devAccounts'
+import { setDemoRole, useStaff, type Staff } from '@/features/auth/useStaff'
+import { setMockSession } from '@/mocks/session'
 
 /** Mục trong menu tài khoản, dùng chung cho khung quản lý và khung giao hàng. */
 export function useAccountMenuItems(): MenuProps['items'] {

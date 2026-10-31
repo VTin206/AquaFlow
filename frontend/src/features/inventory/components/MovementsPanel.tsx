@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Empty, Segmented, Table, Tag, Typography } from 'antd'
-import { CountLabel } from '../../../shared/components/CountLabel'
-import { tablePagination, tableScrollHeight } from '../../../shared/utils/table'
-import type { Order } from '../../orders/types'
-import { useOrders } from '../../orders/useOrders'
+import { CountLabel } from '@/shared/components/CountLabel'
+import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
+import type { Order } from '@/features/orders/types'
+import { useOrders } from '@/features/orders/useOrders'
 import { isoToVnDate } from '../expiry'
 
 type MovementType = 'DISPATCH' | 'RETURN'

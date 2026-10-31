@@ -1,9 +1,9 @@
-import { db } from '../../mocks/db'
-import { mockError, mockRequest } from '../../mocks/mockRequest'
-import { asCustomer, logActivity, mockActor, requireRole, type ActivityArea } from '../../mocks/session'
-import { addBottleEntry, bottleBalance, ensureCustomer } from '../customers/customerService'
-import { suggestedDeliveryFee as webDeliveryFee } from '../../shared/policy'
-import { daysUntilExpiry } from '../inventory/expiry'
+import { db } from '@/mocks/db'
+import { mockError, mockRequest } from '@/mocks/mockRequest'
+import { asCustomer, logActivity, mockActor, requireRole, type ActivityArea } from '@/mocks/session'
+import { addBottleEntry, bottleBalance, ensureCustomer } from '@/features/customers/customerService'
+import { suggestedDeliveryFee as webDeliveryFee } from '@/shared/policy'
+import { daysUntilExpiry } from '@/features/inventory/expiry'
 import {
   amountDue,
   jugCount,

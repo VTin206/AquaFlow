@@ -1,8 +1,8 @@
-import type { TripRecord } from '../features/delivery/types'
-import type { Order, OrderLine } from '../features/orders/types'
-import type { CustomerRecord } from '../features/customers/types'
-import type { Product } from '../features/inventory/types'
-import { suggestedDeliveryFee } from '../shared/policy'
+import type { TripRecord } from '@/features/delivery/types'
+import type { Order, OrderLine } from '@/features/orders/types'
+import type { CustomerRecord } from '@/features/customers/types'
+import type { Product } from '@/features/inventory/types'
+import { suggestedDeliveryFee } from '@/shared/policy'
 import type { ActivityArea, ActivityEntry } from './session'
 
 // Đơn đã đóng của các ngày trước, sinh ngẫu nhiên có hạt giống cố định để báo cáo theo kỳ có số liệu.

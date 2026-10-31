@@ -1,4 +1,4 @@
-import { api } from '../../shared/api/client'
+import { api } from '@/shared/api/client'
 
 export type BottleType = { id: number; name: string; depositUnitAmount: number; active: boolean }
 export type BottleTypeDraft = Pick<BottleType, 'name' | 'depositUnitAmount'>

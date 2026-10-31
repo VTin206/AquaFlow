@@ -1,6 +1,6 @@
 import { App, Form, Input, InputNumber, Modal, Radio } from 'antd'
-import { PICKUP_FEE, PICKUP_FEE_BELOW } from '../../../shared/policy'
-import { currency } from '../../../shared/utils/format'
+import { PICKUP_FEE, PICKUP_FEE_BELOW } from '@/shared/policy'
+import { currency } from '@/shared/utils/format'
 import { DEPOSIT_PER_BOTTLE, type BottleAction, type Customer } from '../types'
 import { useRecordBottles } from '../useCustomers'
 

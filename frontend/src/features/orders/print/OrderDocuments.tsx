@@ -1,9 +1,9 @@
-import { TransferQr } from '../../../shared/payment/TransferQr'
-import { bankBinOf, transferNote } from '../../../shared/payment/vietqr'
-import { PrintHeader } from '../../../shared/print/PrintHeader'
-import { DEPOSIT_PER_BOTTLE } from '../../../shared/policy'
-import { currency, printDate } from '../../../shared/utils/format'
-import type { StoreSettings } from '../../settings/types'
+import { TransferQr } from '@/shared/payment/TransferQr'
+import { bankBinOf, transferNote } from '@/shared/payment/vietqr'
+import { PrintHeader } from '@/shared/print/PrintHeader'
+import { DEPOSIT_PER_BOTTLE } from '@/shared/policy'
+import { currency, printDate } from '@/shared/utils/format'
+import type { StoreSettings } from '@/features/settings/types'
 import { amountDue, jugCount, paidAmount, returnedValue, type Order } from '../types'
 
 type DocumentProps = { order: Order; settings?: StoreSettings }

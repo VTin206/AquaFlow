@@ -2,12 +2,12 @@ import type { ReactNode } from 'react'
 import { App, Badge, Menu, Tooltip, type MenuProps } from 'antd'
 import { CircleQuestionMark, Droplets, PanelLeftClose, PanelLeftOpen, Settings2, type LucideIcon } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router'
-import { navGroups } from '../app/navigation'
-import { canOpen } from '../features/auth/permissions'
-import { useStaff } from '../features/auth/useStaff'
-import { usePageSupported } from '../shared/features'
-import { useOrders } from '../features/orders/useOrders'
-import { useSettings } from '../features/settings/settingsService'
+import { navGroups } from '@/app/navigation'
+import { canOpen } from '@/features/auth/permissions'
+import { useStaff } from '@/features/auth/useStaff'
+import { usePageSupported } from '@/shared/features'
+import { useOrders } from '@/features/orders/useOrders'
+import { useSettings } from '@/features/settings/settingsService'
 
 type SidebarProps = {
   onNavigate?: () => void

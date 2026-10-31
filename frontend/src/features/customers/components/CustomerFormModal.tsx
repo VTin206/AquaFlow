@@ -2,9 +2,9 @@ import { App, Button, Col, Form, Input, Modal, Row, Segmented } from 'antd'
 import { Plus, Trash2 } from 'lucide-react'
 import type { Customer, CustomerDraft } from '../types'
 import { useSaveCustomer } from '../useCustomers'
-import { useConfirmDiscard } from '../../../shared/hooks/useConfirmDiscard'
-import { useFeature, useIsDemo } from '../../../shared/features'
-import { UNSUPPORTED_HINT } from '../../../shared/components/Unsupported'
+import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
+import { useFeature, useIsDemo } from '@/shared/features'
+import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 
 type CustomerFormModalProps = { open: boolean; customer?: Customer; onClose: () => void; onSaved?: (customer: Customer) => void }
 

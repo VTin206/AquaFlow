@@ -1,7 +1,7 @@
-import { db } from '../../mocks/db'
-import { mockError, mockRequest } from '../../mocks/mockRequest'
-import { logActivity, requireRole } from '../../mocks/session'
-import { api } from '../../shared/api/client'
+import { db } from '@/mocks/db'
+import { mockError, mockRequest } from '@/mocks/mockRequest'
+import { logActivity, requireRole } from '@/mocks/session'
+import { api } from '@/shared/api/client'
 import type { Supplier, SupplierDraft, SupplierRecord } from './types'
 
 const phone = (value?: string) => value?.replace(/[\s().-]/g, '') || undefined

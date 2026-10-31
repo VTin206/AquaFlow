@@ -1,4 +1,4 @@
-import { getBrandGroup, normalizeSearch } from '../inventory/catalog'
+import { getBrandGroup, normalizeSearch } from '@/features/inventory/catalog'
 import type { ShopProduct } from './shopService'
 
 // Lọc như trang nước của iWater: logo thương hiệu, quy cách bình/chai, rồi loại nước.

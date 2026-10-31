@@ -1,7 +1,7 @@
 import { Card, Empty } from 'antd'
 import { Link } from 'react-router'
-import { Page } from '../../shared/components/Page'
-import { UNSUPPORTED_HINT } from '../../shared/components/Unsupported'
+import { Page } from '@/shared/components/Page'
+import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 
 /** Trang chưa có API BE: giữ tiêu đề như bản dùng thử, không hiện dữ liệu giả. */
 export function UnavailablePage({ title }: { title: string }) {

@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, App, Button, Form, Input, InputNumber, Modal, Select, Space } from 'antd'
-import { QueryError } from '../../shared/components/QueryError'
-import { useConfirmDiscard } from '../../shared/hooks/useConfirmDiscard'
-import { currency } from '../../shared/utils/format'
+import { QueryError } from '@/shared/components/QueryError'
+import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
+import { currency } from '@/shared/utils/format'
 import { catalogApi } from './catalogApi'
 import { customerApi } from './customerApi'
 import { invalidateLiveData } from './invalidateLiveData'
 import { orderApi, type LiveOrder, type OrderInput } from './orderApi'
-import { useStaff } from '../auth/useStaff'
+import { useStaff } from '@/features/auth/useStaff'
 
 type Draft = { customerId?: number; addressId?: number; recipientName?: string; recipientPhone?: string; deliveryAddress?: string; deliveryArea?: string; fulfillmentType: OrderInput['fulfillmentType']; channel: OrderInput['channel']; items: { productId: number; quantity: number }[]; note?: string }
 

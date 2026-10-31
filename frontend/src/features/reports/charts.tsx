@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Grid } from 'antd'
 import { Bar, BarChart, CartesianGrid, ComposedChart, LabelList, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { compactCurrency, currency } from '../../shared/utils/format'
+import { compactCurrency, currency } from '@/shared/utils/format'
 import type { RevenueBucket } from './periods'
 import type { DriverReportRow, ProductReportRow } from './reportService'
 

@@ -1,4 +1,4 @@
-import { api } from '../../shared/api/client'
+import { api } from '@/shared/api/client'
 
 /** DTO theo StockController/PurchaseReceiptController (BE2). */
 export type BatchStock = { batchId: number; lotCode: string; expiresOn: string; expired: boolean; onHand: number; reserved: number; available: number }

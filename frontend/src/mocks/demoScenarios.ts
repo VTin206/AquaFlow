@@ -1,4 +1,4 @@
-import type { Order, Payment } from '../features/orders/types'
+import type { Order, Payment } from '@/features/orders/types'
 import { waterProducts } from './waterCatalog'
 
 // Tình huống hư cấu để thử bảng, bộ lọc và các bước xử lý trong bản demo frontend.

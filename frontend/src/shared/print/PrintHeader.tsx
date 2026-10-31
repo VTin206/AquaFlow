@@ -1,4 +1,4 @@
-import type { StoreSettings } from '../../features/settings/types'
+import type { StoreSettings } from '@/features/settings/types'
 
 /** Đầu chứng từ: thông tin cửa hàng lấy từ trang Cài đặt. */
 export function PrintHeader({ settings, title, code, date }: { settings?: StoreSettings; title: string; code: string; date: string }) {

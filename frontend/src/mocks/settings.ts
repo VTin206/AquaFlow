@@ -1,4 +1,4 @@
-import type { StoreSettings } from '../features/settings/types'
+import type { StoreSettings } from '@/features/settings/types'
 
 // Thông tin cửa hàng hư cấu cho bản demo.
 export const initialSettings: StoreSettings = {

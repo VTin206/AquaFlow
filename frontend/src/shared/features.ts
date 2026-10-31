@@ -1,4 +1,4 @@
-import { useAuth } from '../features/auth/useAuth'
+import { useAuth } from '@/features/auth/useAuth'
 
 /**
  * Phần giao diện đã có API BE hỗ trợ. Bản dùng thử bật hết để giới thiệu đủ thiết kế;

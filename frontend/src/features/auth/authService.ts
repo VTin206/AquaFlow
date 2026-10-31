@@ -1,4 +1,4 @@
-import { api, ApiError } from '../../shared/api/client'
+import { api, ApiError } from '@/shared/api/client'
 
 export type LoginCredentials = { email: string; password: string }
 

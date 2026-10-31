@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { db } from '../../mocks/db'
-import { DEPOSIT_PER_BOTTLE } from '../../shared/policy'
-import { mockError, mockRequest } from '../../mocks/mockRequest'
-import { expectedHandover, tripStatus } from '../delivery/tripService'
-import { createdAtOf, minutesLate, type Order, type OrderLine } from '../orders/types'
+import { db } from '@/mocks/db'
+import { DEPOSIT_PER_BOTTLE } from '@/shared/policy'
+import { mockError, mockRequest } from '@/mocks/mockRequest'
+import { expectedHandover, tripStatus } from '@/features/delivery/tripService'
+import { createdAtOf, minutesLate, type Order, type OrderLine } from '@/features/orders/types'
 
 // Đang tính từ dữ liệu mẫu. Khi backend có API báo cáo, thay bằng api.get('/reports/summary', { params: range }).
 

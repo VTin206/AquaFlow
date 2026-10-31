@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useAuth } from '../auth/useAuth'
-import { useStaff } from '../auth/useStaff'
-import { invalidateLiveData } from '../live/invalidateLiveData'
+import { useAuth } from '@/features/auth/useAuth'
+import { useStaff } from '@/features/auth/useStaff'
+import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { supplierApi, supplierService, type SupplierStatus } from './supplierService'
 import type { SupplierDraft } from './types'
 

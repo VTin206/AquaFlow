@@ -1,6 +1,6 @@
 import { Button, Dropdown, type MenuProps } from 'antd'
 import { Check, Monitor, Moon, Sun } from 'lucide-react'
-import { setColorMode, useColorMode, type ColorMode } from '../app/colorMode'
+import { setColorMode, useColorMode, type ColorMode } from '@/app/colorMode'
 
 const modes: { value: ColorMode; label: string; hint: string; Icon: typeof Sun }[] = [
   { value: 'light', label: 'Sáng', hint: 'Nền trắng, chữ đậm', Icon: Sun },

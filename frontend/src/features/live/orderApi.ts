@@ -1,4 +1,4 @@
-import { api } from '../../shared/api/client'
+import { api } from '@/shared/api/client'
 
 export const orderStatusLabels = { PENDING: 'Chờ xác nhận', CONFIRMED: 'Đã xác nhận', PREPARING: 'Đang chuẩn bị', OUT_FOR_DELIVERY: 'Đang giao', DELIVERED: 'Đã giao', COMPLETED: 'Đã hoàn tất', CANCELLED: 'Đã hủy' }
 export const paymentStatusLabels = { UNPAID: 'Chưa thanh toán', PARTIALLY_PAID: 'Thanh toán một phần', PAID: 'Đã thanh toán', REFUND_PENDING: 'Chờ hoàn tiền', REFUNDED: 'Đã hoàn tiền' }

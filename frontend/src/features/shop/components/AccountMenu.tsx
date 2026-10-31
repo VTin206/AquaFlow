@@ -3,9 +3,9 @@ import { App, Avatar, Button, Popover } from 'antd'
 import { useQueryClient } from '@tanstack/react-query'
 import { LayoutDashboard, LogOut, UserRound } from 'lucide-react'
 import { useNavigate } from 'react-router'
-import { devAccounts, type DevAccount } from '../../auth/devAccounts'
-import { useAuth } from '../../auth/useAuth'
-import { useStaff } from '../../auth/useStaff'
+import { devAccounts, type DevAccount } from '@/features/auth/devAccounts'
+import { useAuth } from '@/features/auth/useAuth'
+import { useStaff } from '@/features/auth/useStaff'
 
 /**
  * Tài khoản trên đầu trang khách, có hai chỗ: chữ trên thanh trên cùng ("Đăng nhập" / "Chào, …") và icon trên header.

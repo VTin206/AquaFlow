@@ -1,6 +1,6 @@
-import { db } from '../../mocks/db'
-import { mockError, mockRequest } from '../../mocks/mockRequest'
-import { logActivity, requireRole } from '../../mocks/session'
+import { db } from '@/mocks/db'
+import { mockError, mockRequest } from '@/mocks/mockRequest'
+import { logActivity, requireRole } from '@/mocks/session'
 import { isoToVnDate, localToday } from './expiry'
 import { tracksExpiry, type Lot, type Product, type ProductDraft, type Receipt, type ReceiptDraft } from './types'
 

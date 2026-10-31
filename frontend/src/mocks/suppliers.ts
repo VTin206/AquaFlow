@@ -1,4 +1,4 @@
-import type { SupplierRecord } from '../features/suppliers/types'
+import type { SupplierRecord } from '@/features/suppliers/types'
 
 // Các đơn vị và thông tin liên hệ hư cấu phục vụ giao diện mẫu.
 export const initialSuppliers: SupplierRecord[] = [

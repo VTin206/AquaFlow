@@ -1,6 +1,6 @@
-import { DEPOSIT_PER_BOTTLE, guessCustomerType, normalizePhone, type BottleEntry, type CustomerRecord } from '../features/customers/types'
-import type { Order } from '../features/orders/types'
-import type { Product } from '../features/inventory/types'
+import { DEPOSIT_PER_BOTTLE, guessCustomerType, normalizePhone, type BottleEntry, type CustomerRecord } from '@/features/customers/types'
+import type { Order } from '@/features/orders/types'
+import type { Product } from '@/features/inventory/types'
 import { waterProducts } from './waterCatalog'
 import { additionalCustomers, additionalOrders, type SeedCustomer } from './demoScenarios'
 

@@ -1,8 +1,8 @@
-import { db } from '../../mocks/db'
-import { mockError, mockRequest } from '../../mocks/mockRequest'
-import { logActivity, mockActor, requireRole } from '../../mocks/session'
-import { beginDelivery, canDispatch } from '../orders/orderService'
-import type { Order } from '../orders/types'
+import { db } from '@/mocks/db'
+import { mockError, mockRequest } from '@/mocks/mockRequest'
+import { logActivity, mockActor, requireRole } from '@/mocks/session'
+import { beginDelivery, canDispatch } from '@/features/orders/orderService'
+import type { Order } from '@/features/orders/types'
 import { drivers, type SettlementDraft, type Trip, type TripDraft, type TripRecord } from './types'
 
 // Bản mô phỏng trong bộ nhớ; API thật cần transaction để một đơn không nằm ở hai chuyến.

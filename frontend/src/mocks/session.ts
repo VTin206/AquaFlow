@@ -1,4 +1,4 @@
-import type { RoleCode } from '../features/auth/permissions'
+import type { RoleCode } from '@/features/auth/permissions'
 import { db } from './db'
 import { mockError } from './mockRequest'
 

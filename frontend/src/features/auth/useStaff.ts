@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { drivers } from '../delivery/types'
+import { drivers } from '@/features/delivery/types'
 import { roleNames, roleOfUser, type RoleCode } from './permissions'
 import { useAuth } from './useAuth'
 

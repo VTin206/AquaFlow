@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { App, Col, Form, Input, InputNumber, Modal, Row, Select, Upload } from 'antd'
 import { ImagePlus } from 'lucide-react'
-import { useFeature, useIsDemo } from '../../../shared/features'
-import { UNSUPPORTED_HINT } from '../../../shared/components/Unsupported'
-import { bottleTypeApi } from '../../live/bottleTypeApi'
+import { useFeature, useIsDemo } from '@/shared/features'
+import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
+import { bottleTypeApi } from '@/features/live/bottleTypeApi'
 import { useSaveProduct, type CatalogItem, type ProductForm } from '../productCatalog'
-import { useConfirmDiscard } from '../../../shared/hooks/useConfirmDiscard'
+import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 
 const MAX_IMAGE_MB = 5
 const UNITS = ['Bình', 'Thùng', 'Chai', 'Vỏ']

@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Checkbox, Form, Input, Modal, Popconfirm, Table, Tag, Tooltip } from 'antd'
 import { Pencil } from 'lucide-react'
-import { api } from '../../shared/api/client'
-import { QueryError } from '../../shared/components/QueryError'
+import { api } from '@/shared/api/client'
+import { QueryError } from '@/shared/components/QueryError'
 import { invalidateLiveData } from './invalidateLiveData'
 
 type Address = {

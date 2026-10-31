@@ -1,4 +1,4 @@
-import { api } from '../../shared/api/client'
+import { api } from '@/shared/api/client'
 
 /** DTO theo ProductController/SupplierController hiện có, không suy ra tồn từ danh mục. */
 export type CatalogProduct = {

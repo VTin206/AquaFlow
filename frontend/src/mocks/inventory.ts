@@ -1,5 +1,5 @@
-import { vnToIsoDate } from '../features/inventory/expiry'
-import type { Lot, Product, Receipt } from '../features/inventory/types'
+import { vnToIsoDate } from '@/features/inventory/expiry'
+import type { Lot, Product, Receipt } from '@/features/inventory/types'
 import { initialProducts } from './data'
 import { initialSuppliers } from './suppliers'
 

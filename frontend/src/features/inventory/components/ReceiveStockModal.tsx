@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { App, Button, Col, Form, Input, InputNumber, Modal, Result, Row, Select, Space, Table, Typography } from 'antd'
 import { Plus, Trash2 } from 'lucide-react'
-import { QueryError } from '../../../shared/components/QueryError'
-import { currency } from '../../../shared/utils/format'
+import { QueryError } from '@/shared/components/QueryError'
+import { currency } from '@/shared/utils/format'
 import { isoToVnDate, localToday } from '../expiry'
 import { tracksExpiry } from '../types'
 import { receiptToForm, useInventoryCaps, useReceiptOptions, useSaveReceipt, type ReceiptForm, type ReceiptLineView, type ReceiptView } from '../inventoryData'
-import { useConfirmDiscard } from '../../../shared/hooks/useConfirmDiscard'
+import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 
 type ReceiveStockModalProps = { open: boolean; onClose: () => void; defaultProductId?: string; receipt?: ReceiptView }
 

@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Button, Select, Tooltip } from 'antd'
 import { Eye, Plus } from 'lucide-react'
-import { MobileRecordList } from '../../../shared/components/MobileRecordList'
-import { Money } from '../../../shared/components/Money'
-import { useFeature } from '../../../shared/features'
-import { Unsupported } from '../../../shared/components/Unsupported'
+import { MobileRecordList } from '@/shared/components/MobileRecordList'
+import { Money } from '@/shared/components/Money'
+import { useFeature } from '@/shared/features'
+import { Unsupported } from '@/shared/components/Unsupported'
 import { customerCode, type Customer } from '../types'
 
 type CustomerCardsProps = {

@@ -1,6 +1,6 @@
 import { App, Button, Col, Form, Input, InputNumber, Modal, Radio, Row } from 'antd'
-import { currency } from '../../../shared/utils/format'
-import { DEPOSIT_PER_BOTTLE, EXCHANGEABLE_BRANDS } from '../../../shared/policy'
+import { currency } from '@/shared/utils/format'
+import { DEPOSIT_PER_BOTTLE, EXCHANGEABLE_BRANDS } from '@/shared/policy'
 import { jugCount, type DeliveryResult, type Order } from '../types'
 import { useOrderAction } from '../useOrders'
 

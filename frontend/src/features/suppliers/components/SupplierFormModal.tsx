@@ -1,9 +1,9 @@
 import { App, Col, Form, Input, Modal, Row } from 'antd'
 import type { Supplier, SupplierDraft } from '../types'
 import { useSaveSupplier } from '../useSuppliers'
-import { useConfirmDiscard } from '../../../shared/hooks/useConfirmDiscard'
-import { useFeature } from '../../../shared/features'
-import { UNSUPPORTED_HINT } from '../../../shared/components/Unsupported'
+import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
+import { useFeature } from '@/shared/features'
+import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 
 /** Thêm mới khi không có `supplier`; sửa khi có. */
 export function SupplierFormModal({ supplier, onClose, onSaved }: { supplier?: Supplier; onClose: () => void; onSaved: () => void }) {

@@ -1,4 +1,4 @@
-import { DEPOSIT_PER_BOTTLE } from '../../shared/policy'
+import { DEPOSIT_PER_BOTTLE } from '@/shared/policy'
 
 export type CustomerType = 'Cá nhân' | 'Doanh nghiệp'
 

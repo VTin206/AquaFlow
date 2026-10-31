@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { useIsDemo } from '../../shared/features'
-import { useStaff } from '../auth/useStaff'
-import { catalogApi, type CatalogProduct } from '../live/catalogApi'
-import { channelLabels, orderApi, paymentStatusLabels, type LiveOrder } from '../live/orderApi'
+import { useIsDemo } from '@/shared/features'
+import { useStaff } from '@/features/auth/useStaff'
+import { catalogApi, type CatalogProduct } from '@/features/live/catalogApi'
+import { channelLabels, orderApi, paymentStatusLabels, type LiveOrder } from '@/features/live/orderApi'
 import type { Order, OrderStatus } from './types'
 import { useOrders } from './useOrders'
 

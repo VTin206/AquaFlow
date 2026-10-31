@@ -1,4 +1,4 @@
-import { api } from '../../shared/api/client'
+import { api } from '@/shared/api/client'
 import type { LiveOrder } from './orderApi'
 
 /** Payload công khai cho checkout; giá và customerId do backend quyết định. */
