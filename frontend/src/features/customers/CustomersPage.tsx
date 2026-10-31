@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { App, Button, Card, Col, Dropdown, Grid, Input, Row, Segmented, Statistic, Table, Tag, Tooltip, type TableColumnsType } from 'antd'
 import { Ellipsis, Eye, Plus, Search } from 'lucide-react'
 import { Page } from '../../shared/components/Page'
+import { ToneLabel } from '../../shared/components/ToneLabel'
 import { QueryError } from '../../shared/components/QueryError'
 import { useColumnSort } from '../../shared/components/sortableColumn'
 import { Money } from '../../shared/components/Money'
@@ -158,8 +159,8 @@ export function CustomersPage() {
                 value={view}
                 onChange={setView}
                 options={[
-                  { value: 'active', label: 'Đang hoạt động' },
-                  { value: 'archived', label: canReactivate ? 'Đã lưu trữ' : <Tooltip title="Backend chưa hỗ trợ xem khách đã lưu trữ">Đã lưu trữ</Tooltip>, disabled: !canReactivate },
+                  { value: 'active', label: <ToneLabel tone="success">Đang hoạt động</ToneLabel> },
+                  { value: 'archived', label: canReactivate ? <ToneLabel tone="neutral">Đã lưu trữ</ToneLabel> : <Tooltip title="Backend chưa hỗ trợ xem khách đã lưu trữ"><span><ToneLabel tone="neutral">Đã lưu trữ</ToneLabel></span></Tooltip>, disabled: !canReactivate },
                 ]}
               />
               <Input

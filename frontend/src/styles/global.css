@@ -32,6 +32,11 @@
   /* Thanh trên cùng và chân trang cửa hàng. */
   --af-chrome: #f5fbfe;
   --af-accent-soft: #fff1dc;
+  /* Màu trạng thái cho bộ lọc (ToneLabel): đang dùng / cần chú ý / lỗi. */
+  --af-success: #1f7a60;
+  --af-success-soft: #e3f4ec;
+  --af-warning-soft: #fff1dc;
+  --af-danger-soft: #fdecec;
   /* Chữ/nút trắng đặt trên nền màu thương hiệu; giữ trắng ở mọi chế độ. */
   --af-on-primary: #fff;
   /* Khung ảnh sản phẩm, logo, QR: ảnh có nền trắng nên khung luôn trắng. */
@@ -71,6 +76,10 @@
   --af-border-strong: #273042;
   --af-chrome: #080c15;
   --af-accent-soft: #3a2a12;
+  --af-success: #4cc39a;
+  --af-success-soft: #10291f;
+  --af-warning-soft: #3a2a12;
+  --af-danger-soft: #3a1a1d;
   --af-chart-bar: #24597a;
   --af-chart-bar-hover: #3a7fa8;
   --af-shadow-chrome: #0006;
@@ -398,6 +407,19 @@ body {
   background: var(--af-accent);
   color: var(--af-on-primary);
 }
+
+/* Nhãn trạng thái có chấm màu (ToneLabel); ô Segmented đang chọn tô nền nhạt cùng màu. */
+.af-tone { display: inline-flex; align-items: center; gap: 6px; }
+.af-tone-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--tone); }
+.af-tone.is-success { --tone: var(--af-success); --tone-soft: var(--af-success-soft); }
+.af-tone.is-warning { --tone: var(--af-warning); --tone-soft: var(--af-warning-soft); }
+.af-tone.is-danger { --tone: var(--af-danger); --tone-soft: var(--af-danger-soft); }
+.af-tone.is-neutral { --tone: var(--af-text-tertiary); --tone-soft: var(--af-surface-sunken); }
+.ant-segmented-item-selected:has(.af-tone.is-success) { background: var(--af-success-soft); color: var(--af-success); }
+.ant-segmented-item-selected:has(.af-tone.is-warning) { background: var(--af-warning-soft); color: var(--af-warning); }
+.ant-segmented-item-selected:has(.af-tone.is-danger) { background: var(--af-danger-soft); color: var(--af-danger); }
+.ant-segmented-item-selected:has(.af-tone.is-neutral) { background: var(--af-surface-sunken); color: var(--af-text-strong); }
+.ant-segmented-item-selected .af-tone .af-count { background: var(--tone); color: var(--af-on-primary); }
 .af-order-id {
   align-items: center;
   display: inline-flex;

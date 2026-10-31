@@ -1,7 +1,8 @@
-import { useState, type KeyboardEvent } from 'react'
+import { useState, type KeyboardEvent, type ReactNode } from 'react'
 import { App, Button, Card, Col, Dropdown, Empty, Input, Pagination, Row, Segmented, Select, Skeleton, Space, Tag, Tooltip, Typography, type MenuProps } from 'antd'
 import { Droplets, Ellipsis, FunnelX, LayoutGrid, Plus, Search } from 'lucide-react'
 import { Page } from '../../shared/components/Page'
+import { ToneLabel } from '../../shared/components/ToneLabel'
 import { QueryError } from '../../shared/components/QueryError'
 import { useFeature, useIsDemo } from '../../shared/features'
 import { currency } from '../../shared/utils/format'
@@ -10,9 +11,9 @@ import { brandGroups, capacityGroups, catalogCategories, getBrandGroup, getCatal
 import { ProductFormModal } from './components/ProductFormModal'
 import { useActivateProduct, useCanManageProducts, useCatalog, useDeactivateProduct, type CatalogItem, type ProductStatus } from './productCatalog'
 
-const statusOptions: { value: ProductStatus; label: string }[] = [
-  { value: 'active', label: 'Đang bán' },
-  { value: 'inactive', label: 'Ngừng bán' },
+const statusOptions: { value: ProductStatus; label: ReactNode }[] = [
+  { value: 'active', label: <ToneLabel tone="success">Đang bán</ToneLabel> },
+  { value: 'inactive', label: <ToneLabel tone="neutral">Ngừng bán</ToneLabel> },
   { value: 'all', label: 'Tất cả' },
 ]
 
