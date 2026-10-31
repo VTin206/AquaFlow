@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Alert, App, Avatar, Button, Divider, Form, Input } from 'antd'
-import { ArrowRight, FlaskConical, History, LayoutDashboard, LockKeyhole, LogOut, MapPin, PackageSearch, ShoppingBag, UserRound, UserRoundPlus } from 'lucide-react'
+import { ArrowRight, FlaskConical, LayoutDashboard, LockKeyhole, LogOut, PackageSearch, ShoppingBag, UserRound, UserRoundPlus } from 'lucide-react'
 import { Link, useNavigate } from 'react-router'
 import { focusNextOnEnter } from '../../shared/utils/forms'
 import type { LoginCredentials } from '../auth/authService'
@@ -88,17 +88,13 @@ export function ShopAccountPage() {
 
         <section className="af-shop-account-side" aria-label="Chưa có tài khoản">
           <Link to="/shop/register"><Button size="large" block icon={<UserRoundPlus size={18} />}>Tạo tài khoản</Button></Link>
-          <p>Có tài khoản, bạn được lưu địa chỉ giao và xem lại các đơn đã đặt để đặt lại nhanh hơn.</p>
-          <ul>
-            <li><MapPin size={16} aria-hidden /> Lưu địa chỉ giao hàng</li>
-            <li><History size={16} aria-hidden /> Xem lại đơn đã đặt</li>
+          <p>Lưu địa chỉ giao và xem lại đơn đã đặt.</p>
+          <Divider plain>hoặc</Divider>
+          <ul className="af-shop-account-links">
+            <li><Link to="/shop"><ShoppingBag size={16} aria-hidden /> Mua hàng không cần tài khoản</Link></li>
+            <li><Link to="/track"><PackageSearch size={16} aria-hidden /> Tra cứu đơn</Link></li>
+            <li><Button type="link" icon={<FlaskConical size={16} />} onClick={() => { enterDemo(); navigate('/') }}>Xem bản dùng thử</Button></li>
           </ul>
-          <Link to="/shop"><Button size="large" block icon={<ShoppingBag size={18} />}>Mua hàng không cần tài khoản</Button></Link>
-          <p>Chỉ cần tên, số điện thoại và địa chỉ giao khi thanh toán.</p>
-          <Link to="/track"><Button size="large" block icon={<PackageSearch size={18} />}>Tra cứu đơn không cần tài khoản</Button></Link>
-          <p>Xem trạng thái đơn bằng mã đơn và số điện thoại đặt hàng.</p>
-          <Button size="large" block icon={<FlaskConical size={18} />} onClick={() => { enterDemo(); navigate('/') }}>Xem bản dùng thử</Button>
-          <p>Trang quản lý với dữ liệu mẫu, không cần tài khoản.</p>
         </section>
       </div>
     </div>

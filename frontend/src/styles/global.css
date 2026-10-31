@@ -1344,6 +1344,10 @@ body {
 .af-shop-account-side li { display: flex; align-items: center; gap: 8px; }
 .af-shop-account-side li svg { color: var(--af-primary); }
 .af-shop-account-side a { display: block; }
+.af-shop-account-side .ant-divider { margin: 4px 0; color: var(--af-text-tertiary); font-size: 13px; }
+.af-shop-account-side ul.af-shop-account-links { margin: 0; gap: 4px; }
+.af-shop-account-links a, .af-shop-account-links .ant-btn { display: inline-flex; align-items: center; gap: 8px; height: auto; padding: 4px 0; color: var(--af-text); font-size: 14px; }
+.af-shop-account-links a:hover, .af-shop-account-links .ant-btn:hover { color: var(--af-primary); }
 .af-shop-account-card { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 24px; border: 1px solid var(--af-border); border-radius: 16px; background: var(--af-surface); }
 .af-shop-account-card > div:not(.af-shop-account-actions) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .af-shop-account-card strong { font-size: 18px; color: var(--af-text-strong); }
