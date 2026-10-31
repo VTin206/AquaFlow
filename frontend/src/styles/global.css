@@ -408,9 +408,8 @@ body {
   color: var(--af-on-primary);
 }
 
-/* Nhãn trạng thái có chấm màu (ToneLabel); ô Segmented đang chọn tô nền nhạt cùng màu. */
-.af-tone { display: inline-flex; align-items: center; gap: 6px; }
-.af-tone-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--tone); }
+/* Nhãn trạng thái tô chữ theo màu (ToneLabel); ô Segmented đang chọn tô nền nhạt cùng màu. */
+.af-tone { display: inline-flex; align-items: center; color: var(--tone); }
 .af-tone.is-success { --tone: var(--af-success); --tone-soft: var(--af-success-soft); }
 .af-tone.is-warning { --tone: var(--af-warning); --tone-soft: var(--af-warning-soft); }
 .af-tone.is-danger { --tone: var(--af-danger); --tone-soft: var(--af-danger-soft); }

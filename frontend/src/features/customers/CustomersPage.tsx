@@ -160,7 +160,7 @@ export function CustomersPage() {
                 onChange={setView}
                 options={[
                   { value: 'active', label: <ToneLabel tone="success">Đang hoạt động</ToneLabel> },
-                  { value: 'archived', label: canReactivate ? <ToneLabel tone="neutral">Đã lưu trữ</ToneLabel> : <Tooltip title="Backend chưa hỗ trợ xem khách đã lưu trữ"><span><ToneLabel tone="neutral">Đã lưu trữ</ToneLabel></span></Tooltip>, disabled: !canReactivate },
+                  { value: 'archived', label: canReactivate ? <ToneLabel tone="danger">Đã lưu trữ</ToneLabel> : <Tooltip title="Backend chưa hỗ trợ xem khách đã lưu trữ"><span><ToneLabel tone="danger">Đã lưu trữ</ToneLabel></span></Tooltip>, disabled: !canReactivate },
                 ]}
               />
               <Input

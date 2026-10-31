@@ -50,7 +50,7 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
               { value: 'all', label: <CountLabel label="Tất cả" count={receipts.length} /> },
               { value: 'DRAFT', label: <CountLabel label="Nháp" count={count('DRAFT')} urgent tone="warning" /> },
               { value: 'CONFIRMED', label: <CountLabel label="Đã nhập kho" count={count('CONFIRMED')} tone="success" /> },
-              { value: 'CANCELLED', label: <CountLabel label="Đã hủy" count={count('CANCELLED')} tone="neutral" /> },
+              { value: 'CANCELLED', label: <CountLabel label="Đã hủy" count={count('CANCELLED')} tone="danger" /> },
             ]}
           />
         </div>

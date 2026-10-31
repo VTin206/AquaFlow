@@ -13,7 +13,7 @@ import { useActivateProduct, useCanManageProducts, useCatalog, useDeactivateProd
 
 const statusOptions: { value: ProductStatus; label: ReactNode }[] = [
   { value: 'active', label: <ToneLabel tone="success">Đang bán</ToneLabel> },
-  { value: 'inactive', label: <ToneLabel tone="neutral">Ngừng bán</ToneLabel> },
+  { value: 'inactive', label: <ToneLabel tone="danger">Ngừng bán</ToneLabel> },
   { value: 'all', label: 'Tất cả' },
 ]
 
