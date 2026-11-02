@@ -252,9 +252,11 @@ class OrderServiceTest {
         assertThatThrownBy(() -> orderService.transitionStatus(
                 5L,
                 OrderStatus.OUT_FOR_DELIVERY))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(
+                        com.aquaflow.shared.api.ConflictException.class)
                 .hasMessage(
-                        "Invalid order status transition from PREPARING to OUT_FOR_DELIVERY");
+                        "Delivery-controlled statuses must be updated "
+                                + "through the delivery workflow");
 
         verify(stockReservationService, never()).reserve(anyList());
         verify(stockReservationService, never()).release(anyList());
@@ -422,5 +424,88 @@ class OrderServiceTest {
 
         verify(orderRepository, never()).save(any(Order.class));
         verify(stockReservationService, never()).reserve(anyList());
+    }
+
+
+    @Test
+    void transitionStatusRejectsDeliveredThroughGenericPatch() {
+        Order order = createOrder(6L);
+
+        order.transitionTo(OrderStatus.CONFIRMED);
+        order.transitionTo(OrderStatus.PREPARING);
+        order.transitionTo(OrderStatus.OUT_FOR_DELIVERY);
+
+        when(orderRepository.findForUpdateById(6L))
+                .thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() ->
+                orderService.transitionStatus(
+                        6L,
+                        OrderStatus.DELIVERED))
+                .isInstanceOf(
+                        com.aquaflow.shared.api.ConflictException.class)
+                .hasMessage(
+                        "Delivery-controlled statuses must be updated "
+                                + "through the delivery workflow");
+
+        verify(orderRepository, never())
+                .save(org.mockito.ArgumentMatchers.any(Order.class));
+    }
+
+
+    @Test
+    void markOutForDeliveryFromDeliveryWorkflowUpdatesOrder() {
+        Order order = createOrder(7L);
+
+        order.transitionTo(OrderStatus.CONFIRMED);
+        order.transitionTo(OrderStatus.PREPARING);
+
+        when(orderRepository.findForUpdateById(7L))
+                .thenReturn(Optional.of(order));
+
+        when(orderRepository.save(order))
+                .thenReturn(order);
+
+        when(orderItemRepository.findAllByOrder_Id(7L))
+                .thenReturn(List.of());
+
+        Optional<OrderResponse> result =
+                orderService.markOutForDeliveryFromDeliveryWorkflow(7L);
+
+        assertThat(result).isPresent();
+
+        assertThat(result.orElseThrow().status())
+                .isEqualTo(OrderStatus.OUT_FOR_DELIVERY);
+
+        verify(orderRepository).save(order);
+    }
+
+
+    @Test
+    void markDeliveredFromDeliveryWorkflowUpdatesOrder() {
+        Order order = createOrder(8L);
+
+        order.transitionTo(OrderStatus.CONFIRMED);
+        order.transitionTo(OrderStatus.PREPARING);
+        order.transitionTo(OrderStatus.OUT_FOR_DELIVERY);
+
+        when(orderRepository.findForUpdateById(8L))
+                .thenReturn(Optional.of(order));
+
+        when(orderRepository.save(order))
+                .thenReturn(order);
+
+        when(orderItemRepository.findAllByOrder_Id(8L))
+                .thenReturn(List.of());
+
+        Optional<OrderResponse> result =
+                orderService.markDeliveredFromDeliveryWorkflow(8L);
+
+        assertThat(result).isPresent();
+
+        assertThat(result.orElseThrow().status())
+                .isEqualTo(OrderStatus.DELIVERED);
+
+        verify(orderRepository).save(order);
     }
 }

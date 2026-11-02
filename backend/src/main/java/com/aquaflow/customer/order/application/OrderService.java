@@ -20,6 +20,8 @@ import com.aquaflow.shared.api.ConflictException;
 import com.aquaflow.shared.api.NotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.aquaflow.customer.order.domain.OrderStatusPolicy;
+
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -193,12 +195,93 @@ public class OrderService {
     }
 
     @Transactional
+    public Optional<OrderResponse> markOutForDeliveryFromDeliveryWorkflow(
+            Long id) {
+
+        return transitionDeliveryStatus(
+                id,
+                OrderStatus.OUT_FOR_DELIVERY);
+    }
+
+    @Transactional
+    public Optional<OrderResponse> markDeliveredFromDeliveryWorkflow(
+            Long id) {
+
+        return transitionDeliveryStatus(
+                id,
+                OrderStatus.DELIVERED);
+    }
+
+    @Transactional
+    public Optional<OrderResponse> prepareForRedelivery(Long id) {
+
+        return orderRepository.findForUpdateById(id)
+                .map(order -> {
+
+                    if (!OrderStatusPolicy.canPrepareForRedelivery(
+                            order.getStatus(),
+                            order.getFulfillmentType())) {
+
+                        throw new ConflictException(
+                                "Order is not eligible for redelivery");
+                    }
+
+                    List<ReservationLine> reservationLines =
+                            orderItemRepository.findAllByOrder_Id(id)
+                                    .stream()
+                                    .map(item -> new ReservationLine(
+                                            item.getId(),
+                                            item.getProductId(),
+                                            item.getQuantity()))
+                                    .toList();
+
+                    if (reservationLines.isEmpty()) {
+                        throw new ConflictException(
+                                "Order has no items for redelivery");
+                    }
+
+                    stockReservationService.reserveForRedelivery(
+                            reservationLines);
+
+                    order.prepareForRedelivery();
+
+                    Order savedOrder = orderRepository.save(order);
+
+                    return toResponse(savedOrder);
+                });
+    }
+
+    private Optional<OrderResponse> transitionDeliveryStatus(
+            Long id,
+            OrderStatus nextStatus) {
+
+        return orderRepository.findForUpdateById(id)
+                .map(order -> {
+                    order.transitionTo(nextStatus);
+
+                    Order savedOrder = orderRepository.save(order);
+
+                    return toResponse(savedOrder);
+                });
+    }
+
+
+    @Transactional
     public Optional<OrderResponse> transitionStatus(
             Long id,
             OrderStatus nextStatus) {
 
         return orderRepository.findForUpdateById(id)
                 .map(order -> {
+
+                    if (nextStatus == OrderStatus.OUT_FOR_DELIVERY
+                            || nextStatus == OrderStatus.DELIVERED) {
+
+                        throw new ConflictException(
+                                "Delivery-controlled statuses must be updated "
+                                        + "through the delivery workflow");
+                    }
+
                     OrderStatus previousStatus = order.getStatus();
                     order.transitionTo(nextStatus);
 
@@ -247,6 +330,11 @@ public class OrderService {
                 .map(this::toResponse);
     }
 
+    @Transactional
+    public Optional<OrderResponse> findForUpdateById(Long id) {
+        return orderRepository.findForUpdateById(id)
+                .map(this::toResponse);
+    }
     private OrderResponse toResponse(Order order) {
         List<OrderResponse.OrderItemResponse> items =
                 orderItemRepository.findAllByOrder_Id(order.getId())

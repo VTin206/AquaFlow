@@ -1,39 +1,6 @@
 package com.aquaflow.customer.order.domain;
 
-import java.util.Map;
-import java.util.Set;
-
 public final class OrderStatusPolicy {
-
-    private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED_TRANSITIONS =
-            Map.of(
-                    OrderStatus.PENDING,
-                    Set.of(
-                            OrderStatus.CONFIRMED,
-                            OrderStatus.CANCELLED
-                    ),
-
-                    OrderStatus.CONFIRMED,
-                    Set.of(
-                            OrderStatus.PREPARING,
-                            OrderStatus.CANCELLED
-                    ),
-
-                    OrderStatus.PREPARING,
-                    Set.of(OrderStatus.CANCELLED),
-
-                    OrderStatus.OUT_FOR_DELIVERY,
-                    Set.of(),
-
-                    OrderStatus.DELIVERED,
-                    Set.of(),
-
-                    OrderStatus.COMPLETED,
-                    Set.of(),
-
-                    OrderStatus.CANCELLED,
-                    Set.of()
-            );
 
     private OrderStatusPolicy() {
     }
@@ -49,11 +16,34 @@ public final class OrderStatusPolicy {
             return false;
         }
 
-        // Delivery, dispatch and completion are intentionally blocked in Sprint 2.
-        // Sprint 3 must introduce the inventory movement and delivery workflow before
-        // these states can be enabled again.
-        return ALLOWED_TRANSITIONS
-                .getOrDefault(currentStatus, Set.of())
-                .contains(nextStatus);
+        return switch (currentStatus) {
+
+            case PENDING ->
+                    nextStatus == OrderStatus.CONFIRMED
+                    || nextStatus == OrderStatus.CANCELLED;
+
+            case CONFIRMED ->
+                    nextStatus == OrderStatus.PREPARING
+                    || nextStatus == OrderStatus.CANCELLED;
+
+            case PREPARING ->
+                    nextStatus == OrderStatus.CANCELLED
+                    || (fulfillmentType == FulfillmentType.DELIVERY
+                    && nextStatus == OrderStatus.OUT_FOR_DELIVERY);
+
+            case OUT_FOR_DELIVERY ->
+                    fulfillmentType == FulfillmentType.DELIVERY
+                    && nextStatus == OrderStatus.DELIVERED;
+
+            case DELIVERED, COMPLETED, CANCELLED -> false;
+        };
+    }
+
+    public static boolean canPrepareForRedelivery(
+            OrderStatus currentStatus,
+            FulfillmentType fulfillmentType) {
+
+        return currentStatus == OrderStatus.OUT_FOR_DELIVERY
+                && fulfillmentType == FulfillmentType.DELIVERY;
     }
 }

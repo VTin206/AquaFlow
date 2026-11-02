@@ -181,6 +181,18 @@ public class Order {
         return value;
     }
 
+    public void prepareForRedelivery() {
+        if (!OrderStatusPolicy.canPrepareForRedelivery(
+                this.status,
+                this.fulfillmentType)) {
+
+            throw new InvalidOrderStatusTransitionException(
+                    "Order is not eligible for redelivery");
+        }
+
+        this.status = OrderStatus.PREPARING;
+    }
+
     public void transitionTo(OrderStatus nextStatus) {
         if (!OrderStatusPolicy.canTransition(
                 this.status,

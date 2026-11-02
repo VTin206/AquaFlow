@@ -67,6 +67,15 @@ public class InventoryBalance {
         reserved -= quantity;
     }
 
+    public void dispatch(int quantity) {
+        requirePositive(quantity);
+        if (quantity > reserved) {
+            throw new IllegalStateException("Xuất kho vượt số lượng đang giữ");
+        }
+        onHand -= quantity;
+        reserved -= quantity;
+    }
+
     private static void requirePositive(int quantity) {
         if (quantity <= 0) {
             throw new IllegalArgumentException("Số lượng phải lớn hơn 0");

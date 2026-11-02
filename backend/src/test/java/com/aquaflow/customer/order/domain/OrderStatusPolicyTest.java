@@ -24,10 +24,74 @@ class OrderStatusPolicyTest {
     }
 
     @Test
-    void rejectsPreparingToCompleted() {
+    void allowsConfirmedToPreparing() {
+        assertTrue(OrderStatusPolicy.canTransition(
+                OrderStatus.CONFIRMED,
+                OrderStatus.PREPARING,
+                FulfillmentType.DELIVERY));
+    }
+
+    @Test
+    void allowsPreparingToOutForDeliveryForDelivery() {
+        assertTrue(OrderStatusPolicy.canTransition(
+                OrderStatus.PREPARING,
+                OrderStatus.OUT_FOR_DELIVERY,
+                FulfillmentType.DELIVERY));
+    }
+
+    @Test
+    void allowsOutForDeliveryToDeliveredForDelivery() {
+        assertTrue(OrderStatusPolicy.canTransition(
+                OrderStatus.OUT_FOR_DELIVERY,
+                OrderStatus.DELIVERED,
+                FulfillmentType.DELIVERY));
+    }
+
+    @Test
+    void allowsPreparingToCancelled() {
+        assertTrue(OrderStatusPolicy.canTransition(
+                OrderStatus.PREPARING,
+                OrderStatus.CANCELLED,
+                FulfillmentType.DELIVERY));
+    }
+
+    @Test
+    void rejectsPreparingToOutForDeliveryForCounter() {
         assertFalse(OrderStatusPolicy.canTransition(
                 OrderStatus.PREPARING,
-                OrderStatus.COMPLETED,
+                OrderStatus.OUT_FOR_DELIVERY,
+                FulfillmentType.COUNTER));
+    }
+
+    @Test
+    void rejectsOutForDeliveryToDeliveredForCounter() {
+        assertFalse(OrderStatusPolicy.canTransition(
+                OrderStatus.OUT_FOR_DELIVERY,
+                OrderStatus.DELIVERED,
+                FulfillmentType.COUNTER));
+    }
+
+    @Test
+    void rejectsPreparingToDeliveredForDelivery() {
+        assertFalse(OrderStatusPolicy.canTransition(
+                OrderStatus.PREPARING,
+                OrderStatus.DELIVERED,
+                FulfillmentType.DELIVERY));
+    }
+
+    @Test
+    void rejectsPreparingToDeliveredForCounter() {
+        assertFalse(OrderStatusPolicy.canTransition(
+                OrderStatus.PREPARING,
+                OrderStatus.DELIVERED,
+                FulfillmentType.COUNTER));
+    }
+
+    @Test
+    void rejectsOutForDeliveryToCancelled() {
+        assertFalse(OrderStatusPolicy.canTransition(
+                OrderStatus.OUT_FOR_DELIVERY,
+                OrderStatus.CANCELLED,
                 FulfillmentType.DELIVERY));
     }
 
@@ -40,55 +104,7 @@ class OrderStatusPolicyTest {
     }
 
     @Test
-    void rejectsPreparingToOutForDeliveryUntilDeliveryWorkflowIsImplemented() {
-        assertFalse(OrderStatusPolicy.canTransition(
-                OrderStatus.PREPARING,
-                OrderStatus.OUT_FOR_DELIVERY,
-                FulfillmentType.DELIVERY));
-    }
-
-    @Test
-    void rejectsOutForDeliveryToDeliveredUntilDeliveryWorkflowIsImplemented() {
-        assertFalse(OrderStatusPolicy.canTransition(
-                OrderStatus.OUT_FOR_DELIVERY,
-                OrderStatus.DELIVERED,
-                FulfillmentType.DELIVERY));
-    }
-
-    @Test
-    void rejectsOutForDeliveryToCancelledToAvoidReleasingDispatchedStock() {
-        assertFalse(OrderStatusPolicy.canTransition(
-                OrderStatus.OUT_FOR_DELIVERY,
-                OrderStatus.CANCELLED,
-                FulfillmentType.DELIVERY));
-    }
-
-    @Test
-    void rejectsPreparingToDeliveredForCounterUntilDispatchWorkflowIsImplemented() {
-        assertFalse(OrderStatusPolicy.canTransition(
-                OrderStatus.PREPARING,
-                OrderStatus.DELIVERED,
-                FulfillmentType.COUNTER));
-    }
-
-    @Test
-    void rejectsPreparingToDeliveredForDeliveryFulfillment() {
-        assertFalse(OrderStatusPolicy.canTransition(
-                OrderStatus.PREPARING,
-                OrderStatus.DELIVERED,
-                FulfillmentType.DELIVERY));
-    }
-
-    @Test
-    void rejectsPreparingToOutForDeliveryForCounterFulfillment() {
-        assertFalse(OrderStatusPolicy.canTransition(
-                OrderStatus.PREPARING,
-                OrderStatus.OUT_FOR_DELIVERY,
-                FulfillmentType.COUNTER));
-    }
-
-    @Test
-    void rejectsDeliveredToCompletedUntilDeliveryWorkflowIsImplemented() {
+    void rejectsDeliveredToCompleted() {
         assertFalse(OrderStatusPolicy.canTransition(
                 OrderStatus.DELIVERED,
                 OrderStatus.COMPLETED,
@@ -112,7 +128,7 @@ class OrderStatusPolicyTest {
     }
 
     @Test
-    void rejectsTransitionFromPreparingBackToPending() {
+    void rejectsPreparingBackToPending() {
         assertFalse(OrderStatusPolicy.canTransition(
                 OrderStatus.PREPARING,
                 OrderStatus.PENDING,
@@ -141,5 +157,26 @@ class OrderStatusPolicyTest {
                 OrderStatus.PENDING,
                 OrderStatus.CONFIRMED,
                 null));
+    }
+
+    @Test
+    void allowsRedeliveryOnlyForDeliveryOrder() {
+        assertTrue(OrderStatusPolicy.canPrepareForRedelivery(
+                OrderStatus.OUT_FOR_DELIVERY,
+                FulfillmentType.DELIVERY));
+    }
+
+    @Test
+    void rejectsRedeliveryForCounterOrder() {
+        assertFalse(OrderStatusPolicy.canPrepareForRedelivery(
+                OrderStatus.OUT_FOR_DELIVERY,
+                FulfillmentType.COUNTER));
+    }
+
+    @Test
+    void rejectsRedeliveryWhenOrderIsNotOutForDelivery() {
+        assertFalse(OrderStatusPolicy.canPrepareForRedelivery(
+                OrderStatus.PREPARING,
+                FulfillmentType.DELIVERY));
     }
 }
