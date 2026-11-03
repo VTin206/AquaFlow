@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, App, Button, Form, Input, InputNumber, Modal, Select, Space } from 'antd'
+import { Alert, App, Button, DatePicker, Form, Input, InputNumber, Modal, Select, Space } from 'antd'
+import dayjs, { type Dayjs } from 'dayjs'
+import { useEffect, useRef } from 'react'
 import { QueryError } from '@/shared/components/QueryError'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { currency } from '@/shared/utils/format'
@@ -8,6 +10,7 @@ import { customerApi } from './customerApi'
 import { invalidateLiveData } from './invalidateLiveData'
 import { orderApi, type LiveOrder, type OrderInput } from './orderApi'
 import { useStaff } from '@/features/auth/useStaff'
+import { useStockItems } from '@/features/inventory/useInventory'
 
 type Draft = {
   customerId?: number
@@ -16,6 +19,7 @@ type Draft = {
   recipientPhone?: string
   deliveryAddress?: string
   deliveryArea?: string
+  requestedDeliveryAt?: Dayjs
   fulfillmentType: OrderInput['fulfillmentType']
   channel: OrderInput['channel']
   items: { productId: number; quantity: number }[]
@@ -35,6 +39,7 @@ const toInput = (draft: Draft): OrderInput => {
     recipientPhone: phone(draft.recipientPhone),
     deliveryAddress: delivery ? text(draft.deliveryAddress) : null,
     deliveryArea: delivery ? text(draft.deliveryArea) : null,
+    requestedDeliveryAt: delivery ? (draft.requestedDeliveryAt?.toISOString() ?? null) : null,
     items: draft.items.map(({ productId, quantity }) => ({ productId, quantity })),
     note: text(draft.note),
   }
@@ -63,8 +68,26 @@ export function LiveOrderDraftModal({
     queryFn: () => customerApi.addresses(customerId!),
     enabled: customerId != null,
   })
+  // Không tải được tồn kho thì vẫn tạo được đơn; hệ thống kiểm tra lại khi xác nhận.
+  const stock = useStockItems()
   const method = Form.useWatch('fulfillmentType', form) ?? 'DELIVERY'
   const items: Partial<Draft['items'][number]>[] = Form.useWatch('items', form) ?? []
+  const applyAddress = (address: NonNullable<typeof addresses.data>[number]) =>
+    form.setFieldsValue({
+      addressId: address.id,
+      recipientName: address.recipientName,
+      recipientPhone: address.recipientPhone,
+      deliveryAddress: address.addressLine,
+      deliveryArea: address.area ?? '',
+    })
+  // Chọn khách xong tự điền địa chỉ mặc định, mỗi khách một lần để không đè phần nhân viên đã sửa.
+  const autoFilledFor = useRef<number>(undefined)
+  useEffect(() => {
+    if (method !== 'DELIVERY' || !addresses.data || customerId == null || autoFilledFor.current === customerId) return
+    autoFilledFor.current = customerId
+    const address = addresses.data.find((item) => item.isDefault)
+    if (address) applyAddress(address)
+  })
   const total = items.reduce(
     (sum, item) => sum + (products.data?.find((product) => product.id === item?.productId)?.salePrice ?? 0) * (item?.quantity ?? 0),
     0,
@@ -143,6 +166,7 @@ export function LiveOrderDraftModal({
               }))}
               onChange={(id) => {
                 const customer = customers.data?.find((item) => item.id === id)
+                autoFilledFor.current = undefined
                 form.setFieldsValue({
                   recipientName: customer?.fullName ?? '',
                   recipientPhone: customer?.phone ?? '',
@@ -172,13 +196,7 @@ export function LiveOrderDraftModal({
                   }))}
                   onChange={(id) => {
                     const address = addresses.data?.find((item) => item.id === id)
-                    if (address)
-                      form.setFieldsValue({
-                        recipientName: address.recipientName,
-                        recipientPhone: address.recipientPhone,
-                        deliveryAddress: address.addressLine,
-                        deliveryArea: address.area ?? '',
-                      })
+                    if (address) applyAddress(address)
                   }}
                 />
               </Form.Item>
@@ -223,6 +241,23 @@ export function LiveOrderDraftModal({
               <Form.Item name="deliveryArea" label="Khu vực (không bắt buộc)" rules={[{ max: 150, message: 'Tối đa 150 ký tự.' }]}>
                 <Input placeholder="Phường / quận" />
               </Form.Item>
+              <Form.Item
+                name="requestedDeliveryAt"
+                label="Giờ nhận mong muốn (không bắt buộc)"
+                rules={[
+                  {
+                    validator: (_, value?: Dayjs) =>
+                      !value || value.isAfter(dayjs()) ? Promise.resolve() : Promise.reject(new Error('Chọn giờ trong tương lai.')),
+                  },
+                ]}
+              >
+                <DatePicker
+                  showTime
+                  format="DD/MM/YYYY HH:mm"
+                  disabledDate={(date) => date.isBefore(dayjs(), 'day')}
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
             </>
           )}
           <Form.List name="items">
@@ -247,10 +282,14 @@ export function LiveOrderDraftModal({
                       <Select
                         loading={products.isPending}
                         showSearch={{ optionFilterProp: 'label' }}
-                        options={(products.data ?? []).map((product) => ({
-                          value: product.id,
-                          label: `${product.sku} · ${product.name} · ${currency(product.salePrice)}`,
-                        }))}
+                        options={(products.data ?? []).map((product) => {
+                          const available = stock.data?.find((item) => item.id === String(product.id))?.available
+                          return {
+                            value: product.id,
+                            label: `${product.sku} · ${product.name} · ${currency(product.salePrice)}${available === undefined ? '' : ` · còn ${available}`}`,
+                            disabled: available === 0,
+                          }
+                        })}
                       />
                     </Form.Item>
                     <Form.Item

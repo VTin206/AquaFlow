@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { orderStatuses } from './orderStatus'
 
 export const ALL_ORDERS = 'Tất cả'
@@ -19,14 +20,26 @@ export function parseOrderFilters(value: unknown): OrderFilters {
   }
 }
 
+/** Link mở trang Đơn hàng với bộ lọc sẵn, ví dụ từ Tổng quan. */
+export const ordersLink = (filters: Partial<Pick<OrderFilters, 'status' | 'payment'>>) => `/orders?${new URLSearchParams(filters)}`
+
 export function useOrderFilters() {
+  const [params, setParams] = useSearchParams()
   const [filters, setFilters] = useState<OrderFilters>(() => {
+    // Đi từ link có bộ lọc thì chỉ lọc theo link, để số đơn khớp với chỗ vừa bấm.
+    if (params.has('status') || params.has('payment')) {
+      return parseOrderFilters({ status: params.get('status'), payment: params.get('payment') })
+    }
     try {
       return parseOrderFilters(JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? 'null'))
     } catch {
       return initialOrderFilters
     }
   })
+  // Bộ lọc đã nhận vào state; bỏ khỏi URL để tải lại trang không đè lựa chọn mới của người dùng.
+  useEffect(() => {
+    if (params.has('status') || params.has('payment')) setParams({}, { replace: true })
+  }, [params, setParams])
   useEffect(() => {
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(filters))

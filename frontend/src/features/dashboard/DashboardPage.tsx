@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Button, Card, Col, Empty, Row, Statistic, Tag } from 'antd'
+import { Button, Card, Col, Empty, Row, Space, Statistic, Tag } from 'antd'
 import { ArrowRight, PackagePlus, Plus } from 'lucide-react'
 import { Link } from 'react-router'
 import { BarChart } from '@/shared/components/BarChart'
@@ -12,12 +12,14 @@ import { ReceiveStockModal } from '@/features/inventory/components/ReceiveStockM
 import { useStockItems } from '@/features/inventory/useInventory'
 import { isLowStock } from '@/features/inventory/types'
 import { useProducts } from '@/features/inventory/useProducts'
+import { LiveConfirmButton } from '@/features/live/LiveConfirmButton'
 import { LiveOrderDetails } from '@/features/live/LiveOrderDetails'
 import { LiveOrderDraftModal } from '@/features/live/LiveOrderDraftModal'
 import { AdvanceStatusButton } from '@/features/orders/components/AdvanceStatusButton'
 import { CreateOrderModal } from '@/features/orders/components/CreateOrderModal'
 import { OrdersTable } from '@/features/orders/components/OrdersTable'
 import { useOrderList } from '@/features/orders/orderData'
+import { ordersLink } from '@/features/orders/useOrderFilters'
 import { amountDue, createdAtOf, orderedAtOf, type Order } from '@/features/orders/types'
 import { dayFromToday, localDay, useDailyRevenue } from '@/features/reports/reportService'
 
@@ -142,9 +144,12 @@ export function DashboardPage() {
         demo ? (
           <AdvanceStatusButton order={order} />
         ) : (
-          <Button size="small" type="primary" onClick={() => setOpenedOrder(Number(order.id))}>
-            Xem đơn
-          </Button>
+          <Space size={6}>
+            <Button size="small" onClick={() => setOpenedOrder(Number(order.id))}>
+              Xem đơn
+            </Button>
+            <LiveConfirmButton order={order} />
+          </Space>
         ),
       ),
     ),
@@ -181,9 +186,9 @@ export function DashboardPage() {
   // Dòng tóm tắt: chỉ liệt kê việc đang có, mỗi mục dẫn tới trang xử lý.
   const summary = [
     { count: failed.length, label: 'giao thất bại', to: '/delivery', tone: 'danger' },
-    { count: pending.length, label: 'đơn chờ xác nhận', to: '/orders', tone: 'warning' },
+    { count: pending.length, label: 'đơn chờ xác nhận', to: ordersLink({ status: 'Chờ xác nhận' }), tone: 'warning' },
     { count: shipping.length, label: 'đang giao', to: '/delivery' },
-    { count: unpaid.length, label: 'đơn chưa thu đủ', to: '/orders', tone: 'warning' },
+    { count: unpaid.length, label: 'đơn chưa thu đủ', to: ordersLink({ payment: 'Còn phải thu' }), tone: 'warning' },
     { count: lowStock.length, label: 'sản phẩm sắp hết', to: '/inventory', tone: 'warning' },
   ].filter((item) => item.count > 0)
 

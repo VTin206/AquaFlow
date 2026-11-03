@@ -32,6 +32,8 @@ export const backendFeatures = {
   reactivate: false,
   /** Hộp thông báo cá nhân qua NotificationController. */
   notifications: true,
+  /** Đăng ký và đăng nhập cho khách (AuthController mới có login, me cho nhân viên). Form đăng ký đang khóa nên ẩn mọi lối vào, kể cả bản dùng thử. */
+  customerAccounts: false,
 } satisfies Record<string, boolean>
 
 export type BackendFeature = keyof typeof backendFeatures
