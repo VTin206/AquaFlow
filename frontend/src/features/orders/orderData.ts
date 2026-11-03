@@ -57,7 +57,7 @@ export function fromLiveOrder(order: LiveOrder, products: CatalogProduct[]): Ord
     payments: [],
     paymentStatusLabel: order.status === 'CANCELLED' ? 'Đã hủy' : paymentStatusLabels[order.paymentStatus],
     history: [{ at: order.createdAt, message: 'Tạo đơn' }],
-    stockReserved: ['CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY'].includes(order.status),
+    stockReserved: ['CONFIRMED', 'PREPARING'].includes(order.status),
   }
 }
 

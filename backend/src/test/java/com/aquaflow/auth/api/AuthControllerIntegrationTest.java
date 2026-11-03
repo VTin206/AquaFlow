@@ -38,6 +38,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 @AutoConfigureMockMvc
 class AuthControllerIntegrationTest {
+    @MockBean private com.aquaflow.customer.order.repository.DispatchRepository dispatchRepository;
+    @MockBean private com.aquaflow.inventory.application.StockDispatchService stockDispatchService;
     @MockBean private com.aquaflow.workspace.repository.StoreSettingsRepository storeSettingsRepository;
     @MockBean private com.aquaflow.workspace.repository.NotificationRepository notificationRepository;
 

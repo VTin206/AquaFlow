@@ -59,6 +59,15 @@ public class StockReservation {
         return outstanding;
     }
 
+    public int dispatchOutstanding() {
+        int outstanding = getOutstanding();
+        if (outstanding <= 0) {
+            throw new com.aquaflow.shared.api.ConflictException("Reservation không còn hàng để xuất");
+        }
+        quantityDispatched += outstanding;
+        return outstanding;
+    }
+
     public Long getId() { return id; }
     public Long getOrderItemId() { return orderItemId; }
     public ProductBatch getBatch() { return batch; }

@@ -62,7 +62,9 @@ public class StockReservationService {
     @Transactional
     public void release(Collection<Long> orderItemIds) {
         List<StockReservation> reservations = reservationRepository.findByOrderItemIdIn(orderItemIds).stream()
-                .sorted(Comparator.comparing(r -> r.getBatch().getId()))
+                .sorted(Comparator.comparing((StockReservation r) -> r.getBatch().getProduct().getId())
+                        .thenComparing(r -> r.getBatch().getExpiresOn())
+                        .thenComparing(r -> r.getBatch().getId()))
                 .toList();
 
         if (reservations.stream().anyMatch(r -> r.getQuantityDispatched() > 0)) {
