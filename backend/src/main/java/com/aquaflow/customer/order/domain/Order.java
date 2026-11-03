@@ -207,6 +207,15 @@ public class Order {
         }
     }
 
+    /** Only the transactional dispatch workflow may advance past PREPARING. */
+    public void markDispatched() {
+        if (status != OrderStatus.PREPARING) {
+            throw new com.aquaflow.shared.api.ConflictException("Chỉ xuất kho đơn đang chuẩn bị");
+        }
+        status = fulfillmentType == FulfillmentType.DELIVERY
+                ? OrderStatus.OUT_FOR_DELIVERY : OrderStatus.DELIVERED;
+    }
+
     public Long getId() {
         return id;
     }
