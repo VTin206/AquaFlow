@@ -1,9 +1,10 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
+import { URL } from 'node:url'
 
 const { matchesSearch, normalizeSearch } = await import('/src/shared/utils/search.ts')
 const { expiryStatus } = await import('/src/features/inventory/expiry.ts')
-const { parseOrderFilters, initialOrderFilters } = await import('/src/features/orders/useOrderFilters.ts')
+const { ordersLink, parseOrderFilters, initialOrderFilters } = await import('/src/features/orders/useOrderFilters.ts')
 
 test('Vietnamese search handles accents, Đ, combining characters and repeated whitespace', () => {
   assert.equal(normalizeSearch('  ĐẶNG   Nguyễn  '), 'dang nguyen')
@@ -42,4 +43,11 @@ test('order filters restore valid selections and recover from corrupt or outdate
   }
   assert.deepEqual(parseOrderFilters({ query: 15, status: 'OLD', method: {}, payment: 'UNKNOWN' }), initialOrderFilters)
   assert.deepEqual(parseOrderFilters({ query: 'Giữ từ khóa', status: 'OLD' }), { ...initialOrderFilters, query: 'Giữ từ khóa' })
+})
+test('order links carry filters that survive the URL round trip', () => {
+  const params = new URL(ordersLink({ status: 'Chờ xác nhận' }), 'http://local').searchParams
+  assert.deepEqual(parseOrderFilters({ status: params.get('status'), payment: params.get('payment') }), {
+    ...initialOrderFilters,
+    status: 'Chờ xác nhận',
+  })
 })

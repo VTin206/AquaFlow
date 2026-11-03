@@ -18,6 +18,7 @@ import { AdvanceStatusButton } from '@/features/orders/components/AdvanceStatusB
 import { CreateOrderModal } from '@/features/orders/components/CreateOrderModal'
 import { OrdersTable } from '@/features/orders/components/OrdersTable'
 import { useOrderList } from '@/features/orders/orderData'
+import { ordersLink } from '@/features/orders/useOrderFilters'
 import { amountDue, createdAtOf, orderedAtOf, type Order } from '@/features/orders/types'
 import { dayFromToday, localDay, useDailyRevenue } from '@/features/reports/reportService'
 
@@ -181,9 +182,9 @@ export function DashboardPage() {
   // Dòng tóm tắt: chỉ liệt kê việc đang có, mỗi mục dẫn tới trang xử lý.
   const summary = [
     { count: failed.length, label: 'giao thất bại', to: '/delivery', tone: 'danger' },
-    { count: pending.length, label: 'đơn chờ xác nhận', to: '/orders', tone: 'warning' },
+    { count: pending.length, label: 'đơn chờ xác nhận', to: ordersLink({ status: 'Chờ xác nhận' }), tone: 'warning' },
     { count: shipping.length, label: 'đang giao', to: '/delivery' },
-    { count: unpaid.length, label: 'đơn chưa thu đủ', to: '/orders', tone: 'warning' },
+    { count: unpaid.length, label: 'đơn chưa thu đủ', to: ordersLink({ payment: 'Còn phải thu' }), tone: 'warning' },
     { count: lowStock.length, label: 'sản phẩm sắp hết', to: '/inventory', tone: 'warning' },
   ].filter((item) => item.count > 0)
 
