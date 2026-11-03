@@ -69,18 +69,17 @@ export function CheckoutPage() {
       submitLock,
       () => mutation.mutateAsync(draft),
       (order) => {
-        if (demo)
-          saveProfile(
-            values.remember
-              ? {
-                  customer: values.customer.trim(),
-                  phone: values.phone.trim(),
-                  address: values.address.trim(),
-                  area: values.area.trim(),
-                  floor,
-                }
-              : null,
-          )
+        saveProfile(
+          values.remember
+            ? {
+                customer: values.customer.trim(),
+                phone: values.phone.trim(),
+                address: values.address.trim(),
+                area: values.area.trim(),
+                floor,
+              }
+            : null,
+        )
         actions.clear()
         if (demo && 'trackingToken' in order && order.trackingToken) navigate(`/track/${order.trackingToken}`, { state: { placed: true } })
         else if (!demo) setPlacedLiveOrder(order as LiveOrder)
@@ -243,11 +242,9 @@ export function CheckoutPage() {
               <Form.Item name="note" label="Ghi chú" rules={[{ max: 500 }]}>
                 <Input.TextArea rows={2} />
               </Form.Item>
-              {demo && (
-                <Form.Item name="remember" valuePropName="checked">
-                  <Checkbox>Lưu thông tin trên máy này cho lần đặt sau</Checkbox>
-                </Form.Item>
-              )}
+              <Form.Item name="remember" valuePropName="checked">
+                <Checkbox>Lưu thông tin trên máy này cho lần đặt sau</Checkbox>
+              </Form.Item>
               <Button type="primary" block htmlType="submit" disabled={invalid} loading={mutation.isPending}>
                 {demo ? 'Đặt đơn dùng thử' : 'Đặt đơn'}
               </Button>
