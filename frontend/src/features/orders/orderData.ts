@@ -41,6 +41,7 @@ export function fromLiveOrder(order: LiveOrder, products: CatalogProduct[]): Ord
     customer: order.recipientName || 'Khách tại quầy',
     phone: order.recipientPhone ?? '',
     address: order.deliveryAddress ?? '',
+    area: order.deliveryArea ?? undefined,
     items: lines.map((line) => `${line.name} × ${line.quantity}`).join(', '),
     total: Number(order.total),
     time: timeOf(order.createdAt),

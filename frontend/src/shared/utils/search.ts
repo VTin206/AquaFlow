@@ -8,7 +8,7 @@ export const normalizeSearch = (text: string) =>
     .trim()
     .replace(/\s+/g, ' ')
 
-const phoneDigits = (text: string) => text.replace(/\D/g, '').replace(/^84(?=\d{9,10}$)/, '0')
+export const phoneDigits = (text: string) => text.replace(/\D/g, '').replace(/^84(?=\d{9,10}$)/, '0')
 
 /** Giữ tìm theo chuỗi cho tên/mã; chỉ bỏ dấu phân cách khi từ khóa là số điện thoại. */
 export function matchesSearch(query: string, text: string, phone?: string) {

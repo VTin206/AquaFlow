@@ -14,9 +14,8 @@ import { isLowStock } from '@/features/inventory/types'
 import { useProducts } from '@/features/inventory/useProducts'
 import { LiveConfirmButton } from '@/features/live/LiveConfirmButton'
 import { LiveOrderDetails } from '@/features/live/LiveOrderDetails'
-import { LiveOrderDraftModal } from '@/features/live/LiveOrderDraftModal'
 import { AdvanceStatusButton } from '@/features/orders/components/AdvanceStatusButton'
-import { CreateOrderModal } from '@/features/orders/components/CreateOrderModal'
+import { OrderIntakeModal } from '@/features/orders/components/OrderIntakeModal'
 import { OrdersTable } from '@/features/orders/components/OrdersTable'
 import { useOrderList } from '@/features/orders/orderData'
 import { ordersLink } from '@/features/orders/useOrderFilters'
@@ -392,18 +391,8 @@ export function DashboardPage() {
         </Col>
       </Row>
 
-      {demo ? (
-        <CreateOrderModal open={creatingOrder} onClose={() => setCreatingOrder(false)} />
-      ) : (
-        creatingOrder && (
-          <LiveOrderDraftModal
-            onClose={() => setCreatingOrder(false)}
-            onCreated={(order) => {
-              setCreatingOrder(false)
-              setOpenedOrder(order.id)
-            }}
-          />
-        )
+      {creatingOrder && (
+        <OrderIntakeModal onClose={() => setCreatingOrder(false)} onCreated={demo ? undefined : (id) => setOpenedOrder(Number(id))} />
       )}
       {openedOrder !== null && <LiveOrderDetails key={openedOrder} id={openedOrder} onClose={() => setOpenedOrder(null)} />}
       <ReceiveStockModal open={receiving !== null} defaultProductId={receiving?.productId} onClose={() => setReceiving(null)} />

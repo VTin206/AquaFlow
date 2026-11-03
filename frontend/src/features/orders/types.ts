@@ -66,6 +66,8 @@ export type Order = {
   customer: string
   phone: string
   address: string
+  /** Khu vực giao (tài khoản thật: deliveryArea của BE). */
+  area?: string
   items: string
   total: number
   time: string

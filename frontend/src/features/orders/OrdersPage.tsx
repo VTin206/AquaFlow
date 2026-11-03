@@ -6,8 +6,7 @@ import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
 import { useFeature, useIsDemo } from '@/shared/features'
 import { LiveOrderDetails } from '@/features/live/LiveOrderDetails'
-import { LiveOrderDraftModal } from '@/features/live/LiveOrderDraftModal'
-import { CreateOrderModal } from './components/CreateOrderModal'
+import { OrderIntakeModal } from './components/OrderIntakeModal'
 import { OrdersTable } from './components/OrdersTable'
 import { statusesFor } from './orderStatus'
 import { useOrderList } from './orderData'
@@ -151,19 +150,7 @@ export function OrdersPage() {
           </>
         )}
       </Card>
-      {demo ? (
-        <CreateOrderModal open={creating} onClose={() => setCreating(false)} />
-      ) : (
-        creating && (
-          <LiveOrderDraftModal
-            onClose={() => setCreating(false)}
-            onCreated={(order) => {
-              setCreating(false)
-              setCreated(order.id)
-            }}
-          />
-        )
-      )}
+      {creating && <OrderIntakeModal onClose={() => setCreating(false)} onCreated={demo ? undefined : (id) => setCreated(Number(id))} />}
       {created !== null && <LiveOrderDetails key={created} id={created} onClose={() => setCreated(null)} />}
     </Page>
   )

@@ -1803,6 +1803,27 @@ body {
   margin-bottom: 16px;
   color: var(--af-primary);
 }
+.af-intake-last {
+  align-items: center;
+  background: var(--af-primary-soft);
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+}
+.af-intake-last .af-cell-stack {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.af-quick-products {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
 @media (max-width: 575px) {
   .af-profile-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -11,10 +11,9 @@ import { Money } from '@/shared/components/Money'
 import { downloadExcel, type ExcelColumn } from '@/shared/utils/excel'
 import { currency } from '@/shared/utils/format'
 import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
-import { useFeature, useIsDemo } from '@/shared/features'
+import { useFeature } from '@/shared/features'
 import { Unsupported } from '@/shared/components/Unsupported'
-import { LiveOrderDraftModal } from '@/features/live/LiveOrderDraftModal'
-import { CreateOrderModal } from '@/features/orders/components/CreateOrderModal'
+import { OrderIntakeModal } from '@/features/orders/components/OrderIntakeModal'
 import { CustomerDrawer } from './components/CustomerDrawer'
 import { CustomerFormModal } from './components/CustomerFormModal'
 import { CustomerCards } from './components/CustomerCards'
@@ -24,7 +23,6 @@ import { matchesSearch } from '@/shared/utils/search'
 
 export function CustomersPage() {
   const screens = Grid.useBreakpoint()
-  const demo = useIsDemo()
   const showArea = useFeature('customerProfileExtras')
   const showDebt = useFeature('customerDebt')
   const showBottles = useFeature('bottleLedger')
@@ -360,20 +358,7 @@ export function CustomersPage() {
         onClose={() => setEditing(undefined)}
         onSaved={(customer) => editing === null && setProfileId(customer.id)}
       />
-      {!demo && orderFor && (
-        <LiveOrderDraftModal
-          defaultCustomer={{ id: Number(orderFor.id), name: orderFor.name, phone: orderFor.phone || undefined }}
-          onClose={() => setOrderFor(null)}
-          onCreated={() => setOrderFor(null)}
-        />
-      )}
-      <CreateOrderModal
-        open={demo && orderFor !== null}
-        defaultCustomer={orderFor?.name}
-        defaultPhone={orderFor?.phone}
-        defaultAddress={orderFor?.addresses[0]}
-        onClose={() => setOrderFor(null)}
-      />
+      {orderFor && <OrderIntakeModal key={orderFor.id} defaultCustomer={orderFor} onClose={() => setOrderFor(null)} />}
     </Page>
   )
 }
