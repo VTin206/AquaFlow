@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button, Select, Space } from 'antd'
 import { Eye } from 'lucide-react'
+import { LiveConfirmButton } from '@/features/live/LiveConfirmButton'
 import { MobileRecordList } from '@/shared/components/MobileRecordList'
 import { Money } from '@/shared/components/Money'
 import { useFeature, useIsDemo } from '@/shared/features'
@@ -89,6 +90,7 @@ export function OrderCards({ orders, loading, compact, emptyText, onDetails, fil
               Chi tiết
             </Button>
             {!compact && demo && nextActionLabel(order) && <AdvanceStatusButton order={order} size="middle" />}
+            {!compact && !demo && order.status === 'Chờ xác nhận' && <LiveConfirmButton order={order} size="middle" />}
           </div>
         </article>
       )}

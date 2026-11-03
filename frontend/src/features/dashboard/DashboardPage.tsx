@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Button, Card, Col, Empty, Row, Statistic, Tag } from 'antd'
+import { Button, Card, Col, Empty, Row, Space, Statistic, Tag } from 'antd'
 import { ArrowRight, PackagePlus, Plus } from 'lucide-react'
 import { Link } from 'react-router'
 import { BarChart } from '@/shared/components/BarChart'
@@ -12,6 +12,7 @@ import { ReceiveStockModal } from '@/features/inventory/components/ReceiveStockM
 import { useStockItems } from '@/features/inventory/useInventory'
 import { isLowStock } from '@/features/inventory/types'
 import { useProducts } from '@/features/inventory/useProducts'
+import { LiveConfirmButton } from '@/features/live/LiveConfirmButton'
 import { LiveOrderDetails } from '@/features/live/LiveOrderDetails'
 import { LiveOrderDraftModal } from '@/features/live/LiveOrderDraftModal'
 import { AdvanceStatusButton } from '@/features/orders/components/AdvanceStatusButton'
@@ -143,9 +144,12 @@ export function DashboardPage() {
         demo ? (
           <AdvanceStatusButton order={order} />
         ) : (
-          <Button size="small" type="primary" onClick={() => setOpenedOrder(Number(order.id))}>
-            Xem đơn
-          </Button>
+          <Space size={6}>
+            <Button size="small" onClick={() => setOpenedOrder(Number(order.id))}>
+              Xem đơn
+            </Button>
+            <LiveConfirmButton order={order} />
+          </Space>
         ),
       ),
     ),

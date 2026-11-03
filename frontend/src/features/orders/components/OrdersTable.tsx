@@ -5,6 +5,7 @@ import { Money } from '@/shared/components/Money'
 import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
 import { useColumnSort } from '@/shared/components/sortableColumn'
 import { useFeature, useIsDemo } from '@/shared/features'
+import { LiveConfirmButton } from '@/features/live/LiveConfirmButton'
 import { LiveOrderDetails } from '@/features/live/LiveOrderDetails'
 import { amountDue, compareDeliveryDue, deliveryTimingOf, paymentLabel, type Order } from '../types'
 import { AdvanceStatusButton } from './AdvanceStatusButton'
@@ -27,7 +28,7 @@ type OrdersTableProps = {
 export function OrdersTable({ orders, loading, compact = false, emptyText = 'Chưa có đơn hàng nào.', filterKey }: OrdersTableProps) {
   const screens = Grid.useBreakpoint()
   const demo = useIsDemo()
-  // Tài khoản thật: BE chưa có phiếu thu nên không tính "còn phải thu"; thao tác đơn nằm trong chi tiết đơn.
+  // Tài khoản thật: BE chưa có phiếu thu nên không tính "còn phải thu"; ngoài xác nhận, thao tác đơn nằm trong chi tiết đơn.
   const showPayments = useFeature('orderPayments')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   // Tích chọn nhiều đơn (chỉ bảng đầy đủ); chỉ tính các đơn còn hiện theo bộ lọc.
@@ -146,6 +147,7 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
             />
           </Tooltip>
           {!compact && demo && <AdvanceStatusButton order={order} menu />}
+          {!compact && !demo && order.status === 'Chờ xác nhận' && <LiveConfirmButton order={order} iconOnly />}
         </Space>
       ),
     },
