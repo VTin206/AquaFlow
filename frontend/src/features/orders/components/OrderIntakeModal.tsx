@@ -9,10 +9,19 @@ import { useFeature } from '@/shared/features'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { focusNextOnEnter } from '@/shared/utils/forms'
 import { currency } from '@/shared/utils/format'
-import { matchesSearch, phoneDigits } from '@/shared/utils/search'
+import { phoneDigits } from '@/shared/utils/search'
 import { useOrderList } from '../orderData'
-import { addQuickLine, bestSellers, lastOrderOf, samePhone, shortProductName, type IntakeLine, type IntakeValues } from '../orderIntake'
-import { orderedAtOf, type Order } from '../types'
+import {
+  addQuickLine,
+  bestSellers,
+  contactSuggestions,
+  lastOrderOf,
+  samePhone,
+  shortProductName,
+  type IntakeLine,
+  type IntakeValues,
+} from '../orderIntake'
+import { orderedAtOf, walkInName, type Order } from '../types'
 import { useIntakeAddresses, useIntakeProducts, useSubmitIntake, type IntakeAddress, type IntakeProduct } from '../useOrderIntake'
 import { FormSection } from '@/shared/components/FormSection'
 import { ModalTotalFooter } from '@/shared/components/ModalTotalFooter'
@@ -110,6 +119,24 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
     if (saved) applyAddress(saved)
   })
 
+  // Số từng đặt đơn nhưng chưa có hồ sơ: điền từ đơn gần nhất vào ô còn trống, đổi số thì bỏ.
+  const contactOrder = customer ? undefined : lastOrder
+  const orderFilledFor = useRef<string>(undefined)
+  useEffect(() => {
+    const key = contactOrder && phoneDigits(contactOrder.phone)
+    if (key === orderFilledFor.current) return
+    const hadOrder = orderFilledFor.current !== undefined
+    orderFilledFor.current = key
+    if (contactOrder) {
+      const { customer: name, address: line, area: place } = form.getFieldsValue(['customer', 'address', 'area'])
+      form.setFieldsValue({
+        customer: name || (contactOrder.customer === walkInName ? '' : contactOrder.customer),
+        address: line || contactOrder.address,
+        area: place || (contactOrder.area ?? ''),
+      })
+    } else if (hadOrder && !customer) form.setFieldsValue({ customer: '', address: '', area: '' })
+  })
+
   const reorder = (order: Order) => {
     const kept = order.lines.filter((line) => productOf(line.productId)?.sellable)
     const dropped = order.lines.filter((line) => !productOf(line.productId)?.sellable)
@@ -126,13 +153,7 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
   }
 
   const typed = typedPhone.trim()
-  const suggestions =
-    !customer && typed.length >= 2
-      ? customers
-          .filter((item) => item.phone && matchesSearch(typed, `${item.name} ${item.phone}`, item.phone))
-          .slice(0, 6)
-          .map((item) => ({ value: item.phone, label: `${item.name} · ${item.phone}` }))
-      : []
+  const suggestions = !customer && typed.length >= 2 ? contactSuggestions(customers, orders, typed) : []
   const isNewPhone = !customer && !lastOrder && phoneDigits(typed).length >= 10
   const customerFacts = customer
     ? [
@@ -210,6 +231,7 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
                 <Form.Item
                   name="phone"
                   label="Số điện thoại"
+                  validateTrigger="onBlur"
                   rules={[
                     { required: needsCustomer, message: 'Nhập số điện thoại.' },
                     {
@@ -226,6 +248,8 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
                     onChange={(value: string) => {
                       setTypedPhone(value ?? '')
                       setPinned(undefined)
+                      // Đang gõ dở thì chưa báo lỗi; rời ô hoặc tạo đơn mới kiểm tra.
+                      form.setFields([{ name: 'phone', errors: [] }])
                     }}
                   />
                 </Form.Item>

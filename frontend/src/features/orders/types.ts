@@ -124,6 +124,9 @@ export const paymentLabel = (order: Order) =>
 export const jugCount = (order: Pick<Order, 'lines'>) =>
   order.lines.filter((line) => line.unit === 'Bình').reduce((sum, line) => sum + line.quantity, 0)
 
+/** Tên hiển thị cho đơn không có tên người nhận. */
+export const walkInName = 'Khách tại quầy'
+
 export const createdAtOf = (order: Pick<Order, 'history'>) => order.history[0]?.at
 
 /** Lúc đặt đơn: nhãn ngắn theo ngày ("Hôm qua 13:10") và ngày giờ đầy đủ cho tooltip; thiếu thời điểm thì dùng giờ có sẵn. */

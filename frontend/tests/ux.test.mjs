@@ -5,7 +5,7 @@ import { URL } from 'node:url'
 const { matchesSearch, normalizeSearch } = await import('/src/shared/utils/search.ts')
 const { expiryStatus } = await import('/src/features/inventory/expiry.ts')
 const { ordersLink, parseOrderFilters, initialOrderFilters } = await import('/src/features/orders/useOrderFilters.ts')
-const { addQuickLine, bestSellers, lastOrderOf, samePhone, shortProductName, toLiveOrderInput } =
+const { addQuickLine, bestSellers, contactSuggestions, lastOrderOf, samePhone, shortProductName, toLiveOrderInput } =
   await import('/src/features/orders/orderIntake.ts')
 
 test('Vietnamese search handles accents, Đ, combining characters and repeated whitespace', () => {
@@ -121,4 +121,25 @@ test('order links carry filters that survive the URL round trip', () => {
     ...initialOrderFilters,
     status: 'Chờ xác nhận',
   })
+})
+
+test('order intake suggests contacts from profiles first, then from past orders without a profile', () => {
+  const order = (phone, customer, status = 'Đã giao') => ({ phone, customer, status })
+  const customers = [
+    { name: 'Lan', phone: '0901112223' },
+    { name: 'Không số', phone: '' },
+  ]
+  const orders = [
+    order('0901 112 223', 'Lan'),
+    order('0123456789', 'Nam'),
+    order('0123000111', 'Khách tại quầy'),
+    order('0123999999', 'Hủy', 'Đã hủy'),
+  ]
+  assert.deepEqual(contactSuggestions(customers, orders, '012'), [
+    { value: '0123456789', label: 'Nam · 0123456789' },
+    { value: '0123000111', label: '0123000111' },
+  ])
+  assert.deepEqual(contactSuggestions(customers, orders, '0901'), [{ value: '0901112223', label: 'Lan · 0901112223' }])
+  assert.deepEqual(contactSuggestions(customers, orders, 'khong so'), [])
+  assert.equal(contactSuggestions(customers, orders, '0', 1).length, 1)
 })

@@ -5,7 +5,7 @@ import { catalogApi, type CatalogProduct } from '@/features/live/catalogApi'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { channelLabels, orderApi, paymentStatusLabels, type LiveOrder } from '@/features/live/orderApi'
 import { orderStatuses } from './orderStatus'
-import type { Order, OrderStatus } from './types'
+import { walkInName, type Order, type OrderStatus } from './types'
 import { useAdvanceOrderStatus, useOrders } from './useOrders'
 
 /**
@@ -40,7 +40,7 @@ export function fromLiveOrder(order: LiveOrder, products: CatalogProduct[]): Ord
     id: String(order.id),
     code: order.orderCode,
     customerId: order.customerId === null ? undefined : String(order.customerId),
-    customer: order.recipientName || 'Khách tại quầy',
+    customer: order.recipientName || walkInName,
     phone: order.recipientPhone ?? '',
     address: order.deliveryAddress ?? '',
     area: order.deliveryArea ?? undefined,
