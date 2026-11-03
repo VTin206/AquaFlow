@@ -14,6 +14,9 @@ import { useOrderList } from '../orderData'
 import { addQuickLine, bestSellers, lastOrderOf, samePhone, shortProductName, type IntakeLine, type IntakeValues } from '../orderIntake'
 import { orderedAtOf, type Order } from '../types'
 import { useIntakeAddresses, useIntakeProducts, useSubmitIntake, type IntakeAddress, type IntakeProduct } from '../useOrderIntake'
+import { FormSection } from '@/shared/components/FormSection'
+import { ModalTotalFooter } from '@/shared/components/ModalTotalFooter'
+import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
 
 type OrderIntakeModalProps = {
   onClose: () => void
@@ -144,8 +147,8 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
     <Modal
       open
       title="Tiếp nhận đơn hàng"
-      width={960}
-      styles={{ body: { maxHeight: 'calc(100dvh - 200px)', overflowY: 'auto', overflowX: 'hidden', paddingRight: 8 } }}
+      width={modalWidth.large}
+      styles={modalScrollBody}
       okText="Tạo đơn chờ xác nhận"
       cancelText="Hủy"
       okButtonProps={{ disabled: loadingProducts || Boolean(productsError) }}
@@ -154,14 +157,10 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
       onCancel={submit.isPending ? undefined : cancel}
       mask={{ closable: !submit.isPending }}
       footer={(_, { OkBtn, CancelBtn }) => (
-        <div className="af-intake-footer">
-          <div className="af-intake-total" role="status">
-            <small>Tiền hàng dự kiến</small>
-            <strong>{currency(goods)}</strong>
-          </div>
+        <ModalTotalFooter label="Tiền hàng dự kiến" value={currency(goods)}>
           <CancelBtn />
           <OkBtn />
-        </div>
+        </ModalTotalFooter>
       )}
     >
       {productsError ? (
@@ -205,12 +204,9 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
               action={<Button onClick={() => void customersQuery.refetch()}>Thử lại</Button>}
             />
           )}
-          <div className="af-intake-grid">
+          <div className="af-form-columns">
             <div>
-              <section aria-labelledby="af-intake-customer">
-                <h3 id="af-intake-customer" className="af-form-section-title">
-                  Khách hàng
-                </h3>
+              <FormSection title="Khách hàng">
                 <Form.Item
                   name="phone"
                   label="Số điện thoại"
@@ -282,12 +278,9 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
                     </Button>
                   </div>
                 )}
-              </section>
+              </FormSection>
 
-              <section aria-labelledby="af-intake-delivery">
-                <h3 id="af-intake-delivery" className="af-form-section-title">
-                  Giao nhận
-                </h3>
+              <FormSection title="Giao nhận">
                 <Row gutter={12}>
                   <Col xs={24} sm={14}>
                     <Form.Item name="method" label="Hình thức nhận" rules={[{ required: true }]}>
@@ -356,14 +349,11 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
                     </Form.Item>
                   </>
                 )}
-              </section>
+              </FormSection>
             </div>
 
             <div>
-              <section aria-labelledby="af-intake-products">
-                <h3 id="af-intake-products" className="af-form-section-title">
-                  Sản phẩm
-                </h3>
+              <FormSection title="Sản phẩm">
                 {quickProducts.length > 0 && (
                   <div className="af-quick-products" role="group" aria-label="Chọn nhanh sản phẩm bán chạy">
                     <small>Bán chạy</small>
@@ -456,21 +446,18 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
                     </>
                   )}
                 </Form.List>
-              </section>
+              </FormSection>
 
-              <section aria-labelledby="af-intake-note">
-                <h3 id="af-intake-note" className="af-form-section-title">
-                  Ghi chú
-                </h3>
-                <Form.Item name="note" aria-labelledby="af-intake-note" rules={[{ max: 500, message: 'Tối đa 500 ký tự.' }]}>
-                  <Input.TextArea rows={3} placeholder="Hướng dẫn tìm địa chỉ, lưu ý giao nhận..." />
+              <FormSection title="Ghi chú">
+                <Form.Item name="note" rules={[{ max: 500, message: 'Tối đa 500 ký tự.' }]}>
+                  <Input.TextArea aria-label="Ghi chú" rows={3} placeholder="Hướng dẫn tìm địa chỉ, lưu ý giao nhận..." />
                 </Form.Item>
                 <p className="af-form-hint">
                   Đơn mới ở trạng thái chờ xác nhận. Tồn kho được kiểm tra và giữ hàng khi xác nhận đơn. Phí giao và tổng tiền cuối cùng do
                   hệ thống tính.
                   {showBottles && ' Khách chưa có vỏ để đổi đặt cọc riêng khi nhận hàng, không gộp vào tiền hàng.'}
                 </p>
-              </section>
+              </FormSection>
             </div>
           </div>
         </Form>

@@ -5,6 +5,8 @@ import { useFeature } from '@/shared/features'
 import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 import { useBottleTypeOptions, useSaveProduct, type CatalogItem, type ProductForm } from '../useProductCatalog'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
+import { FormSection } from '@/shared/components/FormSection'
+import { modalWidth } from '@/shared/utils/modal'
 
 const MAX_IMAGE_MB = 5
 const UNITS = ['Bình', 'Thùng', 'Chai', 'Vỏ']
@@ -62,7 +64,7 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
       title={product ? `Sửa sản phẩm ${product.sku}` : 'Thêm sản phẩm'}
       okText="Lưu sản phẩm"
       cancelText="Hủy"
-      width={860}
+      width={modalWidth.large}
       confirmLoading={save.isPending}
       onOk={() => form.submit()}
       onCancel={cancel}
@@ -115,8 +117,7 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
           </div>
 
           <div className="af-product-form-fields">
-            <section>
-              <h4>Thông tin chung</h4>
+            <FormSection title="Thông tin chung">
               <Form.Item
                 name="name"
                 label="Tên sản phẩm"
@@ -148,10 +149,9 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
                   </Form.Item>
                 </Col>
               </Row>
-            </section>
+            </FormSection>
 
-            <section>
-              <h4>Bán hàng</h4>
+            <FormSection title="Bán hàng">
               <Row gutter={12}>
                 <Col xs={12} sm={8}>
                   <Form.Item name="unit" label="Đơn vị" rules={[{ required: true }]}>
@@ -175,10 +175,9 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
                   </Form.Item>
                 </Col>
               </Row>
-            </section>
+            </FormSection>
 
-            <section>
-              <h4>Kho</h4>
+            <FormSection title="Kho">
               <Row gutter={12}>
                 <Col xs={24} sm={8}>
                   <Form.Item
@@ -208,7 +207,7 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
                 </Col>
               </Row>
               {!product && <p className="af-form-hint">Tồn kho tăng khi xác nhận phiếu nhập ở trang Kho.</p>}
-            </section>
+            </FormSection>
           </div>
         </div>
       </Form>

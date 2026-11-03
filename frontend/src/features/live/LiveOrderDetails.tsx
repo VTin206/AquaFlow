@@ -17,6 +17,7 @@ import {
   type OrderStatus,
 } from './orderApi'
 import { invalidateLiveData } from './invalidateLiveData'
+import { modalWidth } from '@/shared/utils/modal'
 
 const dateTime = (value: string | null) => (value ? new Date(value).toLocaleString('vi-VN') : '—')
 const statusColors: Record<OrderStatus, string> = {
@@ -119,7 +120,7 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
     <Modal
       open
       title={order ? `Đơn ${order.orderCode}` : 'Chi tiết đơn hàng'}
-      width={850}
+      width={modalWidth.large}
       onCancel={onClose}
       footer={
         <Space wrap>

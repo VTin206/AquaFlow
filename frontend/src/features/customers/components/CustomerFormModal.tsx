@@ -5,6 +5,7 @@ import { useSaveCustomer } from '../useCustomers'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { useFeature, useIsDemo } from '@/shared/features'
 import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
+import { modalWidth } from '@/shared/utils/modal'
 
 type CustomerFormModalProps = { open: boolean; customer?: Customer; onClose: () => void; onSaved?: (customer: Customer) => void }
 
@@ -24,7 +25,7 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
       title={customer ? `Sửa hồ sơ ${customer.name}` : 'Thêm khách hàng'}
       okText={customer ? 'Lưu thay đổi' : 'Thêm khách hàng'}
       cancelText="Hủy"
-      width={620}
+      width={modalWidth.small}
       confirmLoading={save.isPending}
       onOk={() => form.submit()}
       onCancel={cancel}

@@ -5,6 +5,7 @@ import { Pencil } from 'lucide-react'
 import { api } from '@/shared/api/client'
 import { QueryError } from '@/shared/components/QueryError'
 import { invalidateLiveData } from './invalidateLiveData'
+import { modalWidth } from '@/shared/utils/modal'
 
 type Address = {
   id: number
@@ -66,7 +67,13 @@ export function LiveCustomerAddresses({
 
   return (
     <>
-      <Modal title={`Địa chỉ của ${customerName}`} open onCancel={onClose} footer={<Button onClick={onClose}>Đóng</Button>} width={800}>
+      <Modal
+        title={`Địa chỉ của ${customerName}`}
+        open
+        onCancel={onClose}
+        footer={<Button onClick={onClose}>Đóng</Button>}
+        width={modalWidth.medium}
+      >
         <Button type="primary" onClick={() => open(null)} style={{ marginBottom: 16 }}>
           Thêm địa chỉ
         </Button>
@@ -109,6 +116,7 @@ export function LiveCustomerAddresses({
         onCancel={() => setEditing(undefined)}
         onOk={() => form.submit()}
         confirmLoading={save.isPending}
+        width={modalWidth.small}
         destroyOnHidden
       >
         <Form form={form} layout="vertical" onFinish={(draft) => save.mutate(draft)}>

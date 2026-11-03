@@ -4,6 +4,7 @@ import { PackageCheck } from 'lucide-react'
 import { awaitingReturnInspection, deliveryAttempts, returnLinesOf, type Order, type ReturnInspectionDraft } from '@/features/orders/types'
 import { useOrderAction, useOrders } from '@/features/orders/useOrders'
 import { isoToVnDate } from '../expiry'
+import { modalWidth } from '@/shared/utils/modal'
 
 /** Đơn giao thất bại có hàng mang về: kiểm từng lô trước khi nhập lại kho. */
 export function ReturnsPanel() {
@@ -105,11 +106,11 @@ function ReturnInspectionModal({ order, onClose }: { order: Order; onClose: () =
       open
       title={`Kiểm hàng hoàn · ${order.id}`}
       okText="Xác nhận tiếp nhận"
-      cancelText="Đóng"
+      cancelText="Hủy"
       confirmLoading={action.isPending}
       onCancel={onClose}
       onOk={() => form.submit()}
-      width={640}
+      width={modalWidth.medium}
     >
       <Form form={form} layout="vertical" initialValues={{ sellable: lines.map((line) => line.quantity) }} onFinish={submit}>
         <Table
