@@ -5,9 +5,8 @@ import { Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { customerCode, type Customer } from '@/features/customers/types'
 import { useCustomers } from '@/features/customers/useCustomers'
 import { QueryError } from '@/shared/components/QueryError'
-import { useFeature, useIsDemo } from '@/shared/features'
+import { useFeature } from '@/shared/features'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
-import { FREE_DELIVERY_MIN_UNITS, SMALL_ORDER_FEE, stairsSurcharge, suggestedDeliveryFee } from '@/shared/policy'
 import { focusNextOnEnter } from '@/shared/utils/forms'
 import { currency } from '@/shared/utils/format'
 import { matchesSearch, phoneDigits } from '@/shared/utils/search'
@@ -31,7 +30,6 @@ const priceAndStock = (product: IntakeProduct) =>
 
 /** Nhận đơn bắt đầu từ số điện thoại: khách quen tự điền thông tin và đặt lại đơn trước chỉ với một lần bấm. */
 export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderIntakeModalProps) {
-  const demo = useIsDemo()
   const { message } = App.useApp()
   const [form] = Form.useForm<IntakeValues>()
   const cancel = useConfirmDiscard(form, onClose)
@@ -54,8 +52,6 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
 
   const method = Form.useWatch('method', form) ?? 'Giao tận nơi'
   const lines: IntakeLine[] = Form.useWatch('lines', form) ?? []
-  const fee = Form.useWatch('deliveryFee', form) ?? 0
-  const floor = Form.useWatch('floor', form) ?? 0
   const recipient = Form.useWatch('customer', form) ?? ''
   const address = Form.useWatch('address', form) ?? ''
   const area = Form.useWatch('area', form) ?? ''
@@ -67,12 +63,10 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
     Boolean(customer) && editingFor !== customer?.id && Boolean(recipient.trim()) && (!delivery || Boolean(address.trim()))
 
   const productOf = (id?: string) => products.find((product) => product.id === id)
-  const units = lines.reduce((sum, line) => sum + (line?.quantity ?? 0), 0)
-  const jugs = lines.reduce((sum, line) => sum + (productOf(line?.productId)?.unit === 'Bình' ? (line?.quantity ?? 0) : 0), 0)
+  const hasJugs = lines.some((line) => productOf(line?.productId)?.unit === 'Bình')
   const goods = lines.reduce((sum, line) => sum + (productOf(line?.productId)?.price ?? 0) * (line?.quantity ?? 0), 0)
-  const suggestedFee = suggestedDeliveryFee({ units, jugs, floor })
-  // Bản dùng thử giữ quy tắc mua bình cần hồ sơ để theo dõi vỏ; backend chỉ bắt buộc với đơn giao.
-  const needsCustomer = delivery || (demo && jugs > 0)
+  // Giao tận nơi hoặc mua bình cần tên và số điện thoại để theo dõi vỏ; đơn quầy còn lại được phép vãng lai.
+  const needsCustomer = delivery || hasJugs
   const quickProducts = bestSellers(orders)
     .map((id) => productOf(id))
     .filter((product) => product?.sellable)
@@ -122,8 +116,6 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
       customer: order.customer,
       address: order.method === 'Giao tận nơi' ? order.address : '',
       area: order.area ?? '',
-      floor: order.floor ?? 0,
-      deliveryFee: order.deliveryFee,
       lines: kept.length ? kept.map(({ productId, quantity }) => ({ productId, quantity })) : [{ quantity: 1 }],
     })
     if (dropped.length) message.warning(`Không còn bán được: ${dropped.map((line) => line.name).join(', ')}. Chọn sản phẩm thay thế.`)
@@ -164,8 +156,8 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
       footer={(_, { OkBtn, CancelBtn }) => (
         <div className="af-intake-footer">
           <div className="af-intake-total" role="status">
-            <small>{demo ? 'Tổng tiền dự kiến' : 'Tiền hàng dự kiến'}</small>
-            <strong>{currency(goods + (demo && delivery ? fee : 0))}</strong>
+            <small>Tiền hàng dự kiến</small>
+            <strong>{currency(goods)}</strong>
           </div>
           <CancelBtn />
           <OkBtn />
@@ -187,8 +179,6 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
             customer: defaultCustomer?.name,
             method: 'Giao tận nơi',
             channel: 'Điện thoại',
-            deliveryFee: 0,
-            floor: 0,
             lines: [{ quantity: 1 }],
           }}
           // Lỗi nằm ở phần đang thu gọn thì mở ra để nhân viên thấy.
@@ -344,11 +334,9 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
                         }}
                       />
                     </Form.Item>
-                    {!demo && (
-                      <Form.Item name="area" label="Khu vực" hidden={contactCollapsed} rules={[{ max: 150, message: 'Tối đa 150 ký tự.' }]}>
-                        <Input placeholder="Phường / quận" />
-                      </Form.Item>
-                    )}
+                    <Form.Item name="area" label="Khu vực" hidden={contactCollapsed} rules={[{ max: 150, message: 'Tối đa 150 ký tự.' }]}>
+                      <Input placeholder="Phường / quận" />
+                    </Form.Item>
                     <Form.Item
                       name="appointment"
                       label="Giờ nhận mong muốn"
@@ -366,42 +354,6 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
                         style={{ width: '100%' }}
                       />
                     </Form.Item>
-                  </>
-                )}
-                {/* Tài khoản thật: phí giao do hệ thống tính nên không nhập ở đây. */}
-                {demo && delivery && (
-                  <>
-                    <Row gutter={12}>
-                      <Col xs={24} sm={12}>
-                        <Form.Item name="floor" label="Giao lên lầu (thang bộ)">
-                          <Select
-                            options={[
-                              { value: 0, label: 'Tầng trệt / có thang máy' },
-                              ...[1, 2, 3, 4].map((value) => ({
-                                value,
-                                label: `Lầu ${value} · +${stairsSurcharge(value, 1).toLocaleString('vi-VN')} ₫/bình`,
-                              })),
-                            ]}
-                          />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} sm={12}>
-                        <Form.Item name="deliveryFee" label="Phí giao hàng (₫)" rules={[{ required: true }, { type: 'integer', min: 0 }]}>
-                          <InputNumber min={0} step={1000} precision={0} style={{ width: '100%' }} />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                    <p className="af-form-hint af-fee-hint">
-                      {units >= FREE_DELIVERY_MIN_UNITS
-                        ? `Từ ${FREE_DELIVERY_MIN_UNITS} bình/thùng: miễn phí giao trong 5 km`
-                        : `Dưới ${FREE_DELIVERY_MIN_UNITS} bình/thùng: phí ${SMALL_ORDER_FEE.min.toLocaleString('vi-VN')}–${SMALL_ORDER_FEE.max.toLocaleString('vi-VN')} ₫ tùy khoảng cách`}
-                      {floor > 0 && jugs > 0 ? `, thang bộ +${currency(stairsSurcharge(floor, jugs))}` : ''}. Gợi ý {currency(suggestedFee)}{' '}
-                      {fee !== suggestedFee && (
-                        <Button type="link" size="small" onClick={() => form.setFieldValue('deliveryFee', suggestedFee)}>
-                          Áp dụng
-                        </Button>
-                      )}
-                    </p>
                   </>
                 )}
               </section>
@@ -514,10 +466,9 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
                   <Input.TextArea rows={3} placeholder="Hướng dẫn tìm địa chỉ, lưu ý giao nhận..." />
                 </Form.Item>
                 <p className="af-form-hint">
-                  Đơn mới ở trạng thái chờ xác nhận. Tồn kho được kiểm tra và giữ hàng khi xác nhận đơn.
-                  {demo
-                    ? ' Khách chưa có vỏ để đổi đặt cọc riêng khi nhận hàng, không gộp vào tiền hàng.'
-                    : ' Tổng tiền cuối cùng do hệ thống tính.'}
+                  Đơn mới ở trạng thái chờ xác nhận. Tồn kho được kiểm tra và giữ hàng khi xác nhận đơn. Phí giao và tổng tiền cuối cùng do
+                  hệ thống tính.
+                  {showBottles && ' Khách chưa có vỏ để đổi đặt cọc riêng khi nhận hàng, không gộp vào tiền hàng.'}
                 </p>
               </section>
             </div>

@@ -2,7 +2,7 @@ import { db } from '@/mocks/db'
 import { mockError, mockRequest } from '@/mocks/mockRequest'
 import { asCustomer, logActivity, mockActor, requireRole, type ActivityArea } from '@/mocks/session'
 import { addBottleEntry, bottleBalance, ensureCustomer } from '@/features/customers/customerService'
-import { suggestedDeliveryFee as webDeliveryFee } from '@/shared/policy'
+import { suggestedDeliveryFee } from '@/shared/policy'
 import { daysUntilExpiry } from '@/features/inventory/expiry'
 import {
   amountDue,
@@ -201,6 +201,15 @@ function settleBottles(order: Order, result: DeliveryResult) {
   return { delivered, returned, deposit }
 }
 
+/** Phí giao tính theo chính sách ở phía cửa hàng, người đặt không tự nhập. */
+export function deliveryFeeFor(lines: OrderDraft['lines'], floor = 0) {
+  const units = lines.reduce((sum, line) => sum + line.quantity, 0)
+  const jugs = lines
+    .filter((line) => db.products.find((product) => product.id === line.productId)?.unit === 'Bình')
+    .reduce((sum, line) => sum + line.quantity, 0)
+  return suggestedDeliveryFee({ units, jugs, floor })
+}
+
 function createOrder(draft: OrderDraft) {
   requireRole(draft.channel === 'Website' ? ['CUSTOMER', ...STAFF] : [...STAFF], 'tạo đơn hàng')
   if (!['Tại quầy', 'Giao tận nơi'].includes(draft.method)) throw mockError(400, 'Chọn hình thức nhận hàng.')
@@ -229,6 +238,7 @@ function createOrder(draft: OrderDraft) {
     customer: draft.customer?.trim() || 'Khách vãng lai',
     phone: draft.phone?.trim() || '',
     address: delivery ? draft.address!.trim() : 'Nhận tại cửa hàng',
+    area: delivery ? draft.area?.trim() || undefined : undefined,
     lines,
     items: summary(lines),
     total: subtotal(lines) + deliveryFee,
@@ -449,12 +459,7 @@ export const orderService = {
   /** Khách đặt trên website, không cần tài khoản; luôn giao tận nơi. */
   placeWebOrder: (draft: Omit<OrderDraft, 'channel' | 'method' | 'deliveryFee'>) =>
     mockRequest(() => {
-      // Phí giao tính theo chính sách ở phía cửa hàng, khách không tự nhập.
-      const units = (draft.lines ?? []).reduce((sum, line) => sum + line.quantity, 0)
-      const jugs = (draft.lines ?? [])
-        .filter((line) => db.products.find((product) => product.id === line.productId)?.unit === 'Bình')
-        .reduce((sum, line) => sum + line.quantity, 0)
-      const deliveryFee = webDeliveryFee({ units, jugs, floor: draft.floor ?? 0 })
+      const deliveryFee = deliveryFeeFor(draft.lines ?? [], draft.floor ?? 0)
       return toPublicOrder(
         asCustomer(draft.customer?.trim() || 'Khách', () =>
           createOrder({ ...draft, deliveryFee, channel: 'Website', method: 'Giao tận nơi' }),

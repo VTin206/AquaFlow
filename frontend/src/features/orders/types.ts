@@ -97,6 +97,7 @@ export type OrderDraft = {
   customer?: string
   phone?: string
   address?: string
+  area?: string
   method: Order['method']
   channel: Order['channel']
   lines: { productId: string; quantity: number }[]

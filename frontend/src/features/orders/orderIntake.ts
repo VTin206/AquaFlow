@@ -14,8 +14,6 @@ export type IntakeValues = {
   area?: string
   appointment?: Dayjs
   lines: IntakeLine[]
-  floor?: number
-  deliveryFee?: number
   note?: string
 }
 export type SubmittedLine = { productId: string; quantity: number }
@@ -77,15 +75,16 @@ export function toLiveOrderInput(values: IntakeValues, customerId: string | unde
   }
 }
 
-export const toDemoOrderDraft = (values: IntakeValues): OrderDraft => ({
+/** Dữ liệu mẫu tính phí giao thay cho hệ thống, như backend khi tạo đơn. */
+export const toDemoOrderDraft = (values: IntakeValues, deliveryFee: number): OrderDraft => ({
   customer: values.customer,
   phone: values.phone,
   address: values.address,
+  area: values.area,
   method: values.method,
   channel: values.channel,
   lines: submittedLines(values),
-  deliveryFee: values.deliveryFee ?? 0,
-  floor: values.floor ?? 0,
+  deliveryFee,
   appointment: values.appointment?.toISOString(),
   note: values.note,
 })

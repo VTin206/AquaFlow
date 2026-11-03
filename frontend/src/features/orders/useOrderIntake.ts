@@ -8,7 +8,8 @@ import { customerApi } from '@/features/live/customerApi'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { orderApi } from '@/features/live/orderApi'
 import { useIsDemo } from '@/shared/features'
-import { toDemoOrderDraft, toLiveOrderInput, type IntakeValues } from './orderIntake'
+import { toDemoOrderDraft, toLiveOrderInput, type IntakeValues, type SubmittedLine } from './orderIntake'
+import { deliveryFeeFor } from './orderService'
 import { useCreateOrder } from './useOrders'
 
 export type IntakeProduct = {
@@ -86,7 +87,8 @@ export function useSubmitIntake() {
   return useMutation({
     mutationFn: async ({ values, customerId }: { values: IntakeValues; customerId?: string }) => {
       if (demo) {
-        const order = await createDemo.mutateAsync(toDemoOrderDraft(values))
+        const fee = deliveryFeeFor(values.lines as SubmittedLine[])
+        const order = await createDemo.mutateAsync(toDemoOrderDraft(values, fee))
         return { id: order.id, code: order.id }
       }
       const order = await orderApi.create(toLiveOrderInput(values, customerId))
