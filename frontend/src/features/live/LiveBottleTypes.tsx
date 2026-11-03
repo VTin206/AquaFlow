@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, App, Button, Dropdown, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Tooltip } from 'antd'
+import { Alert, App, Button, Dropdown, Form, Input, InputNumber, Modal, Segmented, Space, Table, Tag, Tooltip } from 'antd'
 import { Ellipsis, Pencil } from 'lucide-react'
+import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { currency } from '@/shared/utils/format'
@@ -81,8 +82,10 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
   const [status, setStatus] = useState<'active' | 'inactive' | 'all'>('active')
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<BottleType | null | undefined>()
-  const active = !admin || status === 'active' ? true : status === 'inactive' ? false : undefined
-  const types = useQuery({ queryKey: ['live', 'bottle-types', admin, active], queryFn: () => bottleTypeApi.list(active) })
+  // Quản trị tải hết một lần rồi lọc tại chỗ để đếm được từng trạng thái; vai trò khác chỉ thấy loại đang lưu hành.
+  const types = useQuery({ queryKey: ['live', 'bottle-types', admin], queryFn: () => bottleTypeApi.list(admin ? undefined : true) })
+  const allTypes = types.data ?? []
+  const activeCount = allTypes.filter((type) => type.active).length
   const deactivate = useMutation({
     mutationFn: bottleTypeApi.deactivate,
     onSuccess: () => {
@@ -91,7 +94,7 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
     },
     onError: (error: Error) => message.error(error.message),
   })
-  const visible = (types.data ?? []).filter((type) => matchesSearch(search, type.name))
+  const visible = allTypes.filter((type) => (status === 'all' || type.active === (status === 'active')) && matchesSearch(search, type.name))
   const confirmStop = (item: BottleType) =>
     modal.confirm({
       title: 'Ngừng lưu hành?',
@@ -128,14 +131,14 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
             onChange={(event) => setSearch(event.target.value)}
           />
           {admin && (
-            <Select
+            <Segmented<'active' | 'inactive' | 'all'>
               aria-label="Trạng thái loại vỏ"
               value={status}
               onChange={setStatus}
               options={[
-                { value: 'active', label: 'Đang lưu hành' },
-                { value: 'inactive', label: 'Ngừng lưu hành' },
-                { value: 'all', label: 'Tất cả' },
+                { value: 'active', label: <CountLabel label="Đang lưu hành" count={activeCount} tone="success" /> },
+                { value: 'inactive', label: <CountLabel label="Ngừng lưu hành" count={allTypes.length - activeCount} tone="danger" /> },
+                { value: 'all', label: <CountLabel label="Tất cả" count={allTypes.length} /> },
               ]}
             />
           )}

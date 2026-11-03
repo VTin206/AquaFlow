@@ -18,6 +18,7 @@ import {
   type TableColumnsType,
 } from 'antd'
 import { FilePlus2, PackagePlus, Search } from 'lucide-react'
+import { BulkBar } from '@/shared/components/BulkBar'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
@@ -54,7 +55,12 @@ export function InventoryPage() {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const [view, setView] = useState<View>('stock')
-  const [receiving, setReceiving] = useState<{ productId?: string; receipt?: ReceiptView } | null>(null)
+  const [receiving, setReceiving] = useState<{
+    productId?: string
+    lines?: { productId: string; received: number }[]
+    receipt?: ReceiptView
+  } | null>(null)
+  const [checkedIds, setCheckedIds] = useState<string[]>([])
 
   const products = stockQuery.data ?? []
   const hasThreshold = products.some((item) => item.threshold !== undefined)
@@ -76,6 +82,17 @@ export function InventoryPage() {
             : true,
     )
     .filter((item) => matchesSearch(query, `${item.name} ${item.sku} ${item.brand ?? ''}`))
+  // Chỉ tính các dòng còn hiện theo bộ lọc; số nhập gợi ý đủ gấp đôi ngưỡng tối thiểu, sửa được trong phiếu.
+  const checked = visible.filter((item) => checkedIds.includes(item.id))
+  const receiveChecked = () => {
+    setReceiving({
+      lines: checked.map((item) => ({
+        productId: item.id,
+        received: item.threshold === undefined ? 1 : Math.max(item.threshold * 2 - item.available, 1),
+      })),
+    })
+    setCheckedIds([])
+  }
 
   const sort = useColumnSort<StockItem>()
   const columns: TableColumnsType<StockItem> = [
@@ -312,6 +329,11 @@ export function InventoryPage() {
                     className="af-search"
                   />
                 </div>
+                <BulkBar count={checked.length} noun="sản phẩm" onClear={() => setCheckedIds([])}>
+                  <Button type="primary" icon={<FilePlus2 size={16} />} onClick={receiveChecked}>
+                    Tạo phiếu nhập
+                  </Button>
+                </BulkBar>
                 <Table<StockItem>
                   key={`${filter}:${query}`}
                   className="af-data-table af-table-flush"
@@ -326,7 +348,13 @@ export function InventoryPage() {
                       ? 'Không có sản phẩm phù hợp.'
                       : 'Chưa có sản phẩm. Thêm sản phẩm ở trang Sản phẩm trước khi nhập kho.',
                   }}
-                  scroll={{ x: 1000, y: tableScrollHeight }}
+                  scroll={{ x: 1044, y: tableScrollHeight }}
+                  rowSelection={{
+                    selectedRowKeys: checked.map((item) => item.id),
+                    onChange: (keys) => setCheckedIds(keys.map(String)),
+                    fixed: 'left',
+                    columnWidth: 44,
+                  }}
                 />
               </>
             )}
@@ -337,6 +365,7 @@ export function InventoryPage() {
         key={receiving?.receipt?.id ?? 'new'}
         open={receiving !== null}
         defaultProductId={receiving?.productId}
+        defaultLines={receiving?.lines}
         receipt={receiving?.receipt}
         onClose={() => setReceiving(null)}
       />

@@ -181,6 +181,56 @@ export function appointmentOf(order: Order, now = Date.now()) {
   } as const
 }
 
+export type TimingTone = 'normal' | 'muted' | 'warning' | 'danger'
+
+/**
+ * Cột "Hẹn giao": dòng chính là lúc cần giao (giờ hẹn, "Giao sớm nhất", hoặc lúc đã giao), dòng phụ là lúc đặt;
+ * đơn chờ xác nhận thì dòng phụ là thời gian khách đã chờ để gọi lại kịp.
+ */
+export function deliveryTimingOf(order: Order, now = Date.now()) {
+  const created = createdAtOf(order)
+  const appointment = appointmentOf(order, now)
+  const open = OPEN_DELIVERY.includes(order.status)
+  const main: { label: string; tone: TimingTone; title?: string } =
+    order.method !== 'Giao tận nơi'
+      ? { label: 'Tại quầy', tone: 'muted' }
+      : appointment
+        ? {
+            label: relativeDateTime(order.appointment!, new Date(now)),
+            tone: appointment.tone === 'muted' ? 'normal' : appointment.tone,
+            title: `Hẹn giao ${appointment.full}`,
+          }
+        : open
+          ? { label: 'Giao sớm nhất', tone: 'normal', title: 'Khách không hẹn giờ' }
+          : order.deliveredAt
+            ? {
+                label: `Đã giao ${relativeDateTime(order.deliveredAt, new Date(now))}`,
+                tone: 'muted',
+                title: new Date(order.deliveredAt).toLocaleString('vi-VN'),
+              }
+            : { label: '—', tone: 'muted' }
+  const waited = created && order.status === 'Chờ xác nhận' ? Math.max(0, Math.floor((now - Date.parse(created)) / 60_000)) : null
+  const sub = {
+    label: waited !== null ? `chờ ${waitLabel(waited)}` : created ? `đặt ${relativeDateTime(created, new Date(now))}` : `đặt ${order.time}`,
+    title: `Đặt lúc ${orderedAtOf(order).full}`,
+  }
+  return { main, sub }
+}
+
+/** Sắp xếp "Hẹn giao": đơn chưa xong lên trước theo giờ cần giao (hẹn, hoặc lúc đặt nếu không hẹn); đơn đã xong theo lúc đặt mới nhất. */
+export function compareDeliveryDue(a: Order, b: Order) {
+  const openA = OPEN_DELIVERY.includes(a.status)
+  const openB = OPEN_DELIVERY.includes(b.status)
+  if (openA !== openB) return openA ? -1 : 1
+  const createdA = createdAtOf(a) ?? a.time
+  const createdB = createdAtOf(b) ?? b.time
+  if (!openA) return createdB.localeCompare(createdA)
+  return (a.appointment ?? createdA).localeCompare(b.appointment ?? createdB)
+}
+
+/** Thời gian chờ ngắn gọn: dưới 1 ngày theo giờ/phút, từ 1 ngày trở lên chỉ ghi số ngày. */
+const waitLabel = (minutes: number) => (minutes >= 1440 ? `${Math.floor(minutes / 1440)} ngày` : lateLabel(minutes))
+
 export const lateLabel = (minutes: number) =>
   minutes >= 60 ? `${Math.floor(minutes / 60)} giờ ${minutes % 60 ? `${minutes % 60} phút` : ''}`.trim() : `${minutes} phút`
 

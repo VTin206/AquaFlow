@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs'
+import { saveWorkbook } from '@/shared/utils/excel'
 import type { PeriodReport, ReportFilters } from './reportService'
 
 const moneyFormat = '#,##0 "₫";[Red]-#,##0 "₫"'
@@ -221,20 +222,5 @@ export function buildReportWorkbook(report: PeriodReport, filters: ReportFilters
 }
 
 export async function downloadReportExcel(report: PeriodReport, filters: ReportFilters = {}) {
-  const buffer = await buildReportWorkbook(report, filters).xlsx.writeBuffer()
-  const url = URL.createObjectURL(
-    new Blob([new Uint8Array(buffer).buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    }),
-  )
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `bao-cao-${report.range.from}_${report.range.to}.xlsx`
-  document.body.appendChild(link)
-  try {
-    link.click()
-  } finally {
-    link.remove()
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
-  }
+  await saveWorkbook(buildReportWorkbook(report, filters), `bao-cao-${report.range.from}_${report.range.to}.xlsx`)
 }

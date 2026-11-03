@@ -682,19 +682,24 @@ body {
   vertical-align: -2px;
 }
 
-/* Giờ hẹn dưới "Đặt lúc": xám bình thường, cam khi còn dưới 1 giờ, đỏ khi đã trễ. */
-.af-cell-stack > .af-ordered-at {
+/* Cột "Hẹn giao": màu chữ thường, xám khi đã xong/tại quầy, cam khi còn dưới 1 giờ, đỏ khi đã trễ. */
+.af-cell-stack > .af-timing {
   font-weight: 400;
+}
+.af-timing-cell > * {
+  white-space: nowrap;
+}
+.af-timing.is-normal {
   color: var(--af-text);
 }
-.af-appointment.is-muted {
+.af-timing.is-muted {
   color: var(--af-text-tertiary);
 }
-.af-appointment.is-warning {
+.af-timing.is-warning {
   color: var(--af-warning);
   font-weight: 500;
 }
-.af-appointment.is-danger {
+.af-timing.is-danger {
   color: var(--af-danger);
   font-weight: 500;
 }
@@ -2122,4 +2127,22 @@ body {
 }
 .af-theme-menu .ant-dropdown-menu-item-selected {
   background: var(--af-primary-soft) !important;
+}
+
+/* Thanh thao tác khi đã tích chọn dòng trong bảng (BulkBar). */
+.af-bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--af-border);
+  background: var(--af-primary-soft);
+  color: var(--af-text-strong);
+}
+.af-bulk-errors {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--af-text-secondary);
 }
