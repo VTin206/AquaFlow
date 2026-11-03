@@ -66,10 +66,16 @@ async function liveOrders() {
     .sort((a, b) => (b.history[0]?.at ?? '').localeCompare(a.history[0]?.at ?? ''))
 }
 
-export function useOrderList() {
+export function useOrderList(enabled = true) {
   const demo = useIsDemo()
   const staff = useStaff()
-  const demoQuery = useOrders(demo)
-  const liveQuery = useQuery({ queryKey: ['live', 'orders-view', staff?.name, staff?.role], queryFn: liveOrders, enabled: !demo })
+  const demoQuery = useOrders(demo && enabled)
+  // Đơn mới có thể đến từ website bất cứ lúc nào nên tải lại định kỳ; thẻ trình duyệt ẩn thì tạm dừng.
+  const liveQuery = useQuery({
+    queryKey: ['live', 'orders-view', staff?.name, staff?.role],
+    queryFn: liveOrders,
+    enabled: !demo && enabled,
+    refetchInterval: 30_000,
+  })
   return demo ? demoQuery : liveQuery
 }
