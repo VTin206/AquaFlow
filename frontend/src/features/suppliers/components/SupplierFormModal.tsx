@@ -4,6 +4,7 @@ import { useSaveSupplier } from '../useSuppliers'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { useFeature } from '@/shared/features'
 import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
+import { modalWidth } from '@/shared/utils/modal'
 
 /** Thêm mới khi không có `supplier`; sửa khi có. */
 export function SupplierFormModal({ supplier, onClose, onSaved }: { supplier?: Supplier; onClose: () => void; onSaved: () => void }) {
@@ -33,7 +34,7 @@ export function SupplierFormModal({ supplier, onClose, onSaved }: { supplier?: S
       open
       centered
       title={supplier ? `Sửa nhà cung cấp ${supplier.code}` : 'Thêm nhà cung cấp'}
-      width={600}
+      width={modalWidth.small}
       okText="Lưu nhà cung cấp"
       cancelText="Hủy"
       onOk={() => form.submit()}

@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/shared/api/client'
 import { useIsDemo } from '@/shared/features'
 import { useStaff } from '@/features/auth/useStaff'
-import { customerApi } from '@/features/live/customerApi'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { orderApi } from '@/features/live/orderApi'
 import { customerService } from './customerService'
@@ -68,29 +67,6 @@ export function useCustomers() {
 export const useBottleLedger = (customerId: string) => {
   const demo = useIsDemo()
   return useQuery({ queryKey: customerKeys.ledger(customerId), queryFn: () => customerService.ledger(customerId), enabled: demo })
-}
-
-/** Địa chỉ giao của khách (tài khoản thật); bản dùng thử lưu địa chỉ ngay trên hồ sơ. */
-export const useLiveAddresses = (customerId: string) => {
-  const demo = useIsDemo()
-  return useQuery({
-    queryKey: ['live', 'customer-addresses', Number(customerId)],
-    queryFn: () => customerApi.addresses(Number(customerId)),
-    enabled: !demo,
-  })
-}
-
-/** Đơn thật của một khách, dùng ở hồ sơ khách. */
-export const useLiveCustomerOrders = (customerId: string) => {
-  const demo = useIsDemo()
-  const who = useLiveKey()
-  return useQuery({
-    queryKey: ['live', 'orders', ...who],
-    queryFn: orderApi.list,
-    enabled: !demo,
-    select: (orders) =>
-      orders.filter((order) => order.customerId === Number(customerId)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-  })
 }
 
 const useInvalidateCustomers = () => {

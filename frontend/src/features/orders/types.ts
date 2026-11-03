@@ -66,6 +66,8 @@ export type Order = {
   customer: string
   phone: string
   address: string
+  /** Khu vực giao (tài khoản thật: deliveryArea của BE). */
+  area?: string
   items: string
   total: number
   time: string
@@ -95,6 +97,7 @@ export type OrderDraft = {
   customer?: string
   phone?: string
   address?: string
+  area?: string
   method: Order['method']
   channel: Order['channel']
   lines: { productId: string; quantity: number }[]
@@ -120,6 +123,9 @@ export const paymentLabel = (order: Order) =>
 /** Số bình (có vỏ luân chuyển) trong đơn. */
 export const jugCount = (order: Pick<Order, 'lines'>) =>
   order.lines.filter((line) => line.unit === 'Bình').reduce((sum, line) => sum + line.quantity, 0)
+
+/** Tên hiển thị cho đơn không có tên người nhận. */
+export const walkInName = 'Khách tại quầy'
 
 export const createdAtOf = (order: Pick<Order, 'history'>) => order.history[0]?.at
 

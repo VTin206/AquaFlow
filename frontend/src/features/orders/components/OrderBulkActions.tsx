@@ -1,30 +1,26 @@
 import { useState } from 'react'
 import { App, Button, Dropdown } from 'antd'
-import { useQueryClient } from '@tanstack/react-query'
 import { CheckCheck, FileSpreadsheet, Printer } from 'lucide-react'
 import { BulkBar } from '@/shared/components/BulkBar'
-import { useFeature, useIsDemo } from '@/shared/features'
+import { useFeature } from '@/shared/features'
 import { usePrinter } from '@/shared/print/usePrinter'
 import { runEach } from '@/shared/utils/bulk'
 import { downloadExcel, type ExcelColumn } from '@/shared/utils/excel'
 import { useSettings } from '@/features/settings/settingsService'
-import { invalidateLiveData } from '@/features/live/invalidateLiveData'
-import { orderApi } from '@/features/live/orderApi'
+import { useConfirmOrderRequest } from '../orderData'
 import { DeliverySlipDocument, InvoiceDocument } from '../print/OrderDocuments'
 import { amountDue, orderedAtOf, type Order } from '../types'
-import { useAdvanceOrderStatus } from '../useOrders'
 
 const codeOf = (order: Order) => order.code ?? order.id
 
 /** Thao tác cho các đơn đã tích chọn: xác nhận đơn chờ, in chứng từ (bản dùng thử), xuất Excel. */
 export function OrderBulkActions({ orders, onSelect }: { orders: Order[]; onSelect: (ids: string[]) => void }) {
   const { message, modal } = App.useApp()
-  const demo = useIsDemo()
   const showPayments = useFeature('orderPayments')
-  const queryClient = useQueryClient()
-  const advance = useAdvanceOrderStatus()
+  const canPrint = useFeature('orderPrinting')
+  const { confirm, refresh } = useConfirmOrderRequest()
   const printer = usePrinter()
-  const { data: settings } = useSettings(demo)
+  const { data: settings } = useSettings(canPrint)
   const [confirming, setConfirming] = useState(false)
   const [exporting, setExporting] = useState(false)
   const pending = orders.filter((order) => order.status === 'Chờ xác nhận')
@@ -44,10 +40,8 @@ export function OrderBulkActions({ orders, onSelect }: { orders: Order[]; onSele
       cancelText: 'Không',
       onOk: async () => {
         setConfirming(true)
-        const result = await runEach(pending, (order) =>
-          demo ? advance.mutateAsync(order.id) : orderApi.updateStatus(Number(order.id), 'CONFIRMED'),
-        )
-        if (!demo) void invalidateLiveData(queryClient)
+        const result = await runEach(pending, confirm)
+        refresh()
         setConfirming(false)
         if (!result.failed.length) {
           message.success(`Đã xác nhận ${result.done.length} đơn.`)
@@ -104,7 +98,7 @@ export function OrderBulkActions({ orders, onSelect }: { orders: Order[]; onSele
         <Button type="primary" icon={<CheckCheck size={16} />} disabled={!pending.length} loading={confirming} onClick={confirmPending}>
           Xác nhận{pending.length ? ` (${pending.length})` : ''}
         </Button>
-        {demo && (
+        {canPrint && (
           <Dropdown
             trigger={['click']}
             menu={{

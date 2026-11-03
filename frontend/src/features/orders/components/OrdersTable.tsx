@@ -4,16 +4,14 @@ import { Eye } from 'lucide-react'
 import { Money } from '@/shared/components/Money'
 import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
 import { useColumnSort } from '@/shared/components/sortableColumn'
-import { useFeature, useIsDemo } from '@/shared/features'
-import { LiveConfirmButton } from '@/features/live/LiveConfirmButton'
-import { LiveOrderDetails } from '@/features/live/LiveOrderDetails'
+import { useFeature } from '@/shared/features'
 import { amountDue, compareDeliveryDue, deliveryTimingOf, paymentLabel, type Order } from '../types'
-import { AdvanceStatusButton } from './AdvanceStatusButton'
 import { LateTag } from './LateTag'
 import { OrderStatusTag } from './OrderStatusTag'
-import { OrderDetailsModal } from './OrderDetailsModal'
 import { OrderCards } from './OrderCards'
 import { OrderBulkActions } from './OrderBulkActions'
+import { OrderDetails } from './OrderDetails'
+import { OrderNextAction } from './OrderNextAction'
 
 type OrdersTableProps = {
   orders: Order[]
@@ -27,8 +25,7 @@ type OrdersTableProps = {
 
 export function OrdersTable({ orders, loading, compact = false, emptyText = 'Chưa có đơn hàng nào.', filterKey }: OrdersTableProps) {
   const screens = Grid.useBreakpoint()
-  const demo = useIsDemo()
-  // Tài khoản thật: BE chưa có phiếu thu nên không tính "còn phải thu"; ngoài xác nhận, thao tác đơn nằm trong chi tiết đơn.
+  // Chưa có phiếu thu thì không tính "còn phải thu", dùng trạng thái thanh toán của BE.
   const showPayments = useFeature('orderPayments')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   // Tích chọn nhiều đơn (chỉ bảng đầy đủ); chỉ tính các đơn còn hiện theo bộ lọc.
@@ -146,8 +143,7 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
               aria-label={`Chi tiết đơn ${order.code ?? order.id}`}
             />
           </Tooltip>
-          {!compact && demo && <AdvanceStatusButton order={order} menu />}
-          {!compact && !demo && order.status === 'Chờ xác nhận' && <LiveConfirmButton order={order} iconOnly />}
+          {!compact && <OrderNextAction order={order} dense />}
         </Space>
       ),
     },
@@ -191,12 +187,7 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
           />
         </>
       )}
-      {selectedId &&
-        (demo ? (
-          <OrderDetailsModal key={selectedId} orderId={selectedId} onClose={() => setSelectedId(null)} />
-        ) : (
-          <LiveOrderDetails key={selectedId} id={Number(selectedId)} onClose={() => setSelectedId(null)} />
-        ))}
+      {selectedId && <OrderDetails id={selectedId} onClose={() => setSelectedId(null)} />}
     </>
   )
 }

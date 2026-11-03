@@ -10,6 +10,7 @@ import { matchesSearch } from '@/shared/utils/search'
 import { useStaff } from '@/features/auth/useStaff'
 import { bottleTypeApi, type BottleType, type BottleTypeDraft } from './bottleTypeApi'
 import { invalidateLiveData } from './invalidateLiveData'
+import { modalWidth } from '@/shared/utils/modal'
 
 function BottleTypeForm({ item, onClose }: { item: BottleType | null; onClose: () => void }) {
   const [form] = Form.useForm<BottleTypeDraft>()
@@ -35,6 +36,7 @@ function BottleTypeForm({ item, onClose }: { item: BottleType | null; onClose: (
       onOk={() => form.submit()}
       okText="Lưu"
       cancelText="Hủy"
+      width={modalWidth.small}
       confirmLoading={save.isPending}
       closable={!save.isPending}
       cancelButtonProps={{ disabled: save.isPending }}
@@ -114,7 +116,7 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
     })
   return (
     <>
-      <Modal open title="Loại vỏ bình" width={850} onCancel={onClose} footer={<Button onClick={onClose}>Đóng</Button>}>
+      <Modal open title="Loại vỏ bình" width={modalWidth.large} onCancel={onClose} footer={<Button onClick={onClose}>Đóng</Button>}>
         <Alert
           type="info"
           showIcon

@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { App, Col, Form, Input, InputNumber, Modal, Row, Select, Upload } from 'antd'
 import { ImagePlus } from 'lucide-react'
-import { useFeature, useIsDemo } from '@/shared/features'
+import { useFeature } from '@/shared/features'
 import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
-import { bottleTypeApi } from '@/features/live/bottleTypeApi'
-import { useSaveProduct, type CatalogItem, type ProductForm } from '../useProductCatalog'
+import { useBottleTypeOptions, useSaveProduct, type CatalogItem, type ProductForm } from '../useProductCatalog'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
+import { FormSection } from '@/shared/components/FormSection'
+import { modalWidth } from '@/shared/utils/modal'
 
 const MAX_IMAGE_MB = 5
 const UNITS = ['Bình', 'Thùng', 'Chai', 'Vỏ']
@@ -16,17 +16,11 @@ type ProductFormModalProps = { open: boolean; product?: CatalogItem; onClose: ()
 /** Thêm mới khi không có `product`; sửa khi có (mã sản phẩm không đổi). */
 export function ProductFormModal({ open, product, onClose }: ProductFormModalProps) {
   const { message } = App.useApp()
-  const demo = useIsDemo()
   const showImage = useFeature('productImage')
   const [form] = Form.useForm<ProductForm>()
   const [image, setImage] = useState<string | undefined>(product?.image)
   const save = useSaveProduct()
-  // Loại vỏ và quy cách thùng chỉ có ở BE; tồn ban đầu chỉ ở bản dùng thử (BE tăng tồn qua phiếu nhập).
-  const bottleTypes = useQuery({
-    queryKey: ['live', 'bottle-types', 'product-form'],
-    queryFn: () => bottleTypeApi.list(),
-    enabled: open && !demo,
-  })
+  const bottleTypes = useBottleTypeOptions(open)
 
   const close = () => {
     setImage(undefined)
@@ -70,7 +64,7 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
       title={product ? `Sửa sản phẩm ${product.sku}` : 'Thêm sản phẩm'}
       okText="Lưu sản phẩm"
       cancelText="Hủy"
-      width={860}
+      width={modalWidth.large}
       confirmLoading={save.isPending}
       onOk={() => form.submit()}
       onCancel={cancel}
@@ -92,7 +86,7 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
                 bottleTypeId: product.bottleTypeId,
                 threshold: product.threshold,
               }
-            : { unit: 'Bình', price: 0, stock: 0, threshold: 10 }
+            : { unit: 'Bình', price: 0, threshold: 10 }
         }
         onFinish={submit}
         preserve={false}
@@ -123,8 +117,7 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
           </div>
 
           <div className="af-product-form-fields">
-            <section>
-              <h4>Thông tin chung</h4>
+            <FormSection title="Thông tin chung">
               <Form.Item
                 name="name"
                 label="Tên sản phẩm"
@@ -156,10 +149,9 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
                   </Form.Item>
                 </Col>
               </Row>
-            </section>
+            </FormSection>
 
-            <section>
-              <h4>Bán hàng</h4>
+            <FormSection title="Bán hàng">
               <Row gutter={12}>
                 <Col xs={12} sm={8}>
                   <Form.Item name="unit" label="Đơn vị" rules={[{ required: true }]}>
@@ -177,61 +169,45 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
                     />
                   </Form.Item>
                 </Col>
-                {!demo && (
-                  <Col xs={24} sm={8}>
-                    <Form.Item name="unitsPerCase" label="Số đơn vị / thùng">
-                      <InputNumber min={1} precision={0} style={{ width: '100%' }} placeholder="Không bắt buộc" />
-                    </Form.Item>
-                  </Col>
-                )}
+                <Col xs={24} sm={8}>
+                  <Form.Item name="unitsPerCase" label="Số đơn vị / thùng">
+                    <InputNumber min={1} precision={0} style={{ width: '100%' }} placeholder="Không bắt buộc" />
+                  </Form.Item>
+                </Col>
               </Row>
-            </section>
+            </FormSection>
 
-            {(!demo || !product) && (
-              <section>
-                <h4>Kho</h4>
-                <Row gutter={12}>
-                  {demo && (
-                    <Col xs={24} sm={12}>
-                      <Form.Item name="stock" label="Tồn kho ban đầu" rules={[{ required: true, message: 'Nhập số lượng.' }]}>
-                        <InputNumber min={0} precision={0} style={{ width: '100%' }} />
-                      </Form.Item>
-                    </Col>
-                  )}
-                  {!demo && (
-                    <>
-                      <Col xs={24} sm={8}>
-                        <Form.Item
-                          name="threshold"
-                          label="Tồn tối thiểu"
-                          tooltip="Khả dụng từ mức này trở xuống được cảnh báo sắp hết."
-                          rules={[{ required: true, message: 'Nhập tồn tối thiểu.' }]}
-                        >
-                          <InputNumber min={0} precision={0} style={{ width: '100%' }} />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} sm={16}>
-                        <Form.Item name="bottleTypeId" label="Loại vỏ" tooltip="Chọn khi sản phẩm bán kèm vỏ bình có cọc.">
-                          <Select
-                            allowClear
-                            loading={bottleTypes.isPending}
-                            placeholder="Không dùng vỏ"
-                            options={(bottleTypes.data ?? [])
-                              .filter((type) => type.active || type.id === product?.bottleTypeId)
-                              .map((type) => ({
-                                value: type.id,
-                                label: `${type.name}${type.active ? '' : ' (ngừng lưu hành)'}`,
-                                disabled: !type.active,
-                              }))}
-                          />
-                        </Form.Item>
-                      </Col>
-                    </>
-                  )}
-                </Row>
-                {!demo && !product && <p className="af-form-hint">Tồn kho tăng khi xác nhận phiếu nhập ở trang Kho.</p>}
-              </section>
-            )}
+            <FormSection title="Kho">
+              <Row gutter={12}>
+                <Col xs={24} sm={8}>
+                  <Form.Item
+                    name="threshold"
+                    label="Tồn tối thiểu"
+                    tooltip="Khả dụng từ mức này trở xuống được cảnh báo sắp hết."
+                    rules={[{ required: true, message: 'Nhập tồn tối thiểu.' }]}
+                  >
+                    <InputNumber min={0} precision={0} style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={16}>
+                  <Form.Item name="bottleTypeId" label="Loại vỏ" tooltip="Chọn khi sản phẩm bán kèm vỏ bình có cọc.">
+                    <Select
+                      allowClear
+                      loading={bottleTypes.isPending}
+                      placeholder="Không dùng vỏ"
+                      options={bottleTypes.types
+                        .filter((type) => type.active || type.id === product?.bottleTypeId)
+                        .map((type) => ({
+                          value: type.id,
+                          label: `${type.name}${type.active ? '' : ' (ngừng lưu hành)'}`,
+                          disabled: !type.active,
+                        }))}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              {!product && <p className="af-form-hint">Tồn kho tăng khi xác nhận phiếu nhập ở trang Kho.</p>}
+            </FormSection>
           </div>
         </div>
       </Form>

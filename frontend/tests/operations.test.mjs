@@ -310,6 +310,14 @@ test('dispatch records the FEFO lots that were reserved for the order', async ()
   )
 })
 
+test('staff orders: the fee comes from store policy and the delivery area is kept', async () => {
+  const { deliveryFeeFor } = await load('/src/features/orders/orderService.ts')
+  assert.equal(deliveryFeeFor([{ productId: 'P-001', quantity: 3 }]), 0)
+  assert.equal(deliveryFeeFor([{ productId: 'P-001', quantity: 2 }]), 15000)
+  assert.equal((await orderService.create(delivery({ area: ' Quận 7 ' }))).area, 'Quận 7')
+  assert.equal((await orderService.create(delivery({ method: 'Tại quầy', area: 'Quận 7' }))).area, undefined)
+})
+
 test('iWater-style policy: delivery fee, stairs surcharge, pickup fee taken from deposit', async () => {
   assert.equal(suggestedDeliveryFee({ units: 3, jugs: 3, floor: 0 }), 0)
   assert.equal(suggestedDeliveryFee({ units: 2, jugs: 2, floor: 0 }), 15000)

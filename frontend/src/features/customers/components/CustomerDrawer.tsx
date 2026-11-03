@@ -2,19 +2,19 @@ import { useState } from 'react'
 import { App, Avatar, Button, Descriptions, Drawer, Dropdown, Empty, Space, Table, Tabs, Tag, Tooltip, Typography } from 'antd'
 import { Ellipsis, Pencil, Phone, ShoppingBag } from 'lucide-react'
 import { Money } from '@/shared/components/Money'
-import { useFeature, useIsDemo } from '@/shared/features'
+import { useFeature, useLiveOnly } from '@/shared/features'
 import { Unsupported } from '@/shared/components/Unsupported'
 import { currency } from '@/shared/utils/format'
 import { can } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/useStaff'
-import { OrderDetailsModal } from '@/features/orders/components/OrderDetailsModal'
+import { OrderDetails } from '@/features/orders/components/OrderDetails'
 import { OrderStatusTag } from '@/features/orders/components/OrderStatusTag'
-import { amountDue, paymentLabel, type Order } from '@/features/orders/types'
-import { useOrders } from '@/features/orders/useOrders'
+import { useOrderList } from '@/features/orders/orderData'
+import { amountDue, createdAtOf, paymentLabel, type Order } from '@/features/orders/types'
+import { useIntakeAddresses } from '@/features/orders/useOrderIntake'
 import { LiveCustomerAddresses } from '@/features/live/LiveCustomerAddresses'
-import { orderStatusLabels, type LiveOrder } from '@/features/live/orderApi'
 import { customerCode, refundableOf, type BottleEntry, type Customer } from '../types'
-import { useBottleLedger, useCustomers, useDeactivateCustomer, useLiveAddresses, useLiveCustomerOrders } from '../useCustomers'
+import { useBottleLedger, useCustomers, useDeactivateCustomer } from '../useCustomers'
 import { BottleActionModal, type BottleActionKind } from './BottleActionModal'
 
 type CustomerDrawerProps = {
@@ -31,7 +31,8 @@ const signed = (value: number, render: (value: number) => string = String) =>
 export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: CustomerDrawerProps) {
   const staff = useStaff()
   const { message, modal } = App.useApp()
-  const demo = useIsDemo()
+  const canManageAddresses = useLiveOnly()
+  const showPayments = useFeature('orderPayments')
   const showType = useFeature('customerType')
   const showExtras = useFeature('customerProfileExtras')
   const showDebt = useFeature('customerDebt')
@@ -39,20 +40,20 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
   // Hoàn cọc, báo mất/vỡ làm đổi tiền cọc nên chỉ chủ cửa hàng thấy.
   const canAdjust = !staff || can(staff.role, 'adjustBottles')
   const { data: customers = [] } = useCustomers()
-  const { data: orders = [] } = useOrders()
+  const { data: orders = [], isPending: loadingOrders } = useOrderList()
   const ledgerQuery = useBottleLedger(customerId)
-  const liveOrders = useLiveCustomerOrders(customerId)
-  const liveAddresses = useLiveAddresses(customerId)
   const deactivate = useDeactivateCustomer()
   const [managingAddresses, setManagingAddresses] = useState(false)
   const [bottleAction, setBottleAction] = useState<BottleActionKind | null>(null)
   const [orderId, setOrderId] = useState<string | null>(null)
   const customer = customers.find((item) => item.id === customerId)
+  const { addresses, isError: addressesFailed } = useIntakeAddresses(customer)
   if (!customer) return null
 
-  const customerOrders = orders.filter((order) => order.customerId === customer.id)
+  const customerOrders = orders
+    .filter((order) => order.customerId === customer.id)
+    .sort((a, b) => (createdAtOf(b) ?? '').localeCompare(createdAtOf(a) ?? ''))
   const refundable = refundableOf(customer)
-  const orderCount = demo ? customerOrders.length : (liveOrders.data?.length ?? 0)
 
   const summary = [
     { label: 'Đơn đã mua', value: String(customer.orders), show: true },
@@ -93,31 +94,23 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
         ),
     })
 
-  const addressView = demo ? (
-    customer.addresses.length ? (
-      <ol className="af-address-view">
-        {customer.addresses.map((address) => (
-          <li key={address}>{address}</li>
-        ))}
-      </ol>
-    ) : (
-      'Chưa có địa chỉ giao'
-    )
-  ) : (
+  const addressView = (
     <div className="af-cell-stack">
-      {liveAddresses.isPending ? (
-        'Đang tải địa chỉ...'
-      ) : liveAddresses.isError ? (
+      {addressesFailed ? (
         'Không tải được địa chỉ.'
-      ) : liveAddresses.data.length ? (
+      ) : !addresses ? (
+        'Đang tải địa chỉ...'
+      ) : addresses.length ? (
         <ol className="af-address-view">
-          {liveAddresses.data.map((address) => (
-            <li key={address.id}>
-              {address.addressLine}
+          {addresses.map((address) => (
+            <li key={address.line}>
+              {address.line}
               {address.area && ` · ${address.area}`}{' '}
-              <small>
-                ({address.recipientName} · {address.recipientPhone})
-              </small>{' '}
+              {address.recipientName && (
+                <small>
+                  ({address.recipientName} · {address.recipientPhone})
+                </small>
+              )}{' '}
               {address.isDefault && <Tag color="blue">Mặc định</Tag>}
             </li>
           ))}
@@ -125,9 +118,11 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
       ) : (
         'Chưa có địa chỉ giao'
       )}
-      <Button size="small" style={{ alignSelf: 'flex-start', marginTop: 4 }} onClick={() => setManagingAddresses(true)}>
-        Quản lý địa chỉ
-      </Button>
+      {canManageAddresses && (
+        <Button size="small" style={{ alignSelf: 'flex-start', marginTop: 4 }} onClick={() => setManagingAddresses(true)}>
+          Quản lý địa chỉ
+        </Button>
+      )}
     </div>
   )
 
@@ -209,43 +204,12 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
             },
             {
               key: 'orders',
-              label: `Đơn hàng (${orderCount})`,
-              children: !demo ? (
-                <Table<LiveOrder>
-                  rowKey="id"
-                  size="small"
-                  loading={liveOrders.isPending}
-                  dataSource={liveOrders.data}
-                  pagination={{ pageSize: 8, hideOnSinglePage: true }}
-                  scroll={{ x: 520 }}
-                  locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có đơn trong hệ thống" /> }}
-                  columns={[
-                    { title: 'Mã đơn', dataIndex: 'orderCode', width: 130 },
-                    {
-                      title: 'Ngày tạo',
-                      dataIndex: 'createdAt',
-                      width: 110,
-                      render: (at: string) => new Date(at).toLocaleDateString('vi-VN'),
-                    },
-                    {
-                      title: 'Tổng',
-                      dataIndex: 'total',
-                      align: 'right',
-                      width: 110,
-                      render: (total: number) => <span className="af-money">{currency(total)}</span>,
-                    },
-                    {
-                      title: 'Trạng thái',
-                      dataIndex: 'status',
-                      width: 130,
-                      render: (status: LiveOrder['status']) => <Tag>{orderStatusLabels[status] ?? status}</Tag>,
-                    },
-                  ]}
-                />
-              ) : (
+              label: `Đơn hàng (${customerOrders.length})`,
+              children: (
                 <Table<Order>
                   rowKey="id"
                   size="small"
+                  loading={loadingOrders}
                   dataSource={customerOrders}
                   pagination={{ pageSize: 8, hideOnSinglePage: true }}
                   scroll={{ x: 560 }}
@@ -254,10 +218,10 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
                     {
                       title: 'Mã đơn',
                       dataIndex: 'id',
-                      width: 100,
-                      render: (id: string) => (
+                      width: 130,
+                      render: (id: string, order) => (
                         <Button type="link" size="small" onClick={() => setOrderId(id)}>
-                          {id}
+                          {order.code ?? id}
                         </Button>
                       ),
                     },
@@ -281,7 +245,7 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
                           <small>
                             {order.status === 'Đã hủy' ? (
                               ''
-                            ) : amountDue(order) > 0 ? (
+                            ) : showPayments && amountDue(order) > 0 ? (
                               <Money value={amountDue(order)} tone="due" prefix="Còn " />
                             ) : (
                               <span className="af-money is-paid">{paymentLabel(order)}</span>
@@ -376,7 +340,7 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
         <LiveCustomerAddresses customerId={Number(customer.id)} customerName={customer.name} onClose={() => setManagingAddresses(false)} />
       )}
       <BottleActionModal customer={customer} kind={bottleAction} refundable={refundable} onClose={() => setBottleAction(null)} />
-      {orderId && <OrderDetailsModal key={orderId} orderId={orderId} onClose={() => setOrderId(null)} />}
+      {orderId && <OrderDetails id={orderId} onClose={() => setOrderId(null)} />}
     </>
   )
 }
