@@ -31,6 +31,7 @@ class DispatchPostgresIntegrationTest {
     @Autowired OrderService orders;
     @Autowired OrderDispatchService dispatches;
     @Autowired MockMvc mvc;
+    @Autowired com.aquaflow.inventory.application.InventoryMovementService movementHistory;
     Long productId;
     Long orderId;
     Long actorId;
@@ -106,6 +107,13 @@ class DispatchPostgresIntegrationTest {
                 .andExpect(jsonPath("$.items[0].quantity").value(3))
                 .andExpect(jsonPath("$.items[1].quantity").value(2));
         var receipt = dispatches.list(orderId).getFirst();
+
+        var history = movementHistory.list(com.aquaflow.inventory.domain.MovementType.DISPATCH, productId,
+                null, null, null, 0, 20);
+        assertThat(history.content()).hasSize(2);
+        assertThat(history.content()).allMatch(m -> m.referenceId().equals(orderId));
+        assertThat(history.content().stream().mapToInt(m -> m.signedQuantity()).sum()).isEqualTo(-5);
+
         mvc.perform(get(url() + "/" + receipt.id()).with(user("sales").roles("SALES_STAFF")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(receipt.id()));
         mvc.perform(get("/api/v1/sales/orders/0/dispatches/" + receipt.id()).with(user("sales").roles("SALES_STAFF")))

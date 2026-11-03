@@ -288,7 +288,7 @@ export function InventoryPage() {
               { key: 'movements', label: 'Xuất / nhập kho' },
             ]}
           >
-            {(view === 'returns' || view === 'movements') && !showReturns ? (
+            {view === 'returns' && !showReturns ? (
               <Empty
                 className="af-unsupported-empty"
                 description={
