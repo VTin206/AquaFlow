@@ -26,7 +26,7 @@ export const backendFeatures = {
   lowStockThreshold: true,
   /** Phiếu thu, số còn phải thu của đơn (BE chỉ có trạng thái thanh toán, chưa có luồng thu tiền). */
   orderPayments: false,
-  /** Kiểm hàng hoàn sau giao thất bại và lịch sử xuất giao / nhập hàng hoàn (chờ API Dispatch, Return của BE). */
+  /** Kiểm hàng hoàn sau giao thất bại (chờ API Return). Lịch sử kho có API riêng. */
   deliveryReturns: false,
   /** Bật lại nhà cung cấp, loại vỏ đã ngừng và xem/khôi phục khách đã lưu trữ (BE mới có chiều ngừng). */
   reactivate: false,
@@ -58,7 +58,7 @@ export const useIsDemo = () => useAuth().user?.isDemo ?? false
 export const useLiveOnly = () => !useIsDemo()
 
 /** Trang chưa có API BE: tài khoản thật vẫn thấy trên menu, mở ra là trang "Chưa hỗ trợ". */
-const unsupportedPages = new Set(['/delivery', '/driver', '/reports', '/activity', '/settings'])
+const unsupportedPages = new Set(['/reports', '/activity', '/settings'])
 
 export function usePageSupported() {
   const demo = useIsDemo()

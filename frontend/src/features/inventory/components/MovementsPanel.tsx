@@ -5,6 +5,8 @@ import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
 import type { Order } from '@/features/orders/types'
 import { useOrders } from '@/features/orders/useOrders'
 import { isoToVnDate } from '../expiry'
+import { useIsDemo } from '@/shared/features'
+import { LiveMovementsPanel } from './LiveMovementsPanel'
 
 type MovementType = 'DISPATCH' | 'RETURN'
 type Movement = {
@@ -61,6 +63,10 @@ const movementsOf = (orders: Order[]): Movement[] =>
     .sort((a, b) => b.at.localeCompare(a.at))
 
 export function MovementsPanel() {
+  return useIsDemo() ? <DemoMovementsPanel /> : <LiveMovementsPanel />
+}
+
+function DemoMovementsPanel() {
   const ordersQuery = useOrders()
   const [type, setType] = useState<'all' | MovementType>('all')
   const movements = movementsOf(ordersQuery.data ?? [])
