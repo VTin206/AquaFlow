@@ -52,6 +52,9 @@ export function addQuickLine(lines: IntakeLine[], productId: string): IntakeLine
   return lines.map((line, index) => (index === empty ? { productId, quantity: line?.quantity ?? 1 } : line))
 }
 
+/** Tên gọn cho nút chọn nhanh, bỏ loại nước ở đầu tên. */
+export const shortProductName = (name: string) => name.replace(/^nước\s+(tinh khiết|khoáng)\s+/i, '') || name
+
 const text = (value?: string) => value?.trim() || null
 const cleanPhone = (value?: string) => value?.replace(/[\s().-]/g, '') || null
 const liveChannels = { 'Tại quầy': 'COUNTER', 'Điện thoại': 'PHONE', 'Tin nhắn': 'MESSAGE' } as const

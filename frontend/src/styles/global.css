@@ -1803,26 +1803,110 @@ body {
   margin-bottom: 16px;
   color: var(--af-primary);
 }
-.af-intake-last {
+.af-intake-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 32px;
+  align-items: start;
+}
+.af-intake-grid h3.af-form-section-title {
+  font-size: inherit;
+  margin: 20px 0 12px;
+}
+.af-intake-grid > div > section:first-child h3.af-form-section-title {
+  margin-top: 0;
+}
+.af-intake-last,
+.af-intake-contact {
   align-items: center;
-  background: var(--af-primary-soft);
   border-radius: 8px;
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   padding: 10px 12px;
 }
+.af-intake-last {
+  background: var(--af-primary-soft);
+}
+.af-intake-contact {
+  border: 1px solid var(--af-border);
+  align-items: flex-start;
+  flex-wrap: nowrap;
+}
 .af-intake-last .af-cell-stack {
-  flex: 1 1 240px;
+  flex: 1 1 200px;
   min-width: 0;
 }
+.af-intake-contact .af-cell-stack {
+  flex: 1;
+  min-width: 0;
+}
+.af-intake-contact .af-cell-stack > * {
+  display: block;
+}
 .af-quick-products {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 12px;
+}
+.af-quick-products small {
+  color: var(--af-text-tertiary);
+}
+.af-intake-option {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+  white-space: normal;
+}
+.af-intake-option small {
+  color: var(--af-text-tertiary);
+}
+.af-intake-footer {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.af-intake-total {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+  margin-right: auto;
+  text-align: left;
+}
+.af-intake-total small {
+  color: var(--af-text-tertiary);
+}
+.af-intake-total strong {
+  color: var(--af-text-strong);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 900px) {
+  .af-intake-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .af-intake-grid > div + div > section:first-child h3.af-form-section-title {
+    margin-top: 20px;
+  }
+}
+/* Điện thoại: tổng tiền chiếm một hàng riêng, hai nút chung hàng dưới. */
+@media (max-width: 575px) {
+  .af-intake-total {
+    align-items: baseline;
+    flex: 1 1 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    margin-right: 0;
+  }
+  .af-intake-footer .ant-btn-primary {
+    flex: 1;
+  }
 }
 @media (max-width: 575px) {
   .af-profile-summary {

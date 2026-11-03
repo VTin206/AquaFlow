@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Alert, App, AutoComplete, Button, Col, DatePicker, Form, Input, InputNumber, Modal, Row, Segmented, Select } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
-import { Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { customerCode, type Customer } from '@/features/customers/types'
 import { useCustomers } from '@/features/customers/useCustomers'
 import { QueryError } from '@/shared/components/QueryError'
@@ -12,9 +12,9 @@ import { focusNextOnEnter } from '@/shared/utils/forms'
 import { currency } from '@/shared/utils/format'
 import { matchesSearch, phoneDigits } from '@/shared/utils/search'
 import { useOrderList } from '../orderData'
-import { addQuickLine, bestSellers, lastOrderOf, samePhone, type IntakeLine, type IntakeValues } from '../orderIntake'
+import { addQuickLine, bestSellers, lastOrderOf, samePhone, shortProductName, type IntakeLine, type IntakeValues } from '../orderIntake'
 import { orderedAtOf, type Order } from '../types'
-import { useIntakeAddresses, useIntakeProducts, useSubmitIntake, type IntakeAddress } from '../useOrderIntake'
+import { useIntakeAddresses, useIntakeProducts, useSubmitIntake, type IntakeAddress, type IntakeProduct } from '../useOrderIntake'
 
 type OrderIntakeModalProps = {
   onClose: () => void
@@ -25,6 +25,9 @@ type OrderIntakeModalProps = {
 }
 
 const QUICK_PRODUCTS = 4
+
+const priceAndStock = (product: IntakeProduct) =>
+  `${currency(product.price)}${product.available === undefined ? '' : ` · còn ${product.available}`}`
 
 /** Nhận đơn bắt đầu từ số điện thoại: khách quen tự điền thông tin và đặt lại đơn trước chỉ với một lần bấm. */
 export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderIntakeModalProps) {
@@ -53,7 +56,15 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
   const lines: IntakeLine[] = Form.useWatch('lines', form) ?? []
   const fee = Form.useWatch('deliveryFee', form) ?? 0
   const floor = Form.useWatch('floor', form) ?? 0
+  const recipient = Form.useWatch('customer', form) ?? ''
+  const address = Form.useWatch('address', form) ?? ''
+  const area = Form.useWatch('area', form) ?? ''
   const delivery = method === 'Giao tận nơi'
+
+  // Khách quen đã đủ tên và địa chỉ thì thu gọn thành một dòng; đổi khách tự thu gọn lại vì `editingFor` chỉ khớp khách đang sửa.
+  const [editingFor, setEditingFor] = useState<string>()
+  const contactCollapsed =
+    Boolean(customer) && editingFor !== customer?.id && Boolean(recipient.trim()) && (!delivery || Boolean(address.trim()))
 
   const productOf = (id?: string) => products.find((product) => product.id === id)
   const units = lines.reduce((sum, line) => sum + (line?.quantity ?? 0), 0)
@@ -67,12 +78,12 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
     .filter((product) => product?.sellable)
     .slice(0, QUICK_PRODUCTS)
 
-  const applyAddress = (address: IntakeAddress) =>
+  const applyAddress = (saved: IntakeAddress) =>
     form.setFieldsValue({
-      address: address.line,
-      area: address.area ?? '',
-      ...(address.recipientName && { customer: address.recipientName }),
-      ...(address.recipientPhone && { phone: address.recipientPhone }),
+      address: saved.line,
+      area: saved.area ?? '',
+      ...(saved.recipientName && { customer: saved.recipientName }),
+      ...(saved.recipientPhone && { phone: saved.recipientPhone }),
     })
 
   // Tên và số không còn bắt buộc (chuyển sang tại quầy) thì bỏ lỗi đang hiện; số sai vẫn bị kiểm tra lại khi tạo đơn.
@@ -98,8 +109,8 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
   useEffect(() => {
     if (!delivery || !customer || !addresses || addressFilledFor.current === customer.id) return
     addressFilledFor.current = customer.id
-    const address = addresses.find((item) => item.isDefault)
-    if (address) applyAddress(address)
+    const saved = addresses.find((item) => item.isDefault)
+    if (saved) applyAddress(saved)
   })
 
   const reorder = (order: Order) => {
@@ -128,19 +139,21 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
           .map((item) => ({ value: item.phone, label: `${item.name} · ${item.phone}` }))
       : []
   const isNewPhone = !customer && !lastOrder && phoneDigits(typed).length >= 10
-  const customerFacts = customer && [
-    customerCode(customer),
-    `${customer.orders} đơn`,
-    ...(showBottles ? [`đang giữ ${customer.bottlesHeld} vỏ`] : []),
-    ...(showDebt && customer.debt > 0 ? [`còn nợ ${currency(customer.debt)}`] : []),
-  ]
+  const customerFacts = customer
+    ? [
+        customerCode(customer),
+        `${customer.orders} đơn`,
+        ...(showBottles ? [`đang giữ ${customer.bottlesHeld} vỏ`] : []),
+        ...(showDebt && customer.debt > 0 ? [`còn nợ ${currency(customer.debt)}`] : []),
+      ].join(' · ')
+    : ''
 
   return (
     <Modal
       open
       title="Tiếp nhận đơn hàng"
-      width={740}
-      styles={{ body: { maxHeight: 'calc(100dvh - 200px)', overflowY: 'auto', paddingRight: 8 } }}
+      width={960}
+      styles={{ body: { maxHeight: 'calc(100dvh - 200px)', overflowY: 'auto', overflowX: 'hidden', paddingRight: 8 } }}
       okText="Tạo đơn chờ xác nhận"
       cancelText="Hủy"
       okButtonProps={{ disabled: loadingProducts || Boolean(productsError) }}
@@ -148,6 +161,16 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
       onOk={() => form.submit()}
       onCancel={submit.isPending ? undefined : cancel}
       mask={{ closable: !submit.isPending }}
+      footer={(_, { OkBtn, CancelBtn }) => (
+        <div className="af-intake-footer">
+          <div className="af-intake-total" role="status">
+            <small>{demo ? 'Tổng tiền dự kiến' : 'Tiền hàng dự kiến'}</small>
+            <strong>{currency(goods + (demo && delivery ? fee : 0))}</strong>
+          </div>
+          <CancelBtn />
+          <OkBtn />
+        </div>
+      )}
     >
       {productsError ? (
         <QueryError error={productsError} onRetry={refetchProducts} />
@@ -168,6 +191,8 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
             floor: 0,
             lines: [{ quantity: 1 }],
           }}
+          // Lỗi nằm ở phần đang thu gọn thì mở ra để nhân viên thấy.
+          onFinishFailed={() => setEditingFor(customer?.id)}
           onFinish={(values) =>
             submit.mutate(
               { values, customerId: customer?.id },
@@ -190,255 +215,313 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
               action={<Button onClick={() => void customersQuery.refetch()}>Thử lại</Button>}
             />
           )}
-          <Form.Item
-            name="phone"
-            label="Số điện thoại khách"
-            rules={[
-              { required: needsCustomer, message: 'Nhập số điện thoại.' },
-              {
-                pattern: /^(0|\+84)[0-9]{9,10}$/,
-                transform: (value?: string) => value?.replace(/[\s().-]/g, ''),
-                message: 'Số điện thoại không hợp lệ.',
-              },
-            ]}
-          >
-            <AutoComplete
-              autoFocus
-              options={suggestions}
-              placeholder="Nhập số điện thoại hoặc tên để tìm khách quen"
-              onChange={(value: string) => {
-                setTypedPhone(value ?? '')
-                setPinned(undefined)
-              }}
-            />
-          </Form.Item>
-          {customer && (
-            <p className="af-form-hint af-known-customer">
-              <strong>{customer.name}</strong> · {customerFacts?.join(' · ')}
-            </p>
-          )}
-          {isNewPhone && <p className="af-form-hint af-known-customer">Khách mới: nhập tên và địa chỉ bên dưới.</p>}
-          {lastOrder && (
-            <div className="af-intake-last">
-              <div className="af-cell-stack">
-                <small>Đơn gần nhất · {orderedAtOf(lastOrder).label}</small>
-                <span>{lastOrder.items}</span>
-                <small>{currency(lastOrder.total)}</small>
-              </div>
-              <Button type="primary" icon={<RotateCcw size={15} />} disabled={loadingProducts} onClick={() => reorder(lastOrder)}>
-                Đặt lại đơn này
-              </Button>
-            </div>
-          )}
-
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item name="method" label="Hình thức nhận" rules={[{ required: true }]}>
-                <Segmented
-                  block
-                  options={[
-                    { value: 'Giao tận nơi', label: 'Giao tận nơi' },
-                    { value: 'Tại quầy', label: 'Tại quầy' },
+          <div className="af-intake-grid">
+            <div>
+              <section aria-labelledby="af-intake-customer">
+                <h3 id="af-intake-customer" className="af-form-section-title">
+                  Khách hàng
+                </h3>
+                <Form.Item
+                  name="phone"
+                  label="Số điện thoại"
+                  rules={[
+                    { required: needsCustomer, message: 'Nhập số điện thoại.' },
+                    {
+                      pattern: /^(0|\+84)[0-9]{9,10}$/,
+                      transform: (value?: string) => value?.replace(/[\s().-]/g, ''),
+                      message: 'Số điện thoại không hợp lệ.',
+                    },
                   ]}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item name="channel" label="Kênh tiếp nhận" rules={[{ required: true }]}>
-                <Select options={['Điện thoại', 'Tại quầy', 'Tin nhắn'].map((value) => ({ value, label: value }))} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item
-            name="customer"
-            label="Tên người nhận"
-            rules={[
-              { required: needsCustomer, whitespace: true, message: 'Nhập tên người nhận.' },
-              { max: 150, message: 'Tối đa 150 ký tự.' },
-            ]}
-          >
-            <Input placeholder={needsCustomer ? 'Tên khách đặt nước' : 'Để trống nếu là khách vãng lai'} />
-          </Form.Item>
-          {delivery && (
-            <>
-              {addressesFailed && (
-                <Alert
-                  type="warning"
-                  style={{ marginBottom: 16 }}
-                  title="Không tải được địa chỉ đã lưu."
-                  action={<Button onClick={() => void refetchAddresses()}>Thử lại</Button>}
-                />
-              )}
-              <Form.Item
-                name="address"
-                label="Địa chỉ giao hàng"
-                rules={[
-                  { required: true, whitespace: true, message: 'Nhập địa chỉ giao hàng.' },
-                  { max: 255, message: 'Tối đa 255 ký tự.' },
-                ]}
-              >
-                <AutoComplete
-                  options={addresses?.map((address) => ({ value: address.line }))}
-                  placeholder="Số nhà, tên đường, phường/xã, tỉnh/thành phố"
-                  onSelect={(value: string) => {
-                    const address = addresses?.find((item) => item.line === value)
-                    if (address) applyAddress(address)
-                  }}
-                />
-              </Form.Item>
-              <Row gutter={16}>
-                {!demo && (
-                  <Col xs={24} sm={12}>
-                    <Form.Item name="area" label="Khu vực" rules={[{ max: 150, message: 'Tối đa 150 ký tự.' }]}>
-                      <Input placeholder="Phường / quận" />
+                >
+                  <AutoComplete
+                    autoFocus
+                    options={suggestions}
+                    placeholder="Nhập số điện thoại hoặc tên để tìm khách quen"
+                    onChange={(value: string) => {
+                      setTypedPhone(value ?? '')
+                      setPinned(undefined)
+                    }}
+                  />
+                </Form.Item>
+                {isNewPhone && <p className="af-form-hint af-known-customer">Khách mới: nhập tên và địa chỉ bên dưới.</p>}
+                {contactCollapsed ? (
+                  <div className="af-intake-contact">
+                    <div className="af-cell-stack">
+                      <strong>{recipient}</strong>
+                      <small>{customerFacts}</small>
+                      {delivery && (
+                        <span>
+                          {address}
+                          {area ? ` · ${area}` : ''}
+                        </span>
+                      )}
+                    </div>
+                    <Button size="small" icon={<Pencil size={14} />} onClick={() => setEditingFor(customer?.id)}>
+                      Sửa
+                    </Button>
+                  </div>
+                ) : (
+                  customer && <p className="af-form-hint af-known-customer">{customerFacts}</p>
+                )}
+                <Form.Item
+                  name="customer"
+                  label="Tên người nhận"
+                  hidden={contactCollapsed}
+                  rules={[
+                    { required: needsCustomer, whitespace: true, message: 'Nhập tên người nhận.' },
+                    { max: 150, message: 'Tối đa 150 ký tự.' },
+                  ]}
+                >
+                  <Input placeholder={needsCustomer ? 'Tên khách đặt nước' : 'Để trống nếu là khách vãng lai'} />
+                </Form.Item>
+                {lastOrder && (
+                  <div className="af-intake-last">
+                    <div className="af-cell-stack">
+                      <small>Đơn gần nhất · {orderedAtOf(lastOrder).label}</small>
+                      <span>{lastOrder.items}</span>
+                      <small>{currency(lastOrder.total)}</small>
+                    </div>
+                    <Button
+                      color="primary"
+                      variant="outlined"
+                      icon={<RotateCcw size={15} />}
+                      disabled={loadingProducts}
+                      onClick={() => reorder(lastOrder)}
+                    >
+                      Đặt lại đơn này
+                    </Button>
+                  </div>
+                )}
+              </section>
+
+              <section aria-labelledby="af-intake-delivery">
+                <h3 id="af-intake-delivery" className="af-form-section-title">
+                  Giao nhận
+                </h3>
+                <Row gutter={12}>
+                  <Col xs={24} sm={14}>
+                    <Form.Item name="method" label="Hình thức nhận" rules={[{ required: true }]}>
+                      <Segmented
+                        block
+                        options={[
+                          { value: 'Giao tận nơi', label: 'Giao tận nơi' },
+                          { value: 'Tại quầy', label: 'Tại quầy' },
+                        ]}
+                      />
                     </Form.Item>
                   </Col>
-                )}
-                <Col xs={24} sm={demo ? 24 : 12}>
-                  <Form.Item
-                    name="appointment"
-                    label="Giờ nhận mong muốn"
-                    rules={[
-                      {
-                        validator: (_, value?: Dayjs) =>
-                          !value || value.isAfter(dayjs()) ? Promise.resolve() : Promise.reject(new Error('Chọn giờ trong tương lai.')),
-                      },
-                    ]}
-                  >
-                    <DatePicker
-                      showTime
-                      format="DD/MM/YYYY HH:mm"
-                      disabledDate={(date) => date.isBefore(dayjs(), 'day')}
-                      style={{ width: '100%' }}
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </>
-          )}
-
-          <div className="af-form-section-title">Sản phẩm</div>
-          {quickProducts.length > 0 && (
-            <div className="af-quick-products" role="group" aria-label="Chọn nhanh sản phẩm bán chạy">
-              {quickProducts.map((product) => (
-                <Button
-                  key={product!.id}
-                  size="small"
-                  icon={<Plus size={14} />}
-                  onClick={() => form.setFieldValue('lines', addQuickLine(form.getFieldValue('lines') ?? [], product!.id))}
-                >
-                  {product!.name}
-                </Button>
-              ))}
-            </div>
-          )}
-          <Form.List name="lines">
-            {(fields, { add, remove }) => (
-              <>
-                {fields.map((field, index) => (
-                  <div className="af-order-line-form" key={field.key}>
+                  <Col xs={24} sm={10}>
+                    <Form.Item name="channel" label="Kênh tiếp nhận" rules={[{ required: true }]}>
+                      <Select options={['Điện thoại', 'Tại quầy', 'Tin nhắn'].map((value) => ({ value, label: value }))} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                {delivery && (
+                  <>
+                    {addressesFailed && (
+                      <Alert
+                        type="warning"
+                        style={{ marginBottom: 16 }}
+                        title="Không tải được địa chỉ đã lưu."
+                        action={<Button onClick={() => void refetchAddresses()}>Thử lại</Button>}
+                      />
+                    )}
                     <Form.Item
-                      name={[field.name, 'productId']}
-                      label={`Sản phẩm ${index + 1}`}
+                      name="address"
+                      label="Địa chỉ giao hàng"
+                      hidden={contactCollapsed}
                       rules={[
-                        { required: true, message: 'Chọn sản phẩm.' },
+                        { required: true, whitespace: true, message: 'Nhập địa chỉ giao hàng.' },
+                        { max: 255, message: 'Tối đa 255 ký tự.' },
+                      ]}
+                    >
+                      <AutoComplete
+                        options={addresses?.map((saved) => ({ value: saved.line }))}
+                        placeholder="Số nhà, tên đường, phường/xã, tỉnh/thành phố"
+                        onSelect={(value: string) => {
+                          const saved = addresses?.find((item) => item.line === value)
+                          if (saved) applyAddress(saved)
+                        }}
+                      />
+                    </Form.Item>
+                    {!demo && (
+                      <Form.Item name="area" label="Khu vực" hidden={contactCollapsed} rules={[{ max: 150, message: 'Tối đa 150 ký tự.' }]}>
+                        <Input placeholder="Phường / quận" />
+                      </Form.Item>
+                    )}
+                    <Form.Item
+                      name="appointment"
+                      label="Giờ nhận mong muốn"
+                      rules={[
                         {
-                          validator: (_, value) =>
-                            value === undefined ||
-                            lines.filter((line, other) => other !== field.name && line?.productId === value).length === 0
-                              ? Promise.resolve()
-                              : Promise.reject(new Error('Sản phẩm đã có ở dòng khác; tăng số lượng thay vì thêm dòng.')),
+                          validator: (_, value?: Dayjs) =>
+                            !value || value.isAfter(dayjs()) ? Promise.resolve() : Promise.reject(new Error('Chọn giờ trong tương lai.')),
                         },
                       ]}
                     >
-                      <Select
-                        loading={loadingProducts}
-                        showSearch={{ optionFilterProp: 'label' }}
-                        placeholder="Chọn sản phẩm"
-                        options={products.map((product) => ({
-                          value: product.id,
-                          label: `${product.sku} · ${product.name} · ${currency(product.price)}${product.available === undefined ? '' : ` · còn ${product.available}`}`,
-                          disabled: !product.sellable,
-                        }))}
+                      <DatePicker
+                        showTime
+                        format="DD/MM/YYYY HH:mm"
+                        disabledDate={(date) => date.isBefore(dayjs(), 'day')}
+                        style={{ width: '100%' }}
                       />
                     </Form.Item>
-                    <Form.Item
-                      name={[field.name, 'quantity']}
-                      label="Số lượng"
-                      rules={[
-                        { required: true, message: 'Nhập số lượng.' },
-                        { type: 'integer', min: 1, message: 'Nhập số nguyên dương.' },
-                      ]}
-                    >
-                      <InputNumber min={1} precision={0} style={{ width: '100%' }} />
-                    </Form.Item>
-                    <Button
-                      type="text"
-                      danger
-                      aria-label={`Xóa sản phẩm ${index + 1}`}
-                      icon={<Trash2 size={17} />}
-                      onClick={() => remove(field.name)}
-                      disabled={fields.length === 1}
-                    />
-                  </div>
-                ))}
-                <Button type="dashed" block icon={<Plus size={16} />} onClick={() => add({ quantity: 1 })}>
-                  Thêm sản phẩm
-                </Button>
-              </>
-            )}
-          </Form.List>
-
-          <div className="af-form-section-title">Tổng tiền và ghi chú</div>
-          {/* Tài khoản thật: phí giao do hệ thống tính nên không nhập ở đây. */}
-          {demo && delivery && (
-            <>
-              <Row gutter={16}>
-                <Col xs={24} sm={12}>
-                  <Form.Item name="floor" label="Giao lên lầu (thang bộ)">
-                    <Select
-                      options={[
-                        { value: 0, label: 'Tầng trệt / có thang máy' },
-                        ...[1, 2, 3, 4].map((value) => ({
-                          value,
-                          label: `Lầu ${value} · +${stairsSurcharge(value, 1).toLocaleString('vi-VN')} ₫/bình`,
-                        })),
-                      ]}
-                    />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <Form.Item name="deliveryFee" label="Phí giao hàng (₫)" rules={[{ required: true }, { type: 'integer', min: 0 }]}>
-                    <InputNumber min={0} step={1000} precision={0} style={{ width: '100%' }} />
-                  </Form.Item>
-                </Col>
-              </Row>
-              <p className="af-form-hint af-fee-hint">
-                {units >= FREE_DELIVERY_MIN_UNITS
-                  ? `Từ ${FREE_DELIVERY_MIN_UNITS} bình/thùng: miễn phí giao trong 5 km`
-                  : `Dưới ${FREE_DELIVERY_MIN_UNITS} bình/thùng: phí ${SMALL_ORDER_FEE.min.toLocaleString('vi-VN')}–${SMALL_ORDER_FEE.max.toLocaleString('vi-VN')} ₫ tùy khoảng cách`}
-                {floor > 0 && jugs > 0 ? `, thang bộ +${currency(stairsSurcharge(floor, jugs))}` : ''}. Gợi ý {currency(suggestedFee)}{' '}
-                {fee !== suggestedFee && (
-                  <Button type="link" size="small" onClick={() => form.setFieldValue('deliveryFee', suggestedFee)}>
-                    Áp dụng
-                  </Button>
+                  </>
                 )}
-              </p>
-            </>
-          )}
-          <Form.Item name="note" label="Ghi chú" rules={[{ max: 500, message: 'Tối đa 500 ký tự.' }]}>
-            <Input.TextArea rows={2} placeholder="Hướng dẫn tìm địa chỉ, lưu ý giao nhận..." />
-          </Form.Item>
-          <div className="af-order-summary">
-            <span>{demo ? 'Tổng tiền dự kiến' : 'Tiền hàng dự kiến'}</span>
-            <strong>{currency(goods + (demo && delivery ? fee : 0))}</strong>
+                {/* Tài khoản thật: phí giao do hệ thống tính nên không nhập ở đây. */}
+                {demo && delivery && (
+                  <>
+                    <Row gutter={12}>
+                      <Col xs={24} sm={12}>
+                        <Form.Item name="floor" label="Giao lên lầu (thang bộ)">
+                          <Select
+                            options={[
+                              { value: 0, label: 'Tầng trệt / có thang máy' },
+                              ...[1, 2, 3, 4].map((value) => ({
+                                value,
+                                label: `Lầu ${value} · +${stairsSurcharge(value, 1).toLocaleString('vi-VN')} ₫/bình`,
+                              })),
+                            ]}
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} sm={12}>
+                        <Form.Item name="deliveryFee" label="Phí giao hàng (₫)" rules={[{ required: true }, { type: 'integer', min: 0 }]}>
+                          <InputNumber min={0} step={1000} precision={0} style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <p className="af-form-hint af-fee-hint">
+                      {units >= FREE_DELIVERY_MIN_UNITS
+                        ? `Từ ${FREE_DELIVERY_MIN_UNITS} bình/thùng: miễn phí giao trong 5 km`
+                        : `Dưới ${FREE_DELIVERY_MIN_UNITS} bình/thùng: phí ${SMALL_ORDER_FEE.min.toLocaleString('vi-VN')}–${SMALL_ORDER_FEE.max.toLocaleString('vi-VN')} ₫ tùy khoảng cách`}
+                      {floor > 0 && jugs > 0 ? `, thang bộ +${currency(stairsSurcharge(floor, jugs))}` : ''}. Gợi ý {currency(suggestedFee)}{' '}
+                      {fee !== suggestedFee && (
+                        <Button type="link" size="small" onClick={() => form.setFieldValue('deliveryFee', suggestedFee)}>
+                          Áp dụng
+                        </Button>
+                      )}
+                    </p>
+                  </>
+                )}
+              </section>
+            </div>
+
+            <div>
+              <section aria-labelledby="af-intake-products">
+                <h3 id="af-intake-products" className="af-form-section-title">
+                  Sản phẩm
+                </h3>
+                {quickProducts.length > 0 && (
+                  <div className="af-quick-products" role="group" aria-label="Chọn nhanh sản phẩm bán chạy">
+                    <small>Bán chạy</small>
+                    {quickProducts.map((product) => (
+                      <Button
+                        key={product!.id}
+                        size="small"
+                        icon={<Plus size={14} />}
+                        title={product!.name}
+                        aria-label={`Thêm ${product!.name}`}
+                        onClick={() => form.setFieldValue('lines', addQuickLine(form.getFieldValue('lines') ?? [], product!.id))}
+                      >
+                        {shortProductName(product!.name)}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+                <Form.List name="lines">
+                  {(fields, { add, remove }) => (
+                    <>
+                      {fields.map((field, index) => {
+                        const chosen = productOf(lines[field.name]?.productId)
+                        return (
+                          <div className="af-order-line-form" key={field.key}>
+                            <Form.Item
+                              name={[field.name, 'productId']}
+                              label={`Sản phẩm ${index + 1}`}
+                              extra={chosen && priceAndStock(chosen)}
+                              rules={[
+                                { required: true, message: 'Chọn sản phẩm.' },
+                                {
+                                  validator: (_, value) =>
+                                    value === undefined ||
+                                    lines.filter((line, other) => other !== field.name && line?.productId === value).length === 0
+                                      ? Promise.resolve()
+                                      : Promise.reject(new Error('Sản phẩm đã có ở dòng khác; tăng số lượng thay vì thêm dòng.')),
+                                },
+                              ]}
+                            >
+                              <Select
+                                loading={loadingProducts}
+                                showSearch={{ optionFilterProp: 'label' }}
+                                placeholder="Chọn sản phẩm"
+                                // Ô hẹp nên chỉ hiện tên; mã, giá, tồn nằm ở danh sách chọn và dòng dưới ô.
+                                labelRender={({ value, label }) => productOf(String(value))?.name ?? label}
+                                optionRender={({ value }) => {
+                                  const product = productOf(String(value))
+                                  return (
+                                    product && (
+                                      <div className="af-intake-option">
+                                        <span>{product.name}</span>
+                                        <small>
+                                          {product.sku} · {priceAndStock(product)}
+                                        </small>
+                                      </div>
+                                    )
+                                  )
+                                }}
+                                options={products.map((product) => ({
+                                  value: product.id,
+                                  label: `${product.sku} ${product.name}`,
+                                  disabled: !product.sellable,
+                                }))}
+                              />
+                            </Form.Item>
+                            <Form.Item
+                              name={[field.name, 'quantity']}
+                              label="Số lượng"
+                              rules={[
+                                { required: true, message: 'Nhập số lượng.' },
+                                { type: 'integer', min: 1, message: 'Nhập số nguyên dương.' },
+                              ]}
+                            >
+                              <InputNumber min={1} precision={0} style={{ width: '100%' }} />
+                            </Form.Item>
+                            <Button
+                              type="text"
+                              danger
+                              aria-label={`Xóa sản phẩm ${index + 1}`}
+                              icon={<Trash2 size={17} />}
+                              onClick={() => remove(field.name)}
+                              disabled={fields.length === 1}
+                            />
+                          </div>
+                        )
+                      })}
+                      <Button type="dashed" block icon={<Plus size={16} />} onClick={() => add({ quantity: 1 })}>
+                        Thêm sản phẩm
+                      </Button>
+                    </>
+                  )}
+                </Form.List>
+              </section>
+
+              <section aria-labelledby="af-intake-note">
+                <h3 id="af-intake-note" className="af-form-section-title">
+                  Ghi chú
+                </h3>
+                <Form.Item name="note" aria-labelledby="af-intake-note" rules={[{ max: 500, message: 'Tối đa 500 ký tự.' }]}>
+                  <Input.TextArea rows={3} placeholder="Hướng dẫn tìm địa chỉ, lưu ý giao nhận..." />
+                </Form.Item>
+                <p className="af-form-hint">
+                  Đơn mới ở trạng thái chờ xác nhận. Tồn kho được kiểm tra và giữ hàng khi xác nhận đơn.
+                  {demo
+                    ? ' Khách chưa có vỏ để đổi đặt cọc riêng khi nhận hàng, không gộp vào tiền hàng.'
+                    : ' Tổng tiền cuối cùng do hệ thống tính.'}
+                </p>
+              </section>
+            </div>
           </div>
-          <p className="af-form-hint">
-            Đơn mới ở trạng thái chờ xác nhận. Tồn kho được kiểm tra và giữ hàng khi xác nhận đơn.
-            {demo
-              ? ' Khách chưa có vỏ để đổi đặt cọc riêng khi nhận hàng, không gộp vào tiền hàng.'
-              : ' Tổng tiền cuối cùng do hệ thống tính.'}
-          </p>
         </Form>
       )}
     </Modal>

@@ -5,7 +5,8 @@ import { URL } from 'node:url'
 const { matchesSearch, normalizeSearch } = await import('/src/shared/utils/search.ts')
 const { expiryStatus } = await import('/src/features/inventory/expiry.ts')
 const { ordersLink, parseOrderFilters, initialOrderFilters } = await import('/src/features/orders/useOrderFilters.ts')
-const { addQuickLine, bestSellers, lastOrderOf, samePhone, toLiveOrderInput } = await import('/src/features/orders/orderIntake.ts')
+const { addQuickLine, bestSellers, lastOrderOf, samePhone, shortProductName, toLiveOrderInput } =
+  await import('/src/features/orders/orderIntake.ts')
 
 test('Vietnamese search handles accents, Đ, combining characters and repeated whitespace', () => {
   assert.equal(normalizeSearch('  ĐẶNG   Nguyễn  '), 'dang nguyen')
@@ -71,6 +72,11 @@ test('order intake quick pick raises quantity, fills the empty line, or adds a l
     { productId: 'A', quantity: 2 },
     { productId: 'B', quantity: 1 },
   ])
+})
+test('order intake shortens product names on quick picks without losing other names', () => {
+  assert.equal(shortProductName('Nước tinh khiết Vihawa 20 Lít (Vòi)'), 'Vihawa 20 Lít (Vòi)')
+  assert.equal(shortProductName('Nước khoáng LaVie 19 Lít'), 'LaVie 19 Lít')
+  assert.equal(shortProductName('Vỏ bình 20L'), 'Vỏ bình 20L')
 })
 test('order intake ranks best sellers by quantity and ignores cancelled orders', () => {
   const orders = [
