@@ -9,6 +9,7 @@ import {
   canCancel,
   canConfirm,
   canPrepare,
+  confirmOrderHint,
   orderApi,
   orderStatusLabels,
   paymentStatusLabels,
@@ -85,7 +86,7 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
         {canConfirm(order) && (
           <Popconfirm
             title={`Xác nhận đơn ${order.orderCode}?`}
-            description="Hệ thống giữ hàng theo lô có hạn gần nhất. Nếu không đủ hàng khả dụng, đơn vẫn ở trạng thái chờ xác nhận."
+            description={confirmOrderHint}
             okText="Xác nhận"
             cancelText="Chưa"
             onConfirm={() => update.mutate('CONFIRMED')}
