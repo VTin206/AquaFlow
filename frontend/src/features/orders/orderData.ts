@@ -1,10 +1,12 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useIsDemo } from '@/shared/features'
 import { useStaff } from '@/features/auth/useStaff'
 import { catalogApi, type CatalogProduct } from '@/features/live/catalogApi'
+import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { channelLabels, orderApi, paymentStatusLabels, type LiveOrder } from '@/features/live/orderApi'
+import { orderStatuses } from './orderStatus'
 import type { Order, OrderStatus } from './types'
-import { useOrders } from './useOrders'
+import { useAdvanceOrderStatus, useOrders } from './useOrders'
 
 /**
  * Danh sách đơn cho trang Đơn hàng: bản dùng thử đọc mock, tài khoản thật đọc OrderController
@@ -65,6 +67,26 @@ async function liveOrders() {
   return orders
     .map((order) => fromLiveOrder(order, products))
     .sort((a, b) => (b.history[0]?.at ?? '').localeCompare(a.history[0]?.at ?? ''))
+}
+
+/** Trạng thái theo nguồn dữ liệu: mẫu xác nhận là chuyển thẳng sang chuẩn bị; BE có bước "Đã xác nhận" và chưa có "Giao thất bại". */
+export function useOrderStatuses() {
+  const demo = useIsDemo()
+  return orderStatuses.filter((status) => (demo ? status !== 'Đã xác nhận' : status !== 'Giao thất bại'))
+}
+
+/** Xác nhận đơn theo nguồn dữ liệu; `refresh` làm mới danh sách sau khi xác nhận xong một loạt. */
+export function useConfirmOrderRequest() {
+  const demo = useIsDemo()
+  const queryClient = useQueryClient()
+  const advance = useAdvanceOrderStatus()
+  return {
+    confirm: (order: Order): Promise<unknown> =>
+      demo ? advance.mutateAsync(order.id) : orderApi.updateStatus(Number(order.id), 'CONFIRMED'),
+    refresh: () => {
+      if (!demo) void invalidateLiveData(queryClient)
+    },
+  }
 }
 
 export function useOrderList(enabled = true) {

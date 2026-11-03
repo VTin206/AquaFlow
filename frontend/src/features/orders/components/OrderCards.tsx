@@ -1,15 +1,13 @@
 import { useState } from 'react'
 import { Button, Select, Space } from 'antd'
 import { Eye } from 'lucide-react'
-import { LiveConfirmButton } from '@/features/live/LiveConfirmButton'
 import { MobileRecordList } from '@/shared/components/MobileRecordList'
 import { Money } from '@/shared/components/Money'
-import { useFeature, useIsDemo } from '@/shared/features'
+import { useFeature } from '@/shared/features'
 import { Unsupported } from '@/shared/components/Unsupported'
 import { amountDue, deliveryTimingOf, paymentLabel, type Order } from '../types'
-import { nextActionLabel } from '../orderStatus'
-import { AdvanceStatusButton } from './AdvanceStatusButton'
 import { LateTag } from './LateTag'
+import { OrderNextAction } from './OrderNextAction'
 import { OrderStatusTag } from './OrderStatusTag'
 
 type OrderCardsProps = {
@@ -23,7 +21,6 @@ type OrderCardsProps = {
 type Sort = 'default' | 'total' | 'due'
 
 export function OrderCards({ orders, loading, compact, emptyText, onDetails, filterKey }: OrderCardsProps) {
-  const demo = useIsDemo()
   const showPayments = useFeature('orderPayments')
   const [sort, setSort] = useState<Sort>('default')
   const sorted = [...orders].sort((a, b) =>
@@ -89,8 +86,7 @@ export function OrderCards({ orders, loading, compact, emptyText, onDetails, fil
             <Button icon={<Eye size={16} />} onClick={() => onDetails(order.id)} aria-label={`Chi tiết đơn ${order.code ?? order.id}`}>
               Chi tiết
             </Button>
-            {!compact && demo && nextActionLabel(order) && <AdvanceStatusButton order={order} size="middle" />}
-            {!compact && !demo && order.status === 'Chờ xác nhận' && <LiveConfirmButton order={order} size="middle" />}
+            {!compact && <OrderNextAction order={order} size="middle" />}
           </div>
         </article>
       )}

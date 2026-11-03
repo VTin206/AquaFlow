@@ -8,6 +8,7 @@ export type GuestOrderInput = {
   deliveryAddress: string
   deliveryArea: string
   items: { productId: number; quantity: number }[]
+  requestedDeliveryAt?: string
   note?: string
 }
 

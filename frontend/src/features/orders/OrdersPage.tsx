@@ -4,18 +4,16 @@ import { FunnelX, Plus, Search, SlidersHorizontal } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
-import { useFeature, useIsDemo } from '@/shared/features'
-import { LiveOrderDetails } from '@/features/live/LiveOrderDetails'
+import { useFeature } from '@/shared/features'
+import { OrderDetails } from './components/OrderDetails'
 import { OrderIntakeModal } from './components/OrderIntakeModal'
 import { OrdersTable } from './components/OrdersTable'
-import { statusesFor } from './orderStatus'
-import { useOrderList } from './orderData'
+import { useOrderList, useOrderStatuses } from './orderData'
 import { amountDue } from './types'
 import { ALL_ORDERS as ALL, useOrderFilters } from './useOrderFilters'
 import { matchesSearch } from '@/shared/utils/search'
 
 export function OrdersPage() {
-  const demo = useIsDemo()
   const showPayments = useFeature('orderPayments')
   const ordersQuery = useOrderList()
   const {
@@ -28,10 +26,10 @@ export function OrdersPage() {
   const narrow = Grid.useBreakpoint().md === false
   const [moreFilters, setMoreFilters] = useState(false)
   const extraActive = Number(method !== ALL) + Number(payment !== ALL)
-  const [created, setCreated] = useState<number | null>(null)
+  const [created, setCreated] = useState<string | null>(null)
 
   const orders = ordersQuery.data ?? []
-  const statuses = statusesFor(demo)
+  const statuses = useOrderStatuses()
   const countOf = (value: string) => (value === ALL ? orders.length : orders.filter((order) => order.status === value).length)
   const pending = countOf('Chờ xác nhận')
   // Bộ lọc thanh toán đã lưu từ bản dùng thử bị bỏ qua khi BE chưa có phiếu thu.
@@ -56,7 +54,7 @@ export function OrdersPage() {
         </Button>
       }
     >
-      {!demo && pending > 0 && status !== 'Chờ xác nhận' && (
+      {pending > 0 && status !== 'Chờ xác nhận' && (
         <Alert
           type="warning"
           showIcon
@@ -150,8 +148,8 @@ export function OrdersPage() {
           </>
         )}
       </Card>
-      {creating && <OrderIntakeModal onClose={() => setCreating(false)} onCreated={demo ? undefined : (id) => setCreated(Number(id))} />}
-      {created !== null && <LiveOrderDetails key={created} id={created} onClose={() => setCreated(null)} />}
+      {creating && <OrderIntakeModal onClose={() => setCreating(false)} onCreated={setCreated} />}
+      {created !== null && <OrderDetails id={created} onClose={() => setCreated(null)} />}
     </Page>
   )
 }
