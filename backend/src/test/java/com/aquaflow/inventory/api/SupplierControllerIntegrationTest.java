@@ -45,7 +45,6 @@ class SupplierControllerIntegrationTest {
 
     @MockitoBean private com.aquaflow.inventory.repository.InventoryMovementReadRepository inventoryMovementReadRepository;
     @MockitoBean private com.aquaflow.inventory.repository.InventoryReturnRepository inventoryReturnRepository;
-    @MockitoBean private com.aquaflow.inventory.repository.InventoryMovementReadRepository inventoryMovementReadRepository;
     @MockitoBean private com.aquaflow.delivery.repository.DeliveryRepository deliveryRepository;
     @MockitoBean private com.aquaflow.customer.order.repository.DispatchRepository dispatchRepository;
     @MockitoBean private com.aquaflow.inventory.application.StockDispatchService stockDispatchService;

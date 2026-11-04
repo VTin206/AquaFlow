@@ -30,9 +30,6 @@ export const backendFeatures = {
   /** Kiểm hàng hoàn theo lô sau chuyến giao thất bại (Inventory Return API). */
   deliveryReturns: true,
 
-  /** Kiểm hàng hoàn sau giao thất bại (chờ API Return). Lịch sử kho có API riêng. */
-  deliveryReturns: false,
-
   /** Bật lại nhà cung cấp, loại vỏ đã ngừng và xem/khôi phục khách đã lưu trữ (BE mới có chiều ngừng). */
   reactivate: false,
   /** Hộp thông báo cá nhân qua NotificationController. */
