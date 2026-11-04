@@ -60,7 +60,7 @@ export const useIsDemo = () => useAuth().user?.isDemo ?? false
 export const useLiveOnly = () => !useIsDemo()
 
 /** Trang chưa có API BE: tài khoản thật vẫn thấy trên menu, mở ra là trang "Chưa hỗ trợ". */
-const unsupportedPages = new Set(['/reports', '/settings'])
+const unsupportedPages = new Set(['/settings'])
 
 export function usePageSupported() {
   const demo = useIsDemo()

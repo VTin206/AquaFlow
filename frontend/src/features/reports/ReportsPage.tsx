@@ -1,3 +1,5 @@
+import { useIsDemo } from '@/shared/features'
+import { LiveReportsPage } from './LiveReportsPage'
 import { useState } from 'react'
 import {
   App,
@@ -200,6 +202,10 @@ const methodOptions = [
 ]
 
 export function ReportsPage() {
+  return useIsDemo() ? <DemoReportsPage /> : <LiveReportsPage />
+}
+
+function DemoReportsPage() {
   const { message } = App.useApp()
   const [exporting, setExporting] = useState(false)
   const [dates, setDates] = useState<[Dayjs, Dayjs]>(presets[2].value)
