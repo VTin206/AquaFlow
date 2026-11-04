@@ -33,6 +33,17 @@ public final class DeliveryDtos {
 
     public enum Outcome { SUCCESS, FAILED }
 
+    public record CollectionRequest(
+            @NotNull java.util.UUID requestId,
+            @NotNull @DecimalMin("0") @Digits(integer = 12, fraction = 2) BigDecimal amount,
+            @NotNull @Pattern(regexp = "CASH|BANK_TRANSFER") String method,
+            @NotNull @Min(0) Integer bottlesReturned) {}
+    public record CollectionResponse(Long id, Long orderId, BigDecimal amount, String method,
+            int bottlesReturned, Long recordedBy, OffsetDateTime createdAt) {}
+    public record OrderBalance(Long orderId, BigDecimal total, BigDecimal paid, BigDecimal due, int bottlesToExchange) {}
+    public record CollectionsResponse(List<CollectionResponse> receipts, List<OrderBalance> balances,
+            BigDecimal cashExpected, int bottlesExpected) {}
+
     public record DeliveryResultRequest(
             @NotNull Outcome outcome,
             @Size(max = 150) String recipientName,
@@ -55,7 +66,8 @@ public final class DeliveryDtos {
     public record AssignmentResponse(
             Long id, Long orderId, String orderCode, String orderStatus,
             String recipientName, String recipientPhone, String deliveryAddress,
-            AttemptResponse latestAttempt, List<LoadLineResponse> items) {}
+            AttemptResponse latestAttempt, List<LoadLineResponse> items,
+            OffsetDateTime requestedDeliveryAt, String note) {}
 
     public record HandoverResponse(
             Long id, BigDecimal cashReported, BigDecimal cashConfirmed,

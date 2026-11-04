@@ -24,7 +24,7 @@ import { useAuth } from '@/features/auth/useAuth'
 import { useStaff } from '@/features/auth/useStaff'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { currency } from '@/shared/utils/format'
-import { deliveryApi, tripLabels, type DeliveryStop, type ResultInput, type SettlementInput } from './deliveryApi'
+import { collectionApi, deliveryApi, tripLabels, type DeliveryStop, type ResultInput, type SettlementInput } from './deliveryApi'
 
 type Action = { kind: 'create' | 'driver' | 'add' | 'settle'; tripId?: number } | { kind: 'result'; tripId: number; order: DeliveryStop }
 const dateTime = (value: string | null) => (value ? new Date(value).toLocaleString('vi-VN') : '—')
@@ -32,7 +32,7 @@ const dateTime = (value: string | null) => (value ? new Date(value).toLocaleStri
 export function LiveDeliveryPage({ driverView = false }: { driverView?: boolean }) {
   const staff = useStaff()
   const { user } = useAuth()
-  const admin = staff?.role === 'ADMIN'
+  const admin = staff?.role === 'ADMIN' || staff?.role === 'SALES_STAFF'
   const canOperate = admin || staff?.role === 'DELIVERY_STAFF'
   const who = [user?.email, staff?.role]
   const client = useQueryClient()
@@ -66,6 +66,12 @@ export function LiveDeliveryPage({ driverView = false }: { driverView?: boolean 
     },
   })
   const trip = detail.data
+  const collections = useQuery({
+    queryKey: ['live', 'delivery-collections', ...who, selected],
+    queryFn: () => collectionApi.get(selected!),
+    enabled: selected !== null,
+    refetchInterval: 15000,
+  })
   const execute = (operation: () => Promise<unknown>) => change.mutate(operation)
 
   return (
@@ -169,7 +175,7 @@ export function LiveDeliveryPage({ driverView = false }: { driverView?: boolean 
                 )}
                 {admin && trip.status === 'IN_PROGRESS' && (
                   <Button
-                    disabled={change.isPending || trip.orders.some((o) => !o.latestAttempt)}
+                    disabled={change.isPending || collections.isPending || collections.isError || trip.orders.some((o) => !o.latestAttempt)}
                     onClick={() => setAction({ kind: 'settle', tripId: trip.id })}
                   >
                     Đối soát chuyến
@@ -253,6 +259,19 @@ export function LiveDeliveryPage({ driverView = false }: { driverView?: boolean 
                   <p>{dateTime(trip.settlement.handedOverAt)}</p>
                 </Card>
               )}
+              {collections.isError && <QueryError error={collections.error} onRetry={collections.refetch} />}
+              {collections.data && (
+                <Card size="small" title="Tiền và vỏ đã thu">
+                  <p>
+                    Tiền mặt bàn giao: {currency(collections.data.cashExpected)} · Vỏ đã nhận: {collections.data.bottlesExpected}
+                  </p>
+                  {collections.data.receipts.map((r) => (
+                    <p key={r.id}>
+                      Đơn #{r.orderId} · {currency(r.amount)} ({r.method === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}) · {r.bottlesReturned} vỏ
+                    </p>
+                  ))}
+                </Card>
+              )}
             </>
           )
         )}
@@ -261,6 +280,11 @@ export function LiveDeliveryPage({ driverView = false }: { driverView?: boolean 
         <DeliveryActionModal
           key={`${action.kind}-${action.tripId ?? 0}-${action.kind === 'result' ? action.order.orderId : ''}`}
           action={action}
+          expected={
+            action.kind === 'settle' && collections.data?.receipts.length
+              ? { cash: collections.data.cashExpected, bottles: collections.data.bottlesExpected }
+              : undefined
+          }
           loading={change.isPending}
           drivers={drivers.data ?? []}
           available={available.data ?? []}
@@ -328,8 +352,9 @@ export function LiveDeliveryPage({ driverView = false }: { driverView?: boolean 
 }
 
 type FormValues = Partial<SettlementInput & ResultInput> & { driverId?: number; orderId?: number; vehicle?: string }
-function DeliveryActionModal({
+export function DeliveryActionModal({
   action,
+  expected,
   drivers,
   available,
   optionError,
@@ -339,6 +364,7 @@ function DeliveryActionModal({
   onSubmit,
 }: {
   action: Action
+  expected?: { cash: number; bottles: number }
   drivers: { id: number; name: string }[]
   available: { id: number; orderCode: string; recipientName: string | null; deliveryFailed: boolean }[]
   optionError: Error | null
@@ -375,10 +401,10 @@ function DeliveryActionModal({
         initialValues={{
           outcome: 'SUCCESS',
           recipientName: action.kind === 'result' ? action.order.recipientName : undefined,
-          cashReported: 0,
-          cashConfirmed: 0,
-          bottlesExpected: 0,
-          bottlesConfirmed: 0,
+          cashReported: expected?.cash ?? 0,
+          cashConfirmed: expected?.cash ?? 0,
+          bottlesExpected: expected?.bottles ?? 0,
+          bottlesConfirmed: expected?.bottles ?? 0,
         }}
       >
         {(action.kind === 'create' || action.kind === 'driver') && (
@@ -461,6 +487,7 @@ function DeliveryActionModal({
             ).map(([name, label]) => (
               <Form.Item key={name} name={name} label={label} rules={[{ required: true, message: 'Nhập số lượng / số tiền.' }]}>
                 <InputNumber
+                  disabled={!!expected && (name === 'cashReported' || name === 'bottlesExpected')}
                   min={0}
                   max={name.startsWith('cash') ? 999999999999.99 : 2147483647}
                   precision={name.startsWith('cash') ? 2 : 0}

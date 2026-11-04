@@ -16,7 +16,7 @@ import { drivers, type Trip } from './types'
 import { dispatchedIn, openIn } from './tripService'
 import { useTrips } from './useTrips'
 import { useIsDemo } from '@/shared/features'
-import { LiveDeliveryPage } from './LiveDeliveryPage'
+import { LiveDriverPage } from './LiveDriverPage'
 
 const DRIVER_KEY = 'aquaflow.driver'
 const readDriver = () => {
@@ -32,7 +32,7 @@ const mapsUrl = (address: string) => `https://www.google.com/maps/search/?api=1&
 
 /** Màn hình điện thoại cho tài xế: chỉ chuyến của mình, nút gọi/chỉ đường lớn, ghi kết quả từng điểm. */
 export function DriverPage() {
-  return useIsDemo() ? <DemoDriverPage /> : <LiveDeliveryPage driverView />
+  return useIsDemo() ? <DemoDriverPage /> : <LiveDriverPage />
 }
 
 function DemoDriverPage() {

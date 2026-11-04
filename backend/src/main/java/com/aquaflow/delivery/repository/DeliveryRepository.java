@@ -258,7 +258,7 @@ public class DeliveryRepository {
     public TripResponse viewTrip(TripRow trip) {
         List<AssignmentResponse> assigned = jdbc.query("""
                 SELECT a.id AS assignment_id, o.id AS order_id, o.order_code, o.status AS order_status,
-                       o.recipient_name, o.recipient_phone, o.delivery_address,
+                       o.recipient_name, o.recipient_phone, o.delivery_address, o.requested_delivery_at, o.note,
                        da.id AS attempt_id, da.attempt_no, da.outcome, da.recipient_name AS actual_recipient,
                        da.failure_reason, da.note AS attempt_note, da.attempted_at
                 FROM delivery_assignments a JOIN orders o ON o.id = a.order_id
@@ -271,7 +271,8 @@ public class DeliveryRepository {
                 rs.getLong("assignment_id"), rs.getLong("order_id"), rs.getString("order_code"),
                 rs.getString("order_status"), rs.getString("recipient_name"),
                 rs.getString("recipient_phone"), rs.getString("delivery_address"),
-                mapAttempt(rs), orderLoad(rs.getLong("order_id"))), trip.id());
+                mapAttempt(rs), orderLoad(rs.getLong("order_id")),
+                rs.getObject("requested_delivery_at", OffsetDateTime.class), rs.getString("note")), trip.id());
         HandoverResponse handover = jdbc.query("""
                 SELECT * FROM handover_records WHERE trip_id = ?
                 """, (rs, i) -> new HandoverResponse(
@@ -296,5 +297,61 @@ public class DeliveryRepository {
 
     public static String clean(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    public CollectionsResponse collections(long tripId) {
+        var receipts = jdbc.query("""
+                SELECT c.*, a.order_id FROM delivery_collections c
+                JOIN delivery_assignments a ON a.id=c.assignment_id WHERE a.trip_id=? ORDER BY c.id
+                """, (rs, i) -> new CollectionResponse(rs.getLong("id"), rs.getLong("order_id"),
+                rs.getBigDecimal("amount"), rs.getString("method"), rs.getInt("bottles_returned"),
+                rs.getLong("recorded_by"), rs.getObject("created_at", OffsetDateTime.class)), tripId);
+        var balances = jdbc.query("SELECT order_id FROM delivery_assignments WHERE trip_id=? ORDER BY id",
+                (rs, i) -> balance(rs.getLong(1)), tripId);
+        BigDecimal cash = receipts.stream().filter(r -> r.method().equals("CASH"))
+                .map(CollectionResponse::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new CollectionsResponse(receipts, balances, cash, receipts.stream().mapToInt(CollectionResponse::bottlesReturned).sum());
+    }
+
+    public OrderBalance balance(long orderId) {
+        return jdbc.queryForObject("""
+                SELECT o.id, o.subtotal-o.discount_amount+o.delivery_fee AS total,
+                  COALESCE((SELECT SUM(CASE WHEN p.direction='IN' THEN p.amount ELSE -p.amount END)
+                    FROM payments p WHERE p.order_id=o.id AND p.status='CONFIRMED'),0) AS paid,
+                  COALESCE((SELECT SUM(oi.quantity) FROM order_items oi JOIN products pr ON pr.id=oi.product_id
+                    WHERE oi.order_id=o.id AND pr.bottle_type_id IS NOT NULL),0) AS bottles
+                FROM orders o WHERE o.id=?
+                """, (rs, i) -> new OrderBalance(rs.getLong("id"), rs.getBigDecimal("total"), rs.getBigDecimal("paid"),
+                rs.getBigDecimal("total").subtract(rs.getBigDecimal("paid")).max(BigDecimal.ZERO), rs.getInt("bottles")), orderId);
+    }
+
+    public boolean collectionExists(long assignmentId, CollectionRequest request) {
+        var rows = jdbc.queryForList("SELECT * FROM delivery_collections WHERE request_id=?", request.requestId());
+        if (rows.isEmpty()) return false;
+        var row = rows.getFirst();
+        if (((Number) row.get("assignment_id")).longValue()!=assignmentId
+                || ((BigDecimal) row.get("amount")).compareTo(request.amount())!=0
+                || !row.get("method").equals(request.method())
+                || ((Number) row.get("bottles_returned")).intValue()!=request.bottlesReturned())
+            throw new ConflictException("Request id already used with different collection details");
+        return true;
+    }
+
+    public void collect(long assignmentId, long orderId, long actorId, CollectionRequest request) {
+        Long paymentId = null;
+        if (request.amount().signum()>0) {
+            paymentId = jdbc.queryForObject("""
+                    INSERT INTO payments(order_id,direction,method,amount,status,recorded_by,confirmed_by,confirmed_at)
+                    VALUES (?,'IN',?,?,'CONFIRMED',?,?,NOW()) RETURNING id
+                    """, Long.class, orderId, request.method(), request.amount(), actorId, actorId);
+            jdbc.update("INSERT INTO payment_allocations(payment_id,allocation_type,amount) VALUES (?,'SALE',?)", paymentId, request.amount());
+        }
+        jdbc.update("""
+                INSERT INTO delivery_collections(assignment_id,payment_id,request_id,amount,method,bottles_returned,recorded_by)
+                VALUES (?,?,?,?,?,?,?)
+                """, assignmentId, paymentId, request.requestId(), request.amount(), request.method(), request.bottlesReturned(), actorId);
+        var balance = balance(orderId);
+        jdbc.update("UPDATE orders SET payment_status=? WHERE id=?",
+                balance.due().signum()==0 ? "PAID" : balance.paid().signum()>0 ? "PARTIALLY_PAID" : "UNPAID", orderId);
     }
 }

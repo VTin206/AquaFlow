@@ -78,7 +78,8 @@ function BottleTypeForm({ item, onClose }: { item: BottleType | null; onClose: (
 }
 
 export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
-  const admin = useStaff()?.role === 'ADMIN'
+  const role = useStaff()?.role
+  const admin = role === 'ADMIN' || role === 'SALES_STAFF'
   const { message, modal } = App.useApp()
   const client = useQueryClient()
   const [status, setStatus] = useState<'active' | 'inactive' | 'all'>('active')

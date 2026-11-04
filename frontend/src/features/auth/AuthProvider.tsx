@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { App } from 'antd'
+import { useQueryClient } from '@tanstack/react-query'
 import { authService, type LoginCredentials } from './authService'
 import { getStoredAuthToken, setUnauthorizedHandler, storeAuthToken } from '@/shared/api/client'
 import { AuthContext, type AuthContextValue, type AuthUser } from './authContext'
@@ -86,6 +87,7 @@ const toAuthUser = (user: { fullName: string; email: string; role: string }): Au
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient()
   const { message } = App.useApp()
   const [token, setToken] = useState(readStoredToken)
   const [user, setUser] = useState<AuthUser | null>(readStoredUser)
@@ -93,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [demoGuest, setDemoGuest] = useState(readDemoGuest)
 
   const clearSession = useCallback(() => {
+    queryClient.clear()
     storeAuthToken(null)
     writeExpiry(null)
     saveUser(null)
@@ -101,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setExpiresAt(null)
     setUser(null)
     setDemoGuest(false)
-  }, [])
+  }, [queryClient])
 
   // Hết phiên thì xóa dữ liệu đăng nhập; RequireAuth tự đưa về trang đăng nhập.
   const expire = useCallback(() => {
@@ -138,24 +141,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Chỉ kiểm tra khi token thay đổi.
   }, [token])
 
-  const login = async (credentials: LoginCredentials) => {
-    const response = await authService.login(credentials)
-    if (!STAFF_ROLES.includes(response.user.role)) {
-      throw new Error(`Tài khoản ${roleLabel(response.user.role).toLowerCase()} không dùng được trang quản lý cửa hàng.`)
-    }
-    const nextUser = toAuthUser(response.user)
-    const nextExpiry = Date.now() + response.expiresIn * 1000
-    storeAuthToken(response.accessToken)
-    writeExpiry(nextExpiry)
-    saveUser(nextUser)
-    writeDemoGuest(false)
-    setDemoGuest(false)
-    setToken(response.accessToken)
-    setExpiresAt(nextExpiry)
-    setUser(nextUser)
-  }
+  const login = useCallback(
+    async (credentials: LoginCredentials) => {
+      const response = await authService.login(credentials)
+      if (!STAFF_ROLES.includes(response.user.role)) {
+        throw new Error(`Tài khoản ${roleLabel(response.user.role).toLowerCase()} không dùng được trang quản lý cửa hàng.`)
+      }
+      const nextUser = toAuthUser(response.user)
+      queryClient.clear()
+      const nextExpiry = Date.now() + response.expiresIn * 1000
+      storeAuthToken(response.accessToken)
+      writeExpiry(nextExpiry)
+      saveUser(nextUser)
+      writeDemoGuest(false)
+      setDemoGuest(false)
+      setToken(response.accessToken)
+      setExpiresAt(nextExpiry)
+      setUser(nextUser)
+    },
+    [queryClient],
+  )
 
-  const enterDemo = () => {
+  const enterDemo = useCallback(() => {
+    queryClient.clear()
     storeAuthToken(null)
     writeExpiry(null)
     const demoUser = { name: 'Nguyễn An', role: 'Bản dùng thử', isDemo: true }
@@ -165,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null)
     setExpiresAt(null)
     setUser(demoUser)
-  }
+  }, [queryClient])
 
   const enterDemoGuest = useCallback(() => {
     clearSession()
@@ -183,7 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       enterDemoGuest,
       logout: clearSession,
     }),
-    [token, user, demoGuest, clearSession, enterDemoGuest],
+    [token, user, demoGuest, clearSession, enterDemoGuest, login, enterDemo],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
