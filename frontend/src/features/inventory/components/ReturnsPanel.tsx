@@ -1,3 +1,5 @@
+import { useIsDemo } from '@/shared/features'
+import { LiveReturnsPanel } from './LiveReturnsPanel'
 import { useState } from 'react'
 import { App, Alert, Button, Empty, Form, Input, InputNumber, Modal, Table, Tag, Typography } from 'antd'
 import { PackageCheck } from 'lucide-react'
@@ -8,6 +10,10 @@ import { modalWidth } from '@/shared/utils/modal'
 
 /** Đơn giao thất bại có hàng mang về: kiểm từng lô trước khi nhập lại kho. */
 export function ReturnsPanel() {
+  return useIsDemo() ? <DemoReturnsPanel /> : <LiveReturnsPanel />
+}
+
+function DemoReturnsPanel() {
   const ordersQuery = useOrders()
   const [orderId, setOrderId] = useState<string | null>(null)
   const pending = (ordersQuery.data ?? []).filter(awaitingReturnInspection)

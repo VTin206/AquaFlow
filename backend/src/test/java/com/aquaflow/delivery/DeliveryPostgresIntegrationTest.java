@@ -40,6 +40,82 @@ class DeliveryPostgresIntegrationTest {
     @Autowired DeliveryService service;
     @Autowired MockMvc mvc;
 
+    @Autowired com.aquaflow.inventory.application.InventoryReturnService returns;
+
+    private long failedTrip() {
+        long trip = service.create(new CreateTripRequest(driverId, null), ownerId, true).id();
+        service.addOrder(trip, new AddOrderRequest(orderId), ownerId, true);
+        service.start(trip, driverId, false);
+        service.recordResult(trip, orderId, new DeliveryResultRequest(Outcome.FAILED, null, "Vắng nhà", null), driverId, false);
+        return trip;
+    }
+
+    @Test
+    void returnInspectionRestocksOnlySellableAndCannotBeRepeated() throws Exception {
+        long trip = failedTrip();
+        assertThat(returns.pending()).noneMatch(p -> p.orderId() == orderId);
+        service.settle(trip, new SettleTripRequest(BigDecimal.ZERO, BigDecimal.ZERO, 0, 0, null), ownerId, true);
+        var pending = returns.pending().stream().filter(p -> p.orderId() == orderId).findFirst().orElseThrow();
+        long line = pending.lines().getFirst().loadItemId();
+        String body = "{\"orderId\":"+orderId+",\"lines\":[{\"loadItemId\":"+line+",\"sellable\":1}],\"note\":\"Vỡ một bình\"}";
+        String base = "/api/v1/inventory/returns";
+        mvc.perform(post(base).with(actor(ownerId, "SALES_STAFF")).contentType("application/json").content(body))
+            .andExpect(status().isCreated()).andExpect(header().exists("Location"))
+            .andExpect(jsonPath("$.lines[0].sellable").value(1));
+        assertThat(jdbc.queryForObject("SELECT on_hand FROM inventory_balances WHERE batch_id=?", Integer.class, pending.lines().getFirst().batchId())).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT SUM(quantity) FROM inventory_movements WHERE reference_type='ORDER' AND reference_id=? AND movement_type='RETURN'", Integer.class, orderId)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id=?", String.class, orderId)).isEqualTo("CANCELLED");
+        assertThat(jdbc.queryForObject("SELECT quantity_returned FROM delivery_load_items WHERE id=?", Integer.class, line)).isEqualTo(2);
+        mvc.perform(post(base).with(actor(ownerId, "ADMIN")).contentType("application/json").content(body)).andExpect(status().isConflict());
+        assertThat(service.availableOrders(true)).noneMatch(o -> o.id() == orderId);
+        assertThat(returns.pending()).noneMatch(p -> p.orderId() == orderId);
+    }
+
+    @Test
+    void invalidInspectionsDoNotChangeStockAndReassignmentBlocksReturns() throws Exception {
+        long trip = failedTrip();
+        service.settle(trip, new SettleTripRequest(BigDecimal.ZERO, BigDecimal.ZERO, 0, 0, null), ownerId, true);
+        var pending = returns.pending().stream().filter(p -> p.orderId() == orderId).findFirst().orElseThrow();
+        long line = pending.lines().getFirst().loadItemId();
+        String base = "/api/v1/inventory/returns";
+        for (String lines : List.of("[]", "[{\"loadItemId\":"+line+",\"sellable\":3}]",
+            "[{\"loadItemId\":"+line+",\"sellable\":-1}]", "[{\"loadItemId\":"+line+",\"sellable\":0}]",
+            "[{\"loadItemId\":"+line+",\"sellable\":2},{\"loadItemId\":"+line+",\"sellable\":2}]")) {
+            mvc.perform(post(base).with(actor(ownerId, "ADMIN")).contentType("application/json")
+                .content("{\"orderId\":"+orderId+",\"lines\":"+lines+"}")).andExpect(status().isBadRequest());
+        }
+        jdbc.update("UPDATE product_batches SET expires_on=? WHERE id=?", LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")), pending.lines().getFirst().batchId());
+        mvc.perform(post(base).with(actor(ownerId, "ADMIN")).contentType("application/json")
+            .content("{\"orderId\":"+orderId+",\"lines\":[{\"loadItemId\":"+line+",\"sellable\":2}]}")).andExpect(status().isBadRequest());
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM inventory_returns WHERE order_id=?", Integer.class, orderId)).isZero();
+        long retry = service.create(new CreateTripRequest(driverId, null), ownerId, true).id();
+        service.addOrder(retry, new AddOrderRequest(orderId), ownerId, true);
+        assertThat(returns.pending()).noneMatch(p -> p.orderId() == orderId);
+        service.cancel(retry, ownerId, true);
+        assertThat(returns.pending()).anyMatch(p -> p.orderId() == orderId);
+    }
+
+    @Test
+    void returnsResourcesEnforceAccessAndSupportHistory() throws Exception {
+        String base = "/api/v1/inventory/returns";
+        mvc.perform(get(base)).andExpect(status().isUnauthorized());
+        mvc.perform(get(base).with(actor(driverId, "DELIVERY_STAFF"))).andExpect(status().isForbidden());
+        mvc.perform(post(base).with(actor(driverId, "DELIVERY_STAFF")).contentType("application/json").content("{}"))
+            .andExpect(status().isForbidden());
+        mvc.perform(get(base+"/999999999").with(actor(ownerId, "ADMIN"))).andExpect(status().isNotFound());
+        mvc.perform(get(base+"?size=101").with(actor(ownerId, "ADMIN"))).andExpect(status().isBadRequest());
+        long trip=failedTrip();
+        service.settle(trip, new SettleTripRequest(BigDecimal.ZERO, BigDecimal.ZERO, 0, 0, null), ownerId, true);
+        long line=returns.pending().stream().filter(p->p.orderId()==orderId).findFirst().orElseThrow().lines().getFirst().loadItemId();
+        var result=returns.create(new com.aquaflow.inventory.api.ReturnDtos.Create(orderId,
+            List.of(new com.aquaflow.inventory.api.ReturnDtos.LineInput(line,0)),"Hỏng toàn bộ"),ownerId);
+        mvc.perform(get(base+"/"+result.id()).with(actor(ownerId,"SALES_STAFF")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.lines[0].sellable").value(0));
+        mvc.perform(get(base).with(actor(ownerId,"ADMIN"))).andExpect(status().isOk());
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM inventory_movements WHERE reference_id=? AND reference_type='ORDER' AND movement_type='RETURN'",Integer.class,orderId)).isZero();
+    }
+
+
     long ownerId;
     long driverId;
     long otherDriverId;
