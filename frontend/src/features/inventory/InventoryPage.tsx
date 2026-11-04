@@ -23,7 +23,8 @@ import { CountLabel } from '@/shared/components/CountLabel'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
 import { UNSUPPORTED_HINT, Unsupported } from '@/shared/components/Unsupported'
-import { useFeature } from '@/shared/features'
+import { usePendingReturns } from '@/features/live/returnApi'
+import { useIsDemo, useFeature } from '@/shared/features'
 import { awaitingReturnInspection } from '@/features/orders/types'
 import { useOrders } from '@/features/orders/useOrders'
 import { useColumnSort } from '@/shared/components/sortableColumn'
@@ -51,7 +52,10 @@ export function InventoryPage() {
   const receiptsQuery = useReceiptViews()
   const warningDays = useExpiryWarningDays()
   const showReturns = useFeature('deliveryReturns')
-  const returnsCount = (useOrders(showReturns).data ?? []).filter(awaitingReturnInspection).length
+  const demo = useIsDemo()
+  const demoReturns = (useOrders(demo).data ?? []).filter(awaitingReturnInspection).length
+  const liveReturns = usePendingReturns(!demo)
+  const returnsCount = demo ? demoReturns : (liveReturns.data?.length ?? 0)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const [view, setView] = useState<View>('stock')
