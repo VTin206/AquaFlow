@@ -3,9 +3,13 @@ import { db } from '@/mocks/db'
 import { mockError, mockRequest } from '@/mocks/mockRequest'
 import { logActivity, requireRole } from '@/mocks/session'
 import { EXPIRY_WARNING_DAYS } from '@/features/inventory/expiry'
+import { useAuth } from '@/features/auth/useAuth'
+import { canReadSettings, settingsApi, type SettingsSnapshot } from './settingsApi'
+import type { AuthUser } from '@/features/auth/authContext'
+import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import type { StoreSettings } from './types'
 
-// Dữ liệu trong bộ nhớ như các trang khác; thay bằng api.get/put khi backend có API cài đặt.
+// Chỉ dùng bộ nhớ cho chế độ dùng thử; tài khoản thật gọi settingsApi.
 export const settingsService = {
   get: () => mockRequest(() => db.settings),
   update: (draft: StoreSettings) =>
@@ -30,18 +34,33 @@ export const settingsService = {
     }),
 }
 
-export const settingsKeys = { all: ['settings'] as const }
+export const settingsKeys = {
+  all: ['settings'] as const,
+  live: (user: AuthUser | null) => ['live', 'settings', user?.email ?? user?.name ?? '', user?.role ?? ''] as const,
+}
 
-export const useSettings = (enabled = true) =>
-  useQuery({ queryKey: settingsKeys.all, queryFn: settingsService.get, staleTime: Infinity, enabled })
+export function useSettings(enabled = true) {
+  const { user, demoGuest } = useAuth()
+  const demo = Boolean(user?.isDemo || demoGuest)
+  return useQuery<SettingsSnapshot>({
+    queryKey: demo ? settingsKeys.all : settingsKeys.live(user),
+    queryFn: demo ? settingsService.get : settingsApi.get,
+    staleTime: 60_000,
+    enabled: enabled && (demo || canReadSettings(user?.role)),
+  })
+}
 
-/** Ngưỡng cảnh báo hạn dùng hiện hành (mặc định khi chưa tải xong cài đặt). */
 export const useExpiryWarningDays = () => useSettings().data?.expiryWarningDays ?? EXPIRY_WARNING_DAYS
 
 export function useUpdateSettings() {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
+  const demo = Boolean(user?.isDemo)
   return useMutation({
-    mutationFn: settingsService.update,
-    onSuccess: (settings) => queryClient.setQueryData(settingsKeys.all, settings),
+    mutationFn: (draft: SettingsSnapshot) => (demo ? settingsService.update(draft) : settingsApi.update(draft)),
+    onSuccess: (settings) => {
+      queryClient.setQueryData(demo ? settingsKeys.all : settingsKeys.live(user), settings)
+      if (!demo) void invalidateLiveData(queryClient)
+    },
   })
 }

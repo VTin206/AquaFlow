@@ -9,11 +9,10 @@ export const supplierKeys = { all: ['suppliers'] as const }
 
 const useDemo = () => useAuth().user?.isDemo ?? false
 
-/** Bản dùng thử: quản lý và bán hàng được sửa; tài khoản thật: theo BE, chỉ ADMIN. */
+/** Store staff manage the catalog in both demo and live mode. */
 export function useCanManageSuppliers() {
-  const demo = useDemo()
   const role = useStaff()?.role
-  return demo ? role === 'ADMIN' || role === 'SALES_STAFF' : role === 'ADMIN'
+  return role === 'ADMIN' || role === 'SALES_STAFF'
 }
 
 export function useSuppliers(status: SupplierStatus = 'active') {

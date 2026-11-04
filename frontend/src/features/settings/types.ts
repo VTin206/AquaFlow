@@ -1,4 +1,4 @@
-/** Thông tin cửa hàng in trên hóa đơn, phiếu giao và các ngưỡng cảnh báo. Mô hình demo, chưa phải API contract. */
+/** Thông tin cửa hàng in trên hóa đơn, phiếu giao và các ngưỡng cảnh báo. */
 export type StoreSettings = {
   storeName: string
   address: string

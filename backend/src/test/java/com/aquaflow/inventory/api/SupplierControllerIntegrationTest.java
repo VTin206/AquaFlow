@@ -42,10 +42,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 @AutoConfigureMockMvc
 class SupplierControllerIntegrationTest {
+    @MockitoBean private com.aquaflow.auth.repository.RoleRepository roleRepository;
 
     @MockitoBean private com.aquaflow.inventory.repository.InventoryMovementReadRepository inventoryMovementReadRepository;
     @MockitoBean private com.aquaflow.inventory.repository.InventoryReturnRepository inventoryReturnRepository;
     @MockitoBean private com.aquaflow.activity.ActivityRepository activityRepository;
+    @MockitoBean private com.aquaflow.report.ReportRepository reportRepository;
     @MockitoBean private com.aquaflow.delivery.repository.DeliveryRepository deliveryRepository;
     @MockitoBean private com.aquaflow.customer.order.repository.DispatchRepository dispatchRepository;
     @MockitoBean private com.aquaflow.inventory.application.StockDispatchService stockDispatchService;
@@ -164,20 +166,21 @@ class SupplierControllerIntegrationTest {
 
     @Test
     @WithMockUser(roles = "SALES_STAFF")
-    void salesStaffCannotCreateSupplier() throws Exception {
+    void salesStaffCanCreateSupplier() throws Exception {
+        when(supplierService.create(any(SupplierRequest.class))).thenReturn(sampleSupplier());
         mockMvc.perform(post("/api/v1/suppliers")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_BODY))
-                .andExpect(status().isForbidden());
-        verify(supplierService, never()).create(any());
+                .andExpect(status().isCreated());
+        verify(supplierService).create(any());
     }
 
     @Test
     @WithMockUser(roles = "SALES_STAFF")
-    void salesStaffCannotDeleteSupplier() throws Exception {
+    void salesStaffCanDeleteSupplier() throws Exception {
         mockMvc.perform(delete("/api/v1/suppliers/1"))
-                .andExpect(status().isForbidden());
-        verify(supplierService, never()).delete(any());
+                .andExpect(status().isNoContent());
+        verify(supplierService).delete(1L);
     }
 
     @Test

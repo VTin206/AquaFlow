@@ -33,6 +33,7 @@ class ProductServiceTest {
 
     @Mock
     private BottleTypeRepository bottleTypeRepository;
+    @Mock private com.aquaflow.workspace.repository.StoreSettingsRepository settings;
 
     @InjectMocks
     private ProductService productService;
@@ -49,6 +50,16 @@ class ProductServiceTest {
         assertThat(response.sku()).isEqualTo("NUOC-19L");
         assertThat(response.bottleTypeName()).isEqualTo("Bình 19L");
         assertThat(response.active()).isTrue();
+    }
+
+    @Test
+    void createUsesConfiguredDefaultAndPreservesExplicitZero() {
+        when(settings.defaultLowStock()).thenReturn(37);
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        assertThat(productService.create(request("DEFAULT", null)).lowStockThreshold()).isEqualTo(37);
+        var explicit = new CreateProductRequest("ZERO", "Water", null, "Bottle", null, null, BigDecimal.ONE, null, 0);
+        assertThat(productService.create(explicit).lowStockThreshold()).isZero();
+        verify(settings).defaultLowStock();
     }
 
     @Test

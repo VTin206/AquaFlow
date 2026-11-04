@@ -44,8 +44,8 @@ export const backendFeatures = {
   orderPrinting: false,
   /** Báo trước phí giao cho khách trên trang đặt hàng (BE tính khi xác nhận). */
   deliveryQuote: false,
-  /** Tên, hotline và chính sách cửa hàng trên giao diện (chưa nối StoreSettingsController). */
-  storeSettings: false,
+  /** Thông tin cửa hàng và ngưỡng cảnh báo qua StoreSettingsController. */
+  storeSettings: true,
 } satisfies Record<string, boolean>
 
 export type BackendFeature = keyof typeof backendFeatures
@@ -60,7 +60,7 @@ export const useIsDemo = () => useAuth().user?.isDemo ?? false
 export const useLiveOnly = () => !useIsDemo()
 
 /** Trang chưa có API BE: tài khoản thật vẫn thấy trên menu, mở ra là trang "Chưa hỗ trợ". */
-const unsupportedPages = new Set(['/reports', '/settings'])
+const unsupportedPages = new Set<string>()
 
 export function usePageSupported() {
   const demo = useIsDemo()

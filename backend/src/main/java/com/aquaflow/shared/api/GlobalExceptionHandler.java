@@ -18,6 +18,12 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+    ResponseEntity<ApiError> handleMissingParameter(org.springframework.web.bind.MissingServletRequestParameterException exception,
+                                                    HttpServletRequest request) {
+        return error(HttpStatus.BAD_REQUEST, "Missing parameter: " + exception.getParameterName(), request);
+    }
+
     @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
     ResponseEntity<ApiError> handleUnsupportedMethod(org.springframework.web.HttpRequestMethodNotSupportedException exception,
                                                      HttpServletRequest request) {

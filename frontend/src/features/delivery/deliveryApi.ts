@@ -1,5 +1,26 @@
 import { api } from '@/shared/api/client'
 
+export type TripCollections = {
+  receipts: {
+    id: number
+    orderId: number
+    amount: number
+    method: 'CASH' | 'BANK_TRANSFER'
+    bottlesReturned: number
+    recordedBy: number
+    createdAt: string
+  }[]
+  balances: { orderId: number; total: number; paid: number; due: number; bottlesToExchange: number }[]
+  cashExpected: number
+  bottlesExpected: number
+}
+export type CollectionInput = { requestId: string; amount: number; method: 'CASH' | 'BANK_TRANSFER'; bottlesReturned: number }
+export const collectionApi = {
+  get: (tripId: number) => api.get<TripCollections>(`/delivery/trips/${tripId}/collections`),
+  collect: (tripId: number, orderId: number, input: CollectionInput) =>
+    api.post<TripCollections>(`/delivery/trips/${tripId}/orders/${orderId}/collections`, input),
+}
+
 export type DeliveryAttempt = {
   id: number
   attemptNo: number
@@ -17,6 +38,8 @@ export type DeliveryStop = {
   recipientName: string | null
   recipientPhone: string | null
   deliveryAddress: string | null
+  requestedDeliveryAt?: string | null
+  note?: string | null
   latestAttempt: DeliveryAttempt | null
   items: { productId: number; productName: string; unit: string; lotCode: string; quantity: number }[]
 }

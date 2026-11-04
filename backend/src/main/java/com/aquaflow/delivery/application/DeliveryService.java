@@ -32,10 +32,10 @@ public class DeliveryService {
         return repository.viewTrip(trip);
     }
 
-    public List<DriverResponse> drivers(boolean admin) { requireAdmin(admin); return repository.drivers(); }
+    public List<DriverResponse> drivers(boolean admin) { requireStoreStaff(admin); return repository.drivers(); }
 
     public List<AvailableOrderResponse> availableOrders(boolean admin) {
-        requireAdmin(admin);
+        requireStoreStaff(admin);
         return repository.availableOrders();
     }
 
@@ -49,7 +49,7 @@ public class DeliveryService {
 
     @Transactional
     public TripResponse cancel(long id, long actorId, boolean admin) {
-        requireAdmin(admin);
+        requireStoreStaff(admin);
         TripRow trip = repository.lockTrip(id);
         if ("CANCELLED".equals(trip.status())) return repository.viewTrip(trip);
         requireStatus(trip, "CREATED");
@@ -59,7 +59,7 @@ public class DeliveryService {
 
     @Transactional
     public TripResponse create(CreateTripRequest request, long actorId, boolean admin) {
-        requireAdmin(admin);
+        requireStoreStaff(admin);
         String driverName = request.driverId() == null ? null : requireActiveDriver(request.driverId());
         Long id = repository.createTrip(actorId, request.driverId(), driverName,
                 DeliveryRepository.clean(request.vehicle()));
@@ -68,7 +68,7 @@ public class DeliveryService {
 
     @Transactional
     public TripResponse assignDriver(long tripId, AssignDriverRequest request, long actorId, boolean admin) {
-        requireAdmin(admin);
+        requireStoreStaff(admin);
         TripRow trip = repository.lockTrip(tripId);
         requireStatus(trip, "CREATED");
         String name = requireActiveDriver(request.driverId());
@@ -78,7 +78,7 @@ public class DeliveryService {
 
     @Transactional
     public TripResponse addOrder(long tripId, AddOrderRequest request, long actorId, boolean admin) {
-        requireAdmin(admin);
+        requireStoreStaff(admin);
         TripRow trip = repository.lockTrip(tripId);
         requireStatus(trip, "CREATED");
 
@@ -99,7 +99,7 @@ public class DeliveryService {
 
     @Transactional
     public TripResponse removeOrder(long tripId, long orderId, long actorId, boolean admin) {
-        requireAdmin(admin);
+        requireStoreStaff(admin);
         TripRow trip = repository.lockTrip(tripId);
         requireStatus(trip, "CREATED");
         repository.removeOrder(tripId, orderId);
@@ -158,12 +158,17 @@ public class DeliveryService {
 
     @Transactional
     public TripResponse settle(long tripId, SettleTripRequest request, long actorId, boolean admin) {
-        requireAdmin(admin);
+        requireStoreStaff(admin);
         TripRow trip = repository.lockTrip(tripId);
         requireStatus(trip, "IN_PROGRESS");
         if (trip.driverId() == null) throw new ConflictException("Chuyến chưa có tài xế");
         if (!repository.allOrdersHaveResult(tripId)) {
             throw new ConflictException("Vẫn còn đơn chưa ghi nhận kết quả giao");
+        }
+        var collections = repository.collections(tripId);
+        if (!collections.receipts().isEmpty() && (request.cashReported().compareTo(collections.cashExpected()) != 0
+                || request.bottlesExpected() != collections.bottlesExpected())) {
+            throw new ConflictException("Collection totals changed; reload the trip before settlement");
         }
         if ((request.cashReported().compareTo(request.cashConfirmed()) != 0
                 || !request.bottlesExpected().equals(request.bottlesConfirmed()))
@@ -180,13 +185,37 @@ public class DeliveryService {
                 new BadRequestException("Tài xế không tồn tại, không hoạt động hoặc không có role DELIVERY_STAFF"));
     }
 
+    public CollectionsResponse collections(long tripId, long actorId, boolean storeStaff) {
+        requireVisible(repository.findTrip(tripId), actorId, storeStaff);
+        return repository.collections(tripId);
+    }
+
+    @Transactional
+    public CollectionsResponse collect(long tripId, long orderId, CollectionRequest request, long actorId, boolean storeStaff) {
+        var trip = repository.lockTrip(tripId);
+        requireVisible(trip, actorId, storeStaff);
+        // Find the assignment before any writes; another driver's order is never accepted.
+        var assignment = repository.activeAssignment(tripId, orderId);
+        if (repository.collectionExists(assignment.id(), request)) return repository.collections(tripId);
+        requireStatus(trip, "IN_PROGRESS");
+        var order = repository.lockOrder(orderId);
+        if (!List.of("OUT_FOR_DELIVERY", "DELIVERED").contains(order.status())) throw new ConflictException("Order cannot receive collections");
+        if (request.amount().signum()==0 && request.bottlesReturned()==0) throw new BadRequestException("Enter an amount or returned bottles");
+        var balance = repository.balance(orderId);
+        if (request.amount().compareTo(balance.due())>0) throw new ConflictException("Amount exceeds the outstanding balance");
+        int returned = repository.collections(tripId).receipts().stream().filter(r -> r.orderId()==orderId).mapToInt(CollectionResponse::bottlesReturned).sum();
+        if ((long)returned+request.bottlesReturned()>balance.bottlesToExchange()) throw new BadRequestException("Returned bottles exceed the order quantity");
+        repository.collect(assignment.id(), orderId, actorId, request);
+        return repository.collections(tripId);
+    }
+
     private static void requireStatus(TripRow trip, String expected) {
         if (!expected.equals(trip.status())) {
             throw new ConflictException("Chuyến cần ở trạng thái " + expected + ", hiện tại: " + trip.status());
         }
     }
 
-    private static void requireAdmin(boolean admin) {
+    private static void requireStoreStaff(boolean admin) {
         if (!admin) throw new AccessDeniedException("Chỉ chủ cửa hàng được thực hiện thao tác này");
     }
 
