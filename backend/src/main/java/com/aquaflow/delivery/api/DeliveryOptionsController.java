@@ -15,7 +15,7 @@ public class DeliveryOptionsController {
     private final DeliveryService service;
     public DeliveryOptionsController(DeliveryService service) { this.service = service; }
 
-    // SecurityConfig restricts these two resources to ADMIN.
+    // SecurityConfig restricts these two resources to ADMIN and SALES_STAFF.
     @GetMapping("/drivers")
     public List<DriverResponse> drivers() { return service.drivers(true); }
 

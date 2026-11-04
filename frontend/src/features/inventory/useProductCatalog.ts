@@ -106,11 +106,10 @@ async function liveCatalog(status: ProductStatus) {
   return products.map((product) => fromResponse(product, stock ? (available.get(product.id) ?? 0) : undefined))
 }
 
-/** Bản dùng thử: quản lý và bán hàng được sửa; tài khoản thật: theo BE, chỉ ADMIN. */
+/** Store staff manage the catalog in both demo and live mode. */
 export function useCanManageProducts() {
-  const demo = useIsDemo()
   const role = useStaff()?.role
-  return demo ? role === 'ADMIN' || role === 'SALES_STAFF' : role === 'ADMIN'
+  return role === 'ADMIN' || role === 'SALES_STAFF'
 }
 
 export function useCatalog(status: ProductStatus) {

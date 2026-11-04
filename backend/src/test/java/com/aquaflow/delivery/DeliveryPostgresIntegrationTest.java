@@ -212,7 +212,7 @@ class DeliveryPostgresIntegrationTest {
         mvc.perform(post(base).with(actor(driverId, "DELIVERY_STAFF")).contentType("application/json").content("{}"))
                 .andExpect(status().isForbidden());
         mvc.perform(post(base).with(actor(ownerId, "SALES_STAFF")).contentType("application/json").content("{}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isCreated());
         mvc.perform(post(base).with(actor(ownerId, "ADMIN")).contentType("application/json").content("{}"))
                 .andExpect(status().isCreated()).andExpect(header().exists("Location"));
         long trip = service.create(new CreateTripRequest(driverId, null), ownerId, true).id();
@@ -334,5 +334,40 @@ class DeliveryPostgresIntegrationTest {
         service.removeOrder(tripId, orderId, ownerId, true);
         assertThat(service.addOrder(otherTrip, new AddOrderRequest(orderId), ownerId, true).orders())
                 .hasSize(1);
+    }
+
+    @Test void driverCollectionsAreScopedIdempotentAndUpdatePaymentStatus() throws Exception {
+        long trip = service.create(new CreateTripRequest(driverId, null), ownerId, true).id();
+        service.addOrder(trip, new AddOrderRequest(orderId), ownerId, true);
+        service.start(trip, driverId, false);
+        jdbc.update("UPDATE orders SET subtotal=30000 WHERE id=?", orderId);
+        String path = "/api/v1/delivery/trips/"+trip+"/orders/"+orderId+"/collections";
+        String body = "{\"requestId\":\""+UUID.randomUUID()+"\",\"amount\":10000,\"method\":\"CASH\",\"bottlesReturned\":0}";
+        mvc.perform(post(path).with(actor(otherDriverId,"DELIVERY_STAFF")).contentType("application/json").content(body)).andExpect(status().isForbidden());
+        for (int i=0; i<2; i++) mvc.perform(post(path).with(actor(driverId,"DELIVERY_STAFF")).contentType("application/json").content(body))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.balances[0].due").value(20000)).andExpect(jsonPath("$.cashExpected").value(10000));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM payments WHERE order_id=?",Integer.class,orderId)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT payment_status FROM orders WHERE id=?",String.class,orderId)).isEqualTo("PARTIALLY_PAID");
+        mvc.perform(post(path).with(actor(driverId,"DELIVERY_STAFF")).contentType("application/json").content(body.replace("10000","30000")))
+            .andExpect(status().isConflict());
+        service.recordResult(trip,orderId,new DeliveryResultRequest(Outcome.SUCCESS,"Recipient",null,null),driverId,false);
+        service.collect(trip,orderId,new CollectionRequest(UUID.randomUUID(),new BigDecimal("20000"),"BANK_TRANSFER",0),driverId,false);
+        assertThat(jdbc.queryForObject("SELECT payment_status FROM orders WHERE id=?",String.class,orderId)).isEqualTo("PAID");
+        assertThat(service.collections(trip,driverId,false).cashExpected()).isEqualByComparingTo("10000");
+        service.settle(trip,new SettleTripRequest(new BigDecimal("10000"),new BigDecimal("10000"),0,0,null),ownerId,true);
+    }
+
+    @Test void salesCanCreateAssignAndSettleButDriversCannotManageTrips() throws Exception {
+        String base = "/api/v1/delivery/trips";
+        mvc.perform(get("/api/v1/delivery/drivers").with(actor(ownerId,"SALES_STAFF"))).andExpect(status().isOk());
+        long trip = service.create(new CreateTripRequest(driverId,null),ownerId,true).id();
+        mvc.perform(post(base+"/"+trip+"/orders").with(actor(ownerId,"SALES_STAFF")).contentType("application/json")
+            .content("{\"orderId\":"+orderId+"}")).andExpect(status().isCreated());
+        mvc.perform(put(base+"/"+trip+"/driver").with(actor(driverId,"DELIVERY_STAFF")).contentType("application/json")
+            .content("{\"driverId\":"+otherDriverId+"}")).andExpect(status().isForbidden());
+        mvc.perform(put(base+"/"+trip+"/departure").with(actor(ownerId,"SALES_STAFF"))).andExpect(status().isOk());
+        service.recordResult(trip,orderId,new DeliveryResultRequest(Outcome.SUCCESS,"Recipient",null,null),driverId,false);
+        mvc.perform(put(base+"/"+trip+"/settlement").with(actor(ownerId,"SALES_STAFF")).contentType("application/json")
+            .content("{\"cashReported\":0,\"cashConfirmed\":0,\"bottlesExpected\":0,\"bottlesConfirmed\":0}")).andExpect(status().isOk());
     }
 }

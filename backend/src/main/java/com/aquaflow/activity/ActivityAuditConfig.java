@@ -21,6 +21,7 @@ import java.util.Optional;
 @Configuration
 public class ActivityAuditConfig {
     private static final Map<String,String> ENTITIES=Map.ofEntries(
+        Map.entry("com.aquaflow.auth.application.StaffAccountService","STAFF_ACCOUNT"),
         Map.entry("com.aquaflow.customer.order.application.OrderService","ORDER"),
         Map.entry("com.aquaflow.customer.order.application.OrderDispatchService","DISPATCH"),
         Map.entry("com.aquaflow.inventory.application.InventoryReturnService","INVENTORY_RETURN"),

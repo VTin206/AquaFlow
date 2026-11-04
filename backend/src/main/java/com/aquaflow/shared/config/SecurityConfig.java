@@ -71,7 +71,7 @@ public class SecurityConfig {
                         // Nhân viên lập/sửa phiếu nhập/xác nhận (cộng tồn)/hủy phiếu
                         .requestMatchers("/api/v1/purchase-receipts/**").hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers("/api/v1/inventory/**").hasAnyRole("ADMIN", "SALES_STAFF")
-                        .requestMatchers("/api/v1/products/**", "/api/v1/bottle-types/**", "/api/v1/suppliers/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/products/**", "/api/v1/bottle-types/**", "/api/v1/suppliers/**").hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/store-settings").hasAnyRole("ADMIN", "SALES_STAFF", "DELIVERY_STAFF")
@@ -79,9 +79,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/sales/**").hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers(HttpMethod.POST, "/api/v1/customer/orders/guest").permitAll()
-                        .requestMatchers("/api/v1/delivery/drivers", "/api/v1/delivery/available-orders").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/delivery/drivers", "/api/v1/delivery/available-orders").hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers(HttpMethod.GET, "/api/v1/delivery/**").hasAnyRole("ADMIN", "SALES_STAFF", "DELIVERY_STAFF")
-                        .requestMatchers("/api/v1/delivery/**").hasAnyRole("ADMIN", "DELIVERY_STAFF")
+                        .requestMatchers("/api/v1/delivery/**").hasAnyRole("ADMIN", "SALES_STAFF", "DELIVERY_STAFF")
                         .requestMatchers("/api/v1/customer/**").hasAnyRole("ADMIN", "CUSTOMER")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

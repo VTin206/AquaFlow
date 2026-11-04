@@ -31,6 +31,7 @@ export const navGroups: { label: string; items: NavItem[] }[] = [
       { path: '/products', label: 'Sản phẩm', icon: Package },
       { path: '/suppliers', label: 'Nhà cung cấp', icon: Building2 },
       { path: '/customers', label: 'Khách hàng', icon: Users },
+      { path: '/staff', label: 'Tài khoản nhân viên', icon: Users },
       { path: '/reports', label: 'Báo cáo', icon: FileBarChart },
       { path: '/activity', label: 'Nhật ký', icon: History },
     ],

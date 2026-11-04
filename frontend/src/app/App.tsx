@@ -18,6 +18,7 @@ const DeliveryPage = lazy(() => import('@/features/delivery/DeliveryPage').then(
 const ReportsPage = lazy(() => import('@/features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })))
 const DriverPage = lazy(() => import('@/features/delivery/DriverPage').then((m) => ({ default: m.DriverPage })))
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })))
+const StaffAccountsPage = lazy(() => import('@/features/auth/StaffAccountsPage').then((m) => ({ default: m.StaffAccountsPage })))
 const ActivityPage = lazy(() => import('@/features/activity/ActivityPage').then((m) => ({ default: m.ActivityPage })))
 const ShopLayout = lazy(() => import('@/features/shop/ShopLayout').then((m) => ({ default: m.ShopLayout })))
 const ArticlePage = lazy(() => import('@/features/shop/ArticlePage').then((m) => ({ default: m.ArticlePage })))
@@ -81,6 +82,7 @@ export function App() {
             <Route path="products" element={<ProductsPage />} />
             <Route path="customers" element={<CustomersPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
+            <Route path="staff" element={<StaffAccountsPage />} />
             <Route
               path="delivery"
               element={

@@ -42,20 +42,20 @@ public class DeliveryController {
     @PostMapping
     public ResponseEntity<TripResponse> create(@Valid @RequestBody CreateTripRequest request,
             @AuthenticationPrincipal AuthUserDetails user, Authentication auth) {
-        TripResponse result = service.create(request, user.user().getId(), isAdmin(auth));
+        TripResponse result = service.create(request, user.user().getId(), canReadAll(auth));
         return ResponseEntity.created(URI.create("/api/v1/delivery/trips/" + result.id())).body(result);
     }
 
     @PutMapping("/{id}/driver")
     public TripResponse assignDriver(@PathVariable long id, @Valid @RequestBody AssignDriverRequest request,
             @AuthenticationPrincipal AuthUserDetails user, Authentication auth) {
-        return service.assignDriver(id, request, user.user().getId(), isAdmin(auth));
+        return service.assignDriver(id, request, user.user().getId(), canReadAll(auth));
     }
 
     @PostMapping("/{id}/orders")
     public ResponseEntity<AssignmentResponse> addOrder(@PathVariable long id, @Valid @RequestBody AddOrderRequest request,
             @AuthenticationPrincipal AuthUserDetails user, Authentication auth) {
-        var trip = service.addOrder(id, request, user.user().getId(), isAdmin(auth));
+        var trip = service.addOrder(id, request, user.user().getId(), canReadAll(auth));
         var order = trip.orders().stream().filter(o -> o.orderId().equals(request.orderId())).findFirst().orElseThrow();
         return ResponseEntity.created(URI.create("/api/v1/delivery/trips/" + id + "/orders/" + request.orderId())).body(order);
     }
@@ -71,20 +71,20 @@ public class DeliveryController {
     @DeleteMapping("/{id}/orders/{orderId}")
     public TripResponse removeOrder(@PathVariable long id, @PathVariable long orderId,
             @AuthenticationPrincipal AuthUserDetails user, Authentication auth) {
-        return service.removeOrder(id, orderId, user.user().getId(), isAdmin(auth));
+        return service.removeOrder(id, orderId, user.user().getId(), canReadAll(auth));
     }
 
     @PutMapping("/{id}/departure")
     public TripResponse start(@PathVariable long id, @AuthenticationPrincipal AuthUserDetails user,
             Authentication auth) {
-        return service.start(id, user.user().getId(), isAdmin(auth));
+        return service.start(id, user.user().getId(), canReadAll(auth));
     }
 
     @PostMapping("/{id}/orders/{orderId}/attempts")
     public ResponseEntity<AttemptResponse> result(@PathVariable long id, @PathVariable long orderId,
             @Valid @RequestBody DeliveryResultRequest request,
             @AuthenticationPrincipal AuthUserDetails user, Authentication auth) {
-        var trip = service.recordResult(id, orderId, request, user.user().getId(), isAdmin(auth));
+        var trip = service.recordResult(id, orderId, request, user.user().getId(), canReadAll(auth));
         var attempt = trip.orders().stream().filter(o -> o.orderId() == orderId).findFirst().orElseThrow().latestAttempt();
         return ResponseEntity.created(URI.create("/api/v1/delivery/trips/" + id + "/orders/" + orderId + "/attempts/" + attempt.id()))
                 .body(attempt);
@@ -93,7 +93,7 @@ public class DeliveryController {
     @PutMapping("/{id}/settlement")
     public TripResponse settle(@PathVariable long id, @Valid @RequestBody SettleTripRequest request,
             @AuthenticationPrincipal AuthUserDetails user, Authentication auth) {
-        return service.settle(id, request, user.user().getId(), isAdmin(auth));
+        return service.settle(id, request, user.user().getId(), canReadAll(auth));
     }
 
     @GetMapping("/{id}/orders/{orderId}/attempts")
@@ -119,7 +119,7 @@ public class DeliveryController {
     @PatchMapping("/{id}")
     public TripResponse update(@PathVariable long id, @Valid @RequestBody UpdateTripRequest request,
             @AuthenticationPrincipal AuthUserDetails user, Authentication auth) {
-        return service.cancel(id, user.user().getId(), isAdmin(auth));
+        return service.cancel(id, user.user().getId(), canReadAll(auth));
     }
 
     private static boolean canReadAll(Authentication auth) {
@@ -127,10 +127,18 @@ public class DeliveryController {
                 "ROLE_ADMIN".equals(a.getAuthority()) || "ROLE_SALES_STAFF".equals(a.getAuthority()));
     }
 
-    private static boolean isAdmin(Authentication auth) {
-        return auth.getAuthorities().stream()
-                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+    @GetMapping("/{id}/collections")
+    public CollectionsResponse collections(@PathVariable long id, @AuthenticationPrincipal AuthUserDetails user, Authentication auth) {
+        return service.collections(id, user.user().getId(), canReadAll(auth));
     }
+
+    @PostMapping("/{id}/orders/{orderId}/collections")
+    public ResponseEntity<CollectionsResponse> collect(@PathVariable long id, @PathVariable long orderId,
+            @Valid @RequestBody CollectionRequest request, @AuthenticationPrincipal AuthUserDetails user, Authentication auth) {
+        return ResponseEntity.created(URI.create("/api/v1/delivery/trips/"+id+"/collections"))
+                .body(service.collect(id, orderId, request, user.user().getId(), canReadAll(auth)));
+    }
+
 
     // The project's GlobalExceptionHandler currently catches generic Exception as HTTP 500.
     // Handle delivery role-denials locally to ensure they respond with HTTP 403.
