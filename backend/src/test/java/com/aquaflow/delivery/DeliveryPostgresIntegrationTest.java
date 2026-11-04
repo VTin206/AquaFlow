@@ -39,6 +39,7 @@ class DeliveryPostgresIntegrationTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired DeliveryService service;
     @Autowired MockMvc mvc;
+
     @Autowired com.aquaflow.inventory.application.InventoryReturnService returns;
 
     private long failedTrip() {
@@ -113,6 +114,7 @@ class DeliveryPostgresIntegrationTest {
         mvc.perform(get(base).with(actor(ownerId,"ADMIN"))).andExpect(status().isOk());
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM inventory_movements WHERE reference_id=? AND reference_type='ORDER' AND movement_type='RETURN'",Integer.class,orderId)).isZero();
     }
+
 
     long ownerId;
     long driverId;
