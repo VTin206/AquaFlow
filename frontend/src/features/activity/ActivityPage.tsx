@@ -1,3 +1,5 @@
+import { useIsDemo } from '@/shared/features'
+import { LiveActivityPage } from './LiveActivityPage'
 import { useState } from 'react'
 import { Button, Card, DatePicker, Input, Select, Table, Tag, type TableColumnsType } from 'antd'
 import type { Dayjs } from 'dayjs'
@@ -23,6 +25,10 @@ const areaColors: Record<ActivityArea, string> = {
 }
 
 export function ActivityPage() {
+  return useIsDemo() ? <DemoActivityPage /> : <LiveActivityPage />
+}
+
+function DemoActivityPage() {
   const activityQuery = useActivity()
   const { data: orders = [] } = useOrders()
   const [area, setArea] = useState<string>(ALL)

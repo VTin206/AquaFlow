@@ -53,6 +53,7 @@ class DispatchPostgresIntegrationTest {
 
     @AfterEach
     void cleanup() {
+        jdbc.update("DELETE FROM audit_logs WHERE actor_id=? OR (entity_type='ORDER' AND entity_id=?) OR (entity_type='DISPATCH' AND entity_id IN (SELECT id FROM order_dispatches WHERE order_id=?))", actorId, orderId, orderId);
         jdbc.update("DELETE FROM order_dispatch_items WHERE dispatch_id IN (SELECT id FROM order_dispatches WHERE order_id = ?)", orderId);
         jdbc.update("DELETE FROM order_dispatches WHERE order_id = ?", orderId);
         jdbc.update("DELETE FROM inventory_movements WHERE reference_type = 'ORDER' AND reference_id = ?", orderId);
