@@ -68,6 +68,12 @@ class SupplierControllerIntegrationTest {
     @MockitoBean
     private com.aquaflow.inventory.application.StockReservationService stockReservationService;
 
+    @MockitoBean
+    private com.aquaflow.inventory.repository.RedeliveryEligibilityRepository redeliveryEligibilityRepository;
+
+    @MockitoBean
+    private com.aquaflow.inventory.application.RedeliveryReservationService redeliveryReservationService;
+
     private static final String VALID_BODY = """
             {"name":"Aqua Supplier","phone":"0987654321","address":"123 Main St"}
             """;

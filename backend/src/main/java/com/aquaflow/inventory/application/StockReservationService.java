@@ -45,7 +45,11 @@ public class StockReservationService {
         if (!reservationRepository.findByOrderItemIdIn(orderItemIds).isEmpty()) {
             throw new ConflictException("Đơn hàng đã được giữ hàng trước đó");
         }
+        return reserveLines(lines);
+    }
 
+    /** Giữ hàng theo FEFO mà không kiểm tra reservation cũ; chỉ RedeliveryReservationService gọi sau khi đã kiểm tra. */
+    List<StockReservation> reserveLines(Collection<ReservationLine> lines) {
         LocalDate today = LocalDate.now(clock);
         List<StockReservation> reservations = new ArrayList<>();
         // Khóa theo thứ tự productId cố định để hai đơn khóa chéo sản phẩm không bị deadlock

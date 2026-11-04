@@ -66,6 +66,12 @@ class ProductControllerIntegrationTest {
     @MockitoBean
     private com.aquaflow.inventory.application.StockReservationService stockReservationService;
 
+    @MockitoBean
+    private com.aquaflow.inventory.repository.RedeliveryEligibilityRepository redeliveryEligibilityRepository;
+
+    @MockitoBean
+    private com.aquaflow.inventory.application.RedeliveryReservationService redeliveryReservationService;
+
     private static final String VALID_BODY = """
             {"sku":"NUOC-19L","name":"Nước 19L","brand":"Aqua","unit":"Bình","bottleTypeId":1,"salePrice":20000}
             """;
