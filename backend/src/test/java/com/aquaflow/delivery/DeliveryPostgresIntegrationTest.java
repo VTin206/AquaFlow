@@ -192,6 +192,7 @@ class DeliveryPostgresIntegrationTest {
                     .containsExactlyInAnyOrder(true, false);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM delivery_assignments WHERE order_id = ? AND active", Long.class, orderId)).isEqualTo(1);
         } finally {
+            jdbc.update("DELETE FROM audit_logs WHERE entity_type='DELIVERY_TRIP' AND entity_id IN (?, ?)", firstTrip, secondTrip);
             jdbc.update("DELETE FROM delivery_assignments WHERE trip_id IN (?, ?)", firstTrip, secondTrip);
             jdbc.update("DELETE FROM delivery_trips WHERE id IN (?, ?)", firstTrip, secondTrip);
             jdbc.update("DELETE FROM order_dispatch_items WHERE dispatch_id IN (SELECT id FROM order_dispatches WHERE order_id = ?)", orderId);
