@@ -61,6 +61,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/health", "/error").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/store-profile").permitAll()
                         // Public catalog is intentionally limited to the existing collection/detail endpoints.
                         // Do not use /** here: future administrative sub-resources must not become public by accident.
                         .requestMatchers(HttpMethod.GET,

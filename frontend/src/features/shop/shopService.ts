@@ -11,6 +11,7 @@ import { resolveProductImage } from '@/features/inventory/productImages'
 import { orderService } from '@/features/orders/orderService'
 import type { PublicOrder } from '@/features/orders/types'
 import { useSettings } from '@/features/settings/settingsService'
+import { settingsApi } from '@/features/settings/settingsApi'
 import type { StoreSettings } from '@/features/settings/types'
 import { backendFeatures, type BackendFeature } from '@/shared/features'
 
@@ -37,14 +38,13 @@ export const useShopFeature = (feature: BackendFeature) => {
 }
 
 export type ShopContact = Partial<Pick<StoreSettings, 'storeName' | 'phone' | 'address' | 'email' | 'openingHours'>>
-// Bản thật chưa có API cài đặt công khai: hotline và giờ mở cửa tạm lấy từ biến môi trường.
-const liveContact: ShopContact = { phone: import.meta.env.VITE_SHOP_HOTLINE, openingHours: import.meta.env.VITE_SHOP_HOURS }
 
 /** Thông tin liên hệ cửa hàng hiện trên trang khách. */
 export const useShopContact = (): ShopContact | undefined => {
   const demo = useShopDemo()
   const settings = useSettings(demo)
-  return demo ? settings.data : liveContact
+  const profile = useQuery({ queryKey: ['live', 'store-profile'], queryFn: settingsApi.profile, enabled: !demo, staleTime: 60_000 })
+  return demo ? settings.data : profile.data
 }
 
 export const toShopProduct = (product: CatalogProduct): ShopProduct => ({

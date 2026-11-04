@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { App, Col, Form, Input, InputNumber, Modal, Row, Select, Upload } from 'antd'
 import { ImagePlus } from 'lucide-react'
+import { useSettings } from '@/features/settings/settingsService'
 import { useFeature } from '@/shared/features'
 import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 import { useBottleTypeOptions, useSaveProduct, type CatalogItem, type ProductForm } from '../useProductCatalog'
@@ -19,6 +20,11 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
   const showImage = useFeature('productImage')
   const [form] = Form.useForm<ProductForm>()
   const [image, setImage] = useState<string | undefined>(product?.image)
+  const settings = useSettings(open && !product)
+  useEffect(() => {
+    if (open && !product && settings.data && !form.isFieldTouched('threshold'))
+      form.setFieldValue('threshold', settings.data.defaultLowStock)
+  }, [open, product, settings.data, form])
   const save = useSaveProduct()
   const bottleTypes = useBottleTypeOptions(open)
 
@@ -86,7 +92,7 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
                 bottleTypeId: product.bottleTypeId,
                 threshold: product.threshold,
               }
-            : { unit: 'Bình', price: 0, threshold: 10 }
+            : { unit: 'Bình', price: 0, threshold: settings.data?.defaultLowStock ?? 10 }
         }
         onFinish={submit}
         preserve={false}

@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/store-settings")
+@io.swagger.v3.oas.annotations.tags.Tag(name="Store settings")
+@io.swagger.v3.oas.annotations.security.SecurityRequirement(name="bearerAuth")
 public class StoreSettingsController {
     private final StoreSettingsService service;
     public StoreSettingsController(StoreSettingsService service) { this.service = service; }

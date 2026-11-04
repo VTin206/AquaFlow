@@ -18,10 +18,13 @@ import com.aquaflow.inventory.domain.BottleType;
 public class ProductService {
     private final ProductRepository productRepository;
     private final BottleTypeRepository bottleTypeRepository;
+    private final com.aquaflow.workspace.repository.StoreSettingsRepository settings;
 
-    public ProductService(ProductRepository productRepository, BottleTypeRepository bottleTypeRepository) {
+    public ProductService(ProductRepository productRepository, BottleTypeRepository bottleTypeRepository,
+                          com.aquaflow.workspace.repository.StoreSettingsRepository settings) {
         this.productRepository = productRepository;
         this.bottleTypeRepository = bottleTypeRepository;
+        this.settings = settings;
     }
 
     @Transactional
@@ -34,7 +37,7 @@ public class ProductService {
                 request.sku(), request.name(), request.brand(), request.unit(),
                 request.unitsPerCase(), bottleType, request.salePrice());
         product.setImage(request.image());
-        if (request.lowStockThreshold() != null) product.setLowStockThreshold(request.lowStockThreshold());
+        product.setLowStockThreshold(request.lowStockThreshold()!=null?request.lowStockThreshold():settings.defaultLowStock());
         return toResponse(productRepository.save(product));
     }
 
