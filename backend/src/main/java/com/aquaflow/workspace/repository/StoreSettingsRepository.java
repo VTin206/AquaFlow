@@ -23,6 +23,10 @@ public class StoreSettingsRepository {
                         rs.getTimestamp("updated_at").toInstant(), rs.getObject("updated_by", Long.class)));
     }
 
+    public int defaultLowStock() {
+        return jdbc.queryForObject("SELECT COALESCE((settings->>'defaultLowStock')::integer,10) FROM store_settings WHERE id=1",Integer.class);
+    }
+
     public boolean update(StoreSettingsData data, long version, long actorId) {
         return jdbc.update("""
                 UPDATE store_settings SET settings = CAST(? AS jsonb), version = version + 1,

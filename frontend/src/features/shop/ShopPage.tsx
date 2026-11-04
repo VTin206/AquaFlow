@@ -8,7 +8,7 @@ import { useCartActions, useCart } from './cart'
 import { ShopFilters } from './components/ShopFilters'
 import { ShopIntro } from './components/ShopIntro'
 import { emptyFilters, filterProducts, type ShopFilterState } from './shopGroups'
-import { useShopContact, useShopFeature, useShopProducts, type ShopProduct } from './shopService'
+import { useShopDemo, useShopContact, useShopFeature, useShopProducts, type ShopProduct } from './shopService'
 
 function ShopImage({ product }: { product: ShopProduct }) {
   const [failed, setFailed] = useState(false)
@@ -25,7 +25,7 @@ export function ShopPage() {
   const { openCart } = useOutletContext<{ openCart: () => void }>()
   const productsQuery = useShopProducts()
   const contact = useShopContact()
-  const showPolicy = useShopFeature('storeSettings')
+  const showPolicy = useShopDemo()
   const showTracking = useShopFeature('orderTracking')
   const cartActions = useCartActions()
   const cart = useCart()

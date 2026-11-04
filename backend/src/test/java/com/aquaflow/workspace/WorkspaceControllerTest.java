@@ -21,7 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.mockito.Mockito.*;
 import java.util.List;
 
-@WebMvcTest(controllers = {StoreSettingsController.class, NotificationController.class},
+@WebMvcTest(controllers = {StoreSettingsController.class, StoreProfileController.class, NotificationController.class},
         properties = "app.jwt.secret=test-test-test-test-test-test-test-test")
 @Import(SecurityConfig.class)
 class WorkspaceControllerTest {
@@ -38,7 +38,7 @@ class WorkspaceControllerTest {
     }
 
     private static final String SETTINGS = """
-            {"version":0,"settings":{"storeName":"AquaFlow","address":"","phone":"",
+            {"version":0,"settings":{"storeName":"AquaFlow","address":"1 Test street","phone":"0901234567",
             "expiryWarningDays":30,"defaultLowStock":10}}
             """;
 
@@ -105,5 +105,36 @@ class WorkspaceControllerTest {
         when(settings.update(any(), eq(1L))).thenThrow(new com.aquaflow.shared.api.ConflictException("Reload settings"));
         mvc.perform(put("/api/v1/store-settings").with(actor("ADMIN", 1))
                 .contentType("application/json").content(SETTINGS)).andExpect(status().isConflict());
+    }
+
+    @Test void publicProfileDoesNotExposePrivateSettings() throws Exception {
+        var data = new StoreSettingsData("Store", "Address", "0901234567", null, "8-18", "1234567890", "Bank", "12345678", "OWNER", null, 30, 20);
+        when(settings.get()).thenReturn(new StoreSettingsResponse(data, 4L, java.time.Instant.now(), 1L));
+        mvc.perform(get("/api/v1/store-profile")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.storeName").value("Store"))
+            .andExpect(jsonPath("$.bankAccount").doesNotExist())
+            .andExpect(jsonPath("$.taxCode").doesNotExist())
+            .andExpect(jsonPath("$.defaultLowStock").doesNotExist());
+    }
+
+    @Test void rejectsInvalidContactAndIncompleteBankDetails() throws Exception {
+        for (String body : List.of(
+                SETTINGS.replace("0901234567", "abc"),
+                SETTINGS.replace("1 Test street", " "),
+                SETTINGS.replace("\"defaultLowStock\":10", "\"defaultLowStock\":1000001"),
+                SETTINGS.replace("\"expiryWarningDays\":30", "\"expiryWarningDays\":731"),
+                SETTINGS.replace("\"storeName\":", "\"bankName\":\"Bank\",\"storeName\":"))) {
+            mvc.perform(put("/api/v1/store-settings").with(actor("ADMIN", 1))
+                .contentType("application/json").content(body)).andExpect(status().isBadRequest());
+        }
+        verifyNoInteractions(settings);
+    }
+
+    @Test void normalizesOptionalFieldsAndPhoneBeforeSaving() throws Exception {
+        mvc.perform(put("/api/v1/store-settings").with(actor("ADMIN", 1))
+            .contentType("application/json").content(SETTINGS.replace("0901234567", "090 123 4567")
+                .replace("\"storeName\":", "\"email\":\"  \",\"storeName\":"))).andExpect(status().isOk());
+        verify(settings).update(argThat(request -> request.settings().email() == null
+            && request.settings().phone().equals("0901234567")), eq(1L));
     }
 }
