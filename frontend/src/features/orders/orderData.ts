@@ -10,7 +10,7 @@ import { useAdvanceOrderStatus, useOrders } from './useOrders'
 
 /**
  * Danh sách đơn cho trang Đơn hàng: bản dùng thử đọc mock, tài khoản thật đọc OrderController
- * và chuyển về kiểu `Order` của giao diện. Phiếu thu, giao hàng, đổi trả BE chưa có nên để trống.
+ * và chuyển về kiểu `Order` của giao diện. Lịch sử giao và Dispatch tải riêng trong chi tiết đơn.
  */
 const statusOf: Record<LiveOrder['status'], OrderStatus> = {
   PENDING: 'Chờ xác nhận',

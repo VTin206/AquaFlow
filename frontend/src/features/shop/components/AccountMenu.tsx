@@ -7,6 +7,7 @@ import { devAccounts, type DevAccount } from '@/features/auth/devAccounts'
 import { useAuth } from '@/features/auth/useAuth'
 import { useStaff } from '@/features/auth/useStaff'
 import { backendFeatures } from '@/shared/features'
+import { accountDestination, isCustomer } from '@/features/auth/accountAccess'
 
 /**
  * Tài khoản trên đầu trang khách, có hai chỗ: chữ trên thanh trên cùng ("Đăng nhập" / "Chào, …") và icon trên header.
@@ -79,8 +80,8 @@ export function AccountMenu({ variant = 'icon' }: { variant?: 'icon' | 'text' })
           <small>{staff ? `${staff.roleName}${staff.isDemo ? ' · dùng thử' : ''}` : user.role}</small>
         </div>
       </div>
-      <Button block type="primary" icon={<LayoutDashboard size={16} />} onClick={() => go('/')}>
-        Trang quản lý
+      <Button block type="primary" icon={<LayoutDashboard size={16} />} onClick={() => go(accountDestination(user))}>
+        {isCustomer(user) ? 'Đơn hàng của tôi' : 'Trang quản lý'}
       </Button>
       {showSwitch && (
         <div className="af-shop-account-switch">

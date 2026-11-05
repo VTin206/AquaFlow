@@ -128,9 +128,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Mở lại app với token cũ: lấy thông tin người dùng mới nhất (401 đã được xử lý ở trên).
   useEffect(() => {
     if (!token) return
+    let active = true
     authService
       .me()
       .then((current) => {
+        if (!active) return
         const next = toAuthUser(current)
         saveUser(next)
         setUser(next)
@@ -138,13 +140,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch(() => {
         // Lỗi mạng: giữ phiên để dùng tiếp khi máy chủ hoạt động lại.
       })
+    return () => {
+      active = false
+    }
     // Chỉ kiểm tra khi token thay đổi.
   }, [token])
 
   const login = useCallback(
     async (credentials: LoginCredentials) => {
       const response = await authService.login(credentials)
-      if (!STAFF_ROLES.includes(response.user.role)) {
+      if (![...STAFF_ROLES, 'CUSTOMER'].includes(response.user.role)) {
         throw new Error(`Tài khoản ${roleLabel(response.user.role).toLowerCase()} không dùng được trang quản lý cửa hàng.`)
       }
       const nextUser = toAuthUser(response.user)

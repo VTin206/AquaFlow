@@ -12,6 +12,8 @@ import { readProfile, saveProfile, useCart, useCartActions } from './cart'
 import { submitCheckoutOnce } from './checkoutSubmit'
 import { CartThumb } from './components/CartThumb'
 import { usePlaceWebOrder, useShopFeature, useShopProducts } from './shopService'
+import { useAuth } from '@/features/auth/useAuth'
+import { isCustomer } from '@/features/auth/accountAccess'
 
 type CheckoutForm = {
   customer: string
@@ -24,6 +26,7 @@ type CheckoutForm = {
 }
 
 export function CheckoutPage() {
+  const { user } = useAuth()
   const quoteFee = useShopFeature('deliveryQuote')
   const showDeposit = useShopFeature('bottleLedger')
   const cart = useCart()
@@ -91,8 +94,16 @@ export function CheckoutPage() {
           status="success"
           title="Đặt hàng thành công"
           subTitle={placedLiveOrder.orderCode ? `Mã đơn: ${placedLiveOrder.orderCode}` : 'Đơn hàng đã được ghi nhận.'}
-          extra={
+          extra={[
+            ...(isCustomer(user)
+              ? [
+                  <Link key="order" to={`/shop/orders/${placedLiveOrder.id}`}>
+                    <Button>Xem đơn hàng</Button>
+                  </Link>,
+                ]
+              : []),
             <Button
+              key="continue"
               type="primary"
               onClick={() => {
                 setPlacedLiveOrder(undefined)
@@ -100,8 +111,8 @@ export function CheckoutPage() {
               }}
             >
               Tiếp tục mua sắm
-            </Button>
-          }
+            </Button>,
+          ]}
         />
       </div>
     )

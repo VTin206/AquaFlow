@@ -14,7 +14,7 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['tests/**/*.test.mjs', 'src/**/*.test.ts'],
+    include: ['tests/**/*.test.mjs', 'src/**/*.test.{ts,tsx}'],
   },
   build: {
     // Phần lõi Ant Design dùng chung cho mọi trang (~580 kB, ~190 kB gzip); các trang đã được tách riêng bằng lazy().
