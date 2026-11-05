@@ -16,7 +16,7 @@ import {
   type DeliveryTrip,
   type TripCollections,
 } from './deliveryApi'
-import { DeliveryActionModal } from './LiveDeliveryPage'
+import { DeliveryActionModal } from './components/DeliveryActionModal'
 
 export function LiveDriverPage() {
   const { user } = useAuth()
