@@ -43,7 +43,8 @@ test('delivery adapter uses REST resources, passes result/handover data and pres
     await deliveryApi.assignmentResult(21, result)
     await deliveryApi.assignmentAttempts(21)
     const { returnApi } = await import('/src/features/live/returnApi.ts')
-    await returnApi.inspectAttempt({ attemptId: 31, lines: [{ loadItemId: 41, sellable: 2 }], note: 'Checked' })
+    const requestId = '0480e2ca-c740-4409-b00a-798e79f16732'
+    await returnApi.inspectAttempt({ attemptId: 31, requestId, lines: [{ loadItemId: 41, quantity: 3, sellable: 2 }], note: 'Checked' })
     assert.deepEqual(
       requests.map((r) => [r.method, r.url]),
       [
@@ -71,7 +72,7 @@ test('delivery adapter uses REST resources, passes result/handover data and pres
     assert.deepEqual(requests[11].body, settlement)
     assert.deepEqual(requests[12].body, { status: 'CANCELLED' })
     assert.deepEqual(requests[14].body, result)
-    assert.deepEqual(requests[16].body, { lines: [{ loadItemId: 41, sellable: 2 }], note: 'Checked' })
+    assert.deepEqual(requests[16].body, { requestId, lines: [{ loadItemId: 41, quantity: 3, sellable: 2 }], note: 'Checked' })
     await assert.rejects(deliveryApi.detail(999), (error) => error.status === 403 && error.message.includes('chuyến của mình'))
   } finally {
     httpClient.defaults.baseURL = previousUrl
