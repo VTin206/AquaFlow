@@ -35,7 +35,8 @@ public class DeliveryAssignmentService {
         if (!"DELIVERY".equals(order.fulfillmentType()) || !"PREPARING".equals(order.status()))
             throw new ConflictException("Chỉ Dispatch đơn DELIVERY đang PREPARING; không được Dispatch trùng");
         return repository.hasDispatch(order.id())
-                ? dispatches.createRedeliveryForTrip(order.id(), actor) : dispatches.createForTrip(order.id(), actor);
+                ? dispatches.createRedeliveryForTrip(order.id(), actor, assignment.tripId())
+                : dispatches.createForTrip(order.id(), actor, assignment.tripId());
     }
 
     public List<AttemptResponse> attempts(long id, long actor, boolean staff) {
