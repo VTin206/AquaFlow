@@ -16,6 +16,7 @@ import { disabledOutsideHours, formatOpeningHours, isWithinOpeningHours, parseOp
 import { usePlaceWebOrder, useShopContact, useShopFeature, useShopProducts } from './shopService'
 import { useAuth } from '@/features/auth/useAuth'
 import { isCustomer } from '@/features/auth/accountAccess'
+import { SavedAddressPicker } from './SavedAddressPicker'
 
 type CheckoutForm = {
   customer: string
@@ -223,6 +224,7 @@ export function CheckoutPage() {
                 </div>
               </Card>
               <Card title="Giao đến">
+                {isCustomer(user) && !user?.isDemo && <SavedAddressPicker onSelect={address => form.setFieldsValue({ customer: address.recipientName, phone: address.recipientPhone, address: address.addressLine, area: address.area })} />}
                 <Form.Item
                   name="address"
                   label="Địa chỉ giao"

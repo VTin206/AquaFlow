@@ -18,11 +18,23 @@ import { OrderDeliveryHistory } from './OrderDeliveryHistory'
 import { orderDeliveryHistory } from './orderDeliveryApi'
 import { ApiError } from '@/shared/api/client'
 import type { LiveOrder } from '@/features/live/orderApi'
+import { orderApi } from '@/features/live/orderApi'
+import { dispatchApi, type DispatchReceipt } from '@/features/live/dispatchApi'
+import { LiveOrderDetails } from '@/features/live/LiveOrderDetails'
 
 vi.mock('@/features/auth/authService', () => ({ authService: { login: vi.fn(), me: vi.fn() } }))
 vi.mock('@/features/shop/customerOrderApi', () => ({ customerOrderApi: { list: vi.fn(), detail: vi.fn() } }))
 vi.mock('@/features/live/catalogApi', () => ({ catalogApi: { products: vi.fn().mockResolvedValue([]) } }))
 vi.mock('./orderDeliveryApi', () => ({ orderDeliveryHistory: vi.fn() }))
+vi.mock('@/features/live/orderApi', async (original) => ({
+  ...(await original<typeof import('@/features/live/orderApi')>()),
+  orderApi: { detail: vi.fn(), updateStatus: vi.fn() },
+}))
+vi.mock('@/features/live/dispatchApi', async (original) => ({
+  ...(await original<typeof import('@/features/live/dispatchApi')>()),
+  dispatchApi: { create: vi.fn(), list: vi.fn() },
+}))
+vi.mock('@/features/settings/settingsService', () => ({ useSettings: () => ({ data: undefined }) }))
 const customer = { name: 'Customer', email: 'customer@test.com', role: 'CUSTOMER' }
 const order: LiveOrder = {
   id: 12,
@@ -64,6 +76,7 @@ function Providers({ children, user = customer, path = '/shop/orders' }: { child
             enterDemo: vi.fn(),
             demoGuest: false,
             enterDemoGuest: vi.fn(),
+            updateProfile: vi.fn(),
           }}
         >
           <MemoryRouter initialEntries={[path]}>{children}</MemoryRouter>
@@ -77,6 +90,9 @@ beforeEach(() => {
   vi.mocked(customerOrderApi.list).mockReset()
   vi.mocked(customerOrderApi.detail).mockReset()
   vi.mocked(orderDeliveryHistory).mockReset()
+  vi.mocked(orderApi.detail).mockReset()
+  vi.mocked(dispatchApi.create).mockReset()
+  vi.mocked(dispatchApi.list).mockResolvedValue([])
   vi.stubGlobal('ResizeObserver', class { observe = vi.fn(); unobserve = vi.fn(); disconnect = vi.fn() })
   const getStyle = window.getComputedStyle.bind(window)
   vi.spyOn(window, 'getComputedStyle').mockImplementation(element => getStyle(element))
@@ -95,6 +111,80 @@ beforeEach(() => {
         removeEventListener: vi.fn(),
         dispatchEvent: vi.fn(),
       })),
+  })
+})
+
+describe('counter handover', () => {
+  const staff = { name: 'Sales', email: 'sales@test.com', role: 'SALES_STAFF' }
+  const counter: LiveOrder = { ...order, channel: 'COUNTER', fulfillmentType: 'COUNTER' }
+  const receipt: DispatchReceipt = { id: 1, orderId: 12, performedBy: 7, dispatchedAt: '2026-11-06T01:00:00Z', orderStatus: 'DELIVERED', items: [] }
+  const show = (value = counter, role = 'SALES_STAFF') => {
+    vi.mocked(orderApi.detail).mockResolvedValue(value)
+    vi.mocked(orderDeliveryHistory).mockResolvedValue([])
+    render(<Providers user={{ ...staff, role }}><LiveOrderDetails id={12} onClose={vi.fn()} /></Providers>)
+  }
+
+  it('confirms once, locks cancellation during dispatch, and refreshes order and receipts without marking paid', async () => {
+    let finish!: (value: DispatchReceipt) => void
+    vi.mocked(dispatchApi.create).mockImplementation(() => new Promise(resolve => { finish = resolve }))
+    show()
+    fireEvent.click(await screen.findByRole('button', { name: /Bàn giao tại quầy/ }))
+    expect(dispatchApi.create).not.toHaveBeenCalled()
+    fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận bàn giao' }))
+    await waitFor(() => expect(dispatchApi.create).toHaveBeenCalledExactlyOnceWith(12))
+    expect((screen.getByRole('button', { name: /Bàn giao tại quầy/ }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'Hủy đơn' }) as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: /Bàn giao tại quầy/ }))
+    expect(dispatchApi.create).toHaveBeenCalledTimes(1)
+    vi.mocked(orderApi.detail).mockResolvedValue({ ...counter, status: 'DELIVERED' })
+    vi.mocked(dispatchApi.list).mockResolvedValue([receipt])
+    finish(receipt)
+    expect(await screen.findByText('Khách đã nhận hàng')).toBeTruthy()
+    await waitFor(() => expect(screen.queryByRole('button', { name: /Bàn giao tại quầy/ })).toBeNull())
+    expect(await screen.findByText('1 phiếu')).toBeTruthy()
+    expect(screen.getByText('Chưa thanh toán')).toBeTruthy()
+    expect(orderApi.updateStatus).not.toHaveBeenCalled()
+  })
+
+  it('shows an API failure and keeps a preparing order available to retry', async () => {
+    vi.mocked(dispatchApi.create).mockRejectedValue(new ApiError(409, 'Lô hàng đã hết hạn'))
+    show(counter, 'ADMIN')
+    fireEvent.click(await screen.findByRole('button', { name: /Bàn giao tại quầy/ }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận bàn giao' }))
+    expect(await screen.findByText('Lô hàng đã hết hạn')).toBeTruthy()
+    await waitFor(() => expect((screen.getByRole('button', { name: /Bàn giao tại quầy/ }) as HTMLButtonElement).disabled).toBe(false))
+    expect(orderApi.detail).toHaveBeenCalledTimes(2)
+    expect(screen.queryByText('Khách đã nhận hàng')).toBeNull()
+  })
+
+  it('refreshes stale state when another staff member has already handed over the order', async () => {
+    show()
+    fireEvent.click(await screen.findByRole('button', { name: /Bàn giao tại quầy/ }))
+    vi.mocked(orderApi.detail).mockResolvedValue({ ...counter, status: 'DELIVERED' })
+    vi.mocked(dispatchApi.create).mockRejectedValue(new ApiError(409, 'Đơn đã xuất kho'))
+    fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận bàn giao' }))
+    expect(await screen.findByText('Đơn đã xuất kho')).toBeTruthy()
+    expect(await screen.findByText('Khách đã nhận hàng')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Bàn giao tại quầy/ })).toBeNull()
+  })
+
+  it.each(['PENDING', 'CONFIRMED', 'DELIVERED', 'CANCELLED'] as const)('does not offer handover for %s', async status => {
+    show({ ...counter, status })
+    await screen.findByText('Đơn ORDER-12')
+    expect(screen.queryByRole('button', { name: /Bàn giao tại quầy/ })).toBeNull()
+  })
+
+  it('keeps delivery orders on the trip workflow', async () => {
+    show(order)
+    expect((await screen.findByRole('link', { name: 'Xếp chuyến' })).getAttribute('href')).toBe('/delivery')
+    expect(screen.queryByRole('button', { name: /Bàn giao tại quầy/ })).toBeNull()
+  })
+
+  it.each(['CUSTOMER', 'DELIVERY_STAFF'])('does not offer handover to %s', role => {
+    show(counter, role)
+    expect(screen.queryByRole('button', { name: /Bàn giao tại quầy/ })).toBeNull()
+    expect(orderApi.detail).not.toHaveBeenCalled()
+    expect(dispatchApi.create).not.toHaveBeenCalled()
   })
 })
 afterEach(() => {
