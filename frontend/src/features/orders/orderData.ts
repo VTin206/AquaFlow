@@ -1,10 +1,12 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useIsDemo } from '@/shared/features'
 import { useStaff } from '@/features/auth/useStaff'
 import { catalogApi, type CatalogProduct } from '@/features/live/catalogApi'
+import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { channelLabels, orderApi, paymentStatusLabels, type LiveOrder } from '@/features/live/orderApi'
-import type { Order, OrderStatus } from './types'
-import { useOrders } from './useOrders'
+import { orderStatuses } from './orderStatus'
+import { walkInName, type Order, type OrderStatus } from './types'
+import { useAdvanceOrderStatus, useOrders } from './useOrders'
 
 /**
  * Danh sách đơn cho trang Đơn hàng: bản dùng thử đọc mock, tài khoản thật đọc OrderController
@@ -38,9 +40,10 @@ export function fromLiveOrder(order: LiveOrder, products: CatalogProduct[]): Ord
     id: String(order.id),
     code: order.orderCode,
     customerId: order.customerId === null ? undefined : String(order.customerId),
-    customer: order.recipientName || 'Khách tại quầy',
+    customer: order.recipientName || walkInName,
     phone: order.recipientPhone ?? '',
     address: order.deliveryAddress ?? '',
+    area: order.deliveryArea ?? undefined,
     items: lines.map((line) => `${line.name} × ${line.quantity}`).join(', '),
     total: Number(order.total),
     time: timeOf(order.createdAt),
@@ -54,7 +57,7 @@ export function fromLiveOrder(order: LiveOrder, products: CatalogProduct[]): Ord
     payments: [],
     paymentStatusLabel: order.status === 'CANCELLED' ? 'Đã hủy' : paymentStatusLabels[order.paymentStatus],
     history: [{ at: order.createdAt, message: 'Tạo đơn' }],
-    stockReserved: ['CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY'].includes(order.status),
+    stockReserved: ['CONFIRMED', 'PREPARING'].includes(order.status),
   }
 }
 
@@ -66,10 +69,36 @@ async function liveOrders() {
     .sort((a, b) => (b.history[0]?.at ?? '').localeCompare(a.history[0]?.at ?? ''))
 }
 
-export function useOrderList() {
+/** Trạng thái theo nguồn dữ liệu: mẫu xác nhận là chuyển thẳng sang chuẩn bị; BE có bước "Đã xác nhận" và chưa có "Giao thất bại". */
+export function useOrderStatuses() {
+  const demo = useIsDemo()
+  return orderStatuses.filter((status) => (demo ? status !== 'Đã xác nhận' : status !== 'Giao thất bại'))
+}
+
+/** Xác nhận đơn theo nguồn dữ liệu; `refresh` làm mới danh sách sau khi xác nhận xong một loạt. */
+export function useConfirmOrderRequest() {
+  const demo = useIsDemo()
+  const queryClient = useQueryClient()
+  const advance = useAdvanceOrderStatus()
+  return {
+    confirm: (order: Order): Promise<unknown> =>
+      demo ? advance.mutateAsync(order.id) : orderApi.updateStatus(Number(order.id), 'CONFIRMED'),
+    refresh: () => {
+      if (!demo) void invalidateLiveData(queryClient)
+    },
+  }
+}
+
+export function useOrderList(enabled = true) {
   const demo = useIsDemo()
   const staff = useStaff()
-  const demoQuery = useOrders(demo)
-  const liveQuery = useQuery({ queryKey: ['live', 'orders-view', staff?.name, staff?.role], queryFn: liveOrders, enabled: !demo })
+  const demoQuery = useOrders(demo && enabled)
+  // Đơn mới có thể đến từ website bất cứ lúc nào nên tải lại định kỳ; thẻ trình duyệt ẩn thì tạm dừng.
+  const liveQuery = useQuery({
+    queryKey: ['live', 'orders-view', staff?.name, staff?.role],
+    queryFn: liveOrders,
+    enabled: !demo && enabled,
+    refetchInterval: 30_000,
+  })
   return demo ? demoQuery : liveQuery
 }

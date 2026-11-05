@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { App, Button, Card, Col, Descriptions, Form, Input, InputNumber, Row, Select, Skeleton, Space, Typography } from 'antd'
+import { Alert, App, Button, Card, Col, Descriptions, Form, Input, InputNumber, Row, Select, Skeleton, Space, Typography } from 'antd'
 import { Save } from 'lucide-react'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
@@ -16,18 +16,28 @@ import {
 } from '@/shared/policy'
 import { currency } from '@/shared/utils/format'
 import { useSettings, useUpdateSettings } from './settingsService'
+import { useIsDemo } from '@/shared/features'
+import { ApiError } from '@/shared/api/client'
+import { type SettingsSnapshot } from './settingsApi'
 import type { StoreSettings } from './types'
 
 export function SettingsPage() {
   const settingsQuery = useSettings()
   return (
     <Page title="Cài đặt cửa hàng" description="Thông tin in trên hóa đơn, phiếu giao và các ngưỡng cảnh báo kho.">
-      {settingsQuery.isError ? (
+      {settingsQuery.isError && !settingsQuery.data ? (
         <Card>
           <QueryError error={settingsQuery.error} onRetry={settingsQuery.refetch} />
         </Card>
       ) : settingsQuery.data ? (
-        <SettingsForm settings={settingsQuery.data} />
+        <SettingsForm
+          settings={settingsQuery.data}
+          reload={async () => {
+            const result = await settingsQuery.refetch()
+            if (!result.data || result.error) throw result.error
+            return result.data
+          }}
+        />
       ) : (
         <Card>
           <Skeleton active paragraph={{ rows: 8 }} />
@@ -37,8 +47,11 @@ export function SettingsPage() {
   )
 }
 
-function SettingsForm({ settings }: { settings: StoreSettings }) {
-  const { message } = App.useApp()
+function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload: () => Promise<SettingsSnapshot> }) {
+  const { message, modal } = App.useApp()
+  const demo = useIsDemo()
+  const [version, setVersion] = useState(settings.version)
+  const [conflict, setConflict] = useState(false)
   const [form] = Form.useForm<StoreSettings>()
   const update = useUpdateSettings()
   const [dirty, setDirty] = useState(false)
@@ -48,18 +61,60 @@ function SettingsForm({ settings }: { settings: StoreSettings }) {
     <Form<StoreSettings>
       form={form}
       layout="vertical"
+      disabled={update.isPending}
       initialValues={settings}
       onValuesChange={() => setDirty(true)}
       onFinish={(values) =>
-        update.mutate(values, {
-          onSuccess: () => {
-            message.success('Đã lưu cài đặt cửa hàng.')
-            setDirty(false)
+        update.mutate(
+          { ...values, version },
+          {
+            onSuccess: (saved: SettingsSnapshot) => {
+              setVersion(saved.version)
+              form.setFieldsValue(saved)
+              setConflict(false)
+              message.success('Đã lưu cài đặt cửa hàng.')
+              setDirty(false)
+            },
+            onError: (error) => {
+              if (error instanceof ApiError && error.status === 409) setConflict(true)
+              else message.error(error.message)
+            },
           },
-          onError: (error) => message.error(error.message),
-        })
+        )
       }
     >
+      {conflict && (
+        <Alert
+          type="warning"
+          showIcon
+          title="Cài đặt đã được người khác thay đổi. Bản nháp của bạn vẫn được giữ."
+          action={
+            <Button
+              onClick={() =>
+                modal.confirm({
+                  title: 'Bỏ bản nháp và tải cài đặt mới nhất?',
+                  okText: 'Tải lại',
+                  cancelText: 'Giữ bản nháp',
+                  onOk: async () => {
+                    try {
+                      const latest = await reload()
+                      form.setFieldsValue(latest)
+                      setVersion(latest.version)
+                      setDirty(false)
+                      setConflict(false)
+                    } catch (error) {
+                      message.error((error as Error).message)
+                      throw error
+                    }
+                  },
+                })
+              }
+            >
+              Tải lại
+            </Button>
+          }
+        />
+      )}
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={15}>
           <Card className="af-card af-settings-card" title="Thông tin cửa hàng">
@@ -122,7 +177,24 @@ function SettingsForm({ settings }: { settings: StoreSettings }) {
           <Card className="af-card af-settings-card" title="Chuyển khoản & hóa đơn">
             <Row gutter={16}>
               <Col xs={24} md={8}>
-                <Form.Item name="bankName" label="Ngân hàng" tooltip="Ngân hàng trong danh sách VietQR để tạo mã QR chuyển khoản theo đơn.">
+                <Form.Item
+                  name="bankName"
+                  label="Ngân hàng"
+                  tooltip="Ngân hàng trong danh sách VietQR để tạo mã QR chuyển khoản theo đơn."
+                  dependencies={['bankAccount', 'bankHolder']}
+                  rules={[
+                    ({ getFieldValue }) => ({
+                      validator: (_, value) => {
+                        const filled = [value, getFieldValue('bankAccount'), getFieldValue('bankHolder')].filter((item) =>
+                          item?.trim(),
+                        ).length
+                        return filled === 0 || filled === 3
+                          ? Promise.resolve()
+                          : Promise.reject(new Error('Nhập đủ ngân hàng, số tài khoản và chủ tài khoản.'))
+                      },
+                    }),
+                  ]}
+                >
                   <Select
                     showSearch
                     allowClear
@@ -163,9 +235,9 @@ function SettingsForm({ settings }: { settings: StoreSettings }) {
                 <Form.Item
                   name="defaultLowStock"
                   label="Tồn tối thiểu mặc định cho sản phẩm mới"
-                  rules={[{ required: true }, { type: 'integer', min: 0, message: 'Số nguyên không âm.' }]}
+                  rules={[{ required: true }, { type: 'integer', min: 0, max: 1000000, message: 'Số nguyên không âm.' }]}
                 >
-                  <InputNumber min={0} precision={0} style={{ width: '100%' }} />
+                  <InputNumber min={0} max={1000000} precision={0} style={{ width: '100%' }} />
                 </Form.Item>
               </Col>
             </Row>
@@ -198,30 +270,32 @@ function SettingsForm({ settings }: { settings: StoreSettings }) {
             </p>
           </Card>
 
-          <Card className="af-card af-settings-card" title="Chính sách vỏ & giao hàng">
-            <Descriptions
-              size="small"
-              column={1}
-              items={[
-                { key: 'deposit', label: 'Cọc vỏ (khách chưa có vỏ)', children: `${currency(DEPOSIT_PER_BOTTLE)}/vỏ` },
-                { key: 'brands', label: 'Đổi bù vỏ', children: EXCHANGEABLE_BRANDS.join(', ') },
-                { key: 'pickup', label: 'Thu hồi tận nơi', children: `${currency(PICKUP_FEE)}/lần khi dưới ${PICKUP_FEE_BELOW} vỏ` },
-                {
-                  key: 'delivery',
-                  label: 'Phí giao',
-                  children: `Miễn phí từ ${FREE_DELIVERY_MIN_UNITS} bình/thùng; ít hơn ${currency(SMALL_ORDER_FEE.min)}–${currency(SMALL_ORDER_FEE.max)}`,
-                },
-                {
-                  key: 'stairs',
-                  label: 'Thang bộ / bình',
-                  children: [1, 2, 3, 4].map((floor) => `L${floor}: ${currency(stairsSurcharge(floor, 1))}`).join(' · '),
-                },
-              ]}
-            />
-            <Typography.Paragraph type="secondary" className="af-form-hint">
-              Mức mẫu tham khảo chính sách công khai của iWater. Nhóm cần chốt chính sách thật trước khi cho chỉnh ở đây.
-            </Typography.Paragraph>
-          </Card>
+          {demo && (
+            <Card className="af-card af-settings-card" title="Chính sách vỏ & giao hàng">
+              <Descriptions
+                size="small"
+                column={1}
+                items={[
+                  { key: 'deposit', label: 'Cọc vỏ (khách chưa có vỏ)', children: `${currency(DEPOSIT_PER_BOTTLE)}/vỏ` },
+                  { key: 'brands', label: 'Đổi bù vỏ', children: EXCHANGEABLE_BRANDS.join(', ') },
+                  { key: 'pickup', label: 'Thu hồi tận nơi', children: `${currency(PICKUP_FEE)}/lần khi dưới ${PICKUP_FEE_BELOW} vỏ` },
+                  {
+                    key: 'delivery',
+                    label: 'Phí giao',
+                    children: `Miễn phí từ ${FREE_DELIVERY_MIN_UNITS} bình/thùng; ít hơn ${currency(SMALL_ORDER_FEE.min)}–${currency(SMALL_ORDER_FEE.max)}`,
+                  },
+                  {
+                    key: 'stairs',
+                    label: 'Thang bộ / bình',
+                    children: [1, 2, 3, 4].map((floor) => `L${floor}: ${currency(stairsSurcharge(floor, 1))}`).join(' · '),
+                  },
+                ]}
+              />
+              <Typography.Paragraph type="secondary" className="af-form-hint">
+                Mức mẫu tham khảo chính sách công khai của iWater. Nhóm cần chốt chính sách thật trước khi cho chỉnh ở đây.
+              </Typography.Paragraph>
+            </Card>
+          )}
         </Col>
       </Row>
 
@@ -230,7 +304,9 @@ function SettingsForm({ settings }: { settings: StoreSettings }) {
           <Button
             disabled={!dirty}
             onClick={() => {
-              form.resetFields()
+              form.setFieldsValue(settings)
+              setVersion(settings.version)
+              setConflict(false)
               setDirty(false)
             }}
           >

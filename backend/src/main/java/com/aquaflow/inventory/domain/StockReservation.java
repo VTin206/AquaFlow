@@ -1,6 +1,5 @@
 package com.aquaflow.inventory.domain;
 
-import com.aquaflow.shared.api.ConflictException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -18,6 +17,7 @@ public class StockReservation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Giữ id thay vì entity để module inventory không phụ thuộc module order
     @Column(name = "order_item_id", nullable = false)
     private Long orderItemId;
 
@@ -34,12 +34,6 @@ public class StockReservation {
     @Column(name = "quantity_released", nullable = false)
     private Integer quantityReleased;
 
-    @Column(name = "quantity_returned", nullable = false)
-    private Integer quantityReturned;
-
-    @Column(name = "quantity_damaged", nullable = false)
-    private Integer quantityDamaged;
-
     protected StockReservation() {
     }
 
@@ -52,41 +46,26 @@ public class StockReservation {
         this.quantityReserved = quantityReserved;
         this.quantityDispatched = 0;
         this.quantityReleased = 0;
-        this.quantityReturned = 0;
-        this.quantityDamaged = 0;
     }
 
     public int getOutstanding() {
         return quantityReserved - quantityDispatched - quantityReleased;
     }
 
+    /** Giải phóng toàn bộ phần chưa xuất; trả về số lượng vừa giải phóng. */
     public int releaseOutstanding() {
         int outstanding = getOutstanding();
         quantityReleased += outstanding;
         return outstanding;
     }
 
-    public int getUnreturnedDispatched() {
-        return quantityDispatched - quantityReturned - quantityDamaged;
-    }
-
-    public int dispatchAll() {
-        if (quantityDispatched > 0 || quantityReleased > 0) {
-            throw new ConflictException("Reservation " + id + " đã được xử lý, không thể xuất kho");
+    public int dispatchOutstanding() {
+        int outstanding = getOutstanding();
+        if (outstanding <= 0) {
+            throw new com.aquaflow.shared.api.ConflictException("Reservation không còn hàng để xuất");
         }
-        quantityDispatched = quantityReserved;
-        return quantityDispatched;
-    }
-
-    public void recordReturn(int resellable, int damaged) {
-        if (resellable < 0 || damaged < 0 || resellable + damaged == 0) {
-            throw new IllegalArgumentException("Số lượng hàng hoàn không hợp lệ");
-        }
-        if (resellable + damaged > getUnreturnedDispatched()) {
-            throw new ConflictException("Số lượng hàng hoàn vượt số đã xuất của lô " + batch.getLotCode());
-        }
-        quantityReturned += resellable;
-        quantityDamaged += damaged;
+        quantityDispatched += outstanding;
+        return outstanding;
     }
 
     public Long getId() { return id; }
@@ -95,6 +74,4 @@ public class StockReservation {
     public Integer getQuantityReserved() { return quantityReserved; }
     public Integer getQuantityDispatched() { return quantityDispatched; }
     public Integer getQuantityReleased() { return quantityReleased; }
-    public Integer getQuantityReturned() { return quantityReturned; }
-    public Integer getQuantityDamaged() { return quantityDamaged; }
 }

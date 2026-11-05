@@ -4,12 +4,11 @@ import { Droplets, ShoppingCart } from 'lucide-react'
 import { Link, useLocation, useOutletContext } from 'react-router'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
-import { useSettings } from '@/features/settings/settingsService'
 import { useCartActions, useCart } from './cart'
 import { ShopFilters } from './components/ShopFilters'
 import { ShopIntro } from './components/ShopIntro'
 import { emptyFilters, filterProducts, type ShopFilterState } from './shopGroups'
-import { useShopDemo, useShopProducts, type ShopProduct } from './shopService'
+import { useShopDemo, useShopContact, useShopFeature, useShopProducts, type ShopProduct } from './shopService'
 
 function ShopImage({ product }: { product: ShopProduct }) {
   const [failed, setFailed] = useState(false)
@@ -25,8 +24,9 @@ function ShopImage({ product }: { product: ShopProduct }) {
 export function ShopPage() {
   const { openCart } = useOutletContext<{ openCart: () => void }>()
   const productsQuery = useShopProducts()
-  const demo = useShopDemo()
-  const { data: settings } = useSettings(demo)
+  const contact = useShopContact()
+  const showPolicy = useShopDemo()
+  const showTracking = useShopFeature('orderTracking')
   const cartActions = useCartActions()
   const cart = useCart()
   const [filters, setFilters] = useState<ShopFilterState>(emptyFilters)
@@ -49,8 +49,8 @@ export function ShopPage() {
   }, [focusSearch])
 
   useEffect(() => {
-    document.title = `Đặt nước | ${demo ? (settings?.storeName ?? 'AquaFlow') : 'AquaFlow'}`
-  }, [demo, settings?.storeName])
+    document.title = `Đặt nước | ${contact?.storeName ?? 'AquaFlow'}`
+  }, [contact?.storeName])
 
   const products = productsQuery.data ?? []
   const visible = filterProducts(products, filters)
@@ -60,9 +60,10 @@ export function ShopPage() {
   return (
     <div className="af-shop-page">
       <ShopIntro
-        demo={demo}
-        storeName={demo ? settings?.storeName : undefined}
-        phone={demo ? settings?.phone : undefined}
+        showPolicy={showPolicy}
+        showTracking={showTracking}
+        storeName={contact?.storeName}
+        phone={contact?.phone}
         products={products}
         onShop={goToCatalog}
       />
@@ -73,11 +74,7 @@ export function ShopPage() {
             <Typography.Title level={2} id="af-shop-catalog-title">
               Sản phẩm
             </Typography.Title>
-            <p>
-              {demo
-                ? 'Bản dùng thử: đặt đơn không cần tài khoản khách hàng và xem trạng thái mô phỏng.'
-                : 'Chọn sản phẩm và đặt hàng không cần tài khoản.'}
-            </p>
+            <p>Chọn sản phẩm và đặt hàng không cần tài khoản.</p>
           </div>
         </div>
 

@@ -15,6 +15,7 @@ import {
   type ReceiptView,
 } from '../useInventory'
 import { ReceiptResult } from './ReceiveStockModal'
+import { modalWidth } from '@/shared/utils/modal'
 
 type ReceiptFilter = 'all' | ReceiptStatus
 
@@ -199,7 +200,7 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
       <Modal
         open={result !== undefined}
         title="Kết quả nhập kho"
-        width={760}
+        width={modalWidth.medium}
         footer={null}
         onCancel={() => setResult(undefined)}
         destroyOnHidden

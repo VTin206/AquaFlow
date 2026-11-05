@@ -11,10 +11,6 @@ export const orderStatuses: OrderStatus[] = [
   'Đã hủy',
 ]
 
-/** Bản dùng thử xác nhận là chuyển thẳng sang chuẩn bị; BE có bước "Đã xác nhận" và chưa có "Giao thất bại". */
-export const statusesFor = (demo: boolean) =>
-  orderStatuses.filter((status) => (demo ? status !== 'Đã xác nhận' : status !== 'Giao thất bại'))
-
 export const statusColor: Record<OrderStatus, string> = {
   'Chờ xác nhận': 'gold',
   'Đã xác nhận': 'blue',

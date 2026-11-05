@@ -43,6 +43,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 @AutoConfigureMockMvc
 class ProductControllerIntegrationTest {
+    @MockitoBean private com.aquaflow.auth.repository.RoleRepository roleRepository;
+
+    @MockitoBean private com.aquaflow.inventory.repository.InventoryMovementReadRepository inventoryMovementReadRepository;
+    @MockitoBean private com.aquaflow.inventory.repository.InventoryReturnRepository inventoryReturnRepository;
+    @MockitoBean private com.aquaflow.activity.ActivityRepository activityRepository;
+    @MockitoBean private com.aquaflow.report.ReportRepository reportRepository;
+    @MockitoBean private com.aquaflow.delivery.repository.DeliveryRepository deliveryRepository;
+    @MockitoBean private com.aquaflow.customer.order.repository.DispatchRepository dispatchRepository;
+    @MockitoBean private com.aquaflow.inventory.application.StockDispatchService stockDispatchService;
     @MockitoBean private com.aquaflow.workspace.repository.StoreSettingsRepository storeSettingsRepository;
     @MockitoBean private com.aquaflow.workspace.repository.NotificationRepository notificationRepository;
 
@@ -56,6 +65,12 @@ class ProductControllerIntegrationTest {
 
     @MockitoBean
     private com.aquaflow.inventory.application.StockReservationService stockReservationService;
+
+    @MockitoBean
+    private com.aquaflow.inventory.repository.RedeliveryEligibilityRepository redeliveryEligibilityRepository;
+
+    @MockitoBean
+    private com.aquaflow.inventory.application.RedeliveryReservationService redeliveryReservationService;
 
     private static final String VALID_BODY = """
             {"sku":"NUOC-19L","name":"Nước 19L","brand":"Aqua","unit":"Bình","bottleTypeId":1,"salePrice":20000}
@@ -136,14 +151,10 @@ class ProductControllerIntegrationTest {
 
     @Test
     @WithMockUser(roles = "SALES_STAFF")
-    void salesStaffCanReadOnlyActiveProducts() throws Exception {
-        when(productService.findAll(true)).thenReturn(List.of(sampleProduct()));
-
-        mockMvc.perform(get("/api/v1/products?active=false"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].active").value(true));
-
-        verify(productService).findAll(true);
+    void salesStaffCanReadInactiveProducts() throws Exception {
+        when(productService.findAll(false)).thenReturn(List.of());
+        mockMvc.perform(get("/api/v1/products?active=false")).andExpect(status().isOk());
+        verify(productService).findAll(false);
     }
 
     @Test

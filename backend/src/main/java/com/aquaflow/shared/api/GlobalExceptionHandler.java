@@ -18,6 +18,27 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+    ResponseEntity<ApiError> handleMissingParameter(org.springframework.web.bind.MissingServletRequestParameterException exception,
+                                                    HttpServletRequest request) {
+        return error(HttpStatus.BAD_REQUEST, "Missing parameter: " + exception.getParameterName(), request);
+    }
+
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    ResponseEntity<ApiError> handleUnsupportedMethod(org.springframework.web.HttpRequestMethodNotSupportedException exception,
+                                                     HttpServletRequest request) {
+        var headers = new org.springframework.http.HttpHeaders();
+        if (exception.getSupportedHttpMethods() != null) headers.setAllow(exception.getSupportedHttpMethods());
+        return new ResponseEntity<>(error(HttpStatus.METHOD_NOT_ALLOWED, "HTTP method is not supported for this resource", request).getBody(),
+                headers, HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    ResponseEntity<ApiError> handleMissingResource(org.springframework.web.servlet.resource.NoResourceFoundException exception,
+                                                    HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "Resource not found", request);
+    }
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     ResponseEntity<ApiError> handleParameterType(MethodArgumentTypeMismatchException exception, HttpServletRequest request) {
         return error(HttpStatus.BAD_REQUEST, "Invalid parameter: " + exception.getName(), request);

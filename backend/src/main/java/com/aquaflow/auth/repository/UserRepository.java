@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
+    @EntityGraph(attributePaths = "role")
+    java.util.List<User> findByRoleCodeInOrderByIdDesc(java.util.Collection<String> codes);
 
     @EntityGraph(attributePaths = "role")
     Optional<User> findByEmailIgnoreCase(String email);

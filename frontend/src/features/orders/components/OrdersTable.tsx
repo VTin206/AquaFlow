@@ -4,14 +4,14 @@ import { Eye } from 'lucide-react'
 import { Money } from '@/shared/components/Money'
 import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
 import { useColumnSort } from '@/shared/components/sortableColumn'
-import { useFeature, useIsDemo } from '@/shared/features'
-import { LiveOrderDetails } from '@/features/live/LiveOrderDetails'
-import { amountDue, appointmentOf, createdAtOf, orderedAtOf, paymentLabel, type Order } from '../types'
-import { AdvanceStatusButton } from './AdvanceStatusButton'
+import { useFeature } from '@/shared/features'
+import { amountDue, compareDeliveryDue, deliveryTimingOf, paymentLabel, type Order } from '../types'
 import { LateTag } from './LateTag'
 import { OrderStatusTag } from './OrderStatusTag'
-import { OrderDetailsModal } from './OrderDetailsModal'
 import { OrderCards } from './OrderCards'
+import { OrderBulkActions } from './OrderBulkActions'
+import { OrderDetails } from './OrderDetails'
+import { OrderNextAction } from './OrderNextAction'
 
 type OrdersTableProps = {
   orders: Order[]
@@ -25,17 +25,20 @@ type OrdersTableProps = {
 
 export function OrdersTable({ orders, loading, compact = false, emptyText = 'Chưa có đơn hàng nào.', filterKey }: OrdersTableProps) {
   const screens = Grid.useBreakpoint()
-  const demo = useIsDemo()
-  // Tài khoản thật: BE chưa có phiếu thu nên không tính "còn phải thu"; thao tác đơn nằm trong chi tiết đơn.
+  // Chưa có phiếu thu thì không tính "còn phải thu", dùng trạng thái thanh toán của BE.
   const showPayments = useFeature('orderPayments')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  // Tích chọn nhiều đơn (chỉ bảng đầy đủ); chỉ tính các đơn còn hiện theo bộ lọc.
+  const [checkedIds, setCheckedIds] = useState<string[]>([])
+  const checked = compact ? [] : orders.filter((order) => checkedIds.includes(order.id))
   const [pageSize, setPageSize] = useState(tablePagination.defaultPageSize ?? 10)
-  const sort = useColumnSort<Order>()
+  // Mặc định đưa đơn cần giao sớm nhất lên đầu.
+  const sort = useColumnSort<Order>(compact ? null : { key: 'due', order: 'ascend' })
   // Mã của BE (AF- + 20 ký tự) dài hơn mã mẫu nhiều, nên cột rộng theo mã dài nhất để không bị cắt.
   const longestCode = Math.max(0, ...orders.map((order) => (order.code ?? order.id).length))
   const codeWidth = Math.max(compact ? 110 : 150, longestCode * 9 + (compact ? 24 : 64))
   // Độ rộng tối thiểu của bảng = tổng các cột, để không tự giãn rồi che cột cố định bên phải.
-  const tableMinWidth = codeWidth + (compact ? 180 + 150 + 170 + 80 : 220 + 130 + 160 + 170 + 112)
+  const tableMinWidth = codeWidth + (compact ? 180 + 150 + 170 + 80 : 44 + 220 + 170 + 160 + 170 + 112)
   const columns: TableColumnsType<Order> = [
     {
       title: 'Mã đơn',
@@ -70,23 +73,18 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
       ? []
       : [
           {
-            ...sort.column('Đặt lúc', 'time', 'time'),
-            dataIndex: 'time',
-            width: 130,
-            sorter: (a: Order, b: Order) => (createdAtOf(a) ?? a.time).localeCompare(createdAtOf(b) ?? b.time),
+            ...sort.column('Hẹn giao', 'due', 'time'),
+            dataIndex: 'appointment',
+            width: 170,
+            sorter: compareDeliveryDue,
             render: (_: string, order: Order) => {
-              const at = orderedAtOf(order)
-              const appointment = appointmentOf(order)
+              const { main, sub } = deliveryTimingOf(order)
               return (
-                <div className="af-cell-stack">
-                  <span className="af-ordered-at" title={`Đặt lúc ${at.full}`}>
-                    {at.label}
+                <div className="af-cell-stack af-timing-cell">
+                  <span className={`af-timing is-${main.tone}`} title={main.title}>
+                    {main.label}
                   </span>
-                  {appointment && (
-                    <small className={`af-appointment is-${appointment.tone}`} title={`Hẹn giao ${appointment.full}`}>
-                      {appointment.label}
-                    </small>
-                  )}
+                  <small title={sub.title}>{sub.label}</small>
                 </div>
               )
             },
@@ -145,7 +143,7 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
               aria-label={`Chi tiết đơn ${order.code ?? order.id}`}
             />
           </Tooltip>
-          {!compact && demo && <AdvanceStatusButton order={order} menu />}
+          {!compact && <OrderNextAction order={order} dense />}
         </Space>
       ),
     },
@@ -163,25 +161,33 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
           filterKey={filterKey}
         />
       ) : (
-        <Table<Order>
-          key={filterKey}
-          className="af-data-table af-table-flush"
-          rowKey="id"
-          columns={columns}
-          dataSource={orders}
-          loading={loading}
-          size="middle"
-          pagination={compact ? false : { ...tablePagination, pageSize, onShowSizeChange: (_, size) => setPageSize(size) }}
-          locale={{ emptyText }}
-          scroll={{ x: tableMinWidth, ...(!compact && { y: tableScrollHeight }) }}
-        />
+        <>
+          {!compact && <OrderBulkActions orders={checked} onSelect={setCheckedIds} />}
+          <Table<Order>
+            key={filterKey}
+            className="af-data-table af-table-flush"
+            rowKey="id"
+            columns={columns}
+            dataSource={orders}
+            loading={loading}
+            size="middle"
+            pagination={compact ? false : { ...tablePagination, pageSize, onShowSizeChange: (_, size) => setPageSize(size) }}
+            locale={{ emptyText }}
+            scroll={{ x: tableMinWidth, ...(!compact && { y: tableScrollHeight }) }}
+            rowSelection={
+              compact
+                ? undefined
+                : {
+                    selectedRowKeys: checked.map((order) => order.id),
+                    onChange: (keys) => setCheckedIds(keys.map(String)),
+                    fixed: 'left',
+                    columnWidth: 44,
+                  }
+            }
+          />
+        </>
       )}
-      {selectedId &&
-        (demo ? (
-          <OrderDetailsModal key={selectedId} orderId={selectedId} onClose={() => setSelectedId(null)} />
-        ) : (
-          <LiveOrderDetails key={selectedId} id={Number(selectedId)} onClose={() => setSelectedId(null)} />
-        ))}
+      {selectedId && <OrderDetails id={selectedId} onClose={() => setSelectedId(null)} />}
     </>
   )
 }

@@ -51,9 +51,12 @@ export type OrderInput = {
   recipientPhone: string | null
   deliveryAddress: string | null
   deliveryArea: string | null
+  requestedDeliveryAt: string | null
   items: { productId: number; quantity: number }[]
   note: string | null
 }
+
+export const confirmOrderHint = 'Hệ thống giữ hàng theo lô có hạn gần nhất. Nếu không đủ hàng khả dụng, đơn vẫn ở trạng thái chờ xác nhận.'
 
 /** Xác nhận/chuẩn bị/hủy theo OrderStatusPolicy; các bước giao hàng thuộc màn hình giao vận. */
 export const canConfirm = (order: Pick<LiveOrder, 'status'>) => order.status === 'PENDING'

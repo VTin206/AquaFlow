@@ -1,4 +1,4 @@
-import { Alert, App, Button, Card, Checkbox, DatePicker, Empty, Form, Input, InputNumber, Result, Skeleton, Typography } from 'antd'
+import { Alert, App, Button, Card, Checkbox, DatePicker, Empty, Form, Input, Result, Skeleton, Typography } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useRef, useState } from 'react'
 import { Link, useNavigate, useOutletContext } from 'react-router'
@@ -11,21 +11,21 @@ import { DEPOSIT_PER_BOTTLE, suggestedDeliveryFee } from '@/shared/policy'
 import { readProfile, saveProfile, useCart, useCartActions } from './cart'
 import { submitCheckoutOnce } from './checkoutSubmit'
 import { CartThumb } from './components/CartThumb'
-import { usePlaceWebOrder, useShopDemo, useShopProducts } from './shopService'
+import { usePlaceWebOrder, useShopFeature, useShopProducts } from './shopService'
 
 type CheckoutForm = {
   customer: string
   phone: string
   address: string
   area: string
-  floor?: number
   appointment?: Dayjs
   note?: string
   remember: boolean
 }
 
 export function CheckoutPage() {
-  const demo = useShopDemo()
+  const quoteFee = useShopFeature('deliveryQuote')
+  const showDeposit = useShopFeature('bottleLedger')
   const cart = useCart()
   const actions = useCartActions()
   const products = useShopProducts()
@@ -37,21 +37,15 @@ export function CheckoutPage() {
   const [submitError, setSubmitError] = useState<string>()
   const [placedLiveOrder, setPlacedLiveOrder] = useState<LiveOrder>()
   const submitLock = useRef(false)
-  const floor = Form.useWatch('floor', form) ?? 0
   const profile = readProfile()
   const lines = cart.map((line) => ({ ...line, product: products.data?.find((item) => item.id === line.productId) }))
-  const invalidCartLine = cart.some(
-    (line) =>
-      !Number.isSafeInteger(line.quantity) ||
-      line.quantity < 1 ||
-      line.quantity > 99 ||
-      (!demo && (!/^\d+$/.test(line.productId) || !Number.isSafeInteger(Number(line.productId)) || Number(line.productId) <= 0)),
-  )
+  // Mã sản phẩm lạ (giỏ cũ, đổi nguồn dữ liệu) không có trong danh mục nên bị chặn ở `invalid` bên dưới.
+  const invalidCartLine = cart.some((line) => !Number.isSafeInteger(line.quantity) || line.quantity < 1 || line.quantity > 99)
   const invalid = invalidCartLine || lines.some((line) => !line.product || line.product.available === false)
   const subtotal = lines.reduce((sum, line) => sum + (line.product?.price ?? 0) * line.quantity, 0)
   const units = lines.reduce((sum, line) => sum + line.quantity, 0)
   const jugs = lines.filter((line) => line.product?.unit === 'Bình').reduce((sum, line) => sum + line.quantity, 0)
-  const fee = demo ? suggestedDeliveryFee({ units, jugs, floor }) : null
+  const fee = quoteFee ? suggestedDeliveryFee({ units, jugs, floor: 0 }) : null
   const submit = (values: CheckoutForm) => {
     if (submitLock.current || mutation.isPending || invalid || !cart.length || products.isError || products.isPending) return
     setSubmitError(undefined)
@@ -60,7 +54,6 @@ export function CheckoutPage() {
       phone: values.phone.replace(/[\s().-]/g, ''),
       address: values.address.trim(),
       area: values.area.trim(),
-      floor,
       appointment: values.appointment?.toISOString(),
       note: values.note?.trim(),
       lines: cart,
@@ -69,21 +62,20 @@ export function CheckoutPage() {
       submitLock,
       () => mutation.mutateAsync(draft),
       (order) => {
-        if (demo)
-          saveProfile(
-            values.remember
-              ? {
-                  customer: values.customer.trim(),
-                  phone: values.phone.trim(),
-                  address: values.address.trim(),
-                  area: values.area.trim(),
-                  floor,
-                }
-              : null,
-          )
+        saveProfile(
+          values.remember
+            ? {
+                customer: values.customer.trim(),
+                phone: values.phone.trim(),
+                address: values.address.trim(),
+                area: values.area.trim(),
+              }
+            : null,
+        )
         actions.clear()
-        if (demo && 'trackingToken' in order && order.trackingToken) navigate(`/track/${order.trackingToken}`, { state: { placed: true } })
-        else if (!demo) setPlacedLiveOrder(order as LiveOrder)
+        // Có mã tra cứu thì sang trang theo dõi đơn, chưa có thì báo thành công tại đây.
+        if ('trackingToken' in order && order.trackingToken) navigate(`/track/${order.trackingToken}`, { state: { placed: true } })
+        else setPlacedLiveOrder(order as LiveOrder)
       },
       (error) => {
         setSubmitError(error.message)
@@ -173,7 +165,8 @@ export function CheckoutPage() {
               </div>
             </dl>
             <p className="af-form-hint">
-              Chưa gồm tiền cọc vỏ.{demo && jugs > 0 ? ` Nếu thiếu vỏ để đổi, cọc ${currency(DEPOSIT_PER_BOTTLE)}/vỏ khi nhận hàng.` : ''}
+              Chưa gồm tiền cọc vỏ.
+              {showDeposit && jugs > 0 ? ` Nếu thiếu vỏ để đổi, cọc ${currency(DEPOSIT_PER_BOTTLE)}/vỏ khi nhận hàng.` : ''}
             </p>
           </Card>
           <Card style={{ marginTop: 16 }}>
@@ -182,7 +175,7 @@ export function CheckoutPage() {
               name="checkout"
               layout="vertical"
               scrollToFirstError={{ focus: true }}
-              initialValues={{ ...profile, floor: profile?.floor ?? 0, remember: Boolean(profile) }}
+              initialValues={{ ...profile, remember: Boolean(profile) }}
               onFinish={submit}
               onKeyDown={focusNextOnEnter}
             >
@@ -221,35 +214,26 @@ export function CheckoutPage() {
               >
                 <Input autoComplete="address-level2" />
               </Form.Item>
-              {demo && (
-                <>
-                  <Form.Item name="floor" label="Lầu giao bằng thang bộ">
-                    <InputNumber min={0} max={30} precision={0} />
-                  </Form.Item>
-                  <Form.Item
-                    name="appointment"
-                    label="Giờ nhận mong muốn"
-                    rules={[
-                      {
-                        validator: (_, value?: Dayjs) =>
-                          !value || value.isAfter(dayjs()) ? Promise.resolve() : Promise.reject(new Error('Chọn giờ trong tương lai.')),
-                      },
-                    ]}
-                  >
-                    <DatePicker showTime format="DD/MM/YYYY HH:mm" disabledDate={(date) => date.isBefore(dayjs(), 'day')} />
-                  </Form.Item>
-                </>
-              )}
+              <Form.Item
+                name="appointment"
+                label="Giờ nhận mong muốn"
+                rules={[
+                  {
+                    validator: (_, value?: Dayjs) =>
+                      !value || value.isAfter(dayjs()) ? Promise.resolve() : Promise.reject(new Error('Chọn giờ trong tương lai.')),
+                  },
+                ]}
+              >
+                <DatePicker showTime format="DD/MM/YYYY HH:mm" disabledDate={(date) => date.isBefore(dayjs(), 'day')} />
+              </Form.Item>
               <Form.Item name="note" label="Ghi chú" rules={[{ max: 500 }]}>
                 <Input.TextArea rows={2} />
               </Form.Item>
-              {demo && (
-                <Form.Item name="remember" valuePropName="checked">
-                  <Checkbox>Lưu thông tin trên máy này cho lần đặt sau</Checkbox>
-                </Form.Item>
-              )}
+              <Form.Item name="remember" valuePropName="checked">
+                <Checkbox>Lưu thông tin trên máy này cho lần đặt sau</Checkbox>
+              </Form.Item>
               <Button type="primary" block htmlType="submit" disabled={invalid} loading={mutation.isPending}>
-                {demo ? 'Đặt đơn dùng thử' : 'Đặt đơn'}
+                Đặt đơn
               </Button>
             </Form>
           </Card>

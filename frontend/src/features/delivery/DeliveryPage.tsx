@@ -10,6 +10,8 @@ import { amountDue, type Order, type OrderStatus } from '@/features/orders/types
 import { useOrders } from '@/features/orders/useOrders'
 import { OrderDetailsModal } from '@/features/orders/components/OrderDetailsModal'
 import { TripsPanel } from './components/TripsPanel'
+import { useIsDemo } from '@/shared/features'
+import { LiveDeliveryPage } from './LiveDeliveryPage'
 
 // Bảng giao hàng: mỗi cột là một bước, đơn đi từ trái sang phải.
 const columns: { status: OrderStatus; title: string; hint: string; color: string }[] = [
@@ -61,6 +63,10 @@ function DeliveryCard({ order, onDetails }: { order: Order; onDetails: () => voi
 }
 
 export function DeliveryPage() {
+  return useIsDemo() ? <DemoDeliveryPage /> : <LiveDeliveryPage />
+}
+
+function DemoDeliveryPage() {
   const ordersQuery = useOrders()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [view, setView] = useState<'trips' | 'board'>('trips')

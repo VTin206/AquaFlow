@@ -10,6 +10,10 @@ import type { Product } from '@/features/inventory/types'
 import { resolveProductImage } from '@/features/inventory/productImages'
 import { orderService } from '@/features/orders/orderService'
 import type { PublicOrder } from '@/features/orders/types'
+import { useSettings } from '@/features/settings/settingsService'
+import { settingsApi } from '@/features/settings/settingsApi'
+import type { StoreSettings } from '@/features/settings/types'
+import { backendFeatures, type BackendFeature } from '@/shared/features'
 
 // Kênh công khai cho khách; live checkout gửi đơn qua guest order API.
 
@@ -25,6 +29,22 @@ export type ShopProduct = Pick<Product, 'id' | 'name' | 'brand' | 'unit' | 'pric
 export const useShopDemo = () => {
   const { user, demoGuest } = useAuth()
   return Boolean(user?.isDemo || demoGuest)
+}
+
+/** Như `useFeature` nhưng cho trang khách, gồm cả chế độ dev "xem như khách". */
+export const useShopFeature = (feature: BackendFeature) => {
+  const demo = useShopDemo()
+  return demo || backendFeatures[feature]
+}
+
+export type ShopContact = Partial<Pick<StoreSettings, 'storeName' | 'phone' | 'address' | 'email' | 'openingHours'>>
+
+/** Thông tin liên hệ cửa hàng hiện trên trang khách. */
+export const useShopContact = (): ShopContact | undefined => {
+  const demo = useShopDemo()
+  const settings = useSettings(demo)
+  const profile = useQuery({ queryKey: ['live', 'store-profile'], queryFn: settingsApi.profile, enabled: !demo, staleTime: 60_000 })
+  return demo ? settings.data : profile.data
 }
 
 export const toShopProduct = (product: CatalogProduct): ShopProduct => ({
@@ -87,6 +107,7 @@ export const toGuestOrderInput = (draft: WebOrderDraft): GuestOrderInput => ({
   deliveryAddress: draft.address,
   deliveryArea: draft.area,
   items: draft.lines.map((line) => ({ productId: Number(line.productId), quantity: line.quantity })),
+  ...(draft.appointment ? { requestedDeliveryAt: draft.appointment } : {}),
   ...(draft.note ? { note: draft.note } : {}),
 })
 
@@ -118,7 +139,7 @@ export function usePlaceWebOrder() {
         for (const key of [['orders'], ['customers'], ['products'], ['activity'], shopKeys.products])
           queryClient.invalidateQueries({ queryKey: key })
       } else {
-        queryClient.invalidateQueries({ queryKey: ['live', 'orders'] })
+        queryClient.invalidateQueries({ queryKey: ['live', 'orders-view'] })
       }
     },
   })

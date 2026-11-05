@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/shared/api/client'
 import { useIsDemo } from '@/shared/features'
+import { bottleTypeApi } from '@/features/live/bottleTypeApi'
 import { useStaff } from '@/features/auth/useStaff'
 import { inventoryApi } from '@/features/live/inventoryApi'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
@@ -31,7 +32,6 @@ export type ProductForm = {
   brand?: string
   unit: string
   price: number
-  stock?: number
   image?: string
   unitsPerCase?: number
   bottleTypeId?: number
@@ -64,6 +64,7 @@ const fromDemo = (product: Product): CatalogItem => ({
   catalog: product.catalog,
   active: product.active !== false,
   stock: product.stock,
+  threshold: product.threshold,
   lowStock: isLowStock(product),
 })
 
@@ -105,11 +106,10 @@ async function liveCatalog(status: ProductStatus) {
   return products.map((product) => fromResponse(product, stock ? (available.get(product.id) ?? 0) : undefined))
 }
 
-/** Bản dùng thử: quản lý và bán hàng được sửa; tài khoản thật: theo BE, chỉ ADMIN. */
+/** Store staff manage the catalog in both demo and live mode. */
 export function useCanManageProducts() {
-  const demo = useIsDemo()
   const role = useStaff()?.role
-  return demo ? role === 'ADMIN' || role === 'SALES_STAFF' : role === 'ADMIN'
+  return role === 'ADMIN' || role === 'SALES_STAFF'
 }
 
 export function useCatalog(status: ProductStatus) {
@@ -129,6 +129,19 @@ const useInvalidateProducts = () => {
   return () => Promise.all([invalidateLiveData(queryClient), queryClient.invalidateQueries({ queryKey: productKeys.all })])
 }
 
+/** Loại vỏ cho form sản phẩm; dữ liệu mẫu chỉ có một loại vỏ 20L. */
+export function useBottleTypeOptions(enabled: boolean) {
+  const demo = useIsDemo()
+  const query = useQuery({
+    queryKey: ['live', 'bottle-types', 'product-form'],
+    queryFn: () => bottleTypeApi.list(),
+    enabled: enabled && !demo,
+  })
+  return demo
+    ? { types: [{ id: 1, name: 'Vỏ bình 20L', active: true }], isPending: false }
+    : { types: query.data ?? [], isPending: query.isPending }
+}
+
 /** Thêm mới khi không có `id`; khi sửa, mã sản phẩm và tồn kho không đổi (tồn chỉ tăng qua phiếu nhập). */
 export function useSaveProduct() {
   const demo = useIsDemo()
@@ -137,7 +150,8 @@ export function useSaveProduct() {
     mutationFn: async ({ id, form }: { id?: string; form: ProductForm }): Promise<{ name: string }> => {
       if (demo) {
         const draft = { name: form.name, brand: form.brand, unit: form.unit, price: form.price, image: form.image }
-        return id ? productService.update(id, draft) : productService.create({ ...draft, sku: form.sku, stock: form.stock ?? 0 })
+        // Như BE: sản phẩm mới có tồn 0, tồn chỉ tăng qua phiếu nhập.
+        return id ? productService.update(id, draft) : productService.create({ ...draft, sku: form.sku, stock: 0 })
       }
       return id
         ? api.put<ProductResponse>(`/products/${id}`, toRequest(form))

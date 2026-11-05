@@ -15,6 +15,9 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 
+/**
+ * Giữ và giải phóng hàng cho đơn. Module order gọi các hàm này trong transaction xác nhận/hủy đơn.
+ */
 @Service
 public class StockReservationService {
 
@@ -31,37 +34,25 @@ public class StockReservationService {
         this.clock = clock;
     }
 
+    /**
+     * Giữ hàng theo FEFO (lô hết hạn sớm nhất trước), bỏ qua lô đã hết hạn.
+     * Các lô bị khóa SELECT ... FOR UPDATE nên hai đơn không thể cùng chiếm một lượng tồn.
+     * Thiếu hàng ở bất kỳ dòng nào thì ném ConflictException và toàn bộ transaction rollback.
+     */
     @Transactional
     public List<StockReservation> reserve(Collection<ReservationLine> lines) {
         List<Long> orderItemIds = lines.stream().map(ReservationLine::orderItemId).toList();
-        if (reservationRepository.findByOrderItemIdIn(orderItemIds).stream().anyMatch(StockReservationService::isActive)) {
+        if (!reservationRepository.findByOrderItemIdIn(orderItemIds).isEmpty()) {
             throw new ConflictException("Đơn hàng đã được giữ hàng trước đó");
         }
         return reserveLines(lines);
     }
 
-
-    @Transactional
-    public List<StockReservation> reserveForRedelivery(Collection<ReservationLine> lines) {
-        List<Long> orderItemIds = lines.stream().map(ReservationLine::orderItemId).toList();
-        List<StockReservation> existing = reservationRepository.findByOrderItemIdIn(orderItemIds);
-        for (Long orderItemId : orderItemIds) {
-            List<StockReservation> ofItem = existing.stream()
-                    .filter(r -> r.getOrderItemId().equals(orderItemId))
-                    .toList();
-            if (ofItem.stream().noneMatch(r -> r.getQuantityDispatched() > 0)) {
-                throw new ConflictException("Dòng đơn " + orderItemId + " chưa từng xuất kho, không thể giao lại");
-            }
-            if (ofItem.stream().anyMatch(StockReservationService::isActive)) {
-                throw new ConflictException("Dòng đơn " + orderItemId + " chưa hoàn tất xử lý hàng hoàn");
-            }
-        }
-        return reserveLines(lines);
-    }
-
-    private List<StockReservation> reserveLines(Collection<ReservationLine> lines) {
+    /** Giữ hàng theo FEFO mà không kiểm tra reservation cũ; chỉ RedeliveryReservationService gọi sau khi đã kiểm tra. */
+    List<StockReservation> reserveLines(Collection<ReservationLine> lines) {
         LocalDate today = LocalDate.now(clock);
         List<StockReservation> reservations = new ArrayList<>();
+        // Khóa theo thứ tự productId cố định để hai đơn khóa chéo sản phẩm không bị deadlock
         List<ReservationLine> sorted = lines.stream()
                 .sorted(Comparator.comparing(ReservationLine::productId))
                 .toList();
@@ -71,13 +62,16 @@ public class StockReservationService {
         return reservationRepository.saveAll(reservations);
     }
 
+    /** Giải phóng phần hàng chưa xuất của các dòng đơn (dùng khi hủy đơn). Gọi lại nhiều lần vẫn an toàn. */
     @Transactional
     public void release(Collection<Long> orderItemIds) {
         List<StockReservation> reservations = reservationRepository.findByOrderItemIdIn(orderItemIds).stream()
-                .sorted(Comparator.comparing(r -> r.getBatch().getId()))
+                .sorted(Comparator.comparing((StockReservation r) -> r.getBatch().getProduct().getId())
+                        .thenComparing(r -> r.getBatch().getExpiresOn())
+                        .thenComparing(r -> r.getBatch().getId()))
                 .toList();
 
-        if (reservations.stream().anyMatch(r -> r.getUnreturnedDispatched() > 0)) {
+        if (reservations.stream().anyMatch(r -> r.getQuantityDispatched() > 0)) {
             throw new ConflictException(
                     "Không thể giải phóng reservation đã có hàng xuất kho");
         }
@@ -92,10 +86,6 @@ public class StockReservationService {
                             "Missing inventory balance for batch " + reservation.getBatch().getId()));
             balance.release(released);
         }
-    }
-
-    private static boolean isActive(StockReservation reservation) {
-        return reservation.getOutstanding() > 0 || reservation.getUnreturnedDispatched() > 0;
     }
 
     private List<StockReservation> reserveLine(ReservationLine line, LocalDate today) {

@@ -32,6 +32,7 @@ import { useStaff } from '@/features/auth/useStaff'
 import { useSettings } from '@/features/settings/settingsService'
 import { canCancel as cancellable, returnableQuantity } from '../orderService'
 import { DeliverySlipDocument, InvoiceDocument } from '../print/OrderDocuments'
+import { modalWidth } from '@/shared/utils/modal'
 import {
   amountDue,
   awaitingReturnInspection,
@@ -104,7 +105,7 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
         centered
         className="af-order-details"
         onCancel={onClose}
-        width={900}
+        width={modalWidth.large}
         footer={null}
         title={`Chi tiết đơn ${order.id}`}
         styles={{ body: { maxHeight: 'calc(100dvh - 180px)', overflowY: 'auto', paddingTop: 12, paddingRight: 8 } }}
@@ -349,7 +350,8 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
         open={mode === 'pay'}
         title="Ghi nhận thanh toán"
         okText="Xác nhận đã nhận tiền"
-        cancelText="Đóng"
+        cancelText="Hủy"
+        width={modalWidth.small}
         onCancel={() => setMode(null)}
         onOk={() => paymentForm.submit()}
         confirmLoading={action.isPending}
@@ -400,6 +402,7 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
         okText={paid > 0 ? `Hủy và hoàn ${currency(paid)}` : 'Xác nhận hủy đơn'}
         okButtonProps={{ danger: true }}
         cancelText="Giữ đơn"
+        width={modalWidth.small}
         onCancel={() => setMode(null)}
         onOk={() => cancelForm.submit()}
         confirmLoading={action.isPending}
@@ -453,13 +456,13 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
         open={mode === 'return'}
         title={`Nhận trả hàng · ${order.id}`}
         okText={returnRefund > 0 ? `Nhận trả và hoàn ${currency(returnRefund)}` : 'Nhận trả hàng'}
-        cancelText="Đóng"
+        cancelText="Hủy"
         onCancel={() => setMode(null)}
         onOk={() => returnForm.submit()}
         okButtonProps={{ disabled: returnValue <= 0 }}
         confirmLoading={action.isPending}
         destroyOnHidden
-        width={620}
+        width={modalWidth.small}
       >
         <Form<ReturnForm>
           form={returnForm}

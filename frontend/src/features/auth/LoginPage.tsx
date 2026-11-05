@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Alert, App, Button, Checkbox, ConfigProvider, Divider, Form, Input, Modal } from 'antd'
 import { ArrowLeft, ArrowRight, CircleCheck, Headphones, LockKeyhole, Package, Store, Truck, UserRound, Waves } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router'
+import { backendFeatures } from '@/shared/features'
 import { focusNextOnEnter } from '@/shared/utils/forms'
 import { useAuth } from './useAuth'
 import type { LoginCredentials } from './authService'
@@ -160,7 +161,8 @@ export function LoginPage() {
                   name="password"
                   rules={[
                     { required: true, message: 'Vui lòng nhập mật khẩu.' },
-                    { min: 8, max: 128, message: 'Mật khẩu có từ 8 đến 128 ký tự.' },
+                    { min: 8, message: 'Mật khẩu tối thiểu 8 ký tự.' },
+                    { max: 128, message: 'Mật khẩu tối đa 128 ký tự.' },
                   ]}
                 >
                   <Input.Password
@@ -190,9 +192,11 @@ export function LoginPage() {
                   Đăng nhập
                 </Button>
               </Form>
-              <p className="af-login-switch">
-                Chưa có tài khoản? <Link to="/register">Tạo tài khoản</Link>
-              </p>
+              {backendFeatures.customerAccounts && (
+                <p className="af-login-switch">
+                  Chưa có tài khoản? <Link to="/register">Tạo tài khoản</Link>
+                </p>
+              )}
               {devAccounts.length > 0 && (
                 <div className="af-login-dev">
                   <Divider plain>

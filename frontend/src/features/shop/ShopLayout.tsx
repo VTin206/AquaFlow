@@ -3,26 +3,23 @@ import { Alert, Badge, Button, Dropdown } from 'antd'
 import { ArrowLeft, ChevronDown, Clock3, PackageSearch, Phone, Search, ShoppingCart, Waves } from 'lucide-react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router'
 import { useAuth } from '@/features/auth/useAuth'
-import { useSettings } from '@/features/settings/settingsService'
 import { useCart } from './cart'
 import { AccountMenu } from './components/AccountMenu'
 import { CartDrawer } from './components/CartDrawer'
 import { UkFlag, VietnamFlag } from './components/Flags'
 import { ShopFooter } from './components/ShopFooter'
-import { useShopDemo } from './shopService'
+import { useShopContact, useShopDemo, useShopFeature } from './shopService'
 import './shop.css'
-
-// Bản thật chưa có API cài đặt công khai: hotline và giờ mở cửa tạm lấy từ biến môi trường.
-const liveContact = { phone: import.meta.env.VITE_SHOP_HOTLINE, openingHours: import.meta.env.VITE_SHOP_HOURS }
 
 /**
  * Khung trang công khai cho khách, cũng là trang chủ khi chưa đăng nhập.
  * Bấm icon tài khoản để đăng nhập vào trang quản lý; dùng chung dữ liệu mẫu với trang quản lý trong cùng tab.
  */
 export function ShopLayout() {
+  // Chỉ dùng cho nhãn báo đang xem dữ liệu mẫu.
   const demo = useShopDemo()
-  const settingsQuery = useSettings(demo)
-  const settings = demo ? settingsQuery.data : liveContact
+  const showTracking = useShopFeature('orderTracking')
+  const settings = useShopContact()
   const { demoGuest, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -90,8 +87,7 @@ export function ShopLayout() {
               title="Tìm sản phẩm"
               onClick={() => navigate('/shop', { state: { focusSearch: Date.now() } })}
             />
-            {/* Tra cứu đơn chỉ có ở bản dùng thử; tài khoản thật chờ API tra đơn công khai. */}
-            {demo && (
+            {showTracking && (
               <Button
                 type="text"
                 shape="circle"

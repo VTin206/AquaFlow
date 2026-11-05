@@ -36,7 +36,7 @@ public class BottleTypeController {
     })
     public ResponseEntity<List<BottleTypeResponse>> getAllBottleTypes(@RequestParam(required = false) Boolean active, Authentication authentication) {
         // Boolean.TRUE keeps both branches boxed; a primitive `true` would unbox a null `active` and throw.
-        return ResponseEntity.ok(bottleTypeService.findAll(isAdmin(authentication) ? active : Boolean.TRUE));
+        return ResponseEntity.ok(bottleTypeService.findAll(canManage(authentication) ? active : Boolean.TRUE));
     }
 
     @GetMapping("/{id}")
@@ -47,7 +47,7 @@ public class BottleTypeController {
     })
     public ResponseEntity<BottleTypeResponse> getBottleTypeById(@PathVariable Long id, Authentication authentication) {
         BottleTypeResponse bottleType = bottleTypeService.findById(id);
-        if (!bottleType.active() && !isAdmin(authentication)) {
+        if (!bottleType.active() && !canManage(authentication)) {
             throw new NotFoundException("Bottle type not found: " + id);
         }
         return ResponseEntity.ok(bottleType);
@@ -60,7 +60,7 @@ public class BottleTypeController {
         @ApiResponse(responseCode = "201", description = "Success creation of new bottle type"),
         @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
-        @ApiResponse(responseCode = "403", description = "Admin role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "403", description = "Store staff role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "409", description = "Bottle type name already exists", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
     })
     public ResponseEntity<BottleTypeResponse> createBottleType(@Valid @RequestBody CreateBottleTypeRequest request){
@@ -74,7 +74,7 @@ public class BottleTypeController {
         @ApiResponse(responseCode = "200", description = "Success updated bottle type"),
         @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
-        @ApiResponse(responseCode = "403", description = "Admin role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "403", description = "Store staff role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "404", description = "Bottle type not found", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
     })
     public ResponseEntity<BottleTypeResponse> updateBottleType(@PathVariable Long id, @Valid @RequestBody UpdateBottleTypeRequest request){
@@ -87,7 +87,7 @@ public class BottleTypeController {
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Success deletion of bottle type"),
         @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
-        @ApiResponse(responseCode = "403", description = "Admin role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "403", description = "Store staff role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "404", description = "Bottle type not found", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
     })
     public ResponseEntity<Void> deleteBottleType(@PathVariable Long id) {
@@ -95,8 +95,8 @@ public class BottleTypeController {
         return ResponseEntity.noContent().build();
     }
 
-    private boolean isAdmin(Authentication authentication) {
+    private boolean canManage(Authentication authentication) {
         return authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+                .anyMatch(authority -> ("ROLE_ADMIN".equals(authority.getAuthority()) || "ROLE_SALES_STAFF".equals(authority.getAuthority())));
     }
 }

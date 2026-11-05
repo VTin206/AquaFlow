@@ -5,8 +5,8 @@ import { useLocation, useNavigate } from 'react-router'
 import { navGroups } from '@/app/navigation'
 import { canOpen } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/useStaff'
-import { usePageSupported } from '@/shared/features'
-import { useOrders } from '@/features/orders/useOrders'
+import { useFeature, usePageSupported } from '@/shared/features'
+import { useOrderList } from '@/features/orders/orderData'
 import { useSettings } from '@/features/settings/settingsService'
 
 type SidebarProps = {
@@ -22,12 +22,12 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: Sid
   const navigate = useNavigate()
   const { message } = App.useApp()
   const staff = useStaff()
-  const { data: orders = [] } = useOrders(Boolean(staff?.isDemo))
-  const { data: settings } = useSettings(Boolean(staff?.isDemo))
+  const { data: settings } = useSettings(useFeature('storeSettings'))
   const supported = usePageSupported()
   const allowed = (path: string) => !staff || canOpen(staff.role, path)
-  const pendingCount = staff?.isDemo ? orders.filter((order) => order.status === 'Chờ xác nhận').length : 0
-  const storeName = staff?.isDemo ? (settings?.storeName ?? 'Cửa hàng') : 'Cửa hàng'
+  const { data: orders = [] } = useOrderList(allowed('/orders'))
+  const pendingCount = orders.filter((order) => order.status === 'Chờ xác nhận').length
+  const storeName = settings?.storeName ?? 'Cửa hàng'
 
   const groups = navGroups
     .map((group) => ({ ...group, items: group.items.filter((item) => allowed(item.path)) }))

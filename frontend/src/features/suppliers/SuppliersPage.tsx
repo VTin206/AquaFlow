@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { App, Button, Card, Dropdown, Empty, Input, Segmented, Space, Table, Tag, Tooltip, type TableColumnsType } from 'antd'
 import { Ellipsis, Pencil, Plus, Search } from 'lucide-react'
 import { Page } from '@/shared/components/Page'
@@ -14,21 +14,14 @@ import { useActivateSupplier, useCanManageSuppliers, useDeactivateSupplier, useS
 import type { Supplier } from './types'
 import { matchesSearch } from '@/shared/utils/search'
 
-const statusOptions: { value: SupplierStatus; label: string }[] = [
-  { value: 'active', label: 'Đang hợp tác' },
-  { value: 'inactive', label: 'Ngừng hợp tác' },
-  { value: 'all', label: 'Tất cả' },
-]
-
 export function SuppliersPage() {
   const { message, modal } = App.useApp()
   const canManage = useCanManageSuppliers()
   const showContact = useFeature('supplierContactName')
   const showEmail = useFeature('supplierEmail')
   const [status, setStatus] = useState<SupplierStatus>('active')
-  // Nhân viên không quản lý chỉ xem nhà cung cấp đang dùng (BE cũng giới hạn như vậy).
-  const effectiveStatus = canManage ? status : 'active'
-  const suppliersQuery = useSuppliers(effectiveStatus)
+  // Quản lý tải hết một lần rồi lọc tại chỗ để đếm được từng trạng thái; nhân viên chỉ xem nhà cung cấp đang dùng (BE cũng giới hạn như vậy).
+  const suppliersQuery = useSuppliers(canManage ? 'all' : 'active')
   const deactivate = useDeactivateSupplier()
   const activate = useActivateSupplier()
   const canReactivate = useFeature('reactivate')
@@ -38,7 +31,14 @@ export function SuppliersPage() {
   const [pageSize, setPageSize] = useState(10)
   const [editing, setEditing] = useState<Supplier | null>()
   const keyword = query.trim()
-  const suppliers = suppliersQuery.data ?? []
+  const allSuppliers = suppliersQuery.data ?? []
+  const suppliers = status === 'all' ? allSuppliers : allSuppliers.filter((supplier) => supplier.active === (status === 'active'))
+  const activeCount = allSuppliers.filter((supplier) => supplier.active).length
+  const statusOptions: { value: SupplierStatus; label: ReactNode }[] = [
+    { value: 'active', label: <CountLabel label="Đang hợp tác" count={activeCount} tone="success" /> },
+    { value: 'inactive', label: <CountLabel label="Ngừng hợp tác" count={allSuppliers.length - activeCount} tone="danger" /> },
+    { value: 'all', label: <CountLabel label="Tất cả" count={allSuppliers.length} /> },
+  ]
   const visible = suppliers.filter((supplier) =>
     matchesSearch(
       query,
@@ -236,7 +236,7 @@ export function SuppliersPage() {
                     description={
                       keyword
                         ? 'Không tìm thấy nhà cung cấp phù hợp.'
-                        : effectiveStatus === 'inactive'
+                        : status === 'inactive'
                           ? 'Không có nhà cung cấp đã ngừng hợp tác.'
                           : 'Chưa có nhà cung cấp nào.'
                     }
@@ -252,7 +252,7 @@ export function SuppliersPage() {
                       </Button>
                     ) : (
                       canManage &&
-                      effectiveStatus !== 'inactive' && (
+                      status !== 'inactive' && (
                         <Button type="primary" onClick={() => setEditing(null)}>
                           Thêm nhà cung cấp
                         </Button>

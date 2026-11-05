@@ -22,7 +22,7 @@ import { Droplets, Ellipsis, FunnelX, LayoutGrid, Plus, Search } from 'lucide-re
 import { Page } from '@/shared/components/Page'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
-import { useFeature, useIsDemo } from '@/shared/features'
+import { useFeature, useLiveOnly } from '@/shared/features'
 import { currency } from '@/shared/utils/format'
 import { LiveBottleTypes } from '@/features/live/LiveBottleTypes'
 import { brandGroups, capacityGroups, catalogCategories, getBrandGroup, getCatalogDetails, normalizeSearch } from './catalogGroups'
@@ -59,7 +59,7 @@ function StockTag({ product }: { product: CatalogItem }) {
 
 export function ProductsPage() {
   const { message, modal } = App.useApp()
-  const demo = useIsDemo()
+  const canManageBottleTypes = useLiveOnly()
   const canManage = useCanManageProducts()
   const showDetails = useFeature('productCatalogDetails')
   const [status, setStatus] = useState<ProductStatus>('active')
@@ -88,9 +88,7 @@ export function ProductsPage() {
   ]
   const keyword = normalizeSearch(query.trim())
   const brandName = (product: CatalogItem) => getBrandGroup(product.brand)?.name ?? product.brand
-  // Bản dùng thử giới thiệu đủ các nhóm thương hiệu; tài khoản thật chỉ hiện thương hiệu đang có sản phẩm.
-  const groupNames = demo ? brandGroups.map((group) => group.name) : []
-  const brands = [...new Set([...groupNames, ...products.map(brandName)])].map((name) => ({
+  const brands = [...new Set(products.map(brandName))].map((name) => ({
     name,
     logo: brandGroups.find((group) => group.name === name)?.logo ?? products.find((product) => brandName(product) === name)?.image,
     count: products.filter((product) => brandName(product) === name).length,
@@ -308,7 +306,7 @@ export function ProductsPage() {
       description="Tra cứu theo thương hiệu, loại nước và quy cách đóng gói."
       actions={
         <Space wrap>
-          {!demo && <Button onClick={() => setBottlesOpen(true)}>Loại vỏ bình</Button>}
+          {canManageBottleTypes && <Button onClick={() => setBottlesOpen(true)}>Loại vỏ bình</Button>}
           {canManage && (
             <Button type="primary" icon={<Plus size={16} />} onClick={() => setEditing(null)}>
               Thêm sản phẩm

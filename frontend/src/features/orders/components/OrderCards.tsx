@@ -3,12 +3,11 @@ import { Button, Select, Space } from 'antd'
 import { Eye } from 'lucide-react'
 import { MobileRecordList } from '@/shared/components/MobileRecordList'
 import { Money } from '@/shared/components/Money'
-import { useFeature, useIsDemo } from '@/shared/features'
+import { useFeature } from '@/shared/features'
 import { Unsupported } from '@/shared/components/Unsupported'
-import { amountDue, appointmentOf, orderedAtOf, paymentLabel, type Order } from '../types'
-import { nextActionLabel } from '../orderStatus'
-import { AdvanceStatusButton } from './AdvanceStatusButton'
+import { amountDue, deliveryTimingOf, paymentLabel, type Order } from '../types'
 import { LateTag } from './LateTag'
+import { OrderNextAction } from './OrderNextAction'
 import { OrderStatusTag } from './OrderStatusTag'
 
 type OrderCardsProps = {
@@ -22,7 +21,6 @@ type OrderCardsProps = {
 type Sort = 'default' | 'total' | 'due'
 
 export function OrderCards({ orders, loading, compact, emptyText, onDetails, filterKey }: OrderCardsProps) {
-  const demo = useIsDemo()
   const showPayments = useFeature('orderPayments')
   const [sort, setSort] = useState<Sort>('default')
   const sorted = [...orders].sort((a, b) =>
@@ -60,12 +58,7 @@ export function OrderCards({ orders, loading, compact, emptyText, onDetails, fil
         <article className="af-record" aria-label={`Đơn ${order.code ?? order.id}`}>
           <div className="af-record-heading">
             <strong>{order.code ?? order.id}</strong>
-            <span title={orderedAtOf(order).full}>
-              {orderedAtOf(order).label}
-              {appointmentOf(order) && (
-                <small className={`af-appointment is-${appointmentOf(order)!.tone}`}> · {appointmentOf(order)!.label}</small>
-              )}
-            </span>
+            <TimingLine order={order} />
           </div>
           <h3>{order.customer}</h3>
           <p className="af-record-meta">
@@ -93,10 +86,23 @@ export function OrderCards({ orders, loading, compact, emptyText, onDetails, fil
             <Button icon={<Eye size={16} />} onClick={() => onDetails(order.id)} aria-label={`Chi tiết đơn ${order.code ?? order.id}`}>
               Chi tiết
             </Button>
-            {!compact && demo && nextActionLabel(order) && <AdvanceStatusButton order={order} size="middle" />}
+            {!compact && <OrderNextAction order={order} size="middle" />}
           </div>
         </article>
       )}
     />
+  )
+}
+
+/** Giờ cần giao, kèm lúc đặt (hoặc thời gian chờ xác nhận) ở dòng nhỏ. */
+function TimingLine({ order }: { order: Order }) {
+  const { main, sub } = deliveryTimingOf(order)
+  return (
+    <span>
+      <span className={`af-timing is-${main.tone}`} title={main.title}>
+        {main.label}
+      </span>
+      <small title={sub.title}> · {sub.label}</small>
+    </span>
   )
 }

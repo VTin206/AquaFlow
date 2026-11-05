@@ -1,8 +1,9 @@
-import { App, Button, Col, Form, Input, InputNumber, Modal, Radio, Row } from 'antd'
+import { App, Button, Col, Form, Input, InputNumber, Modal, Row, Segmented } from 'antd'
 import { currency } from '@/shared/utils/format'
 import { DEPOSIT_PER_BOTTLE, EXCHANGEABLE_BRANDS } from '@/shared/policy'
 import { jugCount, type DeliveryResult, type Order } from '../types'
 import { useOrderAction } from '../useOrders'
+import { modalWidth } from '@/shared/utils/modal'
 
 export function ReceiveOrderModal({ order, open, onClose }: { order: Order; open: boolean; onClose: () => void }) {
   const { message } = App.useApp()
@@ -22,7 +23,8 @@ export function ReceiveOrderModal({ order, open, onClose }: { order: Order; open
       open={open}
       title={counter ? 'Xác nhận khách đã nhận hàng' : 'Ghi nhận kết quả giao'}
       okText="Lưu kết quả"
-      cancelText="Đóng"
+      cancelText="Hủy"
+      width={modalWidth.small}
       destroyOnHidden
       onCancel={onClose}
       onOk={() => form.submit()}
@@ -47,11 +49,18 @@ export function ReceiveOrderModal({ order, open, onClose }: { order: Order; open
         }
       >
         {!counter && (
-          <Form.Item name="success" label="Kết quả">
-            <Radio.Group
+          <Form.Item
+            name="success"
+            label="Kết quả"
+            // Thanh gạt chỉ nhận chuỗi, còn đơn lưu đúng/sai.
+            getValueProps={(value: boolean) => ({ value: value ? 'success' : 'failed' })}
+            normalize={(value: string) => value === 'success'}
+          >
+            <Segmented
+              block
               options={[
-                { value: true, label: 'Giao thành công' },
-                { value: false, label: 'Giao thất bại' },
+                { value: 'success', label: 'Giao thành công' },
+                { value: 'failed', label: 'Giao thất bại' },
               ]}
             />
           </Form.Item>

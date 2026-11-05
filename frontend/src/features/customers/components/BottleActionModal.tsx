@@ -1,8 +1,9 @@
-import { App, Form, Input, InputNumber, Modal, Radio } from 'antd'
+import { App, Form, Input, InputNumber, Modal, Segmented } from 'antd'
 import { PICKUP_FEE, PICKUP_FEE_BELOW } from '@/shared/policy'
 import { currency } from '@/shared/utils/format'
 import { DEPOSIT_PER_BOTTLE, type BottleAction, type Customer } from '../types'
 import { useRecordBottles } from '../useCustomers'
+import { modalWidth } from '@/shared/utils/modal'
 
 export type BottleActionKind = BottleAction['kind']
 
@@ -40,7 +41,8 @@ export function BottleActionModal({ customer, kind, refundable, onClose }: Bottl
       title={`${text.title} · ${customer.name}`}
       okText={text.ok}
       okButtonProps={{ danger: kind === 'Báo mất/vỡ', disabled: kind === 'Hoàn cọc' && refundable === 0 }}
-      cancelText="Đóng"
+      cancelText="Hủy"
+      width={modalWidth.small}
       confirmLoading={record.isPending}
       onOk={() => form.submit()}
       onCancel={onClose}
@@ -65,11 +67,18 @@ export function BottleActionModal({ customer, kind, refundable, onClose }: Bottl
         }
       >
         {kind === 'Thu vỏ' && (
-          <Form.Item name="pickup" label="Hình thức thu">
-            <Radio.Group
+          <Form.Item
+            name="pickup"
+            label="Hình thức thu"
+            // Thanh gạt chỉ nhận chuỗi, còn sổ vỏ lưu đúng/sai.
+            getValueProps={(value: boolean) => ({ value: value ? 'pickup' : 'store' })}
+            normalize={(value: string) => value === 'pickup'}
+          >
+            <Segmented
+              block
               options={[
-                { value: false, label: 'Khách mang vỏ đến cửa hàng' },
-                { value: true, label: 'Thu hồi tận nơi' },
+                { value: 'store', label: 'Khách mang đến cửa hàng' },
+                { value: 'pickup', label: 'Thu hồi tận nơi' },
               ]}
             />
           </Form.Item>
