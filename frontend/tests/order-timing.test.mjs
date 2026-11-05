@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 
-const { compareDeliveryDue, deliveryTimingOf } = await import('/src/features/orders/types.ts')
+const { compareDeliveryDue, deliveryTimingOf, lateLabel } = await import('/src/features/orders/types.ts')
 
 const now = new Date(2026, 9, 31, 10, 0).getTime()
 const at = (hours, minutes = 0, dayOffset = 0) => new Date(2026, 9, 31 + dayOffset, hours, minutes).toISOString()
@@ -42,6 +42,15 @@ test('no appointment, counter sale, delivered and pending orders', () => {
   expect(
     deliveryTimingOf(order({ status: 'Chờ xác nhận', history: [{ at: at(9, 0, -15), by: 'Web', message: 'Tạo đơn' }] }), now).sub.label,
   ).toBe('chờ 15 ngày')
+})
+
+test('late label stays readable for long delays', () => {
+  expect(lateLabel(25)).toBe('25 phút')
+  expect(lateLabel(120)).toBe('2 giờ')
+  expect(lateLabel(125)).toBe('2 giờ 5 phút')
+  expect(lateLabel(1439)).toBe('23 giờ 59 phút')
+  expect(lateLabel(1440)).toBe('1 ngày')
+  expect(lateLabel(29609)).toBe('20 ngày')
 })
 
 test('sorting puts open orders first by due time, then finished orders newest first', () => {

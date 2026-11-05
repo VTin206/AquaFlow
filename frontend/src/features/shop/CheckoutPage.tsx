@@ -116,7 +116,19 @@ export function CheckoutPage() {
         <Result
           status="success"
           title="Đặt hàng thành công"
-          subTitle={placedLiveOrder.orderCode ? `Mã đơn: ${placedLiveOrder.orderCode}` : 'Đơn hàng đã được ghi nhận.'}
+          subTitle={
+            placedLiveOrder.orderCode ? (
+              <>
+                Mã đơn:{' '}
+                <Typography.Text strong copyable={{ tooltips: ['Sao chép mã đơn', 'Đã sao chép'] }}>
+                  {placedLiveOrder.orderCode}
+                </Typography.Text>
+                {!isCustomer(user) && <p className="af-checkout-placed-hint">Lưu lại mã này để hỏi cửa hàng về đơn của bạn.</p>}
+              </>
+            ) : (
+              'Đơn hàng đã được ghi nhận.'
+            )
+          }
           extra={[
             ...(isCustomer(user)
               ? [
