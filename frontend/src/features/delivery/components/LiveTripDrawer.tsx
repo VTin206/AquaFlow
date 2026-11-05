@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Collapse, Descriptions, Drawer, Dropdown, Modal, Popconfirm, Skeleton, Tag, Timeline, type MenuProps } from 'antd'
+import { App, Button, Collapse, Descriptions, Drawer, Dropdown, Modal, Popconfirm, Skeleton, Tag, type MenuProps } from 'antd'
 import { Ellipsis, MapPin, Phone, Truck } from 'lucide-react'
 import { Money } from '@/shared/components/Money'
 import { QueryError } from '@/shared/components/QueryError'
@@ -16,6 +16,7 @@ import { useSettings } from '@/features/settings/settingsService'
 import { deliveryApi, type DeliveryStop, type SettlementInput } from '../deliveryApi'
 import { liveTripFocus, liveTripStatus } from '../tripFocus'
 import { useAvailableOrders, useDeliveryDrivers, useLiveTrip, useTripCollections } from '../useLiveTrips'
+import { AttemptsTimeline } from './AttemptsTimeline'
 import { DeliveryActionModal, type DeliveryAction } from './DeliveryActionModal'
 import { TripManifest } from './TripManifest'
 import { TripStatusTag } from './TripStatusTag'
@@ -363,23 +364,7 @@ export function LiveTripDrawer({ tripId, onClose }: { tripId: number; onClose: (
         ) : attempts.isPending ? (
           <Skeleton active />
         ) : (
-          <Timeline
-            items={attempts.data.map((attempt) => ({
-              key: attempt.id,
-              color: attempt.outcome === 'SUCCESS' ? 'green' : 'red',
-              content: (
-                <div>
-                  <strong>
-                    Lần {attempt.attemptNo} · {attempt.outcome === 'SUCCESS' ? 'Giao thành công' : 'Giao thất bại'}
-                  </strong>
-                  <p>{dateTime(attempt.attemptedAt)}</p>
-                  {attempt.recipientName && <p>Người nhận: {attempt.recipientName}</p>}
-                  {attempt.failureReason && <p>Lý do: {attempt.failureReason}</p>}
-                  {attempt.note && <p>Ghi chú: {attempt.note}</p>}
-                </div>
-              ),
-            }))}
-          />
+          <AttemptsTimeline attempts={attempts.data} />
         )}
       </Modal>
       {orderId && <OrderDetails id={orderId} onClose={() => setOrderId(null)} />}

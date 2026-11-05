@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DeliveryStop } from './deliveryApi'
-import { demoTripFocus, liveTripFocus, liveTripStatus } from './tripFocus'
+import { demoTripFocus, driverTripFocus, liveTripFocus, liveTripStatus } from './tripFocus'
 
 const stop = (orderStatus: string, outcome?: 'SUCCESS' | 'FAILED') =>
   ({ orderStatus, latestAttempt: outcome ? { outcome } : null }) as DeliveryStop
@@ -64,5 +64,22 @@ describe('demoTripFocus', () => {
     expect(demoTripFocus({ status: 'Đang giao' }, 0, 1, 3).title).toBe('Đã có kết quả 1/3 điểm giao')
     expect(demoTripFocus({ status: 'Chờ đối soát' }, 0, 3, 3).tone).toBe('action')
     expect(demoTripFocus({ status: 'Đã đối soát' }, 0, 3, 3).tone).toBe('done')
+  })
+})
+
+describe('driverTripFocus', () => {
+  const base = { total: 2, pending: 2, waitingDispatch: 0, nextCustomer: 'Lan' }
+
+  it('tells the driver what to do next at each stage', () => {
+    expect(driverTripFocus({ ...base, stage: 'preparing', waitingDispatch: 1 }).title).toBe('Chờ cửa hàng xuất kho 1 đơn')
+    expect(driverTripFocus({ ...base, stage: 'preparing' }).title).toBe('Nhận đủ hàng rồi bắt đầu chuyến')
+    expect(driverTripFocus({ ...base, stage: 'delivering' }).title).toBe('Điểm tiếp theo: Lan')
+    expect(driverTripFocus({ ...base, stage: 'delivering', pending: 0 }).title).toBe('Về cửa hàng đối soát')
+  })
+
+  it('has nothing to do on finished or empty trips', () => {
+    expect(driverTripFocus({ ...base, stage: 'settled' }).tone).toBe('done')
+    expect(driverTripFocus({ ...base, stage: 'cancelled' }).tone).toBe('muted')
+    expect(driverTripFocus({ ...base, stage: 'preparing', total: 0, pending: 0 }).tone).toBe('waiting')
   })
 })

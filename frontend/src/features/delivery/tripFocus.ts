@@ -61,3 +61,25 @@ export function demoTripFocus(trip: Pick<Trip, 'status'>, undispatched: number, 
   if (undispatched) return { tone: 'action', title: `Cần xuất kho ${undispatched} đơn`, description: 'Đơn đã xuất không bỏ khỏi chuyến được.' }
   return { tone: 'waiting', title: `Đã có kết quả ${done}/${total} điểm giao`, description: 'Ghi đủ kết quả rồi mới đối soát được.' }
 }
+
+type DriverFocusInput = {
+  stage: 'preparing' | 'delivering' | 'settled' | 'cancelled'
+  total: number
+  /** Số điểm chưa có kết quả. */
+  pending: number
+  waitingDispatch: number
+  nextCustomer?: string
+}
+
+/** Việc tiếp theo của tài xế; dùng chung cho bản dùng thử và tài khoản thật. */
+export function driverTripFocus({ stage, total, pending, waitingDispatch, nextCustomer }: DriverFocusInput): OrderFocus {
+  if (stage === 'cancelled') return { tone: 'muted', title: 'Chuyến đã hủy' }
+  if (stage === 'settled') return { tone: 'done', title: 'Chuyến đã đối soát xong' }
+  if (!total) return { tone: 'waiting', title: 'Chuyến chưa có đơn', description: 'Cửa hàng đang xếp đơn vào chuyến.' }
+  if (waitingDispatch > 0) {
+    return { tone: 'waiting', title: `Chờ cửa hàng xuất kho ${waitingDispatch} đơn`, description: 'Nhận hàng tại cửa hàng sau khi nhân viên xuất kho.' }
+  }
+  if (stage === 'preparing') return { tone: 'action', title: 'Nhận đủ hàng rồi bắt đầu chuyến' }
+  if (pending === 0) return { tone: 'action', title: 'Về cửa hàng đối soát', description: 'Đã có kết quả tất cả điểm giao. Bàn giao tiền và vỏ.' }
+  return { tone: 'action', title: `Điểm tiếp theo: ${nextCustomer}`, description: `Còn ${pending}/${total} điểm chưa có kết quả.` }
+}
