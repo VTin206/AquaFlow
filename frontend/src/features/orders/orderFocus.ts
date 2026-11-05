@@ -24,7 +24,7 @@ export function liveOrderFocus(
     case 'PREPARING':
       return order.fulfillmentType === 'DELIVERY'
         ? { tone: 'action', title: 'Cần xếp vào chuyến giao', description: 'Quản lý xuất kho cả chuyến ở trang Giao hàng.' }
-        : { tone: 'waiting', title: 'Đang soạn hàng cho khách', description: 'Khách nhận tại quầy.' }
+        : { tone: 'action', title: 'Chờ bàn giao tại quầy', description: 'Kiểm tra đủ hàng rồi xác nhận bàn giao khi khách nhận hàng.' }
     case 'OUT_FOR_DELIVERY':
       if (withoutTrip) {
         return { tone: 'alert', title: 'Đơn đang giao nhưng không thuộc chuyến nào', description: 'Chưa ghi được kết quả giao cho đơn này. Hãy báo quản trị kiểm tra.' }

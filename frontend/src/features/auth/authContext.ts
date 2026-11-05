@@ -12,6 +12,7 @@ export type AuthContextValue = {
   demoGuest: boolean
   enterDemoGuest: () => void
   logout: () => void
+  updateProfile: (profile: { fullName: string; email: string; phone: string | null }) => void
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

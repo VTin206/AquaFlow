@@ -4,6 +4,12 @@ import { App } from 'antd'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { CheckoutPage } from './CheckoutPage'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { customerAccountApi } from './customerAccountApi'
+vi.mock('./customerAccountApi', async original => ({
+  ...(await original<typeof import('./customerAccountApi')>()),
+  customerAccountApi: { addresses: vi.fn().mockResolvedValue([]) },
+}))
 
 const mocks = vi.hoisted(() => ({
   user: null as null | { name: string; role: string; email?: string; phone?: string | null },
@@ -32,11 +38,11 @@ vi.mock('./shopService', () => ({
 
 const renderPage = () =>
   render(
-    <App>
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><App>
       <MemoryRouter>
         <CheckoutPage />
       </MemoryRouter>
-    </App>,
+    </App></QueryClientProvider>,
   )
 const type = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } })
 const fillDelivery = () => {
@@ -53,10 +59,23 @@ beforeEach(() => {
   })
   vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
   mocks.user = null
+  vi.mocked(customerAccountApi.addresses).mockReset().mockResolvedValue([])
   mocks.profile = null
   mocks.feeQuoted = false
   mocks.mutateAsync.mockReset()
   mocks.mutateAsync.mockResolvedValue({ id: 5, orderCode: 'AF-5' })
+})
+
+test('chọn địa chỉ đã lưu điền người nhận và địa chỉ vào đơn thật', async () => {
+  mocks.user = { name: 'Customer', role: 'CUSTOMER', email: 'k@example.com', phone: '0901234567' }
+  vi.mocked(customerAccountApi.addresses).mockResolvedValue([{ id: 1, customerId: 2, recipientName: 'Người nhận khác', recipientPhone: '0905555555', addressLine: 'Địa chỉ đã lưu', area: 'Quận 3', isDefault: true }])
+  renderPage()
+  fireEvent.mouseDown(await screen.findByRole('combobox', { name: 'Chọn địa chỉ đã lưu' }))
+  fireEvent.click(await screen.findByText('Mặc định · Người nhận khác · Địa chỉ đã lưu, Quận 3'))
+  expect((screen.getByLabelText('Tên người nhận') as HTMLInputElement).value).toBe('Người nhận khác')
+  expect((screen.getByLabelText('Địa chỉ giao') as HTMLInputElement).value).toBe('Địa chỉ đã lưu')
+  placeOrder()
+  await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ customer: 'Người nhận khác', phone: '0905555555', address: 'Địa chỉ đã lưu', area: 'Quận 3' })))
 })
 
 test('giao sớm nhất không gửi giờ hẹn, đơn gửi đúng thông tin đã nhập', async () => {

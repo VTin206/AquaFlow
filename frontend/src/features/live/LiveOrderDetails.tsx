@@ -21,7 +21,7 @@ import {
 } from './orderApi'
 import { invalidateLiveData } from './invalidateLiveData'
 import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
-import { canDispatch, dispatchApi } from './dispatchApi'
+import { canDispatch, canHandover, dispatchApi } from './dispatchApi'
 import { OrderProgress } from '@/features/orders/OrderProgress'
 import { OrderDeliveryHistory } from '@/features/orders/OrderDeliveryHistory'
 import { OrderFocusBanner, OrderLines, OrderParty } from '@/features/orders/components/OrderSheet'
@@ -62,8 +62,9 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
   const canManage = staff?.role === 'ADMIN' || staff?.role === 'SALES_STAFF'
   const { message } = App.useApp()
   const queryClient = useQueryClient()
+  const orderQueryKey = ['live', 'order', staff?.name, staff?.role, id]
   const query = useQuery({
-    queryKey: ['live', 'order', staff?.name, staff?.role, id],
+    queryKey: orderQueryKey,
     queryFn: () => orderApi.detail(id),
     enabled: canManage,
     refetchInterval: 15000,
@@ -94,6 +95,23 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
       message.error(error.message)
     },
   })
+  const handover = useMutation({
+    mutationFn: () => dispatchApi.create(id),
+    onSuccess: async (receipt) => {
+      // Chỉ đổi trạng thái sau khi BE đã xuất kho thành công; không đánh dấu đã thanh toán.
+      queryClient.setQueryData<NonNullable<typeof query.data>>(orderQueryKey, (current) =>
+        current ? { ...current, status: receipt.orderStatus } : current,
+      )
+      message.success('Đã xuất kho và bàn giao hàng cho khách tại quầy.')
+      await invalidateLiveData(queryClient)
+    },
+    onError: async (error: Error) => {
+      message.error(error.message)
+      // Bao gồm trường hợp nhân viên khác đã bàn giao đơn này (409).
+      await invalidateLiveData(queryClient)
+    },
+  })
+  const busy = update.isPending || handover.isPending
   const printer = usePrinter()
   const copyMessage = useCopyOrderMessage()
   const { data: settings } = useSettings()
@@ -164,6 +182,20 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
             Chuẩn bị hàng
           </Button>
         </Popconfirm>
+      ) : canHandover(order) ? (
+        <Popconfirm
+          title={`Bàn giao đơn ${order.orderCode} tại quầy?`}
+          description="Xác nhận khách đã nhận đủ hàng. Hệ thống xuất toàn bộ hàng đã giữ và ghi nhận khách đã nhận hàng; thanh toán được theo dõi riêng."
+          okText="Xác nhận bàn giao"
+          cancelText="Chưa"
+          disabled={busy}
+          okButtonProps={{ loading: handover.isPending, disabled: busy }}
+          onConfirm={() => { if (!busy) handover.mutate() }}
+        >
+          <Button type="primary" loading={handover.isPending} disabled={busy}>
+            Bàn giao tại quầy
+          </Button>
+        </Popconfirm>
       ) : canDispatch(order) ? (
         <Link to="/delivery" onClick={onClose}>
           <Button type="primary" disabled={update.isPending}>
@@ -180,10 +212,11 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
         description={order.status === 'PENDING' ? 'Đơn chưa giữ hàng nên không ảnh hưởng tồn kho.' : 'Hàng đã giữ cho đơn sẽ được trả lại tồn kho.'}
         okText="Hủy đơn"
         okButtonProps={{ danger: true }}
+        disabled={busy}
         cancelText="Không"
-        onConfirm={() => update.mutate('CANCELLED')}
+        onConfirm={() => { if (!busy) update.mutate('CANCELLED') }}
       >
-        <Button type="text" danger loading={update.isPending && update.variables === 'CANCELLED'} disabled={update.isPending}>
+        <Button type="text" danger loading={update.isPending && update.variables === 'CANCELLED'} disabled={busy}>
           Hủy đơn
         </Button>
       </Popconfirm>

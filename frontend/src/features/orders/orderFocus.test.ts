@@ -18,7 +18,7 @@ describe('liveOrderFocus', () => {
   })
 
   it('does not ask to schedule a trip for counter orders', () => {
-    expect(liveOrderFocus(live('PREPARING', 'COUNTER')).tone).toBe('waiting')
+    expect(liveOrderFocus(live('PREPARING', 'COUNTER'))).toMatchObject({ tone: 'action', title: 'Chờ bàn giao tại quầy' })
   })
 
   it('puts a failed delivery ahead of the normal status', () => {

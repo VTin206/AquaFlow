@@ -20,6 +20,7 @@ import { RegisterForm } from '@/features/auth/RegisterForm'
 import { useAuth } from '@/features/auth/useAuth'
 import { useStaff } from '@/features/auth/useStaff'
 import { accountDestination, isCustomer } from '@/features/auth/accountAccess'
+import { CustomerAccountPanel } from './CustomerAccountPanel'
 
 /**
  * Trang tài khoản trong cửa hàng (bố cục kiểu Uniqlo): đăng nhập bên trái, tạo tài khoản hoặc mua không cần tài khoản bên phải.
@@ -73,6 +74,7 @@ export function ShopAccountPage() {
             </Button>
           </div>
         </section>
+        {isCustomer(user) && !user.isDemo && <CustomerAccountPanel />}
       </div>
     )
   }
