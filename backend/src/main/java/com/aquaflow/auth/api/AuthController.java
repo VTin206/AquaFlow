@@ -25,9 +25,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final com.aquaflow.auth.application.CustomerRegistrationService registration;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, com.aquaflow.auth.application.CustomerRegistrationService registration) {
         this.authService = authService;
+        this.registration = registration;
+    }
+
+    @PostMapping("/register")
+    @org.springframework.web.bind.annotation.ResponseStatus(org.springframework.http.HttpStatus.CREATED)
+    @Operation(summary = "Register a customer", description = "Creates an active CUSTOMER account and its own customer profile")
+    public UserResponse register(@Valid @RequestBody com.aquaflow.auth.api.dto.RegisterRequest request) {
+        return registration.register(request);
     }
 
     @PostMapping("/login")

@@ -34,8 +34,8 @@ export const backendFeatures = {
   reactivate: false,
   /** Hộp thông báo cá nhân qua NotificationController. */
   notifications: true,
-  /** Đăng ký và đăng nhập cho khách (AuthController mới có login, me cho nhân viên). Form đăng ký đang khóa nên ẩn mọi lối vào, kể cả bản dùng thử. */
-  customerAccounts: false,
+  /** Đăng ký CUSTOMER qua /auth/register, đăng nhập qua /auth/login. */
+  customerAccounts: true,
   /** Doanh thu, tiền đã thu trên Tổng quan (chờ API báo cáo). */
   revenueReports: false,
   /** Khách tự tra cứu đơn theo mã + số điện thoại hoặc liên kết riêng (chờ API công khai). */

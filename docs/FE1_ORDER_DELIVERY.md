@@ -13,7 +13,7 @@
 
 - Customer order detail/list endpoints already enforce ownership. Their list endpoint returns 404 if the user has no customer profile; the FE presents that as an empty list. Detail 403/404 shows a non-disclosing not-found screen. Other errors remain visible and retryable.
 - The CUSTOMER view displays the order status and timestamps available in its order DTO. Full attempt history and internal trip/Dispatch metadata are staff-only because the current backend does not expose a customer-safe delivery-history resource. No staff resource is opened to customers as a workaround.
-- Customer self-registration and public guest order tracking remain disabled: neither is part of this FE1 change. Existing CUSTOMER credentials are needed to sign in. Guest orders are not automatically linked by email/phone.
+- Customer self-registration was added subsequently; see [Customer registration](CUSTOMER_REGISTRATION.md). Public guest order tracking remains disabled. Guest orders are not automatically linked by email/phone.
 - No backend changes or Flyway migrations are introduced. Dispatch, inventory, payments and redelivery business rules are unchanged.
 
 ## Validation

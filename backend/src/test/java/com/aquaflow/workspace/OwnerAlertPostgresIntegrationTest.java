@@ -179,6 +179,10 @@ class OwnerAlertPostgresIntegrationTest {
     }
 
     @Test void resolvedUnreadIsExcludedAndManualMessageIsUntouched() {
+        // Other integration tests commit fixtures for concurrency checks. Exclude their
+        // existing alerts from this test's unread count before creating its own order.
+        alerts.refresh();
+        notifications.markAllRead(admin);
         long id = order("PENDING", "DELIVERY", null);
         var manual = notifications.create(new CreateNotificationRequest(admin, "Thông báo", "Giờ mở cửa"), admin);
         alerts.refresh();
