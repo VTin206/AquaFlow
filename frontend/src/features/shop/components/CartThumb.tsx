@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Droplets } from 'lucide-react'
 import type { ShopProduct } from '../shopService'
 
-/** Ảnh nhỏ của sản phẩm trong giỏ và trang thanh toán; lỗi ảnh thì hiện biểu tượng giọt nước. */
+/** Ảnh nhỏ của sản phẩm trong giỏ và trang đặt hàng; lỗi ảnh thì hiện biểu tượng giọt nước. */
 export function CartThumb({ product }: { product?: ShopProduct }) {
   const [failed, setFailed] = useState(false)
   return (

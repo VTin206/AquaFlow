@@ -80,9 +80,10 @@ const writeDemoGuest = (on: boolean) => {
   }
 }
 
-const toAuthUser = (user: { fullName: string; email: string; role: string }): AuthUser => ({
+const toAuthUser = (user: { fullName: string; email: string; phone?: string | null; role: string }): AuthUser => ({
   name: user.fullName || user.email,
   email: user.email,
+  phone: user.phone,
   role: roleLabel(user.role),
 })
 

@@ -1,0 +1,106 @@
+// @vitest-environment jsdom
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { App } from 'antd'
+import { MemoryRouter } from 'react-router'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
+import { CheckoutPage } from './CheckoutPage'
+
+const mocks = vi.hoisted(() => ({
+  user: null as null | { name: string; role: string; email?: string; phone?: string | null },
+  profile: null as null | { customer: string; phone: string; address: string; area: string },
+  feeQuoted: false,
+  mutateAsync: vi.fn(),
+}))
+
+vi.mock('@/features/auth/useAuth', () => ({ useAuth: () => ({ user: mocks.user }) }))
+vi.mock('react-router', async (original) => ({
+  ...(await original<typeof import('react-router')>()),
+  useOutletContext: () => ({ openCart: vi.fn() }),
+}))
+vi.mock('./cart', () => ({
+  readProfile: () => mocks.profile,
+  saveProfile: vi.fn(),
+  useCart: () => [{ productId: '1', quantity: 2 }],
+  useCartActions: () => ({ clear: vi.fn() }),
+}))
+vi.mock('./shopService', () => ({
+  useShopFeature: (name: string) => (name === 'deliveryQuote' ? mocks.feeQuoted : false),
+  useShopProducts: () => ({ data: [{ id: '1', name: 'Nước 19L', price: 50000, unit: 'Bình', available: true }], isPending: false, isError: false }),
+  usePlaceWebOrder: () => ({ mutateAsync: mocks.mutateAsync, isPending: false }),
+}))
+
+const renderPage = () =>
+  render(
+    <App>
+      <MemoryRouter>
+        <CheckoutPage />
+      </MemoryRouter>
+    </App>,
+  )
+const type = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } })
+const fillDelivery = () => {
+  type('Địa chỉ giao', '12 Đường Test')
+  type('Khu vực', 'Quận 1')
+}
+const placeOrder = () => fireEvent.click(screen.getAllByRole('button', { name: /Đặt đơn/ })[0])
+
+afterEach(cleanup)
+beforeEach(() => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation(() => ({ matches: false, addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn() })),
+  })
+  vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
+  mocks.user = null
+  mocks.profile = null
+  mocks.feeQuoted = false
+  mocks.mutateAsync.mockReset()
+  mocks.mutateAsync.mockResolvedValue({ id: 5, orderCode: 'AF-5' })
+})
+
+test('giao sớm nhất không gửi giờ hẹn, đơn gửi đúng thông tin đã nhập', async () => {
+  renderPage()
+  type('Tên người nhận', ' Khách Thử ')
+  type('Số điện thoại', '090 123 4567')
+  fillDelivery()
+  placeOrder()
+  await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledTimes(1))
+  expect(mocks.mutateAsync.mock.calls[0][0]).toMatchObject({ customer: 'Khách Thử', phone: '0901234567', address: '12 Đường Test', area: 'Quận 1', appointment: undefined })
+})
+
+test('chọn giờ thì bắt buộc có giờ, chưa chọn không tạo đơn', async () => {
+  renderPage()
+  type('Tên người nhận', 'Khách Thử')
+  type('Số điện thoại', '0901234567')
+  fillDelivery()
+  fireEvent.click(screen.getByLabelText('Chọn giờ'))
+  placeOrder()
+  expect(await screen.findByText('Chọn giờ nhận hàng.')).toBeTruthy()
+  expect(mocks.mutateAsync).not.toHaveBeenCalled()
+})
+
+test('khách đã đăng nhập được điền sẵn tên và số điện thoại; thông tin lưu trên máy được ưu tiên', () => {
+  mocks.user = { name: 'Khách Tài Khoản', role: 'CUSTOMER', email: 'k@example.com', phone: '0900000009' }
+  const first = renderPage()
+  expect((screen.getByLabelText('Tên người nhận') as HTMLInputElement).value).toBe('Khách Tài Khoản')
+  expect((screen.getByLabelText('Số điện thoại') as HTMLInputElement).value).toBe('0900000009')
+  first.unmount()
+
+  mocks.profile = { customer: 'Người Nhận Đã Lưu', phone: '0900000001', address: 'A', area: 'B' }
+  renderPage()
+  expect((screen.getByLabelText('Tên người nhận') as HTMLInputElement).value).toBe('Người Nhận Đã Lưu')
+})
+
+test('tài khoản không có họ tên thì không lấy email làm tên người nhận', () => {
+  mocks.user = { name: 'k@example.com', role: 'CUSTOMER', email: 'k@example.com', phone: null }
+  renderPage()
+  expect((screen.getByLabelText('Tên người nhận') as HTMLInputElement).value).toBe('')
+})
+
+test('chưa báo được phí giao thì ghi tạm tính và không tự cộng phí', () => {
+  renderPage()
+  expect(screen.getAllByText('Cửa hàng báo khi xác nhận').length).toBeGreaterThan(0)
+  expect(screen.getAllByText('Tạm tính').length).toBeGreaterThan(0)
+  expect(screen.queryByText('Tổng cộng')).toBeNull()
+  expect(screen.getByText('Thanh toán khi nhận hàng')).toBeTruthy()
+})
