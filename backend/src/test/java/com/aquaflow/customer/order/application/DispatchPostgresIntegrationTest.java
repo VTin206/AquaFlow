@@ -129,14 +129,12 @@ class DispatchPostgresIntegrationTest {
     }
 
     @Test
-    void counterDispatchHandsOverGoodsWithoutMarkingPaidOrCompleted() {
+    void counterDispatchIsRejectedWithoutChangingStock() {
         jdbc.update("UPDATE orders SET fulfillment_type = 'COUNTER' WHERE id = ?", orderId);
         batch("COUNTER", 20, 5);
         prepare();
-        assertThat(dispatches.create(orderId, actorId).orderStatus()).isEqualTo(OrderStatus.DELIVERED);
-        assertThat(orders.findById(orderId).orElseThrow().paymentStatus().name()).isEqualTo("UNPAID");
-        assertThat(jdbc.queryForObject("SELECT movement_type FROM inventory_movements WHERE reference_id = ? AND reference_type = 'ORDER'", String.class, orderId))
-                .isEqualTo("COUNTER_SALE");
+        assertThatThrownBy(() -> dispatches.create(orderId, actorId)).isInstanceOf(com.aquaflow.shared.api.ConflictException.class);
+        assertUnchanged();
     }
 
     @Test

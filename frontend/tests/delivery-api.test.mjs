@@ -39,6 +39,11 @@ test('delivery adapter uses REST resources, passes result/handover data and pres
     const settlement = { cashReported: 100, cashConfirmed: 90, bottlesExpected: 2, bottlesConfirmed: 2, note: 'Thiếu 10' }
     await deliveryApi.settle(7, settlement)
     await deliveryApi.cancel(7)
+    await deliveryApi.dispatchAssignment(21)
+    await deliveryApi.assignmentResult(21, result)
+    await deliveryApi.assignmentAttempts(21)
+    const { returnApi } = await import('/src/features/live/returnApi.ts')
+    await returnApi.inspectAttempt({ attemptId: 31, lines: [{ loadItemId: 41, sellable: 2 }], note: 'Checked' })
     assert.deepEqual(
       requests.map((r) => [r.method, r.url]),
       [
@@ -55,12 +60,18 @@ test('delivery adapter uses REST resources, passes result/handover data and pres
         ['GET', '/api/v1/delivery/trips/7/orders/8/attempts'],
         ['PUT', '/api/v1/delivery/trips/7/settlement'],
         ['PATCH', '/api/v1/delivery/trips/7'],
+        ['POST', '/api/v1/delivery/assignments/21/dispatch'],
+        ['POST', '/api/v1/delivery/assignments/21/attempts'],
+        ['GET', '/api/v1/delivery/assignments/21/attempts'],
+        ['POST', '/api/v1/delivery/attempts/31/return-inspection'],
       ],
     )
     assert.deepEqual(requests[5].body, { orderId: 8, redelivery: true })
     assert.deepEqual(requests[9].body, result)
     assert.deepEqual(requests[11].body, settlement)
     assert.deepEqual(requests[12].body, { status: 'CANCELLED' })
+    assert.deepEqual(requests[14].body, result)
+    assert.deepEqual(requests[16].body, { lines: [{ loadItemId: 41, sellable: 2 }], note: 'Checked' })
     await assert.rejects(deliveryApi.detail(999), (error) => error.status === 403 && error.message.includes('chuyến của mình'))
   } finally {
     httpClient.defaults.baseURL = previousUrl

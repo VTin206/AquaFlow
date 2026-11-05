@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router'
 import { Alert, App, Button, Card, Descriptions, Modal, Popconfirm, Space, Table, Tag } from 'antd'
 import { OrderTotals } from '@/shared/components/OrderTotals'
 import { QueryError } from '@/shared/components/QueryError'
@@ -42,7 +43,7 @@ const paymentTagColors: Record<keyof typeof paymentStatusLabels, string> = {
   REFUNDED: 'default',
 }
 
-/** Chi tiết đơn: giữ hàng, chuẩn bị, xuất kho tại quầy và xem phiếu xuất theo lô. */
+/** Chi tiết đơn: giữ hàng, chuẩn bị, chuyển sang chuyến để Dispatch và xem phiếu xuất theo lô. */
 export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => void }) {
   const staff = useStaff()
   const canManage = staff?.role === 'ADMIN' || staff?.role === 'SALES_STAFF'
@@ -60,17 +61,6 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
     queryFn: () => dispatchApi.list(id),
     enabled: canManage,
     refetchInterval: 15000,
-  })
-  const dispatch = useMutation({
-    mutationFn: () => dispatchApi.create(id),
-    onSuccess: async (receipt) => {
-      await invalidateLiveData(queryClient)
-      message.success(`Đã xuất kho. Phiếu #${receipt.id}.`)
-    },
-    onError: async (error: Error) => {
-      await invalidateLiveData(queryClient)
-      message.error(error.message)
-    },
   })
   const update = useMutation({
     mutationFn: (status: 'CONFIRMED' | 'PREPARING' | 'CANCELLED') => orderApi.updateStatus(id, status),
@@ -105,7 +95,7 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
             cancelText="Không"
             onConfirm={() => update.mutate('CANCELLED')}
           >
-            <Button danger loading={update.isPending && update.variables === 'CANCELLED'} disabled={update.isPending || dispatch.isPending}>
+            <Button danger loading={update.isPending && update.variables === 'CANCELLED'} disabled={update.isPending}>
               Hủy đơn
             </Button>
           </Popconfirm>
@@ -118,11 +108,7 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
             cancelText="Chưa"
             onConfirm={() => update.mutate('CONFIRMED')}
           >
-            <Button
-              type="primary"
-              loading={update.isPending && update.variables === 'CONFIRMED'}
-              disabled={update.isPending || dispatch.isPending}
-            >
+            <Button type="primary" loading={update.isPending && update.variables === 'CONFIRMED'} disabled={update.isPending}>
               Xác nhận đơn
             </Button>
           </Popconfirm>
@@ -139,28 +125,17 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
             cancelText="Chưa"
             onConfirm={() => update.mutate('PREPARING')}
           >
-            <Button
-              type="primary"
-              loading={update.isPending && update.variables === 'PREPARING'}
-              disabled={update.isPending || dispatch.isPending}
-            >
+            <Button type="primary" loading={update.isPending && update.variables === 'PREPARING'} disabled={update.isPending}>
               Chuẩn bị hàng
             </Button>
           </Popconfirm>
         )}
         {canDispatch(order) && (
-          <Popconfirm
-            title="Bàn giao hàng cho khách tại quầy?"
-            description="Xuất toàn bộ hàng đã giữ, trừ tồn thực tế và lập phiếu xuất. Sau bước này không thể hủy đơn trực tiếp."
-            okText="Xuất kho"
-            cancelText="Chưa"
-            onConfirm={() => dispatch.mutateAsync()}
-            okButtonProps={{ loading: dispatch.isPending }}
-          >
-            <Button type="primary" loading={dispatch.isPending} disabled={update.isPending || dispatch.isPending}>
-              Xuất kho / giao tại quầy
+          <Link to="/delivery" onClick={onClose}>
+            <Button type="primary" disabled={update.isPending}>
+              Xếp chuyến / Dispatch
             </Button>
-          </Popconfirm>
+          </Link>
         )}
       </Space>
     ) : null

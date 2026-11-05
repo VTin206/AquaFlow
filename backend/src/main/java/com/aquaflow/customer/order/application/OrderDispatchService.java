@@ -49,10 +49,13 @@ public class OrderDispatchService {
                     ? "Không có phiếu xuất kho cũ để giao lại"
                     : "Đơn đã xuất kho; giao lại phải qua kiểm nhận và reservation mới");
         }
-        order.markDispatched();
+        if (order.getFulfillmentType() != FulfillmentType.DELIVERY || order.getStatus() != OrderStatus.PREPARING)
+            throw new ConflictException("Chỉ Dispatch đơn DELIVERY đang PREPARING");
         var lines = items.findAllByOrder_Id(orderId).stream()
                 .map(item -> new ReservationLine(item.getId(), item.getProductId(), item.getQuantity())).toList();
-        var exported = stock.dispatch(orderId, lines, actorId, order.getFulfillmentType() == FulfillmentType.COUNTER);
+        var exported = stock.dispatch(orderId, lines, actorId, false);
+        order.markDispatched();
+        orders.flush();
         return dispatches.create(orderId, actorId, order.getStatus(), exported);
     }
 
