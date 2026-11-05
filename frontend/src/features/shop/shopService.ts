@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { db } from '@/mocks/db'
 import { mockError, mockRequest } from '@/mocks/mockRequest'
 import { useAuth } from '@/features/auth/useAuth'
+import { isCustomer } from '@/features/auth/accountAccess'
+import { customerOrderApi } from './customerOrderApi'
 import { catalogApi, type CatalogProduct } from '@/features/live/catalogApi'
 import { guestOrderApi, type GuestOrderInput } from '@/features/live/guestOrderApi'
 import { daysUntilExpiry } from '@/features/inventory/expiry'
@@ -126,11 +128,13 @@ export function useShopProduct(id: string) {
 }
 
 export function usePlaceWebOrder() {
+  const { user } = useAuth()
   const demo = useShopDemo()
   const queryClient = useQueryClient()
   return useMutation<PublicOrder | Awaited<ReturnType<typeof guestOrderApi.create>>, Error, WebOrderDraft>({
     mutationFn: (draft) => {
       if (demo) return orderService.placeWebOrder(draft)
+      if (isCustomer(user)) return customerOrderApi.create(toGuestOrderInput(draft))
       return guestOrderApi.create(toGuestOrderInput(draft))
     },
     onSuccess: () => {
@@ -140,6 +144,7 @@ export function usePlaceWebOrder() {
           queryClient.invalidateQueries({ queryKey: key })
       } else {
         queryClient.invalidateQueries({ queryKey: ['live', 'orders-view'] })
+        queryClient.invalidateQueries({ queryKey: ['live', 'customer-orders'] })
       }
     },
   })

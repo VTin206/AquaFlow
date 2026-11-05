@@ -19,6 +19,8 @@ import {
 import { invalidateLiveData } from './invalidateLiveData'
 import { modalWidth } from '@/shared/utils/modal'
 import { canDispatch, dispatchApi } from './dispatchApi'
+import { OrderProgress } from '@/features/orders/OrderProgress'
+import { OrderDeliveryHistory } from '@/features/orders/OrderDeliveryHistory'
 
 const dateTime = (value: string | null) => (value ? new Date(value).toLocaleString('vi-VN') : '—')
 const statusColors: Record<OrderStatus, string> = {
@@ -43,13 +45,21 @@ const paymentTagColors: Record<keyof typeof paymentStatusLabels, string> = {
 /** Chi tiết đơn: giữ hàng, chuẩn bị, xuất kho và xem phiếu xuất theo lô. */
 export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => void }) {
   const staff = useStaff()
+  const canManage = staff?.role === 'ADMIN' || staff?.role === 'SALES_STAFF'
   const { message } = App.useApp()
   const queryClient = useQueryClient()
-  const query = useQuery({ queryKey: ['live', 'order', staff?.name, staff?.role, id], queryFn: () => orderApi.detail(id) })
+  const query = useQuery({
+    queryKey: ['live', 'order', staff?.name, staff?.role, id],
+    queryFn: () => orderApi.detail(id),
+    enabled: canManage,
+    refetchInterval: 15000,
+  })
   const catalog = useQuery({ queryKey: ['live', 'catalog'], queryFn: catalogApi.products })
   const receipts = useQuery({
     queryKey: ['live', 'dispatches', staff?.name, staff?.role, id],
     queryFn: () => dispatchApi.list(id),
+    enabled: canManage,
+    refetchInterval: 15000,
   })
   const dispatch = useMutation({
     mutationFn: () => dispatchApi.create(id),
@@ -82,7 +92,7 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
   })
   const order = query.data
   const actions =
-    order && (canConfirm(order) || canPrepare(order) || canCancel(order) || canDispatch(order)) ? (
+    order && canManage && (canConfirm(order) || canPrepare(order) || canCancel(order) || canDispatch(order)) ? (
       <Space wrap>
         {canCancel(order) && (
           <Popconfirm
@@ -173,6 +183,7 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
         <Card loading={query.isPending}>
           {order && (
             <>
+              <OrderProgress order={order} />
               <Descriptions
                 column={{ xs: 1, sm: 2 }}
                 items={[
@@ -246,6 +257,11 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
                   title="Đơn đang chờ xác nhận"
                   description="Kiểm tra thông tin với khách rồi xác nhận để giữ hàng trong kho."
                 />
+              )}
+              {order.fulfillmentType === 'DELIVERY' && <OrderDeliveryHistory orderId={id} />}
+              {receipts.isPending && <p>Đang tải thông tin xuất kho…</p>}
+              {receipts.isSuccess && receipts.data.length === 0 && (
+                <Alert type="info" title="Đơn chưa có phiếu xuất kho." style={{ marginTop: 16 }} />
               )}
               {receipts.isError && <QueryError error={receipts.error} onRetry={receipts.refetch} />}
               {receipts.data?.map((receipt) => (

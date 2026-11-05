@@ -6,6 +6,7 @@ import { DriverLayout } from '@/app/layouts/DriverLayout'
 import { ThemedArea } from '@/app/layouts/ThemedArea'
 import { RequireAuth } from './RequireAuth'
 import { usePageSupported } from '@/shared/features'
+import { RequireCustomer } from './RequireCustomer'
 
 // Mỗi trang được tải khi người dùng mở tới, giúp lần tải đầu nhẹ hơn.
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })))
@@ -25,6 +26,8 @@ const ArticlePage = lazy(() => import('@/features/shop/ArticlePage').then((m) =>
 const ShopAccountPage = lazy(() => import('@/features/shop/ShopAccountPage').then((m) => ({ default: m.ShopAccountPage })))
 const ShopRegisterPage = lazy(() => import('@/features/shop/ShopAccountPage').then((m) => ({ default: m.ShopRegisterPage })))
 const ShopPage = lazy(() => import('@/features/shop/ShopPage').then((m) => ({ default: m.ShopPage })))
+const CustomerOrdersPage = lazy(() => import('@/features/shop/CustomerOrdersPage').then((m) => ({ default: m.CustomerOrdersPage })))
+const CustomerOrderPage = lazy(() => import('@/features/shop/CustomerOrdersPage').then((m) => ({ default: m.CustomerOrderPage })))
 const ProductDetailPage = lazy(() => import('@/features/shop/ProductDetailPage').then((m) => ({ default: m.ProductDetailPage })))
 const CheckoutPage = lazy(() => import('@/features/shop/CheckoutPage').then((m) => ({ default: m.CheckoutPage })))
 const TrackPage = lazy(() => import('@/features/shop/TrackPage').then((m) => ({ default: m.TrackPage })))
@@ -52,6 +55,10 @@ export function App() {
         {/* Trang công khai cho khách đặt hàng và tra cứu đơn, không cần đăng nhập. */}
         <Route element={<ShopLayout />}>
           <Route path="shop" element={<ShopPage />} />
+          <Route element={<RequireCustomer />}>
+            <Route path="shop/orders" element={<CustomerOrdersPage />} />
+            <Route path="shop/orders/:id" element={<CustomerOrderPage />} />
+          </Route>
           <Route path="shop/products/:id" element={<ProductDetailPage />} />
           <Route path="shop/news/:slug" element={<ArticlePage />} />
           <Route path="shop/account" element={<ShopAccountPage />} />

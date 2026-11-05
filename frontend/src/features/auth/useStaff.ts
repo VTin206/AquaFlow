@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { drivers } from '@/features/delivery/types'
 import { roleNames, roleOfUser, type RoleCode } from './permissions'
 import { useAuth } from './useAuth'
+import { isStaff } from './accountAccess'
 
 // Bản dùng thử không có tài khoản thật nên cho đổi vai trò để xem giao diện của từng người.
 const DEMO_ROLE_KEY = 'aquaflow.demo-role'
@@ -42,7 +43,7 @@ export type Staff = { name: string; role: RoleCode; roleName: string; isDemo: bo
 export function useStaff(): Staff | null {
   const { user } = useAuth()
   const role = useSyncExternalStore(subscribe, () => demoRole)
-  if (!user) return null
+  if (!user || !isStaff(user)) return null
   if (user.isDemo) return { name: demoNames[role], role, roleName: roleNames[role], isDemo: true }
   const real = roleOfUser(user)
   return { name: user.name, role: real, roleName: roleNames[real], isDemo: false }

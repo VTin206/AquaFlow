@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
@@ -30,6 +31,7 @@ type Action = { kind: 'create' | 'driver' | 'add' | 'settle'; tripId?: number } 
 const dateTime = (value: string | null) => (value ? new Date(value).toLocaleString('vi-VN') : '—')
 
 export function LiveDeliveryPage({ driverView = false }: { driverView?: boolean }) {
+  const [searchParams] = useSearchParams()
   const staff = useStaff()
   const { user } = useAuth()
   const admin = staff?.role === 'ADMIN' || staff?.role === 'SALES_STAFF'
@@ -37,7 +39,10 @@ export function LiveDeliveryPage({ driverView = false }: { driverView?: boolean 
   const who = [user?.email, staff?.role]
   const client = useQueryClient()
   const { message } = App.useApp()
-  const [selected, setSelected] = useState<number | null>(null)
+  const [selected, setSelected] = useState<number | null>(() => {
+    const value = Number(searchParams.get('tripId'))
+    return Number.isSafeInteger(value) && value > 0 ? value : null
+  })
   const [action, setAction] = useState<Action | null>(null)
   const [history, setHistory] = useState<{ tripId: number; order: DeliveryStop } | null>(null)
   const trips = useQuery({ queryKey: ['live', 'delivery-trips', ...who], queryFn: deliveryApi.list, refetchInterval: 15000 })
