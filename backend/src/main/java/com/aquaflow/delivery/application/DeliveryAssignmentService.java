@@ -41,7 +41,9 @@ public class DeliveryAssignmentService {
 
     public List<AttemptResponse> attempts(long id, long actor, boolean staff) {
         var assignment = repository.assignment(id);
-        return delivery.attempts(assignment.tripId(), assignment.orderId(), actor, staff);
+        // Reuse trip visibility checks, then return only this assignment's immutable attempt history.
+        delivery.get(assignment.tripId(), actor, staff);
+        return repository.attemptsForAssignment(id);
     }
 
     @Transactional
@@ -61,7 +63,7 @@ public class DeliveryAssignmentService {
         var assignment = repository.assignmentForAttempt(attemptId);
         repository.lockTrip(assignment.tripId());
         repository.lockOrder(assignment.orderId());
-        var latest = delivery.attempts(assignment.tripId(), assignment.orderId(), actor, true).stream().findFirst()
+        var latest = repository.attemptsForAssignment(assignment.id()).stream().findFirst()
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy lần giao"));
         if (latest.id() != attemptId || latest.outcome() != Outcome.FAILED)
             throw new ConflictException("Chỉ kiểm nhận lần giao thất bại mới nhất của phân công");

@@ -88,6 +88,8 @@ class DeliveryPostgresIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id=?", String.class, orderId)).isEqualTo("DELIVERED");
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_dispatches WHERE order_id=?", Integer.class, orderId)).isEqualTo(2);
         assertThat(assignmentService.attempts(assignment, driverId, false).getFirst().outcome()).isEqualTo(Outcome.FAILED);
+        assertThat(assignmentService.attempts(next, driverId, false)).hasSize(1);
+        assertThat(assignmentService.attempts(next, driverId, false).getFirst().outcome()).isEqualTo(Outcome.SUCCESS);
     }
 
     @Autowired com.aquaflow.inventory.application.InventoryReturnService returns;
@@ -344,6 +346,15 @@ class DeliveryPostgresIntegrationTest {
         service.cancel(abandoned, ownerId, true);
         assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id = ?", String.class, orderId)).isEqualTo("CANCELLED");
         assertThat(jdbc.queryForObject("SELECT reserved FROM inventory_balances WHERE batch_id = ?", Integer.class, batchId)).isZero();
+
+        // Make the first dispatch lot unavailable for a new reservation so the redelivery uses a different lot.
+        jdbc.update("UPDATE product_batches SET expires_on = ? WHERE id = ?", LocalDate.now().minusDays(1), batchId);
+        long redeliveryBatch = jdbc.queryForObject("""
+                INSERT INTO product_batches(product_id, lot_code, expires_on)
+                VALUES (?, 'REDELIVERY-LOT', ?) RETURNING id
+                """, Long.class, productId, LocalDate.now().plusDays(120));
+        jdbc.update("INSERT INTO inventory_balances(batch_id, on_hand, reserved) VALUES (?, 2, 0)", redeliveryBatch);
+
         long replacement = service.create(new CreateTripRequest(otherDriverId, null), ownerId, true).id();
         service.addOrder(replacement, new AddOrderRequest(orderId, true), ownerId, true);
         startTrip(replacement, otherDriverId);
@@ -353,6 +364,15 @@ class DeliveryPostgresIntegrationTest {
                 SELECT SUM(quantity_loaded) FROM delivery_load_items l
                 JOIN delivery_assignments a ON a.id = l.assignment_id WHERE a.trip_id = ?
                 """, Integer.class, replacement)).isEqualTo(2);
+
+        // A historical trip must show its own assignment manifest, not the latest redelivery dispatch.
+        var firstTripOrder = service.get(trip, ownerId, true).orders().getFirst();
+        var redeliveryTripOrder = service.get(replacement, ownerId, true).orders().getFirst();
+        assertThat(firstTripOrder.items()).hasSize(1);
+        assertThat(firstTripOrder.items().getFirst().lotCode()).isNotEqualTo("REDELIVERY-LOT");
+        assertThat(redeliveryTripOrder.items()).singleElement()
+                .satisfies(line -> assertThat(line.lotCode()).isEqualTo("REDELIVERY-LOT"));
+
         service.recordResult(replacement, orderId, new DeliveryResultRequest(Outcome.SUCCESS, "Khách", null, null), otherDriverId, false);
         assertThat(service.get(trip, ownerId, true).orders().getFirst().latestAttempt().outcome()).isEqualTo(Outcome.FAILED);
         assertThat(service.availableOrders(true)).noneMatch(o -> o.id() == orderId);
