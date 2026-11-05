@@ -65,9 +65,7 @@ public class DeliveryAssignmentService {
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy lần giao"));
         if (latest.id() != attemptId || latest.outcome() != Outcome.FAILED)
             throw new ConflictException("Chỉ kiểm nhận lần giao thất bại mới nhất của phân công");
-        if (returns.pending().stream().noneMatch(p -> p.assignmentId() == assignment.id()))
-            throw new ConflictException("Lần giao không còn chờ kiểm nhận hàng hoàn");
-        return returns.create(new ReturnDtos.Create(assignment.orderId(), request.lines(), request.note()), actor);
+        return returns.createForAssignment(new ReturnDtos.Create(assignment.orderId(), request.lines(), request.note(), request.requestId()), actor, assignment.id());
     }
 
     private void requireStaff(boolean staff) {

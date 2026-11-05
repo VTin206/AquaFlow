@@ -29,10 +29,19 @@ export type ReturnInspection = {
   note: string | null
   lines: ReturnLine[]
 }
-export type ReturnInput = { orderId: number; lines: { loadItemId: number; sellable: number }[]; note?: string }
+export type ReturnInput = {
+  orderId: number
+  lines: { loadItemId: number; sellable: number; quantity?: number }[]
+  note?: string
+  requestId?: string
+}
 export const returnApi = {
   inspectAttempt: (input: Omit<ReturnInput, 'orderId'> & { attemptId: number }) =>
-    api.post<ReturnInspection>(`/delivery/attempts/${input.attemptId}/return-inspection`, { lines: input.lines, note: input.note }),
+    api.post<ReturnInspection>(`/delivery/attempts/${input.attemptId}/return-inspection`, {
+      lines: input.lines,
+      note: input.note,
+      requestId: input.requestId,
+    }),
   pending: () => api.get<PendingReturn[]>('/inventory/returns/pending'),
   list: (page: number) => api.get<ReturnInspection[]>(`/inventory/returns?page=${page}&size=20`),
   detail: (id: number) => api.get<ReturnInspection>(`/inventory/returns/${id}`),
