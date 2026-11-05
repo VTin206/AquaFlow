@@ -176,9 +176,9 @@ export function LoginPage() {
                   <Form.Item name="rememberMe" valuePropName="checked" noStyle>
                     <Checkbox>Ghi nhớ tôi</Checkbox>
                   </Form.Item>
-                  <Button type="link" size="small" onClick={() => setHelpOpen(true)}>
+                  <Link to="/forgot-password">
                     Quên mật khẩu?
-                  </Button>
+                  </Link>
                 </div>
                 <Button
                   type="primary"
