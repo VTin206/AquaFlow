@@ -85,6 +85,8 @@ public class SecurityConfig {
                                 .hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers(HttpMethod.POST, "/api/v1/delivery/trips/*/orders", "/api/v1/delivery/trips/*/dispatch")
                                 .hasAnyRole("ADMIN", "SALES_STAFF")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/delivery/trips/*/orders/*/dispatch")
+                                .hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/delivery/trips/*/driver", "/api/v1/delivery/trips/*/settlement")
                                 .hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/delivery/trips/*").hasAnyRole("ADMIN", "SALES_STAFF")

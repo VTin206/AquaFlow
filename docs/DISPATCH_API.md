@@ -6,7 +6,7 @@ chỉ `ADMIN` và `SALES_STAFF` được tạo/xem. JWT bắt buộc. Migration:
 | Method | Endpoint | Kết quả |
 | --- | --- | --- |
 | POST | `/api/v1/sales/orders/{orderId}/dispatches` | `201 Created`, header `Location` trỏ tới phiếu |
-| GET | `/api/v1/sales/orders/{orderId}/dispatches` | `200`, mảng rỗng hoặc một phiếu |
+| GET | `/api/v1/sales/orders/{orderId}/dispatches` | `200`, danh sách đầy đủ lịch sử phiếu xuất |
 | GET | `/api/v1/sales/orders/{orderId}/dispatches/{dispatchId}` | `200`, chi tiết phiếu thuộc đúng đơn |
 
 POST không cần body. Số lượng/lô được lấy từ reservation; người thực hiện lấy từ JWT.
@@ -30,8 +30,10 @@ Ví dụ response:
 
 ## Quy tắc nghiệp vụ
 
-- Một đơn có tối đa một phiếu; không hỗ trợ xuất từng phần trong phiên bản này.
+- Mỗi lượt giao có một phiếu đầy đủ; không hỗ trợ xuất từng phần. Redelivery sau kiểm nhận dùng reservation mới và tạo phiếu mới, giữ nguyên lịch sử cũ.
 - Chỉ xuất từ `PREPARING`, khi từng dòng có đủ reservation chưa xuất/chưa giải phóng.
+- Với đơn `DELIVERY`, trước khi gọi API này đơn phải thuộc đúng một Assignment đang hoạt động của Trip `CREATED`, Trip phải có tài xế `DELIVERY_STAFF` đang hoạt động. Thiếu hoặc Assignment/Trip/tài xế không còn hợp lệ trả `409`.
+- Luồng điều phối từng đơn gọi `POST /api/v1/delivery/trips/{tripId}/orders/{orderId}/dispatch`; endpoint theo đơn tại `/sales/orders` vẫn buộc phải qua kiểm tra Assignment và không thể bỏ qua Trip. Endpoint `/delivery/trips/{tripId}/dispatch` xử lý từng Assignment bằng transaction riêng.
 - Xuất đúng lô đã giữ theo FEFO; kiểm tra lại hạn dùng lúc xuất (`expires_on > hôm nay`).
   Lô hết hạn cần xử lý đơn/reservation trước, không tự thay lô khi xuất.
 - Giảm `on_hand` và `reserved` cùng số lượng; tăng `quantity_dispatched`.

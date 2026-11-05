@@ -3,7 +3,7 @@ package com.aquaflow.delivery.application;
 import com.aquaflow.delivery.api.DeliveryDtos.*;
 import com.aquaflow.delivery.repository.DeliveryRepository;
 import com.aquaflow.delivery.repository.DeliveryRepository.TripRow;
-import com.aquaflow.customer.order.application.OrderDispatchService;
+import com.aquaflow.customer.order.api.dto.DispatchResponse;
 import com.aquaflow.customer.order.repository.OrderItemRepository;
 import com.aquaflow.customer.order.repository.OrderRepository;
 import com.aquaflow.inventory.application.RedeliveryReservationService;
@@ -13,6 +13,7 @@ import com.aquaflow.shared.api.ConflictException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 import java.util.List;
 
@@ -21,16 +22,16 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class DeliveryService {
     private final DeliveryRepository repository;
-    private final OrderDispatchService dispatchService;
+    private final AssignmentDispatchService assignmentDispatch;
     private final RedeliveryReservationService redeliveryReservations;
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
 
-    public DeliveryService(DeliveryRepository repository, OrderDispatchService dispatchService,
+    public DeliveryService(DeliveryRepository repository, AssignmentDispatchService assignmentDispatch,
                           RedeliveryReservationService redeliveryReservations,
                           OrderRepository orderRepository, OrderItemRepository orderItemRepository) {
         this.repository = repository;
-        this.dispatchService = dispatchService;
+        this.assignmentDispatch = assignmentDispatch;
         this.redeliveryReservations = redeliveryReservations;
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
@@ -129,27 +130,22 @@ public class DeliveryService {
         return repository.viewTrip(repository.findTrip(tripId));
     }
 
-    /** Dispatches every active assignment atomically; any invalid or unstocked order rolls back the trip. */
-    @Transactional
+    /** Dispatches each active assignment through its own transaction. */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public TripResponse dispatch(long tripId, long actorId, boolean admin) {
         requireStoreStaff(admin);
-        TripRow trip = repository.lockTrip(tripId);
-        requireStatus(trip, "CREATED");
         List<Long> orderIds = repository.assignedOrders(tripId);
         if (orderIds.isEmpty()) throw new ConflictException("Chuyến chưa có đơn hàng");
         for (Long orderId : orderIds) {
-            var order = repository.lockOrder(orderId);
-            if (!"DELIVERY".equals(order.fulfillmentType())) {
-                throw new ConflictException("Chỉ được xuất kho đơn DELIVERY");
-            }
-            if ("PREPARING".equals(order.status())) {
-                if (repository.hasDispatch(orderId)) dispatchService.createRedeliveryForTrip(orderId, actorId);
-                else dispatchService.createForTrip(orderId, actorId);
-            } else if (!"OUT_FOR_DELIVERY".equals(order.status()) || !repository.hasDispatch(orderId)) {
-                throw new ConflictException("Đơn " + orderId + " không còn đủ điều kiện xuất kho cho chuyến");
-            }
+            assignmentDispatch.dispatchFromTrip(tripId, orderId, actorId, admin);
         }
         return repository.viewTrip(repository.findTrip(tripId));
+    }
+
+    /** Dispatch only the exact active assignment; other orders on the trip remain independent. */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public DispatchResponse dispatchAssignment(long tripId, long orderId, long actorId, boolean admin) {
+        return assignmentDispatch.dispatch(tripId, orderId, actorId, admin);
     }
 
     @Transactional
