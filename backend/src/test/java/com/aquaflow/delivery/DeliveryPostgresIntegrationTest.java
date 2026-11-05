@@ -60,6 +60,7 @@ class DeliveryPostgresIntegrationTest {
     }
 
     @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     void returnInspectionRestocksOnlySellableAndCannotBeRepeated() throws Exception {
         long trip = failedTrip();
         assertThat(returns.pending()).noneMatch(p -> p.orderId() == orderId);
@@ -270,6 +271,7 @@ class DeliveryPostgresIntegrationTest {
     }
 
     @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     void failedDeliveryCanMoveToNewTripAfterHandoverAndHistoryRemainsVisible() {
         long trip = service.create(new CreateTripRequest(driverId, null), ownerId, true).id();
         service.addOrder(trip, new AddOrderRequest(orderId), ownerId, true);
@@ -348,7 +350,9 @@ class DeliveryPostgresIntegrationTest {
                 .isEqualTo("DELIVERED");
         assertThat(jdbc.queryForObject("SELECT payment_status FROM orders WHERE id = ?", String.class, orderId))
                 .isEqualTo("UNPAID");
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM inventory_movements WHERE reference_type = 'ORDER' AND reference_id = ?",
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM inventory_movements WHERE reference_type = 'ORDER' AND reference_id = ? AND movement_type = 'DISPATCH'",
+                Long.class, orderId)).isEqualTo(1L);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM inventory_movements WHERE reference_type = 'ORDER' AND reference_id = ? AND movement_type = 'RETURN'",
                 Long.class, orderId)).isZero();
 
         var completed = service.settle(tripId,
@@ -361,6 +365,7 @@ class DeliveryPostgresIntegrationTest {
     }
 
     @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     void tripDispatchRollsBackAllOrdersWhenOneAssignmentCannotReserveStock() {
         long secondOrder = jdbc.queryForObject("""
                 INSERT INTO orders(order_code, channel, fulfillment_type, status, created_by,
@@ -450,6 +455,8 @@ class DeliveryPostgresIntegrationTest {
             .content("{\"orderId\":"+orderId+"}")).andExpect(status().isCreated());
         mvc.perform(put(base+"/"+trip+"/driver").with(actor(driverId,"DELIVERY_STAFF")).contentType("application/json")
             .content("{\"driverId\":"+otherDriverId+"}")).andExpect(status().isForbidden());
+        mvc.perform(post(base+"/"+trip+"/dispatch").with(actor(ownerId,"SALES_STAFF")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.orders[0].orderStatus").value("OUT_FOR_DELIVERY"));
         mvc.perform(put(base+"/"+trip+"/departure").with(actor(ownerId,"SALES_STAFF"))).andExpect(status().isOk());
         service.recordResult(trip,orderId,new DeliveryResultRequest(Outcome.SUCCESS,"Recipient",null,null),driverId,false);
         mvc.perform(put(base+"/"+trip+"/settlement").with(actor(ownerId,"SALES_STAFF")).contentType("application/json")
