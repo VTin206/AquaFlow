@@ -10,7 +10,8 @@ export type DispatchReceipt = {
   items: { orderItemId: number; productId: number; batchId: number; lotCode: string; expiresOn: string; quantity: number }[]
 }
 
-export const canDispatch = (order: Pick<LiveOrder, 'status'>) => order.status === 'PREPARING'
+export const canDispatch = (order: Pick<LiveOrder, 'status' | 'fulfillmentType'>) =>
+  order.status === 'PREPARING' && order.fulfillmentType === 'COUNTER'
 
 export const dispatchApi = {
   create: (orderId: number) => api.post<DispatchReceipt>(`/sales/orders/${orderId}/dispatches`),

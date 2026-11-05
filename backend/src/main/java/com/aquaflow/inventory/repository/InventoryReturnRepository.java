@@ -25,7 +25,7 @@ public class InventoryReturnRepository {
         WHERE o.status='OUT_FOR_DELIVERY' AND o.fulfillment_type='DELIVERY'
           AND t.status='COMPLETED' AND da.outcome='FAILED'
           AND NOT EXISTS (SELECT 1 FROM delivery_assignments x WHERE x.order_id=o.id AND x.active)
-          AND NOT EXISTS (SELECT 1 FROM inventory_returns r WHERE r.order_id=o.id)
+          AND NOT EXISTS (SELECT 1 FROM inventory_returns r WHERE r.assignment_id=a.id)
         """;
 
     public List<Pending> pending() {

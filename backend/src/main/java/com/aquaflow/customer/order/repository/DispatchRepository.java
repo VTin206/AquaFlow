@@ -26,11 +26,11 @@ public class DispatchRepository {
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                     """, id, item.orderItemId(), item.productId(), item.batchId(), item.lotCode(), item.expiresOn(), item.quantity());
         }
-        return findByOrderId(orderId).orElseThrow();
+        return findById(id).orElseThrow();
     }
 
-    public Optional<DispatchResponse> findByOrderId(Long orderId) {
-        return jdbc.query("SELECT * FROM order_dispatches WHERE order_id = ?", (rs, row) -> {
+    public List<DispatchResponse> findAllByOrderId(Long orderId) {
+        return jdbc.query("SELECT * FROM order_dispatches WHERE order_id = ? ORDER BY dispatched_at DESC, id DESC", (rs, row) -> {
             Long id = rs.getLong("id");
             var items = jdbc.query("SELECT * FROM order_dispatch_items WHERE dispatch_id = ? ORDER BY id",
                     (line, index) -> new DispatchedLine(line.getLong("order_item_id"), line.getLong("product_id"),
@@ -38,6 +38,25 @@ public class DispatchRepository {
                             line.getDate("expires_on").toLocalDate(), line.getInt("quantity")), id);
             return new DispatchResponse(id, orderId, rs.getLong("performed_by"),
                     rs.getObject("dispatched_at", OffsetDateTime.class), OrderStatus.valueOf(rs.getString("order_status")), items);
-        }, orderId).stream().findFirst();
+        }, orderId);
     }
+
+    public Optional<DispatchResponse> findById(Long dispatchId) {
+        return jdbc.query("SELECT * FROM order_dispatches WHERE id = ?", (rs, row) -> {
+            Long id = rs.getLong("id");
+            Long orderId = rs.getLong("order_id");
+            var items = jdbc.query("SELECT * FROM order_dispatch_items WHERE dispatch_id = ? ORDER BY id",
+                    (line, index) -> new DispatchedLine(line.getLong("order_item_id"), line.getLong("product_id"),
+                            line.getLong("batch_id"), line.getString("lot_code"),
+                            line.getDate("expires_on").toLocalDate(), line.getInt("quantity")), id);
+            return new DispatchResponse(id, orderId, rs.getLong("performed_by"),
+                    rs.getObject("dispatched_at", OffsetDateTime.class), OrderStatus.valueOf(rs.getString("order_status")), items);
+        }, dispatchId).stream().findFirst();
+    }
+
+    public boolean hasDispatch(Long orderId) {
+        return Boolean.TRUE.equals(jdbc.queryForObject(
+                "SELECT EXISTS(SELECT 1 FROM order_dispatches WHERE order_id = ?)", Boolean.class, orderId));
+    }
+
 }

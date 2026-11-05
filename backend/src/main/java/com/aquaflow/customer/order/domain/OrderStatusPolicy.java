@@ -56,4 +56,14 @@ public final class OrderStatusPolicy {
                 .getOrDefault(currentStatus, Set.of())
                 .contains(nextStatus);
     }
+
+    /** Redelivery is a dedicated inventory-backed workflow, never a generic status update. */
+    public static boolean canPrepareForRedelivery(
+            OrderStatus currentStatus,
+            FulfillmentType fulfillmentType,
+            boolean deliveryFailed) {
+        return currentStatus == OrderStatus.CANCELLED
+                && fulfillmentType == FulfillmentType.DELIVERY
+                && deliveryFailed;
+    }
 }

@@ -47,6 +47,9 @@ public class Order {
     @Column(name = "payment_status", nullable = false, length = 20)
     private PaymentStatus paymentStatus = PaymentStatus.UNPAID;
 
+    @Column(name = "delivery_failed", nullable = false)
+    private boolean deliveryFailed;
+
     @Column(name = "recipient_name", length = 150)
     private String recipientName;
 
@@ -214,6 +217,24 @@ public class Order {
         }
         status = fulfillmentType == FulfillmentType.DELIVERY
                 ? OrderStatus.OUT_FOR_DELIVERY : OrderStatus.DELIVERED;
+    }
+
+    /** Reopens a failed delivery only after the delivery workflow has reserved replacement stock. */
+    public void prepareForRedelivery() {
+        if (!OrderStatusPolicy.canPrepareForRedelivery(status, fulfillmentType, deliveryFailed)) {
+            throw new com.aquaflow.shared.api.ConflictException(
+                    "Chỉ đơn DELIVERY đã giao thất bại mới được đưa vào quy trình giao lại");
+        }
+        status = OrderStatus.PREPARING;
+    }
+
+    /** Returns an unshipped redelivery to the inspected-return queue when its trip is cancelled. */
+    public void cancelPreparedRedelivery() {
+        if (status != OrderStatus.PREPARING || fulfillmentType != FulfillmentType.DELIVERY || !deliveryFailed) {
+            throw new com.aquaflow.shared.api.ConflictException("Đơn không ở trạng thái chuẩn bị giao lại");
+        }
+        status = OrderStatus.CANCELLED;
+        cancelledAt = OffsetDateTime.now();
     }
 
     public Long getId() {

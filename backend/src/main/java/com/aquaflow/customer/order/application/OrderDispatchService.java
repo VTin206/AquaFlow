@@ -27,8 +27,28 @@ public class OrderDispatchService {
 
     @Transactional
     public DispatchResponse create(Long orderId, Long actorId) {
+        return createInternal(orderId, actorId, false);
+    }
+
+    /** Delivery-trip dispatch calls this inside the trip-wide transaction. */
+    @Transactional
+    public DispatchResponse createForTrip(Long orderId, Long actorId) {
+        return createInternal(orderId, actorId, false);
+    }
+
+    @Transactional
+    public DispatchResponse createRedeliveryForTrip(Long orderId, Long actorId) {
+        return createInternal(orderId, actorId, true);
+    }
+
+    private DispatchResponse createInternal(Long orderId, Long actorId, boolean redelivery) {
         var order = orders.findForUpdateById(orderId).orElseThrow(() -> new NotFoundException("Không tìm thấy đơn hàng"));
-        if (dispatches.findByOrderId(orderId).isPresent()) throw new ConflictException("Đơn đã xuất kho");
+        boolean hasHistory = dispatches.hasDispatch(orderId);
+        if (hasHistory != redelivery) {
+            throw new ConflictException(redelivery
+                    ? "Không có phiếu xuất kho cũ để giao lại"
+                    : "Đơn đã xuất kho; giao lại phải qua kiểm nhận và reservation mới");
+        }
         order.markDispatched();
         var lines = items.findAllByOrder_Id(orderId).stream()
                 .map(item -> new ReservationLine(item.getId(), item.getProductId(), item.getQuantity())).toList();
@@ -38,11 +58,11 @@ public class OrderDispatchService {
 
     public List<DispatchResponse> list(Long orderId) {
         if (!orders.existsById(orderId)) throw new NotFoundException("Không tìm thấy đơn hàng");
-        return dispatches.findByOrderId(orderId).stream().toList();
+        return dispatches.findAllByOrderId(orderId);
     }
 
     public DispatchResponse find(Long orderId, Long dispatchId) {
-        return dispatches.findByOrderId(orderId).filter(d -> d.id().equals(dispatchId))
+        return dispatches.findById(dispatchId).filter(d -> d.orderId().equals(orderId))
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy phiếu xuất kho"));
     }
 }

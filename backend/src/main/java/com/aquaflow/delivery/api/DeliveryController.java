@@ -60,6 +60,12 @@ public class DeliveryController {
         return ResponseEntity.created(URI.create("/api/v1/delivery/trips/" + id + "/orders/" + request.orderId())).body(order);
     }
 
+    @PostMapping("/{id}/dispatch")
+    public TripResponse dispatch(@PathVariable long id, @AuthenticationPrincipal AuthUserDetails user,
+                                 Authentication auth) {
+        return service.dispatch(id, user.user().getId(), canReadAll(auth));
+    }
+
     @GetMapping("/{id}/orders/{orderId}")
     public AssignmentResponse order(@PathVariable long id, @PathVariable long orderId,
             @AuthenticationPrincipal AuthUserDetails user, Authentication auth) {

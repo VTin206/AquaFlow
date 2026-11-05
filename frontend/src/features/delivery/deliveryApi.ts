@@ -71,12 +71,18 @@ export const deliveryApi = {
   detail: (id: number) => api.get<DeliveryTrip>(`${base}/${id}`),
   drivers: () => api.get<{ id: number; name: string }[]>('/delivery/drivers'),
   available: () =>
-    api.get<{ id: number; orderCode: string; recipientName: string | null; deliveryAddress: string | null; deliveryFailed: boolean }[]>(
-      '/delivery/available-orders',
-    ),
+    api.get<{
+      id: number
+      orderCode: string
+      recipientName: string | null
+      deliveryAddress: string | null
+      deliveryFailed: boolean
+      redeliveryEligible: boolean
+    }[]>('/delivery/available-orders'),
   create: (input: { driverId?: number; vehicle?: string }) => api.post<DeliveryTrip>(base, input),
   assign: (id: number, driverId: number) => api.put<DeliveryTrip>(`${base}/${id}/driver`, { driverId }),
-  add: (id: number, orderId: number) => api.post<DeliveryStop>(`${base}/${id}/orders`, { orderId }),
+  add: (id: number, orderId: number, redelivery = false) => api.post<DeliveryStop>(`${base}/${id}/orders`, { orderId, redelivery }),
+  dispatch: (id: number) => api.post<DeliveryTrip>(`${base}/${id}/dispatch`),
   remove: (id: number, orderId: number) => api.delete<DeliveryTrip>(`${base}/${id}/orders/${orderId}`),
   depart: (id: number) => api.put<DeliveryTrip>(`${base}/${id}/departure`),
   cancel: (id: number) => api.patch<DeliveryTrip>(`${base}/${id}`, { status: 'CANCELLED' }),

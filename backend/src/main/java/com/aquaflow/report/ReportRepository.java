@@ -15,7 +15,10 @@ public class ReportRepository {
     private static final String ORDERS="""
         WITH filtered AS (
           SELECT o.*, COALESCE(o.delivered_at, CASE WHEN o.fulfillment_type='COUNTER' THEN d.dispatched_at END) AS sold_at
-          FROM orders o LEFT JOIN order_dispatches d ON d.order_id=o.id
+          FROM orders o LEFT JOIN LATERAL (
+            SELECT dispatched_at FROM order_dispatches d0 WHERE d0.order_id=o.id
+            ORDER BY d0.dispatched_at DESC, d0.id DESC LIMIT 1
+          ) d ON TRUE
           WHERE (:channel IS NULL OR o.channel=:channel) AND (:method IS NULL OR o.fulfillment_type=:method)
         ), sold AS (
           SELECT * FROM filtered WHERE status IN ('DELIVERED','COMPLETED') AND sold_at>=:start AND sold_at<:end

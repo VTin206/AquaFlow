@@ -42,7 +42,7 @@ const paymentTagColors: Record<keyof typeof paymentStatusLabels, string> = {
   REFUNDED: 'default',
 }
 
-/** Chi tiết đơn: giữ hàng, chuẩn bị, xuất kho và xem phiếu xuất theo lô. */
+/** Chi tiết đơn: giữ hàng, chuẩn bị, xuất kho tại quầy và xem phiếu xuất theo lô. */
 export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => void }) {
   const staff = useStaff()
   const canManage = staff?.role === 'ADMIN' || staff?.role === 'SALES_STAFF'
@@ -150,7 +150,7 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
         )}
         {canDispatch(order) && (
           <Popconfirm
-            title={order.fulfillmentType === 'DELIVERY' ? 'Xuất kho để giao hàng?' : 'Bàn giao hàng cho khách tại quầy?'}
+            title="Bàn giao hàng cho khách tại quầy?"
             description="Xuất toàn bộ hàng đã giữ, trừ tồn thực tế và lập phiếu xuất. Sau bước này không thể hủy đơn trực tiếp."
             okText="Xuất kho"
             cancelText="Chưa"
@@ -158,7 +158,7 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
             okButtonProps={{ loading: dispatch.isPending }}
           >
             <Button type="primary" loading={dispatch.isPending} disabled={update.isPending || dispatch.isPending}>
-              {order.fulfillmentType === 'DELIVERY' ? 'Xuất kho giao hàng' : 'Xuất kho / giao tại quầy'}
+              Xuất kho / giao tại quầy
             </Button>
           </Popconfirm>
         )}
@@ -184,6 +184,15 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
           {order && (
             <>
               <OrderProgress order={order} />
+              {canManage && order.fulfillmentType === 'DELIVERY' && order.status === 'PREPARING' && (
+                <Alert
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                  title="Xuất kho đơn giao từ trang Giao hàng"
+                  description="Thêm đơn vào chuyến giao trước. Quản lý xuất kho toàn bộ đơn trong chuyến để tồn kho và trạng thái được cập nhật cùng nhau."
+                />
+              )}
               <Descriptions
                 column={{ xs: 1, sm: 2 }}
                 items={[
