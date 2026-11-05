@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, App, Button, Form, Input, InputNumber, Modal, Space, Table, Tabs } from 'antd'
+import { App, Button, Empty, Form, Input, InputNumber, Modal, Space, Table, Tabs } from 'antd'
 import { returnApi, usePendingReturns, type PendingReturn, type ReturnInspection } from '@/features/live/returnApi'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
+import { OrderFocusBanner } from '@/features/orders/components/OrderSheet'
 import { QueryError } from '@/shared/components/QueryError'
+import { modalWidth } from '@/shared/utils/modal'
 
 export function LiveReturnsPanel() {
   const pending = usePendingReturns()
@@ -11,41 +13,48 @@ export function LiveReturnsPanel() {
   const history = useQuery({ queryKey: ['live', 'returns', 'history', page], queryFn: () => returnApi.list(page) })
   const [selected, setSelected] = useState<PendingReturn | null>(null)
   const [detail, setDetail] = useState<ReturnInspection | null>(null)
+  const waiting = pending.data?.length ?? 0
   return (
     <>
-      <Alert
-        type="info"
-        showIcon
-        title="Kiểm hàng sau khi chuyến giao thất bại đã kết thúc."
-        description="Nhập số lượng thực nhận từng lô trong đợt này; chỉ phần bán lại được được cộng tồn. Hàng chưa mang về tiếp tục chờ kiểm ở đợt sau. Chỉ khi đã kiểm đủ hàng, đơn mới được hủy và có thể xếp chuyến giao lại. Phiếu hoàn không tự hoàn tiền."
-      />
       <Tabs
         items={[
           {
             key: 'pending',
-            label: `Chờ kiểm (${pending.data?.length ?? 0})`,
+            label: `Chờ kiểm (${waiting})`,
             children: pending.isError ? (
               <QueryError error={pending.error} onRetry={pending.refetch} />
             ) : (
-              <Table
-                rowKey="orderId"
-                loading={pending.isPending}
-                dataSource={pending.data}
-                scroll={{ x: 650 }}
-                columns={[
-                  { title: 'Đơn hàng', dataIndex: 'orderCode' },
-                  { title: 'Người nhận', dataIndex: 'recipientName' },
-                  { title: 'Lý do giao thất bại', dataIndex: 'failureReason' },
-                  {
-                    title: 'Thao tác',
-                    render: (_, row) => (
-                      <Button type="primary" onClick={() => setSelected(row)}>
-                        Kiểm hàng
-                      </Button>
-                    ),
-                  },
-                ]}
-              />
+              <>
+                {waiting > 0 && (
+                  <OrderFocusBanner
+                    focus={{
+                      tone: 'action',
+                      title: `Có ${waiting} đơn cần kiểm hàng hoàn`,
+                      description: 'Kiểm đủ hàng thì đơn mới giao lại hoặc hủy được. Phiếu hoàn không tự hoàn tiền.',
+                    }}
+                  />
+                )}
+                <Table
+                  rowKey="orderId"
+                  loading={pending.isPending}
+                  dataSource={pending.data}
+                  scroll={{ x: 650 }}
+                  locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có đơn chờ kiểm. Đơn giao thất bại sẽ hiện ở đây." /> }}
+                  columns={[
+                    { title: 'Đơn hàng', dataIndex: 'orderCode' },
+                    { title: 'Người nhận', dataIndex: 'recipientName' },
+                    { title: 'Lý do giao thất bại', dataIndex: 'failureReason' },
+                    {
+                      title: 'Thao tác',
+                      render: (_, row) => (
+                        <Button type="primary" onClick={() => setSelected(row)}>
+                          Kiểm hàng
+                        </Button>
+                      ),
+                    },
+                  ]}
+                />
+              </>
             ),
           },
           {
@@ -60,6 +69,7 @@ export function LiveReturnsPanel() {
                   loading={history.isPending}
                   dataSource={history.data}
                   pagination={false}
+                  locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có phiếu hoàn nào." /> }}
                   columns={[
                     { title: 'Phiếu', dataIndex: 'id' },
                     { title: 'Đơn', dataIndex: 'orderCode' },
@@ -82,24 +92,28 @@ export function LiveReturnsPanel() {
         ]}
       />
       {selected && <InspectionModal key={selected.orderId} order={selected} onClose={() => setSelected(null)} />}
-      <Modal open={!!detail} onCancel={() => setDetail(null)} footer={null} title={`Phiếu hoàn #${detail?.id ?? ''}`} width={800}>
-        <p>
-          Đơn {detail?.orderCode} · Người kiểm #{detail?.performedBy}
-        </p>
+      <Modal
+        open={!!detail}
+        onCancel={() => setDetail(null)}
+        footer={null}
+        title={`Phiếu hoàn #${detail?.id ?? ''} · ${detail?.orderCode ?? ''}`}
+        width={modalWidth.medium}
+      >
         <Table
           rowKey="loadItemId"
+          size="small"
           dataSource={detail?.lines}
           pagination={false}
           scroll={{ x: 600 }}
           columns={[
             { title: 'Sản phẩm', dataIndex: 'productName' },
             { title: 'Lô', dataIndex: 'lotCode' },
-            { title: 'Thực nhận đợt này', dataIndex: 'quantity' },
-            { title: 'Nhập kho', dataIndex: 'sellable' },
-            { title: 'Loại bỏ', render: (_, row) => row.quantity - (row.sellable ?? 0) },
+            { title: 'Thực nhận đợt này', dataIndex: 'quantity', align: 'right' },
+            { title: 'Nhập kho', dataIndex: 'sellable', align: 'right' },
+            { title: 'Loại bỏ', align: 'right', render: (_, row) => row.quantity - (row.sellable ?? 0) },
           ]}
         />
-        <p>{detail?.note}</p>
+        {detail?.note && <p className="af-form-hint">Ghi chú: {detail.note}</p>}
       </Modal>
     </>
   )
@@ -133,22 +147,30 @@ function InspectionModal({ order, onClose }: { order: PendingReturn; onClose: ()
     month: '2-digit',
     day: '2-digit',
   }).format(new Date())
+  const expired = (expiresOn: string) => expiresOn <= today
+  // Việc hay gặp nhất là hàng về đủ và còn tốt: bấm một lần rồi chỉ sửa lô khác đi. Lô đã hết hạn không tính bán lại được.
+  const fillAll = () =>
+    form.setFieldsValue({
+      lines: order.lines.map((line) => ({ quantity: line.quantity, sellable: expired(line.expiresOn) ? 0 : line.quantity })),
+    })
   return (
     <Modal
       open
-      title={`Kiểm hoàn · ${order.orderCode}`}
-      width={850}
+      title={`Kiểm hàng hoàn · ${order.orderCode}`}
+      width={modalWidth.medium}
       onCancel={onClose}
       okText="Lưu đợt nhận hàng"
+      cancelText="Đóng"
       confirmLoading={mutation.isPending}
       okButtonProps={{ disabled: received <= 0 }}
       onOk={() => form.submit()}
     >
-      <Alert
-        type="info"
-        showIcon
-        title={`Còn chờ sau đợt này: ${Math.max(0, outstanding)}`}
-        description="Để 0 nếu lô chưa được mang về. Hàng hỏng = thực nhận − bán lại được; không tính hàng chưa mang về là hàng hỏng. Phiếu đã lưu không thể sửa."
+      <OrderFocusBanner
+        focus={{
+          tone: outstanding > 0 ? 'action' : 'done',
+          title: `Còn chờ sau đợt này: ${Math.max(0, outstanding)}`,
+          description: 'Lô chưa mang về thì để 0, đợt sau kiểm tiếp. Phiếu đã lưu không sửa được.',
+        }}
       />
       <Form
         form={form}
@@ -166,18 +188,35 @@ function InspectionModal({ order, onClose }: { order: PendingReturn; onClose: ()
           mutation.mutate({ attemptId: order.attemptId, requestId, note: input.note, lines })
         }}
       >
+        <div className="af-return-fill">
+          <Button size="small" onClick={fillAll}>
+            Điền đủ, hàng còn tốt
+          </Button>
+        </div>
         <Table
           rowKey="loadItemId"
+          size="small"
           dataSource={order.lines}
           pagination={false}
-          scroll={{ x: 650 }}
+          scroll={{ x: 620 }}
           columns={[
-            { title: 'Sản phẩm', dataIndex: 'productName' },
-            { title: 'Lô', dataIndex: 'lotCode' },
-            { title: 'HSD', dataIndex: 'expiresOn' },
-            { title: 'Còn chờ', dataIndex: 'quantity' },
+            {
+              title: 'Sản phẩm / lô',
+              key: 'product',
+              render: (_, row) => (
+                <div className="af-cell-stack">
+                  <span>{row.productName}</span>
+                  <small className={expired(row.expiresOn) ? 'af-text-danger' : undefined}>
+                    Lô {row.lotCode} · HSD {row.expiresOn}
+                    {expired(row.expiresOn) ? ' (đã hết hạn)' : ''}
+                  </small>
+                </div>
+              ),
+            },
+            { title: 'Còn chờ', dataIndex: 'quantity', align: 'right', width: 80 },
             {
               title: 'Thực nhận',
+              width: 110,
               render: (_, row, i) => (
                 <Form.Item
                   name={['lines', i, 'quantity']}
@@ -190,28 +229,35 @@ function InspectionModal({ order, onClose }: { order: PendingReturn; onClose: ()
             },
             {
               title: 'Bán lại được',
+              width: 110,
               render: (_, row, i) => (
                 <Form.Item
                   name={['lines', i, 'sellable']}
                   dependencies={[['lines', i, 'quantity']]}
                   noStyle
-                  rules={[{ required: true }, { type: 'integer', min: 0, max: row.expiresOn <= today ? 0 : (values[i]?.quantity ?? 0) }]}
+                  rules={[{ required: true }, { type: 'integer', min: 0, max: expired(row.expiresOn) ? 0 : (values[i]?.quantity ?? 0) }]}
                 >
                   <InputNumber
                     aria-label={`Bán lại ${row.lotCode}`}
                     min={0}
-                    max={row.expiresOn <= today ? 0 : (values[i]?.quantity ?? 0)}
+                    max={expired(row.expiresOn) ? 0 : (values[i]?.quantity ?? 0)}
                     precision={0}
                   />
                 </Form.Item>
               ),
             },
-            { title: 'Hỏng / loại bỏ', render: (_, _row, i) => Math.max(0, (values[i]?.quantity ?? 0) - (values[i]?.sellable ?? 0)) },
+            {
+              title: 'Loại bỏ',
+              align: 'right',
+              width: 80,
+              render: (_, _row, i) => Math.max(0, (values[i]?.quantity ?? 0) - (values[i]?.sellable ?? 0)),
+            },
           ]}
         />
         <Form.Item
           name="note"
           label="Ghi chú tình trạng"
+          style={{ marginTop: 16 }}
           rules={[{ required: damaged, whitespace: true, message: 'Ghi rõ tình trạng hàng loại bỏ' }, { max: 300 }]}
         >
           <Input.TextArea rows={2} maxLength={300} />

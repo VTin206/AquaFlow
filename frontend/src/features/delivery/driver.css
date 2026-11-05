@@ -151,10 +151,22 @@
 .af-driver-actions .ant-btn {
   height: 48px;
 }
-.af-driver-result .ant-btn {
+/* Hành động chính của điểm giao chiếm cả hàng để dễ bấm trên điện thoại. */
+.af-driver-result,
+.af-driver-actions .af-driver-primary {
+  grid-column: 1 / -1;
+}
+.af-driver-result .ant-btn,
+.af-driver-actions .af-driver-primary {
   width: 100%;
   height: 48px;
   font-weight: 600;
+}
+.af-driver-summary .af-order-focus {
+  margin-bottom: 0;
+}
+.af-driver-stop .af-text-muted {
+  font-size: 12px;
 }
 .af-driver-finished {
   margin-top: 12px;

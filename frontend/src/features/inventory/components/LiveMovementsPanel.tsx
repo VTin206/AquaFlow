@@ -60,8 +60,8 @@ export function LiveMovementsPanel() {
           <Button onClick={() => void query.refetch()} loading={query.isFetching}>
             Làm mới
           </Button>
-          <Link to="/orders">
-            <Button>Xuất kho theo đơn</Button>
+          <Link to="/delivery">
+            <Button>Xuất kho theo chuyến</Button>
           </Link>
         </Space>
       </div>
@@ -178,7 +178,7 @@ export function LiveMovementsPanel() {
                 { key: 'quantity', label: 'Biến động', children: signed(row) },
                 { key: 'reference', label: 'Chứng từ', children: row.referenceCode },
                 { key: 'actor', label: 'Người thực hiện', children: row.performedByName },
-                { key: 'reason', label: 'Ghi chú', children: row.reason || '—' },
+                ...(row.reason ? [{ key: 'reason', label: 'Ghi chú', children: row.reason }] : []),
               ]}
             />
           )

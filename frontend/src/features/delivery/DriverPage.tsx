@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Alert, Button, Card, Empty, Progress, Select, Skeleton, Tag } from 'antd'
+import { Button, Card, Empty, Progress, Select, Skeleton, Tag } from 'antd'
 import { Clock3, Map, Package, Phone, Recycle, Wallet } from 'lucide-react'
 import { useStaff } from '@/features/auth/useStaff'
 import { QueryError } from '@/shared/components/QueryError'
@@ -8,11 +8,13 @@ import { dueTone } from '@/shared/utils/money'
 import { AdvanceStatusButton } from '@/features/orders/components/AdvanceStatusButton'
 import { OrderDetailsModal } from '@/features/orders/components/OrderDetailsModal'
 import { LateTag } from '@/features/orders/components/LateTag'
+import { OrderFocusBanner } from '@/features/orders/components/OrderSheet'
 import { OrderStatusTag } from '@/features/orders/components/OrderStatusTag'
 import { amountDue, deliveryAttempts, jugCount, type Order } from '@/features/orders/types'
 import { useOrders } from '@/features/orders/useOrders'
 import { TripStatusTag } from './components/TripStatusTag'
 import { drivers, type Trip } from './types'
+import { driverTripFocus } from './tripFocus'
 import { dispatchedIn, openIn } from './tripService'
 import { useTrips } from './useTrips'
 import { useIsDemo } from '@/shared/features'
@@ -139,18 +141,16 @@ function DriverTrip({ trip, stops, onDetails }: { trip: Trip; stops: Order[]; on
             <Recycle size={16} /> Vỏ cần đổi <strong>{jugs}</strong>
           </span>
         </div>
-        {/* Tài xế không xuất kho: cửa hàng Dispatch ở trang Giao hàng, xong mới đi giao. */}
-        {waiting > 0 && (
-          <Alert
-            type="info"
-            showIcon
-            title={`${waiting} đơn chờ cửa hàng xuất kho`}
-            description="Nhận hàng tại cửa hàng sau khi nhân viên xuất kho cho chuyến."
-          />
-        )}
-        {trip.status === 'Chờ đối soát' && (
-          <p className="af-driver-done">Đã giao hết các điểm. Về cửa hàng bàn giao tiền và vỏ để đối soát.</p>
-        )}
+        {/* Tài xế không xuất kho: cửa hàng xuất kho ở trang Giao hàng, xong mới đi giao. */}
+        <OrderFocusBanner
+          focus={driverTripFocus({
+            stage: 'delivering',
+            total: stops.length,
+            pending: pending.length,
+            waitingDispatch: waiting,
+            nextCustomer: pending[0]?.customer,
+          })}
+        />
       </Card>
 
       <ol className="af-driver-stops">
@@ -202,7 +202,7 @@ function DriverTrip({ trip, stops, onDetails }: { trip: Trip; stops: Order[]; on
               </Button>
               {order.status === 'Đang giao' && (
                 <span className="af-driver-result">
-                  <AdvanceStatusButton order={order} />
+                  <AdvanceStatusButton order={order} size="large" primary />
                 </span>
               )}
             </div>

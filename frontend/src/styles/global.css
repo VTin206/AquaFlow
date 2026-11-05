@@ -1844,6 +1844,11 @@ body {
 .af-order-trips header a {
   margin-left: auto;
 }
+.af-return-fill {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
 .af-trip-stop-actions {
   align-items: center;
   display: flex;
