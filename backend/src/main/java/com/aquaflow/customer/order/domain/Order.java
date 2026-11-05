@@ -212,13 +212,12 @@ public class Order {
 
     /** Only the transactional dispatch workflow may advance past PREPARING. */
     public void markDispatched() {
-        if (fulfillmentType != FulfillmentType.DELIVERY) {
-            throw new com.aquaflow.shared.api.ConflictException("Chỉ Dispatch đơn DELIVERY");
-        }
         if (status != OrderStatus.PREPARING) {
             throw new com.aquaflow.shared.api.ConflictException("Chỉ xuất kho đơn đang chuẩn bị");
         }
-        status = OrderStatus.OUT_FOR_DELIVERY;
+        status = fulfillmentType == FulfillmentType.DELIVERY
+                ? OrderStatus.OUT_FOR_DELIVERY
+                : OrderStatus.DELIVERED;
     }
 
     /** Reopens a failed delivery only after the delivery workflow has reserved replacement stock. */

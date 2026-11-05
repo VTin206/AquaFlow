@@ -34,7 +34,7 @@ public class OrderDispatchService {
         return createInternal(orderId, actorId, false, null);
     }
 
-    /** Delivery-trip dispatch calls this inside the trip-wide transaction. */
+    /** Delivery-trip dispatch calls this inside the target assignment transaction. */
     @Transactional
     public DispatchResponse createForTrip(Long orderId, Long actorId, Long tripId) {
         return createInternal(orderId, actorId, false, tripId);
@@ -64,11 +64,11 @@ public class OrderDispatchService {
                     ? "Không có phiếu xuất kho cũ để giao lại"
                     : "Đơn đã xuất kho; giao lại phải qua kiểm nhận và reservation mới");
         }
-        if (order.getFulfillmentType() != FulfillmentType.DELIVERY || order.getStatus() != OrderStatus.PREPARING)
-            throw new ConflictException("Chỉ Dispatch đơn DELIVERY đang PREPARING");
+        if (order.getStatus() != OrderStatus.PREPARING)
+            throw new ConflictException("Chỉ Dispatch đơn đang PREPARING");
         var lines = items.findAllByOrder_Id(orderId).stream()
                 .map(item -> new ReservationLine(item.getId(), item.getProductId(), item.getQuantity())).toList();
-        var exported = stock.dispatch(orderId, lines, actorId, false);
+        var exported = stock.dispatch(orderId, lines, actorId, order.getFulfillmentType() == FulfillmentType.COUNTER);
         order.markDispatched();
         orders.flush();
         return dispatches.create(orderId, actorId, order.getStatus(), exported);

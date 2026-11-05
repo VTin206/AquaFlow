@@ -173,7 +173,7 @@ export function LiveDeliveryPage({ driverView = false }: { driverView?: boolean 
                 {admin && trip.status === 'CREATED' && trip.orders.some((o) => o.orderStatus === 'PREPARING') && (
                   <Popconfirm
                     title={`Xuất kho toàn bộ ${trip.orders.filter((o) => o.orderStatus === 'PREPARING').length} đơn đang chuẩn bị?`}
-                    description="Thao tác xuất kho được thực hiện nguyên chuyến trong một transaction. Nếu một đơn lỗi, toàn bộ sẽ được hoàn tác."
+                    description="Các assignment được xuất kho độc lập. Nếu một assignment lỗi, những assignment đã hoàn tất trước đó vẫn được giữ nguyên."
                     onConfirm={() => execute(() => deliveryApi.dispatch(trip.id))}
                   >
                     <Button danger loading={change.isPending} disabled={change.isPending}>

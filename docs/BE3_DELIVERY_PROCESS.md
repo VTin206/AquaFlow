@@ -12,7 +12,7 @@ All endpoints require a JWT. ADMIN/SALES_STAFF may dispatch and inspect returns.
 | GET | `/api/v1/delivery/assignments/{id}/attempts/{attemptId}` | Scoped attempt detail |
 | POST | `/api/v1/delivery/attempts/{id}/return-inspection` | 201 inspection; Location points to inventory return detail |
 
-Dispatch has no required request body. It requires an active assignment on a CREATED trip and a DELIVERY order in PREPARING. It exports every order line in one transaction. Stock export must succeed before the status becomes OUT_FOR_DELIVERY; any failure rolls everything back. Duplicate assignment dispatch returns 409 without another stock movement. COUNTER is rejected by both assignment and legacy order Dispatch; its previous handover button is removed.
+Dispatch has no required request body. It requires an active assignment on a CREATED trip and a DELIVERY order in PREPARING. It exports every order line in the target assignment transaction. Stock export must succeed before the status becomes OUT_FOR_DELIVERY; any failure rolls the assignment back. Duplicate assignment dispatch returns 409 without another stock movement. COUNTER keeps its legacy handover flow and is not eligible for a delivery assignment.
 
 Attempt body: `{ "outcome": "FAILED", "failureReason": "Customer absent", "note": "..." }`, or `{ "outcome": "SUCCESS", "recipientName": "Actual recipient" }`. The trip must be IN_PROGRESS. The server records the timestamp. Each assignment accepts one outcome; a failed outcome cannot be overwritten by another attempt on the same assignment. Success sets DELIVERED, never COMPLETED. Failure only records the result and flag: no restock or reservation release.
 
@@ -20,7 +20,7 @@ Inspection body: `{ "lines": [{ "loadItemId": 123, "sellable": 2 }], "note": "Co
 
 `GET /api/v1/inventory/returns/pending` now includes `attemptId`. The warehouse UI uses it to submit inspection. After inspection the order is CANCELLED; `POST /delivery/trips/{id}/orders` with `{ "orderId": 123, "redelivery": true }` checks completed returns, creates new reservations and a new assignment, and prepares the order. Dispatch again uses the new assignment. Prior receipts, assignments and attempts remain readable.
 
-The existing trip-wide dispatch and trip/order attempt URLs are retained for compatibility and use the same underlying rules. Trip-wide dispatch remains atomic and skips already dispatched orders without exporting them twice. FE uses assignment attempt APIs, adds a per-order Dispatch button, and submits inspection through the attempt resource.
+The existing trip-wide dispatch and trip/order attempt URLs are retained for compatibility and use the same underlying rules. Trip-wide dispatch processes each active assignment independently, so a committed assignment is not rolled back when a later assignment fails; already dispatched orders are skipped without exporting them twice. FE uses assignment attempt APIs, adds a per-order Dispatch button, and submits inspection through the attempt resource.
 
 ## Verification
 
