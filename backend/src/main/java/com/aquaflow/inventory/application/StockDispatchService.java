@@ -29,16 +29,23 @@ public class StockDispatchService {
     public List<DispatchedLine> dispatch(Long orderId, List<ReservationLine> lines, Long actorId, boolean counter) {
         if (lines.isEmpty()) throw new ConflictException("Đơn không có hàng để xuất");
         var held = reservations.findByOrderItemIdIn(lines.stream().map(ReservationLine::orderItemId).toList());
+        List<StockReservation> active = new ArrayList<>();
         for (var line : lines) {
             var matching = held.stream().filter(r -> r.getOrderItemId().equals(line.orderItemId())).toList();
-            if (matching.isEmpty() || matching.stream().anyMatch(r -> r.getQuantityDispatched() != 0
-                    || r.getQuantityReleased() != 0 || !r.getBatch().getProduct().getId().equals(line.productId()))
-                    || matching.stream().mapToLong(StockReservation::getOutstanding).sum() != line.quantity()) {
+            if (matching.stream().anyMatch(r -> r.getOutstanding() > 0
+                    && (r.getQuantityDispatched() != 0 || r.getQuantityReleased() != 0))) {
+                throw new ConflictException("Reservation đang có lịch sử một phần dispatch/release không hợp lệ");
+            }
+            var current = matching.stream().filter(r -> r.getOutstanding() > 0).toList();
+            if (current.isEmpty() || current.stream().anyMatch(r ->
+                    !r.getBatch().getProduct().getId().equals(line.productId()))
+                    || current.stream().mapToLong(StockReservation::getOutstanding).sum() != line.quantity()) {
                 throw new ConflictException("Hàng giữ cho đơn không đầy đủ hoặc đã được xuất/giải phóng");
             }
+            active.addAll(current);
         }
         // Same product/FEFO order as reserve() to avoid lock inversions across orders.
-        var sorted = held.stream().sorted(Comparator
+        var sorted = active.stream().sorted(Comparator
                 .comparing((StockReservation r) -> r.getBatch().getProduct().getId())
                 .thenComparing(r -> r.getBatch().getExpiresOn())
                 .thenComparing(r -> r.getBatch().getId())).toList();

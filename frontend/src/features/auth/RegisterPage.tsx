@@ -4,7 +4,7 @@ import { Link } from 'react-router'
 import { RegisterForm } from './RegisterForm'
 import './login.css'
 
-/** Trang đăng ký tài khoản khách hàng; form và trạng thái "Chưa hỗ trợ" nằm trong `RegisterForm`. */
+/** Trang đăng ký tài khoản CUSTOMER qua RegisterForm dùng chung. */
 export function RegisterPage() {
   return (
     <div className="af-login-page">

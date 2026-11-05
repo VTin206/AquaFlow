@@ -50,9 +50,10 @@ public final class OrderStatusPolicy {
 
     public static boolean canPrepareForRedelivery(
             OrderStatus currentStatus,
-            FulfillmentType fulfillmentType) {
+            FulfillmentType fulfillmentType,
+            boolean deliveryFailed) {
 
         return currentStatus == OrderStatus.CANCELLED
-                && fulfillmentType == FulfillmentType.DELIVERY;
+                && fulfillmentType == FulfillmentType.DELIVERY
+                && deliveryFailed;
     }
-}

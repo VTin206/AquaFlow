@@ -3,24 +3,39 @@ package com.aquaflow.delivery.application;
 import com.aquaflow.delivery.api.DeliveryDtos.*;
 import com.aquaflow.delivery.repository.DeliveryRepository;
 import com.aquaflow.delivery.repository.DeliveryRepository.TripRow;
+import com.aquaflow.customer.order.api.dto.DispatchResponse;
+import com.aquaflow.customer.order.repository.OrderItemRepository;
+import com.aquaflow.customer.order.repository.OrderRepository;
+import com.aquaflow.inventory.application.RedeliveryReservationService;
+import com.aquaflow.inventory.application.ReservationLine;
 import com.aquaflow.shared.api.BadRequestException;
 import com.aquaflow.shared.api.ConflictException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 import java.util.List;
 
-/**
- * Trip management is separate from Dispatch. An order must already be dispatched
- * (OUT_FOR_DELIVERY + order_dispatches receipt) before it can enter a trip.
- */
+/** Trip assignments, inventory dispatch and delivery outcomes share one trip workflow. */
 @Service
 @Transactional(readOnly = true)
 public class DeliveryService {
     private final DeliveryRepository repository;
+    private final AssignmentDispatchService assignmentDispatch;
+    private final RedeliveryReservationService redeliveryReservations;
+    private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
 
-    public DeliveryService(DeliveryRepository repository) { this.repository = repository; }
+    public DeliveryService(DeliveryRepository repository, AssignmentDispatchService assignmentDispatch,
+                          RedeliveryReservationService redeliveryReservations,
+                          OrderRepository orderRepository, OrderItemRepository orderItemRepository) {
+        this.repository = repository;
+        this.assignmentDispatch = assignmentDispatch;
+        this.redeliveryReservations = redeliveryReservations;
+        this.orderRepository = orderRepository;
+        this.orderItemRepository = orderItemRepository;
+    }
 
     public List<TripResponse> list(long actorId, boolean admin) {
         return repository.listTrips(actorId, admin).stream().map(repository::viewTrip).toList();
@@ -53,6 +68,13 @@ public class DeliveryService {
         TripRow trip = repository.lockTrip(id);
         if ("CANCELLED".equals(trip.status())) return repository.viewTrip(trip);
         requireStatus(trip, "CREATED");
+        for (Long orderId : repository.assignedOrders(id)) {
+            var order = repository.lockOrder(orderId);
+            if ("OUT_FOR_DELIVERY".equals(order.status()) && repository.hasDispatch(orderId)) {
+                throw new ConflictException("Không thể hủy chuyến sau khi đã xuất kho; hãy khởi hành và ghi nhận kết quả giao");
+            }
+            rollbackPreparedRedelivery(orderId);
+        }
         repository.cancelTrip(id);
         return repository.viewTrip(repository.findTrip(id));
     }
@@ -84,17 +106,46 @@ public class DeliveryService {
 
         // This also serializes assignments to the same order from other trips.
         var order = repository.lockOrder(request.orderId());
-        if (!"DELIVERY".equals(order.fulfillmentType()) || !"OUT_FOR_DELIVERY".equals(order.status())) {
-            throw new ConflictException("Chỉ được thêm đơn giao tận nơi đã xuất kho");
-        }
-        if (!repository.hasDispatch(order.id())) {
-            throw new ConflictException("Đơn chưa có phiếu xuất kho");
-        }
         if (repository.isAssigned(order.id())) {
             throw new ConflictException("Đơn đã thuộc một chuyến khác");
         }
+        if (request.redelivery()) {
+            if (!"DELIVERY".equals(order.fulfillmentType()) || !"CANCELLED".equals(order.status())
+                    || !order.deliveryFailed() || !repository.hasDispatch(order.id())) {
+                throw new ConflictException("Chỉ đơn giao thất bại đã kiểm nhận hàng trả mới được giao lại");
+            }
+            var managedOrder = orderRepository.findForUpdateById(order.id())
+                    .orElseThrow(() -> new com.aquaflow.shared.api.NotFoundException("Không tìm thấy đơn hàng"));
+            var lines = orderItemRepository.findAllByOrder_Id(order.id()).stream()
+                    .map(item -> new ReservationLine(item.getId(), item.getProductId(), item.getQuantity())).toList();
+            if (lines.isEmpty()) throw new ConflictException("Đơn không có dòng hàng để giao lại");
+            redeliveryReservations.reserve(lines);
+            managedOrder.prepareForRedelivery();
+            orderRepository.flush();
+        } else if (!"DELIVERY".equals(order.fulfillmentType()) || !"PREPARING".equals(order.status())
+                || order.deliveryFailed() || repository.hasDispatch(order.id())) {
+            throw new ConflictException("Chỉ được thêm đơn DELIVERY đang PREPARING vào chuyến");
+        }
         repository.addOrder(tripId, order.id());
         return repository.viewTrip(repository.findTrip(tripId));
+    }
+
+    /** Dispatches each active assignment through its own transaction. */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public TripResponse dispatch(long tripId, long actorId, boolean admin) {
+        requireStoreStaff(admin);
+        List<Long> orderIds = repository.assignedOrders(tripId);
+        if (orderIds.isEmpty()) throw new ConflictException("Chuyến chưa có đơn hàng");
+        for (Long orderId : orderIds) {
+            assignmentDispatch.dispatchFromTrip(tripId, orderId, actorId, admin);
+        }
+        return repository.viewTrip(repository.findTrip(tripId));
+    }
+
+    /** Dispatch only the exact active assignment; other orders on the trip remain independent. */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public DispatchResponse dispatchAssignment(long tripId, long orderId, long actorId, boolean admin) {
+        return assignmentDispatch.dispatch(tripId, orderId, actorId, admin);
     }
 
     @Transactional
@@ -102,6 +153,12 @@ public class DeliveryService {
         requireStoreStaff(admin);
         TripRow trip = repository.lockTrip(tripId);
         requireStatus(trip, "CREATED");
+        repository.activeAssignment(tripId, orderId);
+        var order = repository.lockOrder(orderId);
+        if ("OUT_FOR_DELIVERY".equals(order.status()) && repository.hasDispatch(orderId)) {
+            throw new ConflictException("Không thể bỏ đơn khỏi chuyến sau khi đã xuất kho");
+        }
+        rollbackPreparedRedelivery(orderId);
         repository.removeOrder(tripId, orderId);
         return repository.viewTrip(repository.findTrip(tripId));
     }
@@ -135,8 +192,8 @@ public class DeliveryService {
         requireVisible(trip, actorId, admin);
         requireStatus(trip, "IN_PROGRESS");
         var assignment = repository.activeAssignment(tripId, orderId);
-        if (repository.latestOutcome(assignment.id()).orElse(null) == Outcome.SUCCESS) {
-            throw new ConflictException("Đơn đã được ghi nhận giao thành công");
+        if (repository.latestOutcome(assignment.id()).isPresent()) {
+            throw new ConflictException("Lần phân công đã có kết quả. Giao lại phải qua kiểm nhận hàng hoàn và phân công mới");
         }
         if (request.outcome() == Outcome.SUCCESS) {
             if (DeliveryRepository.clean(request.recipientName()) == null) {
@@ -183,6 +240,18 @@ public class DeliveryService {
     private String requireActiveDriver(long driverId) {
         return repository.activeDriverName(driverId).orElseThrow(() ->
                 new BadRequestException("Tài xế không tồn tại, không hoạt động hoặc không có role DELIVERY_STAFF"));
+    }
+
+    private void rollbackPreparedRedelivery(long orderId) {
+        var order = repository.lockOrder(orderId);
+        if (!"PREPARING".equals(order.status()) || !order.deliveryFailed() || !repository.hasDispatch(orderId)) return;
+        var managedOrder = orderRepository.findForUpdateById(orderId)
+                .orElseThrow(() -> new com.aquaflow.shared.api.NotFoundException("Không tìm thấy đơn hàng"));
+        var lines = orderItemRepository.findAllByOrder_Id(orderId).stream()
+                .map(item -> new ReservationLine(item.getId(), item.getProductId(), item.getQuantity())).toList();
+        redeliveryReservations.releaseBeforeDispatch(lines);
+        managedOrder.cancelPreparedRedelivery();
+        orderRepository.flush();
     }
 
     public CollectionsResponse collections(long tripId, long actorId, boolean storeStaff) {

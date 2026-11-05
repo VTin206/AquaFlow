@@ -30,27 +30,87 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Run against a disposable PostgreSQL instance; test transactions roll back. */
+/** Run against a disposable PostgreSQL instance. */
 @SpringBootTest(properties = "app.jwt.secret=test-test-test-test-test-test-test-test")
 @EnabledIfEnvironmentVariable(named = "DB_URL", matches = ".+")
-@Transactional
+@Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
 @AutoConfigureMockMvc
 class DeliveryPostgresIntegrationTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired DeliveryService service;
     @Autowired MockMvc mvc;
+    @Autowired com.aquaflow.delivery.application.DeliveryAssignmentService assignmentService;
+
+    @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void assignmentRestContractRejectsDuplicateDispatchAndRequiresReturnBeforeRedelivery() throws Exception {
+        long trip = service.create(new CreateTripRequest(driverId, null), ownerId, true).id();
+        long assignment = service.addOrder(trip, new AddOrderRequest(orderId), ownerId, true).orders().getFirst().id();
+        String base = "/api/v1/delivery/assignments/" + assignment;
+        mvc.perform(post(base + "/dispatch")).andExpect(status().isUnauthorized());
+        mvc.perform(post(base + "/dispatch").with(actor(driverId, "DELIVERY_STAFF"))).andExpect(status().isForbidden());
+        mvc.perform(post(base + "/dispatch").with(actor(ownerId, "SALES_STAFF")))
+            .andExpect(status().isCreated()).andExpect(header().exists("Location"))
+            .andExpect(jsonPath("$.orderStatus").value("OUT_FOR_DELIVERY"));
+        mvc.perform(post(base + "/dispatch").with(actor(ownerId, "ADMIN"))).andExpect(status().isConflict());
+        service.start(trip, driverId, false);
+        mvc.perform(get(base + "/attempts").with(actor(otherDriverId, "DELIVERY_STAFF"))).andExpect(status().isForbidden());
+        mvc.perform(post(base + "/attempts").with(actor(driverId, "DELIVERY_STAFF"))
+            .contentType("application/json").content("{\"outcome\":\"FAILED\"}")).andExpect(status().isBadRequest());
+        mvc.perform(post(base + "/attempts").with(actor(otherDriverId, "DELIVERY_STAFF"))
+            .contentType("application/json").content("{\"outcome\":\"FAILED\",\"failureReason\":\"Absent\"}"))
+            .andExpect(status().isForbidden());
+        mvc.perform(post(base + "/attempts").with(actor(driverId, "DELIVERY_STAFF"))
+            .contentType("application/json").content("{\"outcome\":\"FAILED\",\"failureReason\":\"Absent\"}"))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.attemptedAt").isNotEmpty());
+        mvc.perform(post(base + "/attempts").with(actor(driverId, "DELIVERY_STAFF"))
+            .contentType("application/json").content("{\"outcome\":\"SUCCESS\",\"recipientName\":\"Customer\"}"))
+            .andExpect(status().isConflict());
+        mvc.perform(get(base + "/attempts").with(actor(driverId, "DELIVERY_STAFF")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].outcome").value("FAILED"));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM inventory_movements WHERE reference_type='ORDER' AND reference_id=? AND movement_type='RETURN'", Integer.class, orderId)).isZero();
+        long attempt = assignmentService.attempts(assignment, driverId, false).getFirst().id();
+        service.settle(trip, new SettleTripRequest(BigDecimal.ZERO, BigDecimal.ZERO, 0, 0, null), ownerId, true);
+        var pending = returns.pending().stream().filter(p -> p.orderId() == orderId).findFirst().orElseThrow();
+        String body = "{\"lines\":[{\"loadItemId\":" + pending.lines().getFirst().loadItemId() + ",\"sellable\":2}]}";
+        String inspection = "/api/v1/delivery/attempts/" + attempt + "/return-inspection";
+        mvc.perform(post(inspection).with(actor(driverId, "DELIVERY_STAFF")).contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(post(inspection).with(actor(ownerId, "SALES_STAFF")).contentType("application/json").content(body)).andExpect(status().isCreated());
+        mvc.perform(post(inspection).with(actor(ownerId, "ADMIN")).contentType("application/json").content(body)).andExpect(status().isConflict());
+        long nextTrip = service.create(new CreateTripRequest(driverId, null), ownerId, true).id();
+        long next = service.addOrder(nextTrip, new AddOrderRequest(orderId, true), ownerId, true).orders().getFirst().id();
+        assertThat(next).isNotEqualTo(assignment);
+        mvc.perform(post("/api/v1/delivery/assignments/" + next + "/dispatch").with(actor(ownerId, "ADMIN"))).andExpect(status().isCreated());
+        service.start(nextTrip, driverId, false);
+        mvc.perform(post("/api/v1/delivery/assignments/" + next + "/attempts").with(actor(driverId, "DELIVERY_STAFF"))
+            .contentType("application/json").content("{\"outcome\":\"SUCCESS\",\"recipientName\":\"Customer\"}"))
+            .andExpect(status().isCreated());
+        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id=?", String.class, orderId)).isEqualTo("DELIVERED");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_dispatches WHERE order_id=?", Integer.class, orderId)).isEqualTo(2);
+        assertThat(assignmentService.attempts(assignment, driverId, false).getFirst().outcome()).isEqualTo(Outcome.FAILED);
+    }
 
     @Autowired com.aquaflow.inventory.application.InventoryReturnService returns;
+
+    private long dispatch(long trip) {
+        return service.dispatch(trip, ownerId, true).id();
+    }
+
+    private void startTrip(long trip, long driver) {
+        dispatch(trip);
+        service.start(trip, driver, false);
+    }
 
     private long failedTrip() {
         long trip = service.create(new CreateTripRequest(driverId, null), ownerId, true).id();
         service.addOrder(trip, new AddOrderRequest(orderId), ownerId, true);
-        service.start(trip, driverId, false);
+        startTrip(trip, driverId);
         service.recordResult(trip, orderId, new DeliveryResultRequest(Outcome.FAILED, null, "Vắng nhà", null), driverId, false);
         return trip;
     }
 
     @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     void returnInspectionRestocksOnlySellableAndCannotBeRepeated() throws Exception {
         long trip = failedTrip();
         assertThat(returns.pending()).noneMatch(p -> p.orderId() == orderId);
@@ -67,7 +127,7 @@ class DeliveryPostgresIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id=?", String.class, orderId)).isEqualTo("CANCELLED");
         assertThat(jdbc.queryForObject("SELECT quantity_returned FROM delivery_load_items WHERE id=?", Integer.class, line)).isEqualTo(2);
         mvc.perform(post(base).with(actor(ownerId, "ADMIN")).contentType("application/json").content(body)).andExpect(status().isConflict());
-        assertThat(service.availableOrders(true)).noneMatch(o -> o.id() == orderId);
+        assertThat(service.availableOrders(true)).anyMatch(o -> o.id() == orderId && o.redeliveryEligible());
         assertThat(returns.pending()).noneMatch(p -> p.orderId() == orderId);
     }
 
@@ -89,8 +149,8 @@ class DeliveryPostgresIntegrationTest {
             .content("{\"orderId\":"+orderId+",\"lines\":[{\"loadItemId\":"+line+",\"sellable\":2}]}")).andExpect(status().isBadRequest());
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM inventory_returns WHERE order_id=?", Integer.class, orderId)).isZero();
         long retry = service.create(new CreateTripRequest(driverId, null), ownerId, true).id();
-        service.addOrder(retry, new AddOrderRequest(orderId), ownerId, true);
-        assertThat(returns.pending()).noneMatch(p -> p.orderId() == orderId);
+        assertThatThrownBy(() -> service.addOrder(retry, new AddOrderRequest(orderId, true), ownerId, true))
+                .isInstanceOf(ConflictException.class);
         service.cancel(retry, ownerId, true);
         assertThat(returns.pending()).anyMatch(p -> p.orderId() == orderId);
     }
@@ -120,6 +180,9 @@ class DeliveryPostgresIntegrationTest {
     long driverId;
     long otherDriverId;
     long orderId;
+    long productId;
+    long batchId;
+    long itemId;
 
     @BeforeEach
     void prepare() {
@@ -129,33 +192,31 @@ class DeliveryPostgresIntegrationTest {
         ownerId = user("ADMIN", id + "-owner@delivery.test");
         driverId = user("DELIVERY_STAFF", id + "-driver@delivery.test");
         otherDriverId = user("DELIVERY_STAFF", id + "-other@delivery.test");
-        long productId = jdbc.queryForObject("""
+        productId = jdbc.queryForObject("""
                 INSERT INTO products(sku, name, unit, sale_price) VALUES (?, 'Test water', 'binh', 15000)
                 RETURNING id
                 """, Long.class, id);
-        long batchId = jdbc.queryForObject("""
+        batchId = jdbc.queryForObject("""
                 INSERT INTO product_batches(product_id, lot_code, expires_on)
                 VALUES (?, ?, ?) RETURNING id
                 """, Long.class, productId, id, LocalDate.now().plusDays(90));
         orderId = jdbc.queryForObject("""
                 INSERT INTO orders(order_code, channel, fulfillment_type, status, created_by,
                                    recipient_name, delivery_address)
-                VALUES (?, 'PHONE', 'DELIVERY', 'OUT_FOR_DELIVERY', ?, 'Nguyen A', '1 Test St')
+                VALUES (?, 'PHONE', 'DELIVERY', 'PREPARING', ?, 'Nguyen A', '1 Test St')
                 RETURNING id
                 """, Long.class, id, ownerId);
-        long itemId = jdbc.queryForObject("""
+        itemId = jdbc.queryForObject("""
                 INSERT INTO order_items(order_id, product_id, quantity, unit_price, line_total)
                 VALUES (?, ?, 2, 15000, 30000) RETURNING id
                 """, Long.class, orderId, productId);
-        long dispatchId = jdbc.queryForObject("""
-                INSERT INTO order_dispatches(order_id, performed_by, order_status)
-                VALUES (?, ?, 'OUT_FOR_DELIVERY') RETURNING id
-                """, Long.class, orderId, ownerId);
         jdbc.update("""
-                INSERT INTO order_dispatch_items(dispatch_id, order_item_id, product_id, batch_id,
-                                                 lot_code, expires_on, quantity)
-                VALUES (?, ?, ?, ?, ?, ?, 2)
-                """, dispatchId, itemId, productId, batchId, id, LocalDate.now().plusDays(90));
+                INSERT INTO inventory_balances(batch_id, on_hand, reserved) VALUES (?, 2, 2)
+                """, batchId);
+        jdbc.update("""
+                INSERT INTO stock_reservations(order_item_id, batch_id, quantity_reserved)
+                VALUES (?, ?, 2)
+                """, itemId, batchId);
     }
 
     private long user(String role, String email) {
@@ -197,8 +258,10 @@ class DeliveryPostgresIntegrationTest {
             jdbc.update("DELETE FROM delivery_trips WHERE id IN (?, ?)", firstTrip, secondTrip);
             jdbc.update("DELETE FROM order_dispatch_items WHERE dispatch_id IN (SELECT id FROM order_dispatches WHERE order_id = ?)", orderId);
             jdbc.update("DELETE FROM order_dispatches WHERE order_id = ?", orderId);
+            jdbc.update("DELETE FROM stock_reservations WHERE order_item_id IN (SELECT id FROM order_items WHERE order_id = ?)", orderId);
             jdbc.update("DELETE FROM order_items WHERE order_id = ?", orderId);
             jdbc.update("DELETE FROM orders WHERE id = ?", orderId);
+            jdbc.update("DELETE FROM inventory_balances WHERE batch_id IN (SELECT id FROM product_batches WHERE product_id = ?)", productId);
             jdbc.update("DELETE FROM product_batches WHERE product_id = ?", productId);
             jdbc.update("DELETE FROM products WHERE id = ?", productId);
             jdbc.update("DELETE FROM users WHERE id IN (?, ?, ?)", ownerId, driverId, otherDriverId);
@@ -224,6 +287,12 @@ class DeliveryPostgresIntegrationTest {
         mvc.perform(post(base + "/" + trip + "/orders").with(actor(ownerId, "ADMIN"))
                 .contentType("application/json").content("{\"orderId\":" + orderId + "}"))
                 .andExpect(status().isCreated()).andExpect(header().string("Location", base + "/" + trip + "/orders/" + orderId));
+        mvc.perform(post(base + "/" + trip + "/dispatch").with(actor(driverId, "DELIVERY_STAFF")))
+                .andExpect(status().isForbidden());
+        mvc.perform(post(base + "/" + trip + "/dispatch").with(actor(ownerId, "ADMIN")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.orders[0].orderStatus").value("OUT_FOR_DELIVERY"));
+        assertThatThrownBy(() -> service.cancel(trip, ownerId, true)).isInstanceOf(ConflictException.class);
+        assertThatThrownBy(() -> service.removeOrder(trip, orderId, ownerId, true)).isInstanceOf(ConflictException.class);
         mvc.perform(put(base + "/" + trip + "/departure").with(actor(driverId, "DELIVERY_STAFF")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("IN_PROGRESS"));
         mvc.perform(post(base + "/" + trip + "/orders/" + orderId + "/attempts").with(actor(driverId, "DELIVERY_STAFF"))
@@ -252,19 +321,38 @@ class DeliveryPostgresIntegrationTest {
     }
 
     @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     void failedDeliveryCanMoveToNewTripAfterHandoverAndHistoryRemainsVisible() {
         long trip = service.create(new CreateTripRequest(driverId, null), ownerId, true).id();
         service.addOrder(trip, new AddOrderRequest(orderId), ownerId, true);
-        service.start(trip, driverId, false);
+        startTrip(trip, driverId);
         service.start(trip, driverId, false);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM delivery_load_items WHERE assignment_id IN (SELECT id FROM delivery_assignments WHERE trip_id = ?)", Long.class, trip)).isEqualTo(1);
         service.recordResult(trip, orderId, new DeliveryResultRequest(Outcome.FAILED, null, "Vắng nhà", null), driverId, false);
         service.settle(trip, new SettleTripRequest(BigDecimal.ZERO, BigDecimal.ZERO, 0, 0, null), ownerId, true);
         assertThat(service.get(trip, ownerId, true).orders()).hasSize(1);
-        assertThat(service.availableOrders(true)).anyMatch(o -> o.id() == orderId && o.deliveryFailed());
+        assertThat(service.availableOrders(true)).noneMatch(o -> o.id() == orderId);
+        var pending = returns.pending().stream().filter(p -> p.orderId() == orderId).findFirst().orElseThrow();
+        returns.create(new com.aquaflow.inventory.api.ReturnDtos.Create(orderId,
+                List.of(new com.aquaflow.inventory.api.ReturnDtos.LineInput(
+                        pending.lines().getFirst().loadItemId(), 2)), null), ownerId);
+        assertThat(service.availableOrders(true)).anyMatch(o -> o.id() == orderId && o.redeliveryEligible());
+        long abandoned = service.create(new CreateTripRequest(otherDriverId, null), ownerId, true).id();
+        service.addOrder(abandoned, new AddOrderRequest(orderId, true), ownerId, true);
+        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id = ?", String.class, orderId)).isEqualTo("PREPARING");
+        assertThat(jdbc.queryForObject("SELECT reserved FROM inventory_balances WHERE batch_id = ?", Integer.class, batchId)).isEqualTo(2);
+        service.cancel(abandoned, ownerId, true);
+        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id = ?", String.class, orderId)).isEqualTo("CANCELLED");
+        assertThat(jdbc.queryForObject("SELECT reserved FROM inventory_balances WHERE batch_id = ?", Integer.class, batchId)).isZero();
         long replacement = service.create(new CreateTripRequest(otherDriverId, null), ownerId, true).id();
-        service.addOrder(replacement, new AddOrderRequest(orderId), ownerId, true);
-        service.start(replacement, otherDriverId, false);
+        service.addOrder(replacement, new AddOrderRequest(orderId, true), ownerId, true);
+        startTrip(replacement, otherDriverId);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_dispatches WHERE order_id = ?", Integer.class, orderId))
+                .isEqualTo(2);
+        assertThat(jdbc.queryForObject("""
+                SELECT SUM(quantity_loaded) FROM delivery_load_items l
+                JOIN delivery_assignments a ON a.id = l.assignment_id WHERE a.trip_id = ?
+                """, Integer.class, replacement)).isEqualTo(2);
         service.recordResult(replacement, orderId, new DeliveryResultRequest(Outcome.SUCCESS, "Khách", null, null), otherDriverId, false);
         assertThat(service.get(trip, ownerId, true).orders().getFirst().latestAttempt().outcome()).isEqualTo(Outcome.FAILED);
         assertThat(service.availableOrders(true)).noneMatch(o -> o.id() == orderId);
@@ -275,6 +363,7 @@ class DeliveryPostgresIntegrationTest {
         long trip = service.create(new CreateTripRequest(driverId, null), ownerId, true).id();
         assertThatThrownBy(() -> service.start(trip, driverId, false)).isInstanceOf(ConflictException.class);
         service.addOrder(trip, new AddOrderRequest(orderId), ownerId, true);
+        dispatch(trip);
         service.start(trip, driverId, false);
         assertThatThrownBy(() -> service.cancel(trip, ownerId, true)).isInstanceOf(ConflictException.class);
         assertThatThrownBy(() -> service.settle(trip, new SettleTripRequest(BigDecimal.ZERO, BigDecimal.ZERO, 0, 0, null), ownerId, true))
@@ -293,16 +382,11 @@ class DeliveryPostgresIntegrationTest {
                 new DeliveryResultRequest(Outcome.SUCCESS, "Nguoi nhan", null, null), driverId, false))
                 .isInstanceOf(ConflictException.class);
 
+        dispatch(tripId);
         var started = service.start(tripId, driverId, false);
         assertThat(started.status()).isEqualTo("IN_PROGRESS");
         assertThat(jdbc.queryForObject("SELECT SUM(quantity_loaded) FROM delivery_load_items WHERE assignment_id = ?",
                 Long.class, started.orders().getFirst().id())).isEqualTo(2L);
-
-        service.recordResult(tripId, orderId,
-                new DeliveryResultRequest(Outcome.FAILED, null, "Khach vang nha", null), driverId, false);
-        assertThat(jdbc.queryForObject("SELECT delivery_failed FROM orders WHERE id = ?", Boolean.class, orderId)).isTrue();
-        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id = ?", String.class, orderId))
-                .isEqualTo("OUT_FOR_DELIVERY");
 
         service.recordResult(tripId, orderId,
                 new DeliveryResultRequest(Outcome.SUCCESS, "Nguoi nhan", null, "Giao lai thanh cong"), driverId, false);
@@ -310,7 +394,9 @@ class DeliveryPostgresIntegrationTest {
                 .isEqualTo("DELIVERED");
         assertThat(jdbc.queryForObject("SELECT payment_status FROM orders WHERE id = ?", String.class, orderId))
                 .isEqualTo("UNPAID");
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM inventory_movements WHERE reference_type = 'ORDER' AND reference_id = ?",
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM inventory_movements WHERE reference_type = 'ORDER' AND reference_id = ? AND movement_type = 'DISPATCH'",
+                Long.class, orderId)).isEqualTo(1L);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM inventory_movements WHERE reference_type = 'ORDER' AND reference_id = ? AND movement_type = 'RETURN'",
                 Long.class, orderId)).isZero();
 
         var completed = service.settle(tripId,
@@ -320,6 +406,56 @@ class DeliveryPostgresIntegrationTest {
         assertThatThrownBy(() -> service.settle(tripId,
                 new SettleTripRequest(BigDecimal.ZERO, BigDecimal.ZERO, 0, 0, null), ownerId, true))
                 .isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void tripDispatchKeepsEarlierAssignmentWhenLaterAssignmentCannotReserveStock() {
+        long secondOrder = jdbc.queryForObject("""
+                INSERT INTO orders(order_code, channel, fulfillment_type, status, created_by,
+                                   recipient_name, delivery_address)
+                VALUES (?, 'PHONE', 'DELIVERY', 'PREPARING', ?, 'Nguyen B', '2 Test St')
+                RETURNING id
+                """, Long.class, UUID.randomUUID().toString(), ownerId);
+        jdbc.update("""
+                INSERT INTO order_items(order_id, product_id, quantity, unit_price, line_total)
+                VALUES (?, ?, 1, 15000, 15000)
+                """, secondOrder, productId);
+        long trip = service.create(new CreateTripRequest(driverId, null), ownerId, true).id();
+        service.addOrder(trip, new AddOrderRequest(orderId), ownerId, true);
+        service.addOrder(trip, new AddOrderRequest(secondOrder), ownerId, true);
+
+        assertThatThrownBy(() -> service.dispatch(trip, ownerId, true)).isInstanceOf(ConflictException.class);
+        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id = ?", String.class, orderId)).isEqualTo("OUT_FOR_DELIVERY");
+        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id = ?", String.class, secondOrder)).isEqualTo("PREPARING");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_dispatches WHERE order_id = ?",
+                Integer.class, orderId)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_dispatches WHERE order_id = ?",
+                Integer.class, secondOrder)).isZero();
+        assertThat(jdbc.queryForObject("SELECT on_hand FROM inventory_balances WHERE batch_id = ?", Integer.class, batchId)).isZero();
+        assertThat(jdbc.queryForObject("SELECT reserved FROM inventory_balances WHERE batch_id = ?", Integer.class, batchId)).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM inventory_movements WHERE reference_type='ORDER' AND reference_id=?",
+                Integer.class, orderId)).isEqualTo(1);
+    }
+
+    @Test
+    void redeliveryRequiresInspectedReturnAndAvailableStockAndRollsBackOnShortage() {
+        long trip = failedTrip();
+        service.settle(trip, new SettleTripRequest(BigDecimal.ZERO, BigDecimal.ZERO, 0, 0, null), ownerId, true);
+        var pending = returns.pending().stream().filter(p -> p.orderId() == orderId).findFirst().orElseThrow();
+        returns.create(new com.aquaflow.inventory.api.ReturnDtos.Create(orderId,
+                List.of(new com.aquaflow.inventory.api.ReturnDtos.LineInput(
+                        pending.lines().getFirst().loadItemId(), 0)), "Hàng hỏng"), ownerId);
+
+        long retry = service.create(new CreateTripRequest(otherDriverId, null), ownerId, true).id();
+        assertThatThrownBy(() -> service.addOrder(retry, new AddOrderRequest(orderId, true), ownerId, true))
+                .isInstanceOf(ConflictException.class);
+        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id = ?", String.class, orderId)).isEqualTo("CANCELLED");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM delivery_assignments WHERE order_id = ? AND active", Integer.class, orderId))
+                .isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_dispatches WHERE order_id = ?", Integer.class, orderId))
+                .isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT on_hand FROM inventory_balances WHERE batch_id = ?", Integer.class, batchId)).isZero();
     }
 
     @Test
@@ -339,6 +475,7 @@ class DeliveryPostgresIntegrationTest {
     @Test void driverCollectionsAreScopedIdempotentAndUpdatePaymentStatus() throws Exception {
         long trip = service.create(new CreateTripRequest(driverId, null), ownerId, true).id();
         service.addOrder(trip, new AddOrderRequest(orderId), ownerId, true);
+        dispatch(trip);
         service.start(trip, driverId, false);
         jdbc.update("UPDATE orders SET subtotal=30000 WHERE id=?", orderId);
         String path = "/api/v1/delivery/trips/"+trip+"/orders/"+orderId+"/collections";
@@ -365,6 +502,8 @@ class DeliveryPostgresIntegrationTest {
             .content("{\"orderId\":"+orderId+"}")).andExpect(status().isCreated());
         mvc.perform(put(base+"/"+trip+"/driver").with(actor(driverId,"DELIVERY_STAFF")).contentType("application/json")
             .content("{\"driverId\":"+otherDriverId+"}")).andExpect(status().isForbidden());
+        mvc.perform(post(base+"/"+trip+"/dispatch").with(actor(ownerId,"SALES_STAFF")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.orders[0].orderStatus").value("OUT_FOR_DELIVERY"));
         mvc.perform(put(base+"/"+trip+"/departure").with(actor(ownerId,"SALES_STAFF"))).andExpect(status().isOk());
         service.recordResult(trip,orderId,new DeliveryResultRequest(Outcome.SUCCESS,"Recipient",null,null),driverId,false);
         mvc.perform(put(base+"/"+trip+"/settlement").with(actor(ownerId,"SALES_STAFF")).contentType("application/json")

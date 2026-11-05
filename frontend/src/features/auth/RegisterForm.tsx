@@ -1,19 +1,61 @@
-import { Alert, Button, Checkbox, Form, Input, Tooltip } from 'antd'
+import { useState } from 'react'
+import { Alert, Button, Checkbox, Form, Input } from 'antd'
+import { Link } from 'react-router'
 import { LockKeyhole, Mail, Phone, UserRound, UserRoundPlus } from 'lucide-react'
-import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
+import { authService } from './authService'
 import { focusNextOnEnter } from '@/shared/utils/forms'
 
 type RegisterValues = { fullName: string; phone: string; email: string; password: string; confirm: string; agree: boolean }
 
 /**
  * Form đăng ký tài khoản khách hàng, dùng ở trang /register và khung đăng nhập trên trang khách.
- * BE chưa có API đăng ký (AuthController chỉ có login, me) nên nút gửi bị khóa "Chưa hỗ trợ". Khi có API thì nối vào `onFinish`.
+ * Tạo tài khoản CUSTOMER qua API; sau đó khách đăng nhập bằng email và mật khẩu vừa chọn.
  */
 export function RegisterForm({ size = 'large' }: { size?: 'middle' | 'large' }) {
   const [form] = Form.useForm<RegisterValues>()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string>()
+  const [registered, setRegistered] = useState(false)
+  const submit = async (values: RegisterValues) => {
+    setLoading(true)
+    setError(undefined)
+    try {
+      await authService.register(values)
+      form.resetFields()
+      setRegistered(true)
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Đăng ký thất bại. Vui lòng thử lại.')
+    } finally {
+      setLoading(false)
+    }
+  }
+  if (registered)
+    return (
+      <Alert
+        type="success"
+        showIcon
+        title="Tạo tài khoản thành công"
+        description="Bạn có thể đăng nhập để đặt hàng và xem đơn của mình."
+        action={
+          <Link to="/shop/account">
+            <Button type="primary">Đăng nhập</Button>
+          </Link>
+        }
+      />
+    )
   return (
     <>
-      <Form form={form} name="register" layout="vertical" requiredMark={false} autoComplete="on" onKeyDown={focusNextOnEnter}>
+      {error && <Alert type="error" showIcon title={error} style={{ marginBottom: 16 }} />}
+      <Form
+        form={form}
+        name="register"
+        layout="vertical"
+        requiredMark={false}
+        autoComplete="on"
+        onKeyDown={focusNextOnEnter}
+        onFinish={submit}
+        disabled={loading}
+      >
         <Form.Item
           label="Họ và tên"
           name="fullName"
@@ -54,6 +96,12 @@ export function RegisterForm({ size = 'large' }: { size?: 'middle' | 'large' }) 
               { required: true, message: 'Nhập mật khẩu.' },
               { min: 8, message: 'Mật khẩu tối thiểu 8 ký tự.' },
               { max: 128, message: 'Mật khẩu tối đa 128 ký tự.' },
+              {
+                validator: (_, value) =>
+                  !value || new TextEncoder().encode(value).length <= 72
+                    ? Promise.resolve()
+                    : Promise.reject(new Error('Mật khẩu tối đa 72 byte UTF-8.')),
+              },
             ]}
           >
             <Input.Password
@@ -92,22 +140,10 @@ export function RegisterForm({ size = 'large' }: { size?: 'middle' | 'large' }) 
         >
           <Checkbox>Tôi đồng ý với điều khoản sử dụng của cửa hàng</Checkbox>
         </Form.Item>
-        <Tooltip title={UNSUPPORTED_HINT}>
-          {/* span giữ tooltip khi nút bị khóa */}
-          <span style={{ display: 'block' }}>
-            <Button type="primary" size={size} htmlType="submit" block disabled icon={<UserRoundPlus size={18} />}>
-              Tạo tài khoản (chưa hỗ trợ)
-            </Button>
-          </span>
-        </Tooltip>
+        <Button type="primary" size={size} htmlType="submit" block loading={loading} icon={<UserRoundPlus size={18} />}>
+          Tạo tài khoản
+        </Button>
       </Form>
-      <div style={{ marginTop: 16 }}>
-        <Alert
-          type="info"
-          showIcon
-          title="Đăng ký tài khoản khách hàng chưa hỗ trợ: backend chưa có API đăng ký. Bạn vẫn đặt hàng được mà không cần tài khoản."
-        />
-      </div>
     </>
   )
 }

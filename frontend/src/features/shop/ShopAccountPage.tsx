@@ -19,10 +19,11 @@ import { devAccounts } from '@/features/auth/devAccounts'
 import { RegisterForm } from '@/features/auth/RegisterForm'
 import { useAuth } from '@/features/auth/useAuth'
 import { useStaff } from '@/features/auth/useStaff'
+import { accountDestination, isCustomer } from '@/features/auth/accountAccess'
 
 /**
  * Trang tài khoản trong cửa hàng (bố cục kiểu Uniqlo): đăng nhập bên trái, tạo tài khoản hoặc mua không cần tài khoản bên phải.
- * BE mới có tài khoản nhân viên nên đăng nhập xong vào trang quản lý; tài khoản khách còn chờ API.
+ * Dùng cùng API đăng nhập; khách vào đơn của mình, nhân viên vào không gian quản lý.
  */
 export function ShopAccountPage() {
   const { login, logout, enterDemo, isAuthenticated, user } = useAuth()
@@ -64,8 +65,8 @@ export function ShopAccountPage() {
             <small>{staff ? `${staff.roleName}${staff.isDemo ? ' · dùng thử' : ''}` : user.role}</small>
           </div>
           <div className="af-shop-account-actions">
-            <Button type="primary" icon={<LayoutDashboard size={16} />} onClick={() => navigate('/')}>
-              Trang quản lý
+            <Button type="primary" icon={<LayoutDashboard size={16} />} onClick={() => navigate(accountDestination(user))}>
+              {isCustomer(user) ? 'Đơn hàng của tôi' : 'Trang quản lý'}
             </Button>
             <Button danger icon={<LogOut size={16} />} onClick={() => logout()}>
               Đăng xuất
@@ -85,7 +86,7 @@ export function ShopAccountPage() {
             type="info"
             showIcon
             style={{ marginBottom: 20 }}
-            title="Hiện chỉ tài khoản nhân viên đăng nhập được; đăng nhập xong sẽ vào trang quản lý cửa hàng."
+            title="Khách hàng đăng nhập để xem đơn của mình. Nhân viên đăng nhập để vào trang quản lý."
           />
           {error && <Alert type="error" showIcon style={{ marginBottom: 20 }} title={error} />}
           <Form<LoginCredentials>

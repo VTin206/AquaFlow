@@ -88,6 +88,25 @@ public class StockReservationService {
         }
     }
 
+    /** Release only reservations that have never been dispatched; keep completed dispatch history intact. */
+    @Transactional
+    public void releaseUndispatched(Collection<Long> orderItemIds) {
+        List<StockReservation> reservations = reservationRepository.findByOrderItemIdIn(orderItemIds).stream()
+                .filter(reservation -> reservation.getQuantityDispatched() == 0)
+                .sorted(Comparator.comparing((StockReservation r) -> r.getBatch().getProduct().getId())
+                        .thenComparing(r -> r.getBatch().getExpiresOn())
+                        .thenComparing(r -> r.getBatch().getId()))
+                .toList();
+        for (StockReservation reservation : reservations) {
+            int released = reservation.releaseOutstanding();
+            if (released == 0) continue;
+            InventoryBalance balance = balanceRepository.findForUpdateByBatchId(reservation.getBatch().getId())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Missing inventory balance for batch " + reservation.getBatch().getId()));
+            balance.release(released);
+        }
+    }
+
     private List<StockReservation> reserveLine(ReservationLine line, LocalDate today) {
         List<InventoryBalance> balances = balanceRepository.lockSellableByProductFefo(line.productId(), today);
         int available = balances.stream().mapToInt(InventoryBalance::getAvailable).sum();

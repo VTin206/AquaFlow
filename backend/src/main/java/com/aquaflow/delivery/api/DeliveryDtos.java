@@ -22,12 +22,15 @@ public final class DeliveryDtos {
 
     public record AssignDriverRequest(@NotNull @Positive Long driverId) {}
 
-    public record AddOrderRequest(@NotNull @Positive Long orderId) {}
+    public record AddOrderRequest(@NotNull @Positive Long orderId, boolean redelivery) {
+        public AddOrderRequest(Long orderId) { this(orderId, false); }
+    }
 
     public record UpdateTripRequest(@NotNull @Pattern(regexp = "CANCELLED") String status) {}
     public record DriverResponse(Long id, String name) {}
     public record AvailableOrderResponse(Long id, String orderCode, String recipientName,
-                                         String deliveryAddress, boolean deliveryFailed) {}
+                                         String deliveryAddress, boolean deliveryFailed,
+                                         boolean redeliveryEligible) {}
     public record LoadLineResponse(Long productId, String productName, String unit,
                                     String lotCode, int quantity) {}
 

@@ -3,6 +3,7 @@ package com.aquaflow.delivery.api;
 import com.aquaflow.auth.security.AuthUserDetails;
 import com.aquaflow.delivery.api.DeliveryDtos.*;
 import com.aquaflow.delivery.application.DeliveryService;
+import com.aquaflow.customer.order.api.dto.DispatchResponse;
 import com.aquaflow.shared.api.ApiError;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -58,6 +59,20 @@ public class DeliveryController {
         var trip = service.addOrder(id, request, user.user().getId(), canReadAll(auth));
         var order = trip.orders().stream().filter(o -> o.orderId().equals(request.orderId())).findFirst().orElseThrow();
         return ResponseEntity.created(URI.create("/api/v1/delivery/trips/" + id + "/orders/" + request.orderId())).body(order);
+    }
+
+    @PostMapping("/{id}/dispatch")
+    public TripResponse dispatch(@PathVariable long id, @AuthenticationPrincipal AuthUserDetails user,
+                                 Authentication auth) {
+        return service.dispatch(id, user.user().getId(), canReadAll(auth));
+    }
+
+    @PostMapping("/{id}/orders/{orderId}/dispatch")
+    public ResponseEntity<DispatchResponse> dispatchAssignment(@PathVariable long id, @PathVariable long orderId,
+            @AuthenticationPrincipal AuthUserDetails user, Authentication auth) {
+        DispatchResponse result = service.dispatchAssignment(id, orderId, user.user().getId(), canReadAll(auth));
+        return ResponseEntity.created(URI.create("/api/v1/sales/orders/" + orderId + "/dispatches/" + result.id()))
+                .body(result);
     }
 
     @GetMapping("/{id}/orders/{orderId}")

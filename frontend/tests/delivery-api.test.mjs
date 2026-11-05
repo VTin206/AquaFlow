@@ -29,7 +29,8 @@ test('delivery adapter uses REST resources, passes result/handover data and pres
     await deliveryApi.available()
     await deliveryApi.create({ driverId: 2, vehicle: '59A' })
     await deliveryApi.assign(7, 3)
-    await deliveryApi.add(7, 8)
+    await deliveryApi.add(7, 8, true)
+    await deliveryApi.dispatch(7)
     await deliveryApi.remove(7, 8)
     await deliveryApi.depart(7)
     const result = { outcome: 'FAILED', failureReason: 'Khách vắng', note: 'Gọi lại chiều' }
@@ -38,6 +39,12 @@ test('delivery adapter uses REST resources, passes result/handover data and pres
     const settlement = { cashReported: 100, cashConfirmed: 90, bottlesExpected: 2, bottlesConfirmed: 2, note: 'Thiếu 10' }
     await deliveryApi.settle(7, settlement)
     await deliveryApi.cancel(7)
+    await deliveryApi.dispatchAssignment(21)
+    await deliveryApi.assignmentResult(21, result)
+    await deliveryApi.assignmentAttempts(21)
+    const { returnApi } = await import('/src/features/live/returnApi.ts')
+    const requestId = '0480e2ca-c740-4409-b00a-798e79f16732'
+    await returnApi.inspectAttempt({ attemptId: 31, requestId, lines: [{ loadItemId: 41, quantity: 3, sellable: 2 }], note: 'Checked' })
     assert.deepEqual(
       requests.map((r) => [r.method, r.url]),
       [
@@ -47,17 +54,25 @@ test('delivery adapter uses REST resources, passes result/handover data and pres
         ['POST', '/api/v1/delivery/trips'],
         ['PUT', '/api/v1/delivery/trips/7/driver'],
         ['POST', '/api/v1/delivery/trips/7/orders'],
+        ['POST', '/api/v1/delivery/trips/7/dispatch'],
         ['DELETE', '/api/v1/delivery/trips/7/orders/8'],
         ['PUT', '/api/v1/delivery/trips/7/departure'],
         ['POST', '/api/v1/delivery/trips/7/orders/8/attempts'],
         ['GET', '/api/v1/delivery/trips/7/orders/8/attempts'],
         ['PUT', '/api/v1/delivery/trips/7/settlement'],
         ['PATCH', '/api/v1/delivery/trips/7'],
+        ['POST', '/api/v1/delivery/assignments/21/dispatch'],
+        ['POST', '/api/v1/delivery/assignments/21/attempts'],
+        ['GET', '/api/v1/delivery/assignments/21/attempts'],
+        ['POST', '/api/v1/delivery/attempts/31/return-inspection'],
       ],
     )
-    assert.deepEqual(requests[8].body, result)
-    assert.deepEqual(requests[10].body, settlement)
-    assert.deepEqual(requests[11].body, { status: 'CANCELLED' })
+    assert.deepEqual(requests[5].body, { orderId: 8, redelivery: true })
+    assert.deepEqual(requests[9].body, result)
+    assert.deepEqual(requests[11].body, settlement)
+    assert.deepEqual(requests[12].body, { status: 'CANCELLED' })
+    assert.deepEqual(requests[14].body, result)
+    assert.deepEqual(requests[16].body, { requestId, lines: [{ loadItemId: 41, quantity: 3, sellable: 2 }], note: 'Checked' })
     await assert.rejects(deliveryApi.detail(999), (error) => error.status === 403 && error.message.includes('chuyến của mình'))
   } finally {
     httpClient.defaults.baseURL = previousUrl

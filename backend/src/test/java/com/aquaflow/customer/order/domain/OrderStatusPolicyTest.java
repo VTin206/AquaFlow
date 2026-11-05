@@ -128,7 +128,27 @@ class OrderStatusPolicyTest {
     }
 
     @Test
-    void rejectsPreparingBackToPending() {
+    void redeliveryIsAllowedOnlyThroughDedicatedWorkflowForFailedDelivery() {
+        assertTrue(OrderStatusPolicy.canPrepareForRedelivery(
+                OrderStatus.CANCELLED, FulfillmentType.DELIVERY, true));
+
+        assertFalse(OrderStatusPolicy.canPrepareForRedelivery(
+                OrderStatus.CANCELLED, FulfillmentType.DELIVERY, false));
+
+        assertFalse(OrderStatusPolicy.canPrepareForRedelivery(
+                OrderStatus.CANCELLED, FulfillmentType.COUNTER, true));
+
+        assertFalse(OrderStatusPolicy.canPrepareForRedelivery(
+                OrderStatus.OUT_FOR_DELIVERY, FulfillmentType.DELIVERY, true));
+
+        assertFalse(OrderStatusPolicy.canTransition(
+                OrderStatus.CANCELLED,
+                OrderStatus.PREPARING,
+                FulfillmentType.DELIVERY));
+    }
+
+    @Test
+    void rejectsTransitionFromPreparingBackToPending() {
         assertFalse(OrderStatusPolicy.canTransition(
                 OrderStatus.PREPARING,
                 OrderStatus.PENDING,

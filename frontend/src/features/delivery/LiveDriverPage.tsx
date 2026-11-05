@@ -85,7 +85,7 @@ function DriverTrip({ trip }: { trip: DeliveryTrip }) {
   })
   const attempts = useQuery({
     queryKey: ['live', 'driver-attempts', user?.email, trip.id, history?.orderId],
-    queryFn: () => deliveryApi.attempts(trip.id, history!.orderId),
+    queryFn: () => deliveryApi.assignmentAttempts(history!.id),
     enabled: !!history,
   })
   const change = useMutation({
@@ -100,6 +100,8 @@ function DriverTrip({ trip }: { trip: DeliveryTrip }) {
   })
   const done = trip.orders.filter((o) => o.latestAttempt).length
   const active = trip.status === 'IN_PROGRESS'
+  const waitingForDispatch = trip.orders.some((order) => order.orderStatus !== 'OUT_FOR_DELIVERY')
+  const cannotDepart = !trip.orders.length || !trip.driverId || waitingForDispatch || change.isPending
   const stop = (order: DeliveryStop) => {
     const balance = receipts.data?.balances.find((b) => b.orderId === order.orderId)
     const returned = receipts.data?.receipts.filter((r) => r.orderId === order.orderId).reduce((sum, r) => sum + r.bottlesReturned, 0) ?? 0
@@ -157,7 +159,7 @@ function DriverTrip({ trip }: { trip: DeliveryTrip }) {
               Thu tiền / nhận vỏ
             </Button>
           )}
-          {active && order.latestAttempt?.outcome !== 'SUCCESS' && (
+          {active && !order.latestAttempt && (
             <Button size="large" type="primary" disabled={change.isPending} onClick={() => setResult(order)}>
               Ghi kết quả giao
             </Button>
@@ -195,12 +197,22 @@ function DriverTrip({ trip }: { trip: DeliveryTrip }) {
           </div>
         )}
         {receipts.isError && <QueryError error={receipts.error} onRetry={receipts.refetch} />}
+        {trip.status === 'CREATED' && waitingForDispatch && (
+          <Alert
+            type="info"
+            showIcon
+            title="Chờ cửa hàng xuất kho"
+            description="Chỉ có thể bắt đầu chuyến khi tất cả đơn đã được xuất kho."
+            style={{ marginBottom: 12 }}
+          />
+        )}
         {trip.status === 'CREATED' && (
           <Popconfirm
             title="Đã nhận đủ hàng và bắt đầu giao?"
+            disabled={cannotDepart}
             onConfirm={() => change.mutateAsync(() => deliveryApi.depart(trip.id)).catch(() => {})}
           >
-            <Button type="primary" disabled={!trip.orders.length || !trip.driverId} loading={change.isPending}>
+            <Button type="primary" disabled={cannotDepart} loading={change.isPending}>
               Bắt đầu chuyến
             </Button>
           </Popconfirm>
@@ -228,7 +240,7 @@ function DriverTrip({ trip }: { trip: DeliveryTrip }) {
           onSubmit={async (values) => {
             try {
               await change.mutateAsync(() =>
-                deliveryApi.result(trip.id, result.orderId, {
+                deliveryApi.assignmentResult(result.id, {
                   outcome: values.outcome!,
                   recipientName: values.outcome === 'SUCCESS' ? values.recipientName : undefined,
                   failureReason: values.outcome === 'FAILED' ? values.failureReason : undefined,

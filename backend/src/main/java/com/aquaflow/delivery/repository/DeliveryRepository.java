@@ -25,7 +25,7 @@ public class DeliveryRepository {
                           String status, Long createdBy, OffsetDateTime createdAt,
                           OffsetDateTime startedAt, OffsetDateTime endedAt) {}
 
-    public record OrderRow(Long id, String status, String fulfillmentType) {}
+    public record OrderRow(Long id, String status, String fulfillmentType, boolean deliveryFailed) {}
 
     public record AssignmentRow(Long id, Long orderId) {}
 
@@ -73,13 +73,18 @@ public class DeliveryRepository {
 
     public List<AvailableOrderResponse> availableOrders() {
         return jdbc.query("""
-                SELECT o.id, o.order_code, o.recipient_name, o.delivery_address, o.delivery_failed
-                FROM orders o WHERE o.status = 'OUT_FOR_DELIVERY' AND o.fulfillment_type = 'DELIVERY'
-                  AND EXISTS (SELECT 1 FROM order_dispatches d WHERE d.order_id = o.id)
+                SELECT o.id, o.order_code, o.recipient_name, o.delivery_address, o.delivery_failed,
+                       (o.status = 'CANCELLED' AND o.delivery_failed
+                        AND EXISTS (SELECT 1 FROM inventory_returns r WHERE r.order_id = o.id)) AS redelivery_eligible
+                FROM orders o WHERE o.fulfillment_type = 'DELIVERY'
+                  AND ((o.status = 'PREPARING' AND NOT o.delivery_failed)
+                    OR (o.status = 'CANCELLED' AND o.delivery_failed
+                        AND EXISTS (SELECT 1 FROM inventory_returns r WHERE r.order_id = o.id)))
                   AND NOT EXISTS (SELECT 1 FROM delivery_assignments a WHERE a.order_id = o.id AND a.active)
                 ORDER BY o.created_at, o.id
                 """, (rs, i) -> new AvailableOrderResponse(rs.getLong("id"), rs.getString("order_code"),
-                rs.getString("recipient_name"), rs.getString("delivery_address"), rs.getBoolean("delivery_failed")));
+                rs.getString("recipient_name"), rs.getString("delivery_address"), rs.getBoolean("delivery_failed"),
+                rs.getBoolean("redelivery_eligible")));
     }
 
     public void cancelTrip(long id) {
@@ -104,7 +109,9 @@ public class DeliveryRepository {
         return jdbc.query("""
                 SELECT di.product_id, p.name, p.unit, di.lot_code, di.quantity
                 FROM order_dispatch_items di JOIN order_dispatches d ON d.id = di.dispatch_id
-                JOIN products p ON p.id = di.product_id WHERE d.order_id = ? ORDER BY di.id
+                JOIN products p ON p.id = di.product_id
+                WHERE d.id = (SELECT id FROM order_dispatches WHERE order_id = ? ORDER BY dispatched_at DESC, id DESC LIMIT 1)
+                ORDER BY di.id
                 """, (rs, i) -> new LoadLineResponse(rs.getLong("product_id"), rs.getString("name"),
                 rs.getString("unit"), rs.getString("lot_code"), rs.getInt("quantity")), orderId);
     }
@@ -122,9 +129,9 @@ public class DeliveryRepository {
     }
 
     public OrderRow lockOrder(long orderId) {
-        return jdbc.query("SELECT id, status, fulfillment_type FROM orders WHERE id = ? FOR UPDATE",
+        return jdbc.query("SELECT id, status, fulfillment_type, delivery_failed FROM orders WHERE id = ? FOR UPDATE",
                 (rs, i) -> new OrderRow(rs.getLong("id"), rs.getString("status"),
-                        rs.getString("fulfillment_type")), orderId)
+                        rs.getString("fulfillment_type"), rs.getBoolean("delivery_failed")), orderId)
                 .stream().findFirst().orElseThrow(() -> new NotFoundException("Không tìm thấy đơn hàng"));
     }
 
@@ -133,10 +140,64 @@ public class DeliveryRepository {
                 "SELECT EXISTS(SELECT 1 FROM order_dispatches WHERE order_id = ?)", Boolean.class, orderId));
     }
 
+    public record AssignmentContext(long id, long tripId, long orderId, boolean active) {}
+
+    public AssignmentContext assignment(long id) {
+        return jdbc.query("SELECT id, trip_id, order_id, active FROM delivery_assignments WHERE id = ?",
+                (rs, n) -> new AssignmentContext(rs.getLong("id"), rs.getLong("trip_id"), rs.getLong("order_id"), rs.getBoolean("active")), id)
+                .stream().findFirst().orElseThrow(() -> new NotFoundException("Không tìm thấy phân công giao hàng"));
+    }
+
+    public AssignmentContext assignmentForAttempt(long id) {
+        Long assignmentId = jdbc.query("SELECT assignment_id FROM delivery_attempts WHERE id = ?",
+                (rs, n) -> rs.getLong(1), id).stream().findFirst()
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy lần giao"));
+        return assignment(assignmentId);
+    }
+
     public boolean isAssigned(long orderId) {
         return Boolean.TRUE.equals(jdbc.queryForObject(
                 "SELECT EXISTS(SELECT 1 FROM delivery_assignments WHERE order_id = ? AND active)",
                 Boolean.class, orderId));
+    }
+
+    /** Lock a valid dispatch assignment before the order/stock rows are locked by the dispatch service. */
+    public Long lockDispatchableTripForOrder(long orderId) {
+        List<Long> tripIds = jdbc.query("""
+                SELECT t.id
+                FROM delivery_assignments a
+                JOIN delivery_trips t ON t.id = a.trip_id
+                JOIN users u ON u.id = t.driver_id
+                JOIN roles r ON r.id = u.role_id
+                WHERE a.order_id = ? AND a.active
+                  AND t.status = 'CREATED'
+                  AND u.status = 'ACTIVE' AND r.code = 'DELIVERY_STAFF'
+                ORDER BY a.id
+                LIMIT 2
+                FOR UPDATE OF t, a
+                """, (rs, row) -> rs.getLong("id"), orderId);
+        if (tripIds.size() != 1) {
+            throw new ConflictException("Đơn DELIVERY phải thuộc một Assignment đang hoạt động trong Trip CREATED có tài xế hợp lệ");
+        }
+        return tripIds.getFirst();
+    }
+
+    /** The trip dispatch path must dispatch the exact active assignment it already locked. */
+    public void lockDispatchableAssignment(long tripId, long orderId) {
+        boolean valid = !jdbc.query("""
+                SELECT t.id
+                FROM delivery_assignments a
+                JOIN delivery_trips t ON t.id = a.trip_id
+                JOIN users u ON u.id = t.driver_id
+                JOIN roles r ON r.id = u.role_id
+                WHERE a.trip_id = ? AND a.order_id = ? AND a.active
+                  AND t.status = 'CREATED'
+                  AND u.status = 'ACTIVE' AND r.code = 'DELIVERY_STAFF'
+                FOR UPDATE OF t, a
+                """, (rs, row) -> rs.getLong("id"), tripId, orderId).isEmpty();
+        if (!valid) {
+            throw new ConflictException("Assignment không còn hoạt động hoặc Trip/tài xế không hợp lệ để Dispatch");
+        }
     }
 
     public void addOrder(long tripId, long orderId) {
@@ -172,7 +233,9 @@ public class DeliveryRepository {
                 INSERT INTO delivery_load_items(assignment_id, order_item_id, batch_id, quantity_loaded)
                 SELECT a.id, di.order_item_id, di.batch_id, di.quantity
                 FROM delivery_assignments a
-                JOIN order_dispatches d ON d.order_id = a.order_id
+                JOIN order_dispatches d ON d.id = (
+                    SELECT latest.id FROM order_dispatches latest WHERE latest.order_id = a.order_id
+                    ORDER BY latest.dispatched_at DESC, latest.id DESC LIMIT 1)
                 JOIN order_dispatch_items di ON di.dispatch_id = d.id
                 WHERE a.trip_id = ? AND a.order_id = ? AND a.active
                 """, tripId, orderId);

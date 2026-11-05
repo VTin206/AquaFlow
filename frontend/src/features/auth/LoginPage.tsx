@@ -7,6 +7,7 @@ import { focusNextOnEnter } from '@/shared/utils/forms'
 import { useAuth } from './useAuth'
 import type { LoginCredentials } from './authService'
 import { devAccounts } from './devAccounts'
+import { accountDestination } from './accountAccess'
 import './login.css'
 
 const REMEMBERED_EMAIL_KEY = 'aquaflow.auth.remembered-email'
@@ -14,7 +15,7 @@ type LoginFormValues = LoginCredentials & { rememberMe?: boolean }
 
 export function LoginPage() {
   const { message } = App.useApp()
-  const { login, enterDemo, isAuthenticated } = useAuth()
+  const { login, enterDemo, isAuthenticated, user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [helpOpen, setHelpOpen] = useState(false)
@@ -29,7 +30,6 @@ export function LoginPage() {
       if (rememberMe) localStorage.setItem(REMEMBERED_EMAIL_KEY, email.trim())
       else localStorage.removeItem(REMEMBERED_EMAIL_KEY)
       message.success('Đăng nhập thành công.')
-      navigate(returnTo, { replace: true })
     } catch (error) {
       message.error(error instanceof Error ? error.message : 'Đăng nhập thất bại.')
     } finally {
@@ -43,8 +43,8 @@ export function LoginPage() {
   }
 
   useEffect(() => {
-    if (isAuthenticated) navigate(returnTo, { replace: true })
-  }, [isAuthenticated, navigate, returnTo])
+    if (isAuthenticated) navigate(accountDestination(user, returnTo), { replace: true })
+  }, [isAuthenticated, user, navigate, returnTo])
 
   return (
     <div className="af-login-page">

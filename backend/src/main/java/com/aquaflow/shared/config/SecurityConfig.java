@@ -60,7 +60,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/health", "/error").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/register").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/store-profile").permitAll()
                         // Public catalog is intentionally limited to the existing collection/detail endpoints.
                         // Do not use /** here: future administrative sub-resources must not become public by accident.
@@ -80,6 +80,17 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/sales/**").hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers(HttpMethod.POST, "/api/v1/customer/orders/guest").permitAll()
                         .requestMatchers("/api/v1/delivery/drivers", "/api/v1/delivery/available-orders").hasAnyRole("ADMIN", "SALES_STAFF")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/delivery/trips").hasAnyRole("ADMIN", "SALES_STAFF")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/delivery/assignments/*/dispatch", "/api/v1/delivery/attempts/*/return-inspection")
+                                .hasAnyRole("ADMIN", "SALES_STAFF")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/delivery/trips/*/orders", "/api/v1/delivery/trips/*/dispatch")
+                                .hasAnyRole("ADMIN", "SALES_STAFF")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/delivery/trips/*/orders/*/dispatch")
+                                .hasAnyRole("ADMIN", "SALES_STAFF")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/delivery/trips/*/driver", "/api/v1/delivery/trips/*/settlement")
+                                .hasAnyRole("ADMIN", "SALES_STAFF")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/delivery/trips/*").hasAnyRole("ADMIN", "SALES_STAFF")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/delivery/trips/*/orders/*").hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers(HttpMethod.GET, "/api/v1/delivery/**").hasAnyRole("ADMIN", "SALES_STAFF", "DELIVERY_STAFF")
                         .requestMatchers("/api/v1/delivery/**").hasAnyRole("ADMIN", "SALES_STAFF", "DELIVERY_STAFF")
                         .requestMatchers("/api/v1/customer/**").hasAnyRole("ADMIN", "CUSTOMER")
