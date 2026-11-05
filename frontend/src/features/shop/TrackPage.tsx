@@ -1,16 +1,15 @@
 import { useEffect, useState } from 'react'
-import { Alert, App, Button, Card, Form, Input, Result, Skeleton, Steps, Tooltip, Typography } from 'antd'
+import { Alert, App, Button, Card, Form, Input, Result, Skeleton, Steps, Typography } from 'antd'
 import { Copy, Hash, LogIn, Phone, RefreshCw, Search, ShoppingBag } from 'lucide-react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { Money } from '@/shared/components/Money'
-import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 import { focusNextOnEnter } from '@/shared/utils/forms'
 import { TransferQr } from '@/shared/payment/TransferQr'
 import { dueTone } from '@/shared/utils/money'
 import { currency } from '@/shared/utils/format'
 import type { PublicOrder } from '@/features/orders/types'
 import { useSettings } from '@/features/settings/settingsService'
-import { lookupOrder, useShopFeature, useTrackedOrder } from './shopService'
+import { lookupOrder, useShopContact, useShopFeature, useTrackedOrder } from './shopService'
 
 const stepOf: Record<PublicOrder['status'], number> = {
   'Chờ xác nhận': 0,
@@ -23,27 +22,44 @@ const stepOf: Record<PublicOrder['status'], number> = {
   'Đã hủy': 0,
 }
 
-/**
- * Tra cứu đơn không cần tài khoản (bố cục như trang tài khoản): mã đơn + số điện thoại đặt hàng.
- * Tài khoản thật: BE chưa có API công khai tra đơn theo mã + số điện thoại nên nút tra cứu bị khóa.
- */
-function LookupForm({ supported }: { supported: boolean }) {
+/** Chưa tra cứu trực tuyến được: chỉ cho khách cách làm được ngay, không hiện form không dùng được. */
+function LookupHelp() {
+  const phone = useShopContact()?.phone?.trim()
+  return (
+    <div className="af-shop-page af-shop-account-page">
+      <header>
+        <h1>Hỏi về đơn hàng của bạn</h1>
+        <p>Đọc mã đơn cho cửa hàng để được báo tình trạng đơn. Mã đơn có trong màn hình đặt hàng thành công.</p>
+      </header>
+      <div className="af-shop-account-grid">
+        <section aria-label="Liên hệ cửa hàng">
+          <p>{phone ? 'Gọi cửa hàng trong giờ mở cửa:' : 'Vui lòng liên hệ cửa hàng để hỏi tình trạng đơn.'}</p>
+          {phone && (
+            <a href={`tel:${phone.replace(/\s/g, '')}`}>
+              <Button type="primary" size="large" block icon={<Phone size={18} />}>
+                {phone}
+              </Button>
+            </a>
+          )}
+        </section>
+        <section className="af-shop-account-side" aria-label="Lựa chọn khác">
+          <p>Có tài khoản? Đăng nhập để xem mọi đơn đã đặt.</p>
+          <Link to="/shop/account">
+            <Button size="large" block icon={<LogIn size={18} />}>
+              Đăng nhập
+            </Button>
+          </Link>
+        </section>
+      </div>
+    </div>
+  )
+}
+
+/** Tra cứu đơn không cần tài khoản (bố cục như trang tài khoản): mã đơn + số điện thoại đặt hàng. */
+function LookupForm() {
   const navigate = useNavigate()
   const [error, setError] = useState<string>()
   const [loading, setLoading] = useState(false)
-  const submit = (
-    <Button
-      type="primary"
-      size="large"
-      htmlType="submit"
-      loading={loading}
-      disabled={!supported}
-      icon={<Search size={18} />}
-      className="af-shop-account-submit"
-    >
-      {supported ? 'Tra cứu' : 'Tra cứu (chưa hỗ trợ)'}
-    </Button>
-  )
   return (
     <div className="af-shop-page af-shop-account-page">
       <header>
@@ -52,14 +68,6 @@ function LookupForm({ supported }: { supported: boolean }) {
       </header>
       <div className="af-shop-account-grid">
         <section aria-label="Tra cứu đơn">
-          {!supported && (
-            <Alert
-              type="info"
-              showIcon
-              style={{ marginBottom: 20 }}
-              title="Tra cứu đơn trực tuyến chưa hỗ trợ: backend chưa có API tra đơn theo mã đơn và số điện thoại. Vui lòng gọi cửa hàng để hỏi tình trạng đơn."
-            />
-          )}
           <Form
             layout="vertical"
             requiredMark={false}
@@ -93,13 +101,9 @@ function LookupForm({ supported }: { supported: boolean }) {
               <Input size="large" prefix={<Phone size={17} aria-hidden />} inputMode="tel" placeholder="0901 234 567" />
             </Form.Item>
             {error && <Alert type="error" showIcon title={error} style={{ marginBottom: 16 }} />}
-            {supported ? (
-              submit
-            ) : (
-              <Tooltip title={UNSUPPORTED_HINT}>
-                <span style={{ display: 'inline-block' }}>{submit}</span>
-              </Tooltip>
-            )}
+            <Button type="primary" size="large" htmlType="submit" loading={loading} icon={<Search size={18} />} className="af-shop-account-submit">
+              Tra cứu
+            </Button>
           </Form>
         </section>
         <section className="af-shop-account-side" aria-label="Lựa chọn khác">
@@ -321,19 +325,11 @@ export function TrackPage() {
   useEffect(() => {
     if (!token) document.title = 'Tra cứu đơn hàng'
   }, [token])
-  if (!token) return <LookupForm supported={supported} />
+  if (!supported) return <LookupHelp />
+  if (!token) return <LookupForm />
   return (
     <div className="af-shop-page af-shop-narrow">
-      {supported ? (
-        <TrackedOrder token={token} />
-      ) : (
-        <Result
-          status="info"
-          title="Tra cứu đơn trực tuyến chưa hỗ trợ"
-          subTitle="Backend chưa có API tra đơn công khai."
-          extra={<Link to="/track">Về trang tra cứu</Link>}
-        />
-      )}
+      <TrackedOrder token={token} />
     </div>
   )
 }

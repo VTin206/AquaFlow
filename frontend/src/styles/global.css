@@ -368,6 +368,35 @@ body {
 .af-sider-link:hover {
   background: var(--af-surface-hover);
 }
+.af-help-steps {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  line-height: 1.7;
+}
+/* Màn hình laptop thấp: thu gọn khoảng cách để thấy đủ menu mà không phải cuộn. Điện thoại giữ nút cao để dễ bấm. */
+@media (min-width: 769px) and (max-height: 940px) {
+  .af-nav {
+    padding-top: 12px;
+  }
+  .af-workspace {
+    margin-bottom: 8px;
+    padding: 8px 10px;
+  }
+  .af-menu .ant-menu-item-group-title {
+    padding: 8px 12px 4px !important;
+  }
+  .af-menu.ant-menu .ant-menu-item {
+    height: 36px;
+    line-height: 36px;
+    margin-block: 2px;
+  }
+  .af-sider-footer {
+    padding: 6px 16px;
+  }
+  .af-sider-link {
+    padding: 6px 12px;
+  }
+}
 /* Sidebar thu gọn: chỉ còn icon, nhãn hiện ở tooltip. */
 .af-workspace-text {
   flex: 1;
@@ -1038,6 +1067,14 @@ body {
   .af-dash-tasks .ant-tag {
     grid-column: 1 / -1;
   }
+  /* Tên và nội dung chiếm cả hàng, xuống dòng khi dài thay vì bị cột nút ép cắt chữ. */
+  .af-dash-tasks .af-cell-stack {
+    grid-column: 1 / -1;
+  }
+  .af-dash-tasks .af-cell-stack > span,
+  .af-dash-tasks .af-cell-stack small {
+    white-space: normal;
+  }
   .af-dash-tasks .af-money {
     grid-column: 1;
     text-align: left;
@@ -1512,12 +1549,31 @@ body {
   .af-topbar-user-text {
     display: none;
   }
+  .af-topbar-left,
+  .af-topbar-right {
+    flex: none;
+  }
+  .af-topbar-left {
+    gap: 4px;
+  }
   .af-topbar-right {
     gap: 4px;
   }
   .af-topbar-user {
-    padding-left: 10px;
-    margin-left: 2px;
+    padding-left: 6px;
+    margin-left: 0;
+  }
+  /* Điện thoại: giữ biểu tượng thương hiệu, nhường chỗ để các nút đủ rộng và không đè lên nhau. */
+  .af-topbar-brand strong {
+    display: none;
+  }
+  .af-topbar .af-topbar-icon.ant-btn,
+  .af-topbar .af-notification-link,
+  .af-topbar .af-theme-toggle.ant-btn {
+    flex: none;
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
   }
   .af-page {
     padding: 0 16px;
@@ -2464,5 +2520,93 @@ body {
 .af-bulk-errors {
   margin: 0;
   padding-left: 18px;
+  color: var(--af-text-secondary);
+}
+
+/* Danh sách thẻ trên điện thoại, dùng ở cả trang quản lý nên phải nằm ở CSS chung. */
+.af-mobile-records {
+  padding: 16px;
+}
+.af-mobile-record-controls {
+  margin-bottom: 12px;
+}
+.af-mobile-record-controls > * {
+  width: 100%;
+}
+.af-record-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.af-record {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.af-record-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--af-text-secondary);
+}
+.af-record-heading strong {
+  color: var(--af-primary);
+  font-size: 14px;
+}
+.af-record h3 {
+  margin: 8px 0 4px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--af-text-strong);
+}
+.af-record-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 4px 0 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--af-text-secondary);
+}
+.af-record-meta a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+}
+.af-record-facts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  margin: 12px 0;
+  font-size: 14px;
+}
+.af-record-facts dt {
+  color: var(--af-text-secondary);
+}
+.af-record-facts dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 600;
+}
+.af-record-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.af-mobile-record-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 16px;
+  font-size: 13px;
   color: var(--af-text-secondary);
 }

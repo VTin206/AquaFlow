@@ -210,9 +210,6 @@
   color: var(--af-text-tertiary);
   font-size: 11px;
 }
-.af-login-preview-note {
-  margin-top: 24px;
-}
 .af-login-footer {
   display: flex;
   justify-content: space-between;

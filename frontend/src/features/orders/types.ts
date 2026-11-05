@@ -228,7 +228,7 @@ export function deliveryTimingOf(order: Order, now = Date.now()) {
             : { label: '—', tone: 'muted' }
   const waited = created && order.status === 'Chờ xác nhận' ? Math.max(0, Math.floor((now - Date.parse(created)) / 60_000)) : null
   const sub = {
-    label: waited !== null ? `chờ ${waitLabel(waited)}` : created ? `đặt ${relativeDateTime(created, new Date(now))}` : `đặt ${order.time}`,
+    label: waited !== null ? `chờ ${lateLabel(waited)}` : created ? `đặt ${relativeDateTime(created, new Date(now))}` : `đặt ${order.time}`,
     title: `Đặt lúc ${orderedAtOf(order).full}`,
   }
   return { main, sub }
@@ -246,10 +246,11 @@ export function compareDeliveryDue(a: Order, b: Order) {
 }
 
 /** Thời gian chờ ngắn gọn: dưới 1 ngày theo giờ/phút, từ 1 ngày trở lên chỉ ghi số ngày. */
-const waitLabel = (minutes: number) => (minutes >= 1440 ? `${Math.floor(minutes / 1440)} ngày` : lateLabel(minutes))
-
-export const lateLabel = (minutes: number) =>
-  minutes >= 60 ? `${Math.floor(minutes / 60)} giờ ${minutes % 60 ? `${minutes % 60} phút` : ''}`.trim() : `${minutes} phút`
+/** Từ 1 ngày trở lên chỉ ghi số ngày: "20 ngày" dễ đọc hơn "493 giờ 29 phút". */
+export const lateLabel = (minutes: number) => {
+  if (minutes >= 1440) return `${Math.floor(minutes / 1440)} ngày`
+  return minutes >= 60 ? `${Math.floor(minutes / 60)} giờ ${minutes % 60 ? `${minutes % 60} phút` : ''}`.trim() : `${minutes} phút`
+}
 
 /** Thông tin đơn khách xem được trên trang tra cứu. */
 export type PublicOrder = Pick<
