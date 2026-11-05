@@ -24,6 +24,7 @@ vi.mock('./cart', () => ({
   useCartActions: () => ({ clear: vi.fn() }),
 }))
 vi.mock('./shopService', () => ({
+  useShopContact: () => ({ openingHours: '6:00 – 21:00 hằng ngày' }),
   useShopFeature: (name: string) => (name === 'deliveryQuote' ? mocks.feeQuoted : false),
   useShopProducts: () => ({ data: [{ id: '1', name: 'Nước 19L', price: 50000, unit: 'Bình', available: true }], isPending: false, isError: false }),
   usePlaceWebOrder: () => ({ mutateAsync: mocks.mutateAsync, isPending: false }),
@@ -76,6 +77,14 @@ test('chọn giờ thì bắt buộc có giờ, chưa chọn không tạo đơn'
   fireEvent.click(screen.getByLabelText('Chọn giờ'))
   placeOrder()
   expect(await screen.findByText('Chọn giờ nhận hàng.')).toBeTruthy()
+  expect(mocks.mutateAsync).not.toHaveBeenCalled()
+})
+
+test('Enter ở ô chọn không gửi form', () => {
+  renderPage()
+  // fireEvent trả false nghĩa là đã chặn hành vi mặc định (trình duyệt tự gửi form).
+  expect(fireEvent.keyDown(screen.getByLabelText('Giao sớm nhất'), { key: 'Enter' })).toBe(false)
+  expect(fireEvent.keyDown(screen.getByRole('checkbox'), { key: 'Enter' })).toBe(false)
   expect(mocks.mutateAsync).not.toHaveBeenCalled()
 })
 

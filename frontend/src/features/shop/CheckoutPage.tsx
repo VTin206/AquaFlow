@@ -1,7 +1,7 @@
 import { Alert, App, Button, Card, Checkbox, DatePicker, Empty, Form, Input, Radio, Result, Skeleton, Typography } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { ChevronDown, Wallet } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useRef, useState, type KeyboardEvent } from 'react'
 import { Link, useNavigate, useOutletContext } from 'react-router'
 import type { LiveOrder } from '@/features/live/orderApi'
 import { Money } from '@/shared/components/Money'
@@ -12,7 +12,8 @@ import { DEPOSIT_PER_BOTTLE, suggestedDeliveryFee } from '@/shared/policy'
 import { readProfile, saveProfile, useCart, useCartActions } from './cart'
 import { submitCheckoutOnce } from './checkoutSubmit'
 import { CheckoutReview } from './components/CheckoutReview'
-import { usePlaceWebOrder, useShopFeature, useShopProducts } from './shopService'
+import { disabledOutsideHours, formatOpeningHours, isWithinOpeningHours, parseOpeningHours } from './openingHours'
+import { usePlaceWebOrder, useShopContact, useShopFeature, useShopProducts } from './shopService'
 import { useAuth } from '@/features/auth/useAuth'
 import { isCustomer } from '@/features/auth/accountAccess'
 
@@ -29,6 +30,16 @@ type CheckoutForm = {
 
 const nextStepHint = 'Sau khi đặt, cửa hàng sẽ xác nhận đơn rồi giao hàng cho bạn.'
 
+/** Đặt đơn là việc không rút lại được: Enter ở ô chọn không được tự gửi form như mặc định của trình duyệt. */
+function handleFormKeys(event: KeyboardEvent<HTMLElement>) {
+  const target = event.target
+  if (event.key === 'Enter' && target instanceof HTMLInputElement && (target.type === 'radio' || target.type === 'checkbox')) {
+    event.preventDefault()
+    return
+  }
+  focusNextOnEnter(event)
+}
+
 export function CheckoutPage() {
   const { user } = useAuth()
   const quoteFee = useShopFeature('deliveryQuote')
@@ -36,6 +47,7 @@ export function CheckoutPage() {
   const cart = useCart()
   const actions = useCartActions()
   const products = useShopProducts()
+  const openingHours = parseOpeningHours(useShopContact()?.openingHours)
   const mutation = usePlaceWebOrder()
   const { message } = App.useApp()
   const navigate = useNavigate()
@@ -170,7 +182,7 @@ export function CheckoutPage() {
             scrollToFirstError={{ focus: true, block: 'center' }}
             initialValues={{ ...accountDefaults, ...profile, when: 'asap', remember: Boolean(profile) }}
             onFinish={submit}
-            onKeyDown={focusNextOnEnter}
+            onKeyDown={handleFormKeys}
           >
             <div className="af-checkout-main">
               <Card title="Người nhận">
@@ -223,15 +235,27 @@ export function CheckoutPage() {
                       <Form.Item
                         name="appointment"
                         label="Giờ nhận mong muốn"
+                        extra={openingHours ? `Cửa hàng giao trong giờ mở cửa ${formatOpeningHours(openingHours)}.` : undefined}
                         rules={[
                           { required: true, message: 'Chọn giờ nhận hàng.' },
                           {
-                            validator: (_, value?: Dayjs) =>
-                              !value || value.isAfter(dayjs()) ? Promise.resolve() : Promise.reject(new Error('Chọn giờ trong tương lai.')),
+                            validator: (_, value?: Dayjs) => {
+                              if (!value) return Promise.resolve()
+                              if (!value.isAfter(dayjs())) return Promise.reject(new Error('Chọn giờ trong tương lai.'))
+                              if (openingHours && !isWithinOpeningHours(value, openingHours))
+                                return Promise.reject(new Error(`Chọn giờ trong khoảng ${formatOpeningHours(openingHours)}.`))
+                              return Promise.resolve()
+                            },
                           },
                         ]}
                       >
-                        <DatePicker showTime format="DD/MM/YYYY HH:mm" disabledDate={(date) => date.isBefore(dayjs(), 'day')} style={{ width: '100%' }} />
+                        <DatePicker
+                          showTime
+                          format="DD/MM/YYYY HH:mm"
+                          disabledDate={(date) => date.isBefore(dayjs(), 'day')}
+                          disabledTime={() => (openingHours ? disabledOutsideHours(openingHours) : {})}
+                          style={{ width: '100%' }}
+                        />
                       </Form.Item>
                     )
                   }
