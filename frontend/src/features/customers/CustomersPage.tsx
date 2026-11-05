@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { App, Button, Card, Col, Dropdown, Grid, Input, Row, Segmented, Statistic, Table, Tag, Tooltip, type TableColumnsType } from 'antd'
 import { Ellipsis, Eye, FileSpreadsheet, Plus, Search } from 'lucide-react'
+import { useLinkedQuery } from '@/shared/utils/useLinkedQuery'
 import { BulkBar } from '@/shared/components/BulkBar'
 import { Page } from '@/shared/components/Page'
 import { CountLabel } from '@/shared/components/CountLabel'
@@ -36,7 +37,7 @@ export function CustomersPage() {
   // Tải sẵn để hiện số đếm trên bộ lọc.
   const archivedQuery = useArchivedCustomers(canReactivate)
   const activate = useActivateCustomer()
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useLinkedQuery()
   const [profileId, setProfileId] = useState<string | null>(null)
   // undefined: đóng; null: thêm mới; Customer: sửa.
   const [editing, setEditing] = useState<Customer | null | undefined>(undefined)

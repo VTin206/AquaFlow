@@ -663,6 +663,44 @@ body {
   justify-content: space-between;
   padding: 20px;
 }
+.af-order-tabs .ant-tabs-nav {
+  margin: 0;
+  padding: 4px 20px 0;
+}
+.af-global-search ul {
+  display: grid;
+  gap: 2px;
+  list-style: none;
+  margin: 12px 0 0;
+  max-height: min(50dvh, 400px);
+  overflow-y: auto;
+  padding: 0;
+}
+.af-global-search button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: var(--af-text-strong);
+  cursor: pointer;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  padding: 8px 10px;
+  text-align: left;
+  width: 100%;
+}
+.af-global-search button.is-active {
+  background: var(--af-primary-soft);
+}
+.af-global-search small,
+.af-global-search-note {
+  color: var(--af-text-tertiary);
+  font-size: 12px;
+}
+.af-global-search-note {
+  margin: 10px 0 0;
+}
 .af-toolbar-plain {
   border-bottom: 0;
   margin: -8px -8px 8px;
