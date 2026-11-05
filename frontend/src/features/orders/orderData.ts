@@ -52,6 +52,7 @@ export function fromLiveOrder(order: LiveOrder, products: CatalogProduct[]): Ord
     channel: channelLabels[order.channel] as Order['channel'],
     lines,
     deliveryFee: Number(order.deliveryFee),
+    discount: Number(order.discountAmount) || undefined,
     appointment: order.requestedDeliveryAt ?? undefined,
     note: order.note ?? undefined,
     payments: [],

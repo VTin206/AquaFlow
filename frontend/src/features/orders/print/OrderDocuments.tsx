@@ -1,19 +1,21 @@
 import { TransferQr } from '@/shared/payment/TransferQr'
 import { bankBinOf, transferNote } from '@/shared/payment/vietqr'
 import { PrintHeader } from '@/shared/print/PrintHeader'
+import { useFeature } from '@/shared/features'
 import { DEPOSIT_PER_BOTTLE } from '@/shared/policy'
 import { currency, printDate } from '@/shared/utils/format'
 import type { StoreSettings } from '@/features/settings/types'
-import { amountDue, jugCount, paidAmount, returnedValue, type Order } from '../types'
+import { jugCount, knownAmountDue, paidAmount, returnedValue, type Order } from '../types'
 
 type DocumentProps = { order: Order; settings?: StoreSettings }
 
 /** Hóa đơn bán lẻ cho khách: dòng hàng, tiền đã thu, còn phải thu. Không thay thế hóa đơn điện tử GTGT. */
 export function InvoiceDocument({ order, settings }: DocumentProps) {
-  const due = amountDue(order)
+  const code = order.code ?? order.id
+  const due = knownAmountDue(order)
   return (
     <article className="af-doc">
-      <PrintHeader settings={settings} title="HÓA ĐƠN BÁN LẺ" code={order.id} date={printDate()} />
+      <PrintHeader settings={settings} title="HÓA ĐƠN BÁN LẺ" code={code} date={printDate()} />
       <section className="af-doc-meta">
         <span>
           Khách hàng: <strong>{order.customer}</strong>
@@ -40,7 +42,7 @@ export function InvoiceDocument({ order, settings }: DocumentProps) {
               <td>{index + 1}</td>
               <td>
                 {line.name}
-                <small> ({line.unit.toLowerCase()})</small>
+                {line.unit && <small> ({line.unit.toLowerCase()})</small>}
               </td>
               <td className="af-doc-num">{line.quantity}</td>
               <td className="af-doc-num">{currency(line.unitPrice)}</td>
@@ -49,6 +51,12 @@ export function InvoiceDocument({ order, settings }: DocumentProps) {
           ))}
         </tbody>
         <tfoot>
+          {order.discount ? (
+            <tr>
+              <td colSpan={4}>Giảm giá</td>
+              <td>−{currency(order.discount)}</td>
+            </tr>
+          ) : null}
           {order.deliveryFee > 0 && (
             <tr>
               <td colSpan={4}>Phí giao hàng</td>
@@ -65,14 +73,23 @@ export function InvoiceDocument({ order, settings }: DocumentProps) {
             <td colSpan={4}>Tổng cộng</td>
             <td>{currency(order.total)}</td>
           </tr>
-          <tr>
-            <td colSpan={4}>Đã thanh toán</td>
-            <td>{currency(paidAmount(order))}</td>
-          </tr>
-          <tr className="af-doc-total">
-            <td colSpan={4}>Còn phải thu</td>
-            <td>{order.status === 'Đã hủy' ? '—' : currency(due)}</td>
-          </tr>
+          {order.paymentStatusLabel === undefined ? (
+            <tr>
+              <td colSpan={4}>Đã thanh toán</td>
+              <td>{currency(paidAmount(order))}</td>
+            </tr>
+          ) : (
+            <tr>
+              <td colSpan={4}>Thanh toán</td>
+              <td>{order.paymentStatusLabel}</td>
+            </tr>
+          )}
+          {due !== null && (
+            <tr className="af-doc-total">
+              <td colSpan={4}>Còn phải thu</td>
+              <td>{order.status === 'Đã hủy' ? '—' : currency(due)}</td>
+            </tr>
+          )}
         </tfoot>
       </table>
       {order.bottles?.deposit ? (
@@ -81,17 +98,18 @@ export function InvoiceDocument({ order, settings }: DocumentProps) {
         </p>
       ) : null}
       {settings?.bankAccount &&
+        due !== null &&
         due > 0 &&
         order.status !== 'Đã hủy' &&
         (bankBinOf(settings.bankName) ? (
           <section className="af-doc-qr">
-            <TransferQr settings={settings} amount={due} note={order.id} size={92} compact />
+            <TransferQr settings={settings} amount={due} note={code} size={92} compact />
             <small>Quét mã bằng ứng dụng ngân hàng để chuyển đúng số tiền và nội dung.</small>
           </section>
         ) : (
           <p className="af-doc-note">
             Chuyển khoản: {settings.bankName} · {settings.bankAccount} · {settings.bankHolder} · Nội dung:{' '}
-            <strong>{transferNote(order.id)}</strong>
+            <strong>{transferNote(code)}</strong>
           </p>
         ))}
       <footer className="af-doc-footer">
@@ -105,9 +123,12 @@ export function InvoiceDocument({ order, settings }: DocumentProps) {
 /** Phiếu giao hàng cho tài xế: địa chỉ, hàng, tiền và vỏ cần xử lý, chỗ ký nhận. */
 export function DeliverySlipDocument({ order, settings }: DocumentProps) {
   const jugs = jugCount(order)
+  const due = knownAmountDue(order)
+  // Mức cọc cố định chỉ là chính sách của dữ liệu mẫu; chưa có sổ vỏ thì không in số này.
+  const showDeposit = useFeature('bottleLedger')
   return (
     <article className="af-doc">
-      <PrintHeader settings={settings} title="PHIẾU GIAO HÀNG" code={order.id} date={printDate()} />
+      <PrintHeader settings={settings} title="PHIẾU GIAO HÀNG" code={order.code ?? order.id} date={printDate()} />
       <section className="af-doc-meta af-doc-meta-grid">
         <span>
           Người nhận: <strong>{order.customer}</strong>
@@ -143,7 +164,8 @@ export function DeliverySlipDocument({ order, settings }: DocumentProps) {
       <section className="af-doc-checklist">
         <div>
           <span>Tiền cần thu</span>
-          <strong>{currency(amountDue(order))}</strong>
+          {/* Đã thu một phần mà chưa biết số tiền: để trống cho nhân viên ghi tay sau khi kiểm tra. */}
+          {due === null ? <strong className="af-doc-blank" /> : <strong>{currency(due)}</strong>}
         </div>
         {jugs > 0 && (
           <>
@@ -155,10 +177,12 @@ export function DeliverySlipDocument({ order, settings }: DocumentProps) {
               <span>Vỏ thực nhận</span>
               <strong className="af-doc-blank" />
             </div>
-            <div>
-              <span>Cọc thu thêm ({currency(DEPOSIT_PER_BOTTLE)}/vỏ thiếu)</span>
-              <strong className="af-doc-blank" />
-            </div>
+            {showDeposit && (
+              <div>
+                <span>Cọc thu thêm ({currency(DEPOSIT_PER_BOTTLE)}/vỏ thiếu)</span>
+                <strong className="af-doc-blank" />
+              </div>
+            )}
           </>
         )}
       </section>

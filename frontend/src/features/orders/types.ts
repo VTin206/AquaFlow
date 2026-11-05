@@ -76,6 +76,8 @@ export type Order = {
   channel: 'Tại quầy' | 'Điện thoại' | 'Tin nhắn' | 'Website'
   lines: OrderLine[]
   deliveryFee: number
+  /** Số tiền giảm đã trừ vào `total` (tài khoản thật: discountAmount của BE). */
+  discount?: number
   /** Lầu giao bằng thang bộ (0: tầng trệt hoặc có thang máy), dùng tính phụ thu. */
   floor?: number
   appointment?: string
@@ -110,6 +112,15 @@ export type OrderDraft = {
 export const paidAmount = (order: Order) =>
   order.payments.reduce((sum, payment) => sum + (payment.refund ? -payment.amount : payment.amount), 0)
 export const amountDue = (order: Order) => Math.max(0, order.total - paidAmount(order))
+/**
+ * Số còn phải thu dùng cho chứng từ. BE chưa có phiếu thu, chỉ trả trạng thái thanh toán,
+ * nên `amountDue` sẽ sai với đơn đã trả tiền; "Thanh toán một phần" không biết số tiền nên trả null.
+ */
+export const knownAmountDue = (order: Order): number | null => {
+  if (order.paymentStatusLabel === undefined) return amountDue(order)
+  if (order.paymentStatusLabel === 'Chưa thanh toán') return order.total
+  return order.paymentStatusLabel === 'Thanh toán một phần' ? null : 0
+}
 export const paymentLabel = (order: Order) =>
   order.paymentStatusLabel ??
   (order.status === 'Đã hủy'

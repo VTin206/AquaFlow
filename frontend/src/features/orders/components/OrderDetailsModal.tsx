@@ -32,6 +32,7 @@ import { useStaff } from '@/features/auth/useStaff'
 import { useSettings } from '@/features/settings/settingsService'
 import { canCancel as cancellable, returnableQuantity } from '../orderService'
 import { DeliverySlipDocument, InvoiceDocument } from '../print/OrderDocuments'
+import { CopyOrderMessageButton } from './CopyOrderMessageButton'
 import { modalWidth } from '@/shared/utils/modal'
 import {
   amountDue,
@@ -128,6 +129,7 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
             </Tooltip>
           )}
           {canReturn && <Button onClick={() => setMode('return')}>Nhận trả hàng</Button>}
+          {!cancelled && <CopyOrderMessageButton order={order} storeName={settings?.storeName} />}
           <Dropdown
             trigger={['click']}
             menu={{

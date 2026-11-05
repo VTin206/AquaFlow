@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
-import { Alert, App, Button, Card, Descriptions, Modal, Popconfirm, Space, Table, Tag } from 'antd'
+import { Alert, App, Button, Card, Descriptions, Dropdown, Modal, Popconfirm, Space, Table, Tag } from 'antd'
+import { Printer } from 'lucide-react'
 import { OrderTotals } from '@/shared/components/OrderTotals'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
@@ -22,6 +23,11 @@ import { modalWidth } from '@/shared/utils/modal'
 import { canDispatch, dispatchApi } from './dispatchApi'
 import { OrderProgress } from '@/features/orders/OrderProgress'
 import { OrderDeliveryHistory } from '@/features/orders/OrderDeliveryHistory'
+import { CopyOrderMessageButton } from '@/features/orders/components/CopyOrderMessageButton'
+import { fromLiveOrder } from '@/features/orders/orderData'
+import { DeliverySlipDocument, InvoiceDocument } from '@/features/orders/print/OrderDocuments'
+import { useSettings } from '@/features/settings/settingsService'
+import { usePrinter } from '@/shared/print/usePrinter'
 
 const dateTime = (value: string | null) => (value ? new Date(value).toLocaleString('vi-VN') : '—')
 const statusColors: Record<OrderStatus, string> = {
@@ -80,7 +86,42 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
       message.error(error.message)
     },
   })
+  const printer = usePrinter()
+  const { data: settings } = useSettings()
   const order = query.data
+  // Chứng từ cần tên sản phẩm và thông tin cửa hàng; chưa tải xong thì khóa nút in.
+  const viewOrder = order && catalog.data ? fromLiveOrder(order, catalog.data) : undefined
+  const documents =
+    viewOrder && viewOrder.status !== 'Đã hủy' ? (
+      <>
+        <CopyOrderMessageButton order={viewOrder} storeName={settings?.storeName} />
+        <Dropdown
+          trigger={['click']}
+          menu={{
+            items: [
+              {
+                key: 'invoice',
+                label: 'Hóa đơn bán lẻ',
+                onClick: () => printer.print(<InvoiceDocument order={viewOrder} settings={settings} />),
+              },
+              ...(viewOrder.method === 'Giao tận nơi'
+                ? [
+                    {
+                      key: 'slip',
+                      label: 'Phiếu giao hàng',
+                      onClick: () => printer.print(<DeliverySlipDocument order={viewOrder} settings={settings} />),
+                    },
+                  ]
+                : []),
+            ],
+          }}
+        >
+          <Button icon={<Printer size={15} />} disabled={!settings}>
+            In
+          </Button>
+        </Dropdown>
+      </>
+    ) : null
   const actions =
     order && canManage && (canConfirm(order) || canPrepare(order) || canCancel(order) || canDispatch(order)) ? (
       <Space wrap>
@@ -148,6 +189,7 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
       footer={
         <Space wrap>
           <Button onClick={onClose}>Đóng</Button>
+          {documents}
           {actions}
         </Space>
       }
@@ -276,6 +318,7 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
           )}
         </Card>
       )}
+      {printer.portal}
     </Modal>
   )
 }
