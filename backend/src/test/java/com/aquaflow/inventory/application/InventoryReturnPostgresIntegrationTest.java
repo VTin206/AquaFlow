@@ -1,8 +1,9 @@
 package com.aquaflow.inventory.application;
 
-import com.aquaflow.customer.order.application.OrderDispatchService;
 import com.aquaflow.customer.order.application.OrderService;
 import com.aquaflow.customer.order.domain.OrderStatus;
+import com.aquaflow.delivery.application.DeliveryService;
+import com.aquaflow.delivery.api.DeliveryDtos.*;
 import com.aquaflow.inventory.api.ReturnDtos.Create;
 import com.aquaflow.inventory.api.ReturnDtos.LineInput;
 import com.aquaflow.shared.api.BadRequestException;
@@ -16,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,7 +34,7 @@ class InventoryReturnPostgresIntegrationTest {
 
     @Autowired private JdbcTemplate jdbc;
     @Autowired private OrderService orders;
-    @Autowired private OrderDispatchService dispatches;
+    @Autowired private DeliveryService delivery;
     @Autowired private InventoryReturnService returns;
     @Autowired private RedeliveryReservationService redelivery;
     @Autowired private StockService stockService;
@@ -41,16 +43,22 @@ class InventoryReturnPostgresIntegrationTest {
     private Long orderId;
     private Long itemId;
     private Long actorId;
+    private Long driverId;
     private Long tripId;
 
     @BeforeEach
     void setUp() {
         String suffix = UUID.randomUUID().toString();
         jdbc.update("INSERT INTO roles (code, name) VALUES ('SALES_STAFF', 'Sales') ON CONFLICT (code) DO NOTHING");
+        jdbc.update("INSERT INTO roles (code, name) VALUES ('DELIVERY_STAFF', 'Driver') ON CONFLICT (code) DO NOTHING");
         actorId = jdbc.queryForObject("""
                 INSERT INTO users (role_id, full_name, email, password_hash)
                 VALUES ((SELECT id FROM roles WHERE code = 'SALES_STAFF'), 'Return test', ?, 'unused') RETURNING id
                 """, Long.class, suffix + "@return.test");
+        driverId = jdbc.queryForObject("""
+                INSERT INTO users (role_id, full_name, email, password_hash)
+                VALUES ((SELECT id FROM roles WHERE code = 'DELIVERY_STAFF'), 'Return driver', ?, 'unused') RETURNING id
+                """, Long.class, suffix + "@driver.return.test");
         productId = jdbc.queryForObject(
                 "INSERT INTO products (sku, name, unit, sale_price) VALUES (?, 'Return test', 'binh', 20) RETURNING id",
                 Long.class, suffix);
@@ -71,6 +79,7 @@ class InventoryReturnPostgresIntegrationTest {
         jdbc.update("DELETE FROM delivery_attempts WHERE assignment_id IN (SELECT id FROM delivery_assignments WHERE order_id = ?)", orderId);
         jdbc.update("DELETE FROM delivery_assignments WHERE order_id = ?", orderId);
         if (tripId != null) {
+            jdbc.update("DELETE FROM handover_records WHERE trip_id = ?", tripId);
             jdbc.update("DELETE FROM delivery_trips WHERE id = ?", tripId);
         }
         jdbc.update("DELETE FROM audit_logs WHERE actor_id = ? OR (entity_type = 'ORDER' AND entity_id = ?)"
@@ -87,6 +96,7 @@ class InventoryReturnPostgresIntegrationTest {
         jdbc.update("DELETE FROM product_batches WHERE product_id = ?", productId);
         jdbc.update("DELETE FROM products WHERE id = ?", productId);
         jdbc.update("DELETE FROM users WHERE id = ?", actorId);
+        jdbc.update("DELETE FROM users WHERE id = ?", driverId);
     }
 
     @Test
@@ -175,23 +185,19 @@ class InventoryReturnPostgresIntegrationTest {
     private Long dispatchAndFailDelivery() {
         orders.transitionStatus(orderId, OrderStatus.CONFIRMED);
         orders.transitionStatus(orderId, OrderStatus.PREPARING);
-        dispatches.create(orderId, actorId);
-
-        tripId = jdbc.queryForObject(
-                "INSERT INTO delivery_trips (status, created_by) VALUES ('COMPLETED', ?) RETURNING id", Long.class, actorId);
+        tripId = delivery.create(new CreateTripRequest(driverId, null), actorId, true).id();
+        delivery.addOrder(tripId, new AddOrderRequest(orderId), actorId, true);
+        delivery.dispatch(tripId, actorId, true);
+        delivery.start(tripId, driverId, false);
+        delivery.recordResult(tripId, orderId,
+                new DeliveryResultRequest(Outcome.FAILED, null, "Khách vắng nhà", null), driverId, false);
+        delivery.settle(tripId,
+                new SettleTripRequest(BigDecimal.ZERO, BigDecimal.ZERO, 0, 0, null), actorId, true);
         Long assignmentId = jdbc.queryForObject(
-                "INSERT INTO delivery_assignments (trip_id, order_id, active) VALUES (?, ?, FALSE) RETURNING id",
-                Long.class, tripId, orderId);
-        jdbc.update("""
-                INSERT INTO delivery_attempts (assignment_id, attempt_no, outcome, failure_reason)
-                VALUES (?, 1, 'FAILED', 'Khách vắng nhà')
-                """, assignmentId);
+                "SELECT id FROM delivery_assignments WHERE trip_id = ? AND order_id = ?", Long.class, tripId, orderId);
         return jdbc.queryForObject("""
-                INSERT INTO delivery_load_items (assignment_id, order_item_id, batch_id, quantity_loaded)
-                SELECT ?, di.order_item_id, di.batch_id, di.quantity
-                FROM order_dispatch_items di JOIN order_dispatches d ON d.id = di.dispatch_id
-                WHERE d.order_id = ? RETURNING id
-                """, Long.class, assignmentId, orderId);
+                SELECT id FROM delivery_load_items WHERE assignment_id = ? AND order_item_id = ?
+                """, Long.class, assignmentId, itemId);
     }
 
     private void batch(String lot, int days, int quantity) {

@@ -3,6 +3,7 @@ package com.aquaflow.customer.order.application;
 import com.aquaflow.customer.order.api.dto.DispatchResponse;
 import com.aquaflow.customer.order.domain.*;
 import com.aquaflow.customer.order.repository.*;
+import com.aquaflow.delivery.repository.DeliveryRepository;
 import com.aquaflow.inventory.application.*;
 import com.aquaflow.shared.api.*;
 import org.springframework.stereotype.Service;
@@ -16,33 +17,47 @@ public class OrderDispatchService {
     private final OrderItemRepository items;
     private final DispatchRepository dispatches;
     private final StockDispatchService stock;
+    private final DeliveryRepository deliveryAssignments;
 
     public OrderDispatchService(OrderRepository orders, OrderItemRepository items,
-                                DispatchRepository dispatches, StockDispatchService stock) {
+                                DispatchRepository dispatches, StockDispatchService stock,
+                                DeliveryRepository deliveryAssignments) {
         this.orders = orders;
         this.items = items;
         this.dispatches = dispatches;
         this.stock = stock;
+        this.deliveryAssignments = deliveryAssignments;
     }
 
     @Transactional
     public DispatchResponse create(Long orderId, Long actorId) {
-        return createInternal(orderId, actorId, false);
+        return createInternal(orderId, actorId, false, null);
     }
 
     /** Delivery-trip dispatch calls this inside the trip-wide transaction. */
     @Transactional
-    public DispatchResponse createForTrip(Long orderId, Long actorId) {
-        return createInternal(orderId, actorId, false);
+    public DispatchResponse createForTrip(Long orderId, Long actorId, Long tripId) {
+        return createInternal(orderId, actorId, false, tripId);
     }
 
     @Transactional
-    public DispatchResponse createRedeliveryForTrip(Long orderId, Long actorId) {
-        return createInternal(orderId, actorId, true);
+    public DispatchResponse createRedeliveryForTrip(Long orderId, Long actorId, Long tripId) {
+        return createInternal(orderId, actorId, true, tripId);
     }
 
-    private DispatchResponse createInternal(Long orderId, Long actorId, boolean redelivery) {
+    private DispatchResponse createInternal(Long orderId, Long actorId, boolean redelivery, Long expectedTripId) {
+        var snapshot = orders.findById(orderId).orElseThrow(() -> new NotFoundException("Không tìm thấy đơn hàng"));
+        if (snapshot.getFulfillmentType() == FulfillmentType.DELIVERY) {
+            if (expectedTripId == null) deliveryAssignments.lockDispatchableTripForOrder(orderId);
+            else deliveryAssignments.lockDispatchableAssignment(expectedTripId, orderId);
+        } else if (expectedTripId != null) {
+            throw new ConflictException("Đơn COUNTER không thể thuộc Delivery Trip");
+        }
+
         var order = orders.findForUpdateById(orderId).orElseThrow(() -> new NotFoundException("Không tìm thấy đơn hàng"));
+        if (order.getFulfillmentType() != snapshot.getFulfillmentType()) {
+            throw new ConflictException("Loại giao nhận của đơn đã thay đổi; hãy tải lại đơn hàng");
+        }
         boolean hasHistory = dispatches.hasDispatch(orderId);
         if (hasHistory != redelivery) {
             throw new ConflictException(redelivery

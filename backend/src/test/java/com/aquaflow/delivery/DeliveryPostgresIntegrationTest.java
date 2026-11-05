@@ -30,10 +30,10 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Run against a disposable PostgreSQL instance; test transactions roll back. */
+/** Run against a disposable PostgreSQL instance. */
 @SpringBootTest(properties = "app.jwt.secret=test-test-test-test-test-test-test-test")
 @EnabledIfEnvironmentVariable(named = "DB_URL", matches = ".+")
-@Transactional
+@Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
 @AutoConfigureMockMvc
 class DeliveryPostgresIntegrationTest {
     @Autowired JdbcTemplate jdbc;
@@ -366,7 +366,7 @@ class DeliveryPostgresIntegrationTest {
 
     @Test
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
-    void tripDispatchRollsBackAllOrdersWhenOneAssignmentCannotReserveStock() {
+    void tripDispatchKeepsEarlierAssignmentWhenLaterAssignmentCannotReserveStock() {
         long secondOrder = jdbc.queryForObject("""
                 INSERT INTO orders(order_code, channel, fulfillment_type, status, created_by,
                                    recipient_name, delivery_address)
@@ -382,13 +382,16 @@ class DeliveryPostgresIntegrationTest {
         service.addOrder(trip, new AddOrderRequest(secondOrder), ownerId, true);
 
         assertThatThrownBy(() -> service.dispatch(trip, ownerId, true)).isInstanceOf(ConflictException.class);
-        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id = ?", String.class, orderId)).isEqualTo("PREPARING");
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_dispatches WHERE order_id IN (?, ?)",
-                Integer.class, orderId, secondOrder)).isZero();
-        assertThat(jdbc.queryForObject("SELECT on_hand FROM inventory_balances WHERE batch_id = ?", Integer.class, batchId)).isEqualTo(2);
-        assertThat(jdbc.queryForObject("SELECT reserved FROM inventory_balances WHERE batch_id = ?", Integer.class, batchId)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id = ?", String.class, orderId)).isEqualTo("OUT_FOR_DELIVERY");
+        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id = ?", String.class, secondOrder)).isEqualTo("PREPARING");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_dispatches WHERE order_id = ?",
+                Integer.class, orderId)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_dispatches WHERE order_id = ?",
+                Integer.class, secondOrder)).isZero();
+        assertThat(jdbc.queryForObject("SELECT on_hand FROM inventory_balances WHERE batch_id = ?", Integer.class, batchId)).isZero();
+        assertThat(jdbc.queryForObject("SELECT reserved FROM inventory_balances WHERE batch_id = ?", Integer.class, batchId)).isZero();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM inventory_movements WHERE reference_type='ORDER' AND reference_id=?",
-                Integer.class, orderId)).isZero();
+                Integer.class, orderId)).isEqualTo(1);
     }
 
     @Test

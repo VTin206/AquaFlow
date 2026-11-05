@@ -18,7 +18,8 @@ An order can have only one active assignment. `COUNTER` orders and partial assig
 
 ## Dispatch and departure
 
-- `POST /api/v1/delivery/trips/{id}/dispatch` dispatches every assigned order in one database transaction. Inventory movement, reservation consumption, dispatch receipt creation and `PREPARING` → `OUT_FOR_DELIVERY` updates roll back together if any order fails. Only `ADMIN` and `SALES_STAFF` can dispatch.
+- `POST /api/v1/delivery/trips/{id}/dispatch` processes each active assignment through a separate database transaction. A later assignment failure does not roll back an earlier assignment that already committed. Only `ADMIN` and `SALES_STAFF` can dispatch.
+- `POST /api/v1/delivery/trips/{id}/orders/{orderId}/dispatch` dispatches exactly one active assignment in its own transaction. Other assignments on the trip remain independently dispatchable. Only `ADMIN` and `SALES_STAFF` can dispatch.
 - A failed-delivery order may be assigned for redelivery only after warehouse return inspection has recorded the physical return. The request is:
 
 ```json

@@ -146,6 +146,45 @@ public class DeliveryRepository {
                 Boolean.class, orderId));
     }
 
+    /** Lock a valid dispatch assignment before the order/stock rows are locked by the dispatch service. */
+    public Long lockDispatchableTripForOrder(long orderId) {
+        List<Long> tripIds = jdbc.query("""
+                SELECT t.id
+                FROM delivery_assignments a
+                JOIN delivery_trips t ON t.id = a.trip_id
+                JOIN users u ON u.id = t.driver_id
+                JOIN roles r ON r.id = u.role_id
+                WHERE a.order_id = ? AND a.active
+                  AND t.status = 'CREATED'
+                  AND u.status = 'ACTIVE' AND r.code = 'DELIVERY_STAFF'
+                ORDER BY a.id
+                LIMIT 2
+                FOR UPDATE OF t, a
+                """, (rs, row) -> rs.getLong("id"), orderId);
+        if (tripIds.size() != 1) {
+            throw new ConflictException("Đơn DELIVERY phải thuộc một Assignment đang hoạt động trong Trip CREATED có tài xế hợp lệ");
+        }
+        return tripIds.getFirst();
+    }
+
+    /** The trip dispatch path must dispatch the exact active assignment it already locked. */
+    public void lockDispatchableAssignment(long tripId, long orderId) {
+        boolean valid = !jdbc.query("""
+                SELECT t.id
+                FROM delivery_assignments a
+                JOIN delivery_trips t ON t.id = a.trip_id
+                JOIN users u ON u.id = t.driver_id
+                JOIN roles r ON r.id = u.role_id
+                WHERE a.trip_id = ? AND a.order_id = ? AND a.active
+                  AND t.status = 'CREATED'
+                  AND u.status = 'ACTIVE' AND r.code = 'DELIVERY_STAFF'
+                FOR UPDATE OF t, a
+                """, (rs, row) -> rs.getLong("id"), tripId, orderId).isEmpty();
+        if (!valid) {
+            throw new ConflictException("Assignment không còn hoạt động hoặc Trip/tài xế không hợp lệ để Dispatch");
+        }
+    }
+
     public void addOrder(long tripId, long orderId) {
         jdbc.update("INSERT INTO delivery_assignments(trip_id, order_id) VALUES (?, ?)", tripId, orderId);
     }
