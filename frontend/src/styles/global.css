@@ -1683,6 +1683,171 @@ body {
 .af-detail-actions {
   margin-bottom: 16px;
 }
+/* Chi tiết đơn: một tiêu điểm ở đầu, hàng và tiền ở giữa, phần phụ gập lại ở cuối. */
+.af-order-title {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding-right: 28px;
+}
+.af-order-title > span:first-child {
+  overflow-wrap: anywhere;
+}
+.af-order-title .ant-tag {
+  margin: 0;
+}
+.af-order-focus {
+  align-items: flex-start;
+  background: var(--af-surface-muted);
+  border-radius: 10px;
+  color: var(--af-text-secondary);
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 14px;
+}
+.af-order-focus > svg {
+  flex: none;
+  margin-top: 2px;
+}
+.af-order-focus strong {
+  color: var(--af-text-strong);
+  display: block;
+  font-size: 15px;
+}
+.af-order-focus p {
+  color: var(--af-text-secondary);
+  font-size: 13px;
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+.af-order-focus.is-action {
+  background: var(--af-primary-soft);
+  color: var(--af-primary);
+}
+.af-order-focus.is-alert {
+  background: color-mix(in srgb, var(--af-danger) 12%, transparent);
+  color: var(--af-danger);
+}
+.af-order-focus.is-done {
+  color: var(--af-success);
+}
+.af-order-sheet {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+}
+.af-order-sheet h3 {
+  color: var(--af-text-tertiary);
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0 0 8px;
+}
+.af-order-party {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.af-order-party > strong {
+  color: var(--af-text-strong);
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+.af-order-party > a {
+  align-self: flex-start;
+}
+.af-order-party p {
+  color: var(--af-text);
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+.af-order-party p > span {
+  color: var(--af-text-tertiary);
+  display: block;
+  font-size: 12px;
+}
+.af-order-goods {
+  min-width: 0;
+}
+.af-order-goods ul {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+.af-order-goods li {
+  align-items: baseline;
+  display: flex;
+  font-variant-numeric: tabular-nums;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+.af-order-goods li > span {
+  color: var(--af-text-strong);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.af-order-goods li small {
+  color: var(--af-text-tertiary);
+  display: block;
+  font-size: 12px;
+}
+.af-order-goods li > strong {
+  color: var(--af-text);
+  flex: none;
+  font-weight: 500;
+}
+.af-order-more {
+  border-top: 1px solid var(--af-border);
+  margin-top: 20px;
+}
+.af-order-more .ant-collapse-extra {
+  color: var(--af-text-tertiary);
+  font-size: 13px;
+}
+.af-order-more-empty {
+  color: var(--af-text-tertiary);
+  margin: 0;
+}
+.af-order-receipt + .af-order-receipt,
+.af-order-trips > article + article {
+  margin-top: 20px;
+}
+.af-order-receipt > p {
+  margin: 0 0 8px;
+}
+.af-order-trips header {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.af-order-trips header a {
+  margin-left: auto;
+}
+.af-order-footer {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+}
+.af-order-footer > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.af-order-footer > div:last-child {
+  margin-left: auto;
+}
+@media (max-width: 575px) {
+  .af-order-sheet {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .af-delivery-reason {
   margin: 10px 0 0;
   font-size: 12px;
