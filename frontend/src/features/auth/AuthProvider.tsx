@@ -5,6 +5,7 @@ import { authService, type LoginCredentials } from './authService'
 import { getStoredAuthToken, setUnauthorizedHandler, storeAuthToken } from '@/shared/api/client'
 import { AuthContext, type AuthContextValue, type AuthUser } from './authContext'
 import { roleLabel, STAFF_ROLES } from './roles'
+import { clearShopData, forgetSavedProfile } from '@/features/shop/cartStore'
 const USER_KEY = 'aquaflow.auth.user'
 const EXPIRES_KEY = 'aquaflow.auth.expires-at'
 const DEMO_GUEST_KEY = 'aquaflow.auth.demo-guest'
@@ -33,6 +34,8 @@ const readStoredToken = () => {
   if (expiresAt && expiresAt <= Date.now()) {
     storeAuthToken(null)
     writeExpiry(null)
+    saveUser(null)
+    forgetSavedProfile()
     return null
   }
   return getStoredAuthToken()
@@ -80,9 +83,10 @@ const writeDemoGuest = (on: boolean) => {
   }
 }
 
-const toAuthUser = (user: { fullName: string; email: string; role: string }): AuthUser => ({
+const toAuthUser = (user: { fullName: string; email: string; phone?: string | null; role: string }): AuthUser => ({
   name: user.fullName || user.email,
   email: user.email,
+  phone: user.phone,
   role: roleLabel(user.role),
 })
 
@@ -109,8 +113,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Hết phiên thì xóa dữ liệu đăng nhập; RequireAuth tự đưa về trang đăng nhập.
   const expire = useCallback(() => {
     clearSession()
+    forgetSavedProfile()
     message.warning(EXPIRED_MESSAGE)
   }, [clearSession, message])
+
+  const logout = useCallback(() => {
+    clearSession()
+    clearShopData()
+  }, [clearSession])
 
   // Backend từ chối token (401).
   useEffect(() => {
@@ -194,9 +204,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       enterDemo,
       demoGuest,
       enterDemoGuest,
-      logout: clearSession,
+      logout,
     }),
-    [token, user, demoGuest, clearSession, enterDemoGuest, login, enterDemo],
+    [token, user, demoGuest, logout, enterDemoGuest, login, enterDemo],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

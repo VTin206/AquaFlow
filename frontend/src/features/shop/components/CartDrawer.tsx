@@ -99,7 +99,7 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
               navigate('/checkout')
             }}
           >
-            Thanh toán
+            Đặt hàng
           </Button>
           <div className="af-shop-cart-actions">
             <Button onClick={onClose}>Mua hàng tiếp</Button>
