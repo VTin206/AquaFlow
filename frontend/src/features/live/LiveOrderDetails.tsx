@@ -80,9 +80,16 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
       message.error(error.message)
     },
   })
+  const handover = useMutation({
+    mutationFn: () => dispatchApi.create(id),
+    onSuccess: () => message.success('Đã bàn giao hàng tại quầy.'),
+    onError: (error: Error) => message.error(error.message),
+    onSettled: () => invalidateLiveData(queryClient),
+  })
   const order = query.data
+  const counterReady = order?.fulfillmentType === 'COUNTER' && order.status === 'PREPARING'
   const actions =
-    order && canManage && (canConfirm(order) || canPrepare(order) || canCancel(order) || canDispatch(order)) ? (
+    order && canManage && (canConfirm(order) || canPrepare(order) || canCancel(order) || canDispatch(order) || counterReady) ? (
       <Space wrap>
         {canCancel(order) && (
           <Popconfirm
@@ -95,7 +102,7 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
             cancelText="Không"
             onConfirm={() => update.mutate('CANCELLED')}
           >
-            <Button danger loading={update.isPending && update.variables === 'CANCELLED'} disabled={update.isPending}>
+            <Button danger loading={update.isPending && update.variables === 'CANCELLED'} disabled={update.isPending || handover.isPending}>
               Hủy đơn
             </Button>
           </Popconfirm>
@@ -127,6 +134,19 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
           >
             <Button type="primary" loading={update.isPending && update.variables === 'PREPARING'} disabled={update.isPending}>
               Chuẩn bị hàng
+            </Button>
+          </Popconfirm>
+        )}
+        {counterReady && (
+          <Popconfirm
+            title="Khách đã nhận đủ hàng tại quầy?"
+            description="Xác nhận để xuất kho toàn bộ đơn hàng."
+            okText="Xác nhận bàn giao"
+            cancelText="Chưa"
+            onConfirm={() => handover.mutate()}
+          >
+            <Button type="primary" loading={handover.isPending} disabled={update.isPending || handover.isPending}>
+              Bàn giao tại quầy
             </Button>
           </Popconfirm>
         )}

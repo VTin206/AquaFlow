@@ -18,6 +18,9 @@ import { OrderDeliveryHistory } from './OrderDeliveryHistory'
 import { orderDeliveryHistory } from './orderDeliveryApi'
 import { ApiError } from '@/shared/api/client'
 import type { LiveOrder } from '@/features/live/orderApi'
+import { orderApi } from '@/features/live/orderApi'
+import { dispatchApi } from '@/features/live/dispatchApi'
+import { LiveOrderDetails } from '@/features/live/LiveOrderDetails'
 
 vi.mock('@/features/auth/authService', () => ({ authService: { login: vi.fn(), me: vi.fn() } }))
 vi.mock('@/features/shop/customerOrderApi', () => ({ customerOrderApi: { list: vi.fn(), detail: vi.fn() } }))
@@ -102,6 +105,33 @@ afterEach(() => {
   clients.splice(0).forEach((client) => client.clear())
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
+})
+
+describe('staff order handover', () => {
+  it('posts once after sales confirms counter handover and refreshes the order', async () => {
+    const preparing: LiveOrder = { ...order, fulfillmentType: 'COUNTER' }
+    const detail = vi.spyOn(orderApi, 'detail').mockResolvedValue(preparing)
+    vi.spyOn(dispatchApi, 'list').mockResolvedValue([])
+    const create = vi.spyOn(dispatchApi, 'create').mockImplementation(async () => {
+      detail.mockResolvedValue({ ...preparing, status: 'DELIVERED' })
+      return { id: 1, orderId: order.id, orderStatus: 'DELIVERED', performedBy: 7, dispatchedAt: order.createdAt, items: [] }
+    })
+    render(<Providers user={{ ...customer, role: 'SALES_STAFF' }}><LiveOrderDetails id={order.id} onClose={vi.fn()} /></Providers>)
+    fireEvent.click(await screen.findByRole('button', { name: 'Bàn giao tại quầy' }))
+    expect(create).not.toHaveBeenCalled()
+    expect(screen.queryByRole('link', { name: /Xếp chuyến/ })).toBeNull()
+    fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận bàn giao' }))
+    await waitFor(() => expect(create).toHaveBeenCalledExactlyOnceWith(order.id))
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Bàn giao tại quầy' })).toBeNull())
+  })
+
+  it('routes a preparing delivery order to trip management instead', async () => {
+    vi.spyOn(orderApi, 'detail').mockResolvedValue(order)
+    vi.spyOn(dispatchApi, 'list').mockResolvedValue([])
+    render(<Providers user={{ ...customer, role: 'ADMIN' }}><LiveOrderDetails id={order.id} onClose={vi.fn()} /></Providers>)
+    expect((await screen.findByRole('link', { name: /Xếp chuyến/ })).getAttribute('href')).toBe('/delivery')
+    expect(screen.queryByRole('button', { name: 'Bàn giao tại quầy' })).toBeNull()
+  })
 })
 
 describe('FE1 customer screens and role separation', () => {
