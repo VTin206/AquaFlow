@@ -29,7 +29,7 @@ import { CustomerAccountPanel } from './CustomerAccountPanel'
 export function ShopAccountPage() {
   const { login, logout, enterDemo, isAuthenticated, user } = useAuth()
   const staff = useStaff()
-  const { message, modal } = App.useApp()
+  const { message } = App.useApp()
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string>()
@@ -131,19 +131,9 @@ export function ShopAccountPage() {
                 autoComplete="current-password"
               />
             </Form.Item>
-            <Button
-              type="link"
-              className="af-shop-account-forgot"
-              onClick={() =>
-                modal.info({
-                  title: 'Quên mật khẩu',
-                  content: 'Liên hệ người quản trị cửa hàng để được cấp lại mật khẩu.',
-                  okText: 'Đã hiểu',
-                })
-              }
-            >
+            <Link to="/forgot-password" className="af-shop-account-forgot">
               Quên mật khẩu?
-            </Button>
+            </Link>
             <Button
               type="primary"
               size="large"
