@@ -15,7 +15,18 @@ public record CustomerRequest(
                 regexp = "^(0|\\+84)[0-9]{9,10}$",
                 message = "Phone must be a valid Vietnamese phone number"
         )
-        String phone
+        String phone,
 
+        @Pattern(regexp = "^(Cá nhân|Doanh nghiệp)$", message = "Customer type must be Cá nhân or Doanh nghiệp")
+        String customerType,
+
+        @Size(max = 150, message = "Area must not exceed 150 characters")
+        String area,
+
+        @Size(max = 1000, message = "Note must not exceed 1000 characters")
+        String note
 ) {
+    public CustomerRequest(String fullName, String phone) {
+        this(fullName, phone, null, null, null);
+    }
 }

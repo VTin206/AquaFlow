@@ -13,7 +13,16 @@ type MobileRecordListProps<T> = {
 }
 
 /** Danh sách thẻ có loading/empty/phân trang, dùng cho màn hình nhỏ. */
-export function MobileRecordList<T>({ items, rowKey, renderItem, loading, emptyText, label, paginate = true, controls }: MobileRecordListProps<T>) {
+export function MobileRecordList<T>({
+  items,
+  rowKey,
+  renderItem,
+  loading,
+  emptyText,
+  label,
+  paginate = true,
+  controls,
+}: MobileRecordListProps<T>) {
   const [page, setPage] = useState(1)
   const pageSize = 10
   // Dữ liệu có thể giảm sau khi lọc hoặc cập nhật; không để trang hiện tại trống giả.
@@ -23,17 +32,27 @@ export function MobileRecordList<T>({ items, rowKey, renderItem, loading, emptyT
   return (
     <ConfigProvider theme={{ token: { controlHeight: 44, fontSizeSM: 13 } }}>
       <section className="af-mobile-records" aria-label={label} aria-busy={Boolean(loading)}>
-        {loading ? <Skeleton active paragraph={{ rows: 6 }} /> : items.length === 0 ? (
+        {loading ? (
+          <Skeleton active paragraph={{ rows: 6 }} />
+        ) : items.length === 0 ? (
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={emptyText} />
         ) : (
           <>
             {controls && <div className="af-mobile-record-controls">{controls}</div>}
             <ul className="af-record-list">
-              {visible.map((item) => <li key={rowKey(item)}><Card size="small" styles={{ body: { padding: 16 } }}>{renderItem(item)}</Card></li>)}
+              {visible.map((item) => (
+                <li key={rowKey(item)}>
+                  <Card size="small" styles={{ body: { padding: 16 } }}>
+                    {renderItem(item)}
+                  </Card>
+                </li>
+              ))}
             </ul>
             {paginate && (
               <div className="af-mobile-record-pagination">
-                <span>{(current - 1) * pageSize + 1}–{Math.min(current * pageSize, items.length)} / {items.length}</span>
+                <span>
+                  {(current - 1) * pageSize + 1}–{Math.min(current * pageSize, items.length)} / {items.length}
+                </span>
                 <Pagination simple current={current} pageSize={pageSize} total={items.length} showSizeChanger={false} onChange={setPage} />
               </div>
             )}

@@ -1,7 +1,7 @@
-import { PrintHeader } from '../../../shared/print/PrintHeader'
-import { currency, printDate } from '../../../shared/utils/format'
-import { amountDue, jugCount, type Order } from '../../orders/types'
-import type { StoreSettings } from '../../settings/types'
+import { PrintHeader } from '@/shared/print/PrintHeader'
+import { currency, printDate } from '@/shared/utils/format'
+import { amountDue, jugCount, type Order } from '@/features/orders/types'
+import type { StoreSettings } from '@/features/settings/types'
 import type { Trip } from '../types'
 
 /** Phiếu chuyến cho tài xế mang theo: danh sách điểm giao, tiền và vỏ cần xử lý, cột ký nhận. */

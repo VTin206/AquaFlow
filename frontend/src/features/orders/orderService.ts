@@ -1,9 +1,9 @@
-import { db } from '../../mocks/db'
-import { mockError, mockRequest } from '../../mocks/mockRequest'
-import { asCustomer, logActivity, mockActor, requireRole, type ActivityArea } from '../../mocks/session'
-import { addBottleEntry, bottleBalance, ensureCustomer } from '../customers/customerService'
-import { suggestedDeliveryFee as webDeliveryFee } from '../../shared/policy'
-import { daysUntilExpiry } from '../inventory/expiry'
+import { db } from '@/mocks/db'
+import { mockError, mockRequest } from '@/mocks/mockRequest'
+import { asCustomer, logActivity, mockActor, requireRole, type ActivityArea } from '@/mocks/session'
+import { addBottleEntry, bottleBalance, ensureCustomer } from '@/features/customers/customerService'
+import { suggestedDeliveryFee } from '@/shared/policy'
+import { daysUntilExpiry } from '@/features/inventory/expiry'
 import {
   amountDue,
   jugCount,
@@ -16,8 +16,12 @@ import {
   type OrderLine,
   type PaymentDraft,
   type PublicOrder,
+  awaitingReturnInspection,
+  returnLinesOf,
+  type LotLine,
   type RefundDraft,
   type ReturnDraft,
+  type ReturnInspectionDraft,
 } from './types'
 
 // Bản mô phỏng trong bộ nhớ; API thật cần transaction, phân quyền và nhật ký phía máy chủ.
@@ -86,7 +90,8 @@ const priceLines = (lines: OrderDraft['lines']): OrderLine[] => {
     const product = db.products.find((item) => item.id === productId)
     if (!product || product.sku === 'VO-20L') throw mockError(400, 'Chọn sản phẩm nước đang kinh doanh.')
     if ((daysUntilExpiry(product.expiry) ?? 0) < 0) throw mockError(400, `Sản phẩm ${product.name} đã hết hạn.`)
-    if (product.stock < quantity) throw mockError(400, `${product.name}: chỉ còn ${product.stock} ${product.unit.toLowerCase()} có thể bán.`)
+    if (product.stock < quantity)
+      throw mockError(400, `${product.name}: chỉ còn ${product.stock} ${product.unit.toLowerCase()} có thể bán.`)
     return { productId, quantity, name: product.name, unit: product.unit, unitPrice: product.price }
   })
 }
@@ -100,7 +105,8 @@ const validateAppointment = (appointment?: string) => {
 const checkExpiry = (order: Order) => {
   for (const line of order.lines) {
     const product = db.products.find((item) => item.id === line.productId)
-    if (!product || (daysUntilExpiry(product.expiry) ?? 0) < 0) throw mockError(400, 'Có sản phẩm không còn đủ điều kiện giao. Cần kiểm tra lại hàng.')
+    if (!product || (daysUntilExpiry(product.expiry) ?? 0) < 0)
+      throw mockError(400, 'Có sản phẩm không còn đủ điều kiện giao. Cần kiểm tra lại hàng.')
   }
 }
 
@@ -110,20 +116,71 @@ export const canCancel = (order: Order) => ['Chờ xác nhận', 'Đang chuẩn 
 /** Số lượng còn có thể nhận trả của một sản phẩm trong đơn. */
 export function returnableQuantity(order: Order, productId: string) {
   const sold = order.lines.find((line) => line.productId === productId)?.quantity ?? 0
-  const returned = (order.returns ?? []).flatMap((item) => item.lines).filter((line) => line.productId === productId).reduce((sum, line) => sum + line.quantity, 0)
+  const returned = (order.returns ?? [])
+    .flatMap((item) => item.lines)
+    .filter((line) => line.productId === productId)
+    .reduce((sum, line) => sum + line.quantity, 0)
   return sold - returned
 }
 
-/** Đơn giao tận nơi đang chuẩn bị hoặc giao thất bại có thể xuất đi giao (lần đầu hoặc giao lại). */
-export const canDispatch = (order: Order) => order.method === 'Giao tận nơi' && ['Đang chuẩn bị', 'Giao thất bại'].includes(order.status)
+/** Chỉ đơn giao tận nơi đang chuẩn bị (đã giữ hàng) mới xuất kho đi giao. Đơn giao thất bại phải kiểm hàng hoàn và giao lại trước. */
+export const canDispatch = (order: Order) => order.method === 'Giao tận nơi' && order.status === 'Đang chuẩn bị'
 
-/** Chuyển đơn sang "Đang giao"; dùng chung cho thao tác lẻ và xuất phát chuyến. */
-export function beginDelivery(order: Order, via?: string) {
-  if (!canDispatch(order)) throw mockError(400, `Đơn ${order.id} chưa sẵn sàng xuất giao.`)
+/**
+ * Lô của phần hàng đang giữ cho đơn. Bản mock suy tồn từng lô theo FEFO từ tổng tồn, nên phần vừa giữ
+ * nằm sát ranh giới giữa phần đã dùng và phần còn lại; backend ghi theo lô thật trong transaction.
+ */
+function dispatchLots(line: OrderLine): LotLine[] {
+  const base = { productId: line.productId, name: line.name, unit: line.unit }
+  const product = db.products.find((item) => item.id === line.productId)
+  const lots = db.lots
+    .filter((lot) => lot.productId === line.productId)
+    .sort((a, b) => (a.expiryDate ?? '9999').localeCompare(b.expiryDate ?? '9999'))
+  if (!product || !lots.length) return [{ ...base, quantity: line.quantity }]
+  let consumed = Math.max(0, lots.reduce((sum, lot) => sum + lot.received, 0) - product.stock)
+  const used = lots.map((lot) => {
+    const take = Math.min(consumed, lot.received)
+    consumed -= take
+    return take
+  })
+  const result: LotLine[] = []
+  let need = line.quantity
+  for (let index = lots.length - 1; index >= 0 && need > 0; index--) {
+    const take = Math.min(need, used[index])
+    if (!take) continue
+    result.unshift({ ...base, lotCode: lots[index].lotCode, expiryDate: lots[index].expiryDate, quantity: take })
+    need -= take
+  }
+  if (need > 0) result.push({ ...base, quantity: need })
+  return result
+}
+
+/** Xuất kho toàn bộ hàng đã giữ và chuyển đơn sang "Đang giao" (DISPATCH). Không xuất một phần. */
+export function beginDelivery(order: Order, via?: string, tripId?: string) {
+  if (!canDispatch(order)) throw mockError(400, `Đơn ${order.id} chưa sẵn sàng xuất kho.`)
   checkExpiry(order)
-  const retry = order.status === 'Giao thất bại'
+  const retry = Boolean(order.dispatches?.length) || order.history.some((event) => event.message.startsWith('Giao thất bại'))
+  order.dispatches = [...(order.dispatches ?? []), { at: now(), by: mockActor(), tripId, lines: order.lines.flatMap(dispatchLots) }]
+  // Hàng đã rời kho: không còn là hàng giữ trong kho.
+  order.stockReserved = false
   order.status = 'Đang giao'
-  record(order, `${retry ? 'Bắt đầu lần giao lại' : 'Bắt đầu giao hàng'}${via ? ` · ${via}` : ''}.`)
+  record(order, `Xuất kho, ${retry ? 'bắt đầu lần giao lại' : 'bắt đầu giao hàng'}${via ? ` · ${via}` : ''}.`)
+}
+
+/** Giữ hàng mới cho lần giao lại sau khi đã kiểm hàng hoàn. */
+function reserveAgain(order: Order) {
+  for (const line of order.lines) {
+    const product = db.products.find((item) => item.id === line.productId)
+    if (!product || (daysUntilExpiry(product.expiry) ?? 0) < 0) throw mockError(400, `${line.name} không còn đủ điều kiện giao.`)
+    if (product.stock < line.quantity)
+      throw mockError(400, `${product.name}: chỉ còn ${product.stock} ${product.unit.toLowerCase()} để giữ cho lần giao lại.`)
+  }
+  order.lines.forEach((line) => {
+    db.products.find((product) => product.id === line.productId)!.stock -= line.quantity
+  })
+  order.stockReserved = true
+  order.status = 'Đang chuẩn bị'
+  record(order, 'Giữ hàng mới để giao lại. Lịch sử xuất kho và các lần giao trước được giữ nguyên.')
 }
 
 /** Kiểm tra rồi ghi sổ vỏ khi bàn giao; trả về undefined nếu đơn không có vỏ luân chuyển. */
@@ -144,6 +201,15 @@ function settleBottles(order: Order, result: DeliveryResult) {
   return { delivered, returned, deposit }
 }
 
+/** Phí giao tính theo chính sách ở phía cửa hàng, người đặt không tự nhập. */
+export function deliveryFeeFor(lines: OrderDraft['lines'], floor = 0) {
+  const units = lines.reduce((sum, line) => sum + line.quantity, 0)
+  const jugs = lines
+    .filter((line) => db.products.find((product) => product.id === line.productId)?.unit === 'Bình')
+    .reduce((sum, line) => sum + line.quantity, 0)
+  return suggestedDeliveryFee({ units, jugs, floor })
+}
+
 function createOrder(draft: OrderDraft) {
   requireRole(draft.channel === 'Website' ? ['CUSTOMER', ...STAFF] : [...STAFF], 'tạo đơn hàng')
   if (!['Tại quầy', 'Giao tận nơi'].includes(draft.method)) throw mockError(400, 'Chọn hình thức nhận hàng.')
@@ -158,17 +224,21 @@ function createOrder(draft: OrderDraft) {
   const deliveryFee = delivery ? draft.deliveryFee : 0
   if (!Number.isSafeInteger(deliveryFee) || deliveryFee < 0) throw mockError(400, 'Phí giao hàng phải là số nguyên không âm.')
   if (delivery) validateAppointment(draft.appointment)
-  const floor = delivery ? draft.floor ?? 0 : 0
+  const floor = delivery ? (draft.floor ?? 0) : 0
   if (!Number.isSafeInteger(floor) || floor < 0 || floor > 30) throw mockError(400, 'Số lầu không hợp lệ.')
   const id = `AF-${Math.max(1000, ...db.orders.map((order) => Number(order.id.replace('AF-', '')) || 0)) + 1}`
   // Có tên và số điện thoại thì gắn đơn vào hồ sơ khách (tạo mới nếu chưa có) để theo dõi vỏ, cọc, công nợ.
-  const profile = draft.customer?.trim() && draft.phone?.trim() ? ensureCustomer(draft.customer, draft.phone, delivery ? draft.address?.trim() : undefined) : undefined
+  const profile =
+    draft.customer?.trim() && draft.phone?.trim()
+      ? ensureCustomer(draft.customer, draft.phone, delivery ? draft.address?.trim() : undefined)
+      : undefined
   const order: Order = {
     id,
     customerId: profile?.id,
     customer: draft.customer?.trim() || 'Khách vãng lai',
     phone: draft.phone?.trim() || '',
     address: delivery ? draft.address!.trim() : 'Nhận tại cửa hàng',
+    area: delivery ? draft.area?.trim() || undefined : undefined,
     lines,
     items: summary(lines),
     total: subtotal(lines) + deliveryFee,
@@ -185,7 +255,10 @@ function createOrder(draft: OrderDraft) {
     history: [],
     trackingToken: newTrackingToken(),
   }
-  record(order, `${draft.channel === 'Website' ? 'Khách đặt qua website' : 'Tiếp nhận yêu cầu'}. Giá và tồn kho sẽ được kiểm tra lại khi xác nhận.`)
+  record(
+    order,
+    `${draft.channel === 'Website' ? 'Khách đặt qua website' : 'Tiếp nhận yêu cầu'}. Giá và tồn kho sẽ được kiểm tra lại khi xác nhận.`,
+  )
   db.orders.unshift(order)
   return order
 }
@@ -211,8 +284,13 @@ export const orderService = {
         order.stockReserved = true
         order.status = 'Đang chuẩn bị'
         record(order, 'Xác nhận đơn, chốt giá và giữ hàng.')
-      } else if ((order.status === 'Đang chuẩn bị' && order.method === 'Giao tận nơi') || order.status === 'Giao thất bại') {
+      } else if (order.status === 'Đang chuẩn bị' && order.method === 'Giao tận nơi') {
+        requireRole([...STAFF], 'xuất kho')
         beginDelivery(order)
+      } else if (order.status === 'Giao thất bại') {
+        requireRole([...STAFF], 'tạo lần giao lại')
+        if (awaitingReturnInspection(order)) throw mockError(400, 'Kiểm hàng mang về trước khi giao lại.')
+        reserveAgain(order)
       } else {
         throw mockError(400, 'Đơn không thể chuyển trạng thái bằng thao tác này.')
       }
@@ -237,10 +315,16 @@ export const orderService = {
         order.status = amountDue(order) === 0 ? 'Đã hoàn tất' : 'Đã giao'
         if (bottles) {
           order.bottles = bottles
-          record(order, `Vỏ: giao ${bottles.delivered}, thu về ${bottles.returned}${bottles.deposit ? ` · Thu cọc ${bottles.deposit.toLocaleString('vi-VN')} ₫ (ghi sổ cọc, không tính doanh thu)` : ''}`)
+          record(
+            order,
+            `Vỏ: giao ${bottles.delivered}, thu về ${bottles.returned}${bottles.deposit ? ` · Thu cọc ${bottles.deposit.toLocaleString('vi-VN')} ₫ (ghi sổ cọc, không tính doanh thu)` : ''}`,
+          )
         }
         const late = minutesLate(order)
-        record(order, `${counter ? 'Khách nhận tại quầy' : 'Giao thành công'} · Người nhận: ${result.receiver?.trim() || order.customer}${late ? ` · Trễ ${lateLabel(late)} so với giờ hẹn` : ''}`)
+        record(
+          order,
+          `${counter ? 'Khách nhận tại quầy' : 'Giao thành công'} · Người nhận: ${result.receiver?.trim() || order.customer}${late ? ` · Trễ ${lateLabel(late)} so với giờ hẹn` : ''}`,
+        )
       }
       return order
     }),
@@ -248,16 +332,25 @@ export const orderService = {
   pay: (id: string, draft: PaymentDraft) =>
     mockRequest(() => {
       const order = findOrder(id)
-      if (['Chờ xác nhận', 'Đã hủy', 'Đã hoàn tất'].includes(order.status)) throw mockError(400, 'Chỉ ghi nhận tiền cho đơn đã xác nhận và còn phải thu.')
+      if (['Chờ xác nhận', 'Đã hủy', 'Đã hoàn tất'].includes(order.status))
+        throw mockError(400, 'Chỉ ghi nhận tiền cho đơn đã xác nhận và còn phải thu.')
       if (!Number.isSafeInteger(draft.amount) || draft.amount <= 0 || draft.amount > amountDue(order))
         throw mockError(400, 'Số tiền phải lớn hơn 0 và không vượt số còn phải thu.')
       if (!['Tiền mặt', 'Chuyển khoản'].includes(draft.method)) throw mockError(400, 'Chọn phương thức thanh toán.')
-      if (draft.method === 'Chuyển khoản' && !draft.reference?.trim()) throw mockError(400, 'Nhập mã tham chiếu sau khi kiểm tra chuyển khoản.')
+      if (draft.method === 'Chuyển khoản' && !draft.reference?.trim())
+        throw mockError(400, 'Nhập mã tham chiếu sau khi kiểm tra chuyển khoản.')
       const reference = draft.method === 'Chuyển khoản' ? draft.reference?.trim() : undefined
       if (reference && db.orders.some((item) => item.payments.some((payment) => payment.reference === reference)))
         throw mockError(400, 'Mã tham chiếu đã được ghi nhận.')
       const count = order.payments.filter((payment) => !payment.refund).length + 1
-      order.payments.push({ id: `PT-${order.id}-${count}`, amount: draft.amount, method: draft.method, reference, recordedAt: now(), by: mockActor() })
+      order.payments.push({
+        id: `PT-${order.id}-${count}`,
+        amount: draft.amount,
+        method: draft.method,
+        reference,
+        recordedAt: now(),
+        by: mockActor(),
+      })
       record(order, `Ghi nhận ${draft.amount.toLocaleString('vi-VN')} ₫ · ${draft.method}`, 'Thanh toán')
       if (order.status === 'Đã giao' && amountDue(order) === 0) order.status = 'Đã hoàn tất'
       return order
@@ -268,8 +361,10 @@ export const orderService = {
     mockRequest(() => {
       const order = findOrder(id)
       requireRole([...STAFF], 'hủy đơn')
-      if (order.status === 'Đang giao') throw mockError(400, 'Đơn đang trên đường giao. Ghi kết quả giao thất bại (hàng mang về) rồi mới hủy.')
+      if (order.status === 'Đang giao')
+        throw mockError(400, 'Đơn đang trên đường giao. Ghi kết quả giao thất bại (hàng mang về) rồi mới hủy.')
       if (!canCancel(order)) throw mockError(400, 'Đơn đã giao cho khách; dùng chức năng nhận trả hàng.')
+      if (awaitingReturnInspection(order)) throw mockError(400, 'Kiểm hàng mang về trước khi hủy đơn.')
       if (!reason.trim()) throw mockError(400, 'Nhập lý do hủy đơn.')
       const paid = paidAmount(order)
       if (paid > 0) {
@@ -280,7 +375,41 @@ export const orderService = {
       if (order.stockReserved) restock(order.lines)
       order.stockReserved = false
       order.status = 'Đã hủy'
-      record(order, `Hủy đơn: ${reason.trim()}. ${returned ? 'Hàng mang về đã nhập lại kho.' : 'Đã giải phóng hàng giữ (nếu có).'}`)
+      record(
+        order,
+        `Hủy đơn: ${reason.trim()}. ${returned ? 'Hàng mang về đã xử lý khi kiểm hàng hoàn.' : 'Đã giải phóng hàng giữ (nếu có).'}`,
+      )
+      return order
+    }),
+
+  /** Kiểm hàng mang về sau khi giao thất bại: nhập lại phần bán được (RETURN), phần hỏng loại khỏi kho. */
+  inspectReturn: (id: string, draft: ReturnInspectionDraft) =>
+    mockRequest(() => {
+      const order = findOrder(id)
+      requireRole([...STAFF], 'tiếp nhận hàng hoàn')
+      if (!awaitingReturnInspection(order)) throw mockError(400, 'Đơn không có hàng chờ kiểm.')
+      const lines = returnLinesOf(order)
+      if (draft.sellable?.length !== lines.length) throw mockError(400, 'Nhập số lượng đạt cho từng dòng hàng.')
+      const checked = lines.map((line, index) => {
+        const sellable = draft.sellable[index]
+        if (!Number.isSafeInteger(sellable) || sellable < 0 || sellable > line.quantity)
+          throw mockError(400, `${line.name}: số đạt phải từ 0 đến ${line.quantity}.`)
+        return { ...line, sellable, damaged: line.quantity - sellable }
+      })
+      const damaged = checked.reduce((sum, line) => sum + line.damaged, 0)
+      if (damaged && !draft.note?.trim()) throw mockError(400, 'Ghi chú tình trạng hàng hỏng.')
+      restock(checked.map((line) => ({ productId: line.productId, quantity: line.sellable })))
+      order.stockReserved = false
+      order.returnInspections = [
+        ...(order.returnInspections ?? []),
+        { at: now(), by: mockActor(), note: draft.note?.trim() || undefined, lines: checked },
+      ]
+      const sellable = checked.reduce((sum, line) => sum + line.sellable, 0)
+      record(
+        order,
+        `Kiểm hàng hoàn: nhập lại ${sellable}, hỏng ${damaged}${draft.note?.trim() ? ` · ${draft.note.trim()}` : ''}.`,
+        'Kho hàng',
+      )
       return order
     }),
 
@@ -330,11 +459,12 @@ export const orderService = {
   /** Khách đặt trên website, không cần tài khoản; luôn giao tận nơi. */
   placeWebOrder: (draft: Omit<OrderDraft, 'channel' | 'method' | 'deliveryFee'>) =>
     mockRequest(() => {
-      // Phí giao tính theo chính sách ở phía cửa hàng, khách không tự nhập.
-      const units = (draft.lines ?? []).reduce((sum, line) => sum + line.quantity, 0)
-      const jugs = (draft.lines ?? []).filter((line) => db.products.find((product) => product.id === line.productId)?.unit === 'Bình').reduce((sum, line) => sum + line.quantity, 0)
-      const deliveryFee = webDeliveryFee({ units, jugs, floor: draft.floor ?? 0 })
-      return toPublicOrder(asCustomer(draft.customer?.trim() || 'Khách', () => createOrder({ ...draft, deliveryFee, channel: 'Website', method: 'Giao tận nơi' })))
+      const deliveryFee = deliveryFeeFor(draft.lines ?? [], draft.floor ?? 0)
+      return toPublicOrder(
+        asCustomer(draft.customer?.trim() || 'Khách', () =>
+          createOrder({ ...draft, deliveryFee, channel: 'Website', method: 'Giao tận nơi' }),
+        ),
+      )
     }),
 
   /** Tra cứu bằng liên kết riêng, hoặc mã đơn kèm số điện thoại đặt hàng. */
@@ -344,7 +474,9 @@ export const orderService = {
       const order =
         'token' in lookup
           ? db.orders.find((item) => item.trackingToken && item.trackingToken === lookup.token)
-          : db.orders.find((item) => item.id === lookup.id.trim().toUpperCase() && item.phone && digits(item.phone) === digits(lookup.phone))
+          : db.orders.find(
+              (item) => item.id === lookup.id.trim().toUpperCase() && item.phone && digits(item.phone) === digits(lookup.phone),
+            )
       if (!order) throw mockError(404, 'Không tìm thấy đơn. Kiểm tra lại mã đơn và số điện thoại.')
       return toPublicOrder(order)
     }),

@@ -1,14 +1,16 @@
+import { useIsDemo } from '@/shared/features'
+import { LiveActivityPage } from './LiveActivityPage'
 import { useState } from 'react'
 import { Button, Card, DatePicker, Input, Select, Table, Tag, type TableColumnsType } from 'antd'
 import type { Dayjs } from 'dayjs'
 import { Download, Search } from 'lucide-react'
-import { Page } from '../../shared/components/Page'
-import { QueryError } from '../../shared/components/QueryError'
-import { downloadCsv } from '../../shared/utils/csv'
-import { tablePagination, tableScrollHeight } from '../../shared/utils/table'
-import { OrderDetailsModal } from '../orders/components/OrderDetailsModal'
-import { useOrders } from '../orders/useOrders'
-import { localDay } from '../reports/reportService'
+import { Page } from '@/shared/components/Page'
+import { QueryError } from '@/shared/components/QueryError'
+import { downloadCsv } from '@/shared/utils/csv'
+import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
+import { OrderDetailsModal } from '@/features/orders/components/OrderDetailsModal'
+import { useOrders } from '@/features/orders/useOrders'
+import { localDay } from '@/features/reports/reportService'
 import { useActivity, type ActivityArea, type ActivityEntry } from './activityService'
 
 const ALL = 'Tất cả'
@@ -23,6 +25,10 @@ const areaColors: Record<ActivityArea, string> = {
 }
 
 export function ActivityPage() {
+  return useIsDemo() ? <DemoActivityPage /> : <LiveActivityPage />
+}
+
+function DemoActivityPage() {
   const activityQuery = useActivity()
   const { data: orders = [] } = useOrders()
   const [area, setArea] = useState<string>(ALL)
@@ -44,7 +50,17 @@ export function ActivityPage() {
   const openable = new Set(orders.map((order) => order.id))
 
   const columns: TableColumnsType<ActivityEntry> = [
-    { title: 'Thời điểm', dataIndex: 'at', width: 170, render: (at: string) => new Date(at).toLocaleString('vi-VN') },
+    {
+      title: 'Thời điểm',
+      dataIndex: 'at',
+      width: 170,
+      render: (at: string) => (
+        <div className="af-cell-stack">
+          <span>{new Date(at).toLocaleTimeString('vi-VN')}</span>
+          <small>{new Date(at).toLocaleDateString('vi-VN')}</small>
+        </div>
+      ),
+    },
     { title: 'Người thực hiện', dataIndex: 'by', width: 200, ellipsis: true },
     { title: 'Khu vực', dataIndex: 'area', width: 130, render: (value: ActivityArea) => <Tag color={areaColors[value]}>{value}</Tag> },
     {
@@ -72,7 +88,10 @@ export function ActivityPage() {
           icon={<Download size={16} />}
           disabled={!visible.length}
           onClick={() =>
-            downloadCsv('nhat-ky-hoat-dong.csv', [['Thời điểm', 'Người thực hiện', 'Khu vực', 'Đối tượng', 'Nội dung'], ...visible.map((entry) => [new Date(entry.at).toLocaleString('vi-VN'), entry.by, entry.area, entry.target, entry.action])])
+            downloadCsv('nhat-ky-hoat-dong.csv', [
+              ['Thời điểm', 'Người thực hiện', 'Khu vực', 'Đối tượng', 'Nội dung'],
+              ...visible.map((entry) => [new Date(entry.at).toLocaleString('vi-VN'), entry.by, entry.area, entry.target, entry.action]),
+            ])
           }
         >
           Xuất CSV
@@ -86,7 +105,13 @@ export function ActivityPage() {
           <>
             <div className="af-toolbar">
               <div className="af-order-filters">
-                <Select aria-label="Lọc khu vực" value={area} onChange={setArea} style={{ minWidth: 150 }} options={[ALL, ...Object.keys(areaColors)].map((value) => ({ value, label: value === ALL ? 'Mọi khu vực' : value }))} />
+                <Select
+                  aria-label="Lọc khu vực"
+                  value={area}
+                  onChange={setArea}
+                  style={{ minWidth: 150 }}
+                  options={[ALL, ...Object.keys(areaColors)].map((value) => ({ value, label: value === ALL ? 'Mọi khu vực' : value }))}
+                />
                 <Select
                   aria-label="Lọc người thực hiện"
                   showSearch
@@ -95,7 +120,12 @@ export function ActivityPage() {
                   style={{ minWidth: 190 }}
                   options={[{ value: ALL, label: 'Mọi người' }, ...people.map((value) => ({ value, label: value }))]}
                 />
-                <DatePicker.RangePicker aria-label="Lọc theo ngày" format="DD/MM/YYYY" value={dates} onChange={(value) => setDates(value?.[0] && value[1] ? [value[0], value[1]] : null)} />
+                <DatePicker.RangePicker
+                  aria-label="Lọc theo ngày"
+                  format="DD/MM/YYYY"
+                  value={dates}
+                  onChange={(value) => setDates(value?.[0] && value[1] ? [value[0], value[1]] : null)}
+                />
               </div>
               <Input
                 allowClear
@@ -107,14 +137,17 @@ export function ActivityPage() {
               />
             </div>
             <Table<ActivityEntry>
-              className="af-data-table"
+              className="af-data-table af-table-flush"
               rowKey="id"
               size="middle"
               columns={columns}
               dataSource={visible}
               loading={activityQuery.isPending}
               pagination={{ ...tablePagination, defaultPageSize: 20 }}
-              locale={{ emptyText: keyword || area !== ALL || person !== ALL || dates ? 'Không có hoạt động phù hợp bộ lọc.' : 'Chưa có hoạt động nào.' }}
+              locale={{
+                emptyText:
+                  keyword || area !== ALL || person !== ALL || dates ? 'Không có hoạt động phù hợp bộ lọc.' : 'Chưa có hoạt động nào.',
+              }}
               scroll={{ x: 900, y: tableScrollHeight }}
             />
           </>

@@ -1,9 +1,9 @@
-import { TransferQr } from '../../../shared/payment/TransferQr'
-import { bankBinOf, transferNote } from '../../../shared/payment/vietqr'
-import { PrintHeader } from '../../../shared/print/PrintHeader'
-import { DEPOSIT_PER_BOTTLE } from '../../../shared/policy'
-import { currency, printDate } from '../../../shared/utils/format'
-import type { StoreSettings } from '../../settings/types'
+import { TransferQr } from '@/shared/payment/TransferQr'
+import { bankBinOf, transferNote } from '@/shared/payment/vietqr'
+import { PrintHeader } from '@/shared/print/PrintHeader'
+import { DEPOSIT_PER_BOTTLE } from '@/shared/policy'
+import { currency, printDate } from '@/shared/utils/format'
+import type { StoreSettings } from '@/features/settings/types'
 import { amountDue, jugCount, paidAmount, returnedValue, type Order } from '../types'
 
 type DocumentProps = { order: Order; settings?: StoreSettings }
@@ -80,7 +80,9 @@ export function InvoiceDocument({ order, settings }: DocumentProps) {
           Tiền cọc vỏ đã thu: {currency(order.bottles.deposit)} (khoản thế chân, hoàn lại khi trả vỏ, không tính vào tiền hàng).
         </p>
       ) : null}
-      {settings?.bankAccount && due > 0 && order.status !== 'Đã hủy' &&
+      {settings?.bankAccount &&
+        due > 0 &&
+        order.status !== 'Đã hủy' &&
         (bankBinOf(settings.bankName) ? (
           <section className="af-doc-qr">
             <TransferQr settings={settings} amount={due} note={order.id} size={92} compact />
@@ -88,7 +90,8 @@ export function InvoiceDocument({ order, settings }: DocumentProps) {
           </section>
         ) : (
           <p className="af-doc-note">
-            Chuyển khoản: {settings.bankName} · {settings.bankAccount} · {settings.bankHolder} · Nội dung: <strong>{transferNote(order.id)}</strong>
+            Chuyển khoản: {settings.bankName} · {settings.bankAccount} · {settings.bankHolder} · Nội dung:{' '}
+            <strong>{transferNote(order.id)}</strong>
           </p>
         ))}
       <footer className="af-doc-footer">

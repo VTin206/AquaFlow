@@ -111,4 +111,25 @@ class SupplierServiceTest {
     private Supplier supplier(String name) {
         return new Supplier(name, "0987654321", "123 Main St");
     }
+
+    @Test
+    void createAndUpdateKeepContactFieldsAndOlderClientsDoNotEraseThem() {
+        when(supplierRepository.save(any(Supplier.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        SupplierResponse created = supplierService.create(new SupplierRequest(
+                "Aqua Supplier", "0987654321", "123 Main St", " Chị Lan ", "lan@aqua.vn"));
+        assertThat(created.contactName()).isEqualTo("Chị Lan");
+        assertThat(created.email()).isEqualTo("lan@aqua.vn");
+
+        Supplier existing = supplier("Old name");
+        existing.updateContact("Anh Minh", "minh@aqua.vn");
+        when(supplierRepository.findById(1L)).thenReturn(Optional.of(existing));
+        SupplierResponse kept = supplierService.update(1L, new SupplierRequest("New name", "0911222333", "456 New St"));
+        assertThat(kept.contactName()).isEqualTo("Anh Minh");
+        assertThat(kept.email()).isEqualTo("minh@aqua.vn");
+
+        SupplierResponse cleared = supplierService.update(1L,
+                new SupplierRequest("New name", "0911222333", "456 New St", "", ""));
+        assertThat(cleared.contactName()).isNull();
+        assertThat(cleared.email()).isNull();
+    }
 }

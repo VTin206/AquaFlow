@@ -1,4 +1,4 @@
-import { DEPOSIT_PER_BOTTLE } from '../../shared/policy'
+import { DEPOSIT_PER_BOTTLE } from '@/shared/policy'
 
 export type CustomerType = 'Cá nhân' | 'Doanh nghiệp'
 
@@ -15,6 +15,8 @@ export type CustomerRecord = {
   note?: string
   /** Số đơn trước khi có hệ thống (dữ liệu chuyển đổi). */
   legacyOrders: number
+  /** false khi hồ sơ đã lưu trữ; thiếu nghĩa là đang hoạt động. */
+  active?: boolean
 }
 
 export type Customer = CustomerRecord & {
@@ -57,6 +59,10 @@ export type BottleAction = {
 
 export { DEPOSIT_PER_BOTTLE }
 
+/** Mã hiển thị: bản dùng thử đã có dạng KH-001, tài khoản thật là số. */
+export const customerCode = (customer: Pick<Customer, 'id'>) =>
+  customer.id.startsWith('KH-') ? customer.id : `KH-${customer.id.padStart(3, '0')}`
+
 export const normalizePhone = (phone: string) => phone.replace(/\D/g, '')
 
 export const initialsOf = (name: string) => {
@@ -68,4 +74,5 @@ export const guessCustomerType = (name: string): CustomerType =>
   /^(công ty|văn phòng|cửa hàng|nhà hàng|quán|tiệm|trung tâm|trường)/i.test(name.trim()) ? 'Doanh nghiệp' : 'Cá nhân'
 
 /** Phần cọc vượt quá số vỏ khách còn giữ, có thể hoàn lại. */
-export const refundableOf = (customer: Pick<Customer, 'bottlesHeld' | 'depositHeld'>) => Math.max(0, customer.depositHeld - customer.bottlesHeld * DEPOSIT_PER_BOTTLE)
+export const refundableOf = (customer: Pick<Customer, 'bottlesHeld' | 'depositHeld'>) =>
+  Math.max(0, customer.depositHeld - customer.bottlesHeld * DEPOSIT_PER_BOTTLE)

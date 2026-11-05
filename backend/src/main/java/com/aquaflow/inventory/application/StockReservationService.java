@@ -45,7 +45,11 @@ public class StockReservationService {
         if (!reservationRepository.findByOrderItemIdIn(orderItemIds).isEmpty()) {
             throw new ConflictException("Đơn hàng đã được giữ hàng trước đó");
         }
+        return reserveLines(lines);
+    }
 
+    /** Giữ hàng theo FEFO mà không kiểm tra reservation cũ; chỉ RedeliveryReservationService gọi sau khi đã kiểm tra. */
+    List<StockReservation> reserveLines(Collection<ReservationLine> lines) {
         LocalDate today = LocalDate.now(clock);
         List<StockReservation> reservations = new ArrayList<>();
         // Khóa theo thứ tự productId cố định để hai đơn khóa chéo sản phẩm không bị deadlock
@@ -62,7 +66,9 @@ public class StockReservationService {
     @Transactional
     public void release(Collection<Long> orderItemIds) {
         List<StockReservation> reservations = reservationRepository.findByOrderItemIdIn(orderItemIds).stream()
-                .sorted(Comparator.comparing(r -> r.getBatch().getId()))
+                .sorted(Comparator.comparing((StockReservation r) -> r.getBatch().getProduct().getId())
+                        .thenComparing(r -> r.getBatch().getExpiresOn())
+                        .thenComparing(r -> r.getBatch().getId()))
                 .toList();
 
         if (reservations.stream().anyMatch(r -> r.getQuantityDispatched() > 0)) {
@@ -75,6 +81,25 @@ public class StockReservationService {
             if (released == 0) {
                 continue;
             }
+            InventoryBalance balance = balanceRepository.findForUpdateByBatchId(reservation.getBatch().getId())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Missing inventory balance for batch " + reservation.getBatch().getId()));
+            balance.release(released);
+        }
+    }
+
+    /** Release only reservations that have never been dispatched; keep completed dispatch history intact. */
+    @Transactional
+    public void releaseUndispatched(Collection<Long> orderItemIds) {
+        List<StockReservation> reservations = reservationRepository.findByOrderItemIdIn(orderItemIds).stream()
+                .filter(reservation -> reservation.getQuantityDispatched() == 0)
+                .sorted(Comparator.comparing((StockReservation r) -> r.getBatch().getProduct().getId())
+                        .thenComparing(r -> r.getBatch().getExpiresOn())
+                        .thenComparing(r -> r.getBatch().getId()))
+                .toList();
+        for (StockReservation reservation : reservations) {
+            int released = reservation.releaseOutstanding();
+            if (released == 0) continue;
             InventoryBalance balance = balanceRepository.findForUpdateByBatchId(reservation.getBatch().getId())
                     .orElseThrow(() -> new IllegalStateException(
                             "Missing inventory balance for batch " + reservation.getBatch().getId()));

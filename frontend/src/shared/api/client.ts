@@ -96,9 +96,11 @@ async function request<T>(config: AxiosRequestConfig): Promise<T> {
 
 export const api = {
   get: <T>(path: string, options?: AxiosRequestConfig) => request<T>({ ...options, method: 'GET', url: path }),
-  post: <T>(path: string, body?: unknown, options?: AxiosRequestConfig) => request<T>({ ...options, method: 'POST', url: path, data: body }),
+  post: <T>(path: string, body?: unknown, options?: AxiosRequestConfig) =>
+    request<T>({ ...options, method: 'POST', url: path, data: body }),
   put: <T>(path: string, body?: unknown, options?: AxiosRequestConfig) => request<T>({ ...options, method: 'PUT', url: path, data: body }),
-  patch: <T>(path: string, body?: unknown, options?: AxiosRequestConfig) => request<T>({ ...options, method: 'PATCH', url: path, data: body }),
+  patch: <T>(path: string, body?: unknown, options?: AxiosRequestConfig) =>
+    request<T>({ ...options, method: 'PATCH', url: path, data: body }),
   delete: <T>(path: string, options?: AxiosRequestConfig) => request<T>({ ...options, method: 'DELETE', url: path }),
 }
 

@@ -1,13 +1,16 @@
 import { createContext } from 'react'
 import type { LoginCredentials } from './authService'
 
-export type AuthUser = { name: string; role: string; isDemo?: boolean }
+export type AuthUser = { name: string; role: string; email?: string; isDemo?: boolean }
 
 export type AuthContextValue = {
   user: AuthUser | null
   isAuthenticated: boolean
   login: (credentials: LoginCredentials) => Promise<void>
   enterDemo: () => void
+  /** Chỉ khi dev: xem cửa hàng như khách chưa đăng nhập nhưng vẫn dùng dữ liệu mẫu. */
+  demoGuest: boolean
+  enterDemoGuest: () => void
   logout: () => void
 }
 

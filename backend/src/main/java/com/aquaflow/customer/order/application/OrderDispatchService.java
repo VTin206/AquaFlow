@@ -1,0 +1,68 @@
+package com.aquaflow.customer.order.application;
+
+import com.aquaflow.customer.order.api.dto.DispatchResponse;
+import com.aquaflow.customer.order.domain.*;
+import com.aquaflow.customer.order.repository.*;
+import com.aquaflow.inventory.application.*;
+import com.aquaflow.shared.api.*;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
+
+@Service
+@Transactional(readOnly = true)
+public class OrderDispatchService {
+    private final OrderRepository orders;
+    private final OrderItemRepository items;
+    private final DispatchRepository dispatches;
+    private final StockDispatchService stock;
+
+    public OrderDispatchService(OrderRepository orders, OrderItemRepository items,
+                                DispatchRepository dispatches, StockDispatchService stock) {
+        this.orders = orders;
+        this.items = items;
+        this.dispatches = dispatches;
+        this.stock = stock;
+    }
+
+    @Transactional
+    public DispatchResponse create(Long orderId, Long actorId) {
+        return createInternal(orderId, actorId, false);
+    }
+
+    /** Delivery-trip dispatch calls this inside the trip-wide transaction. */
+    @Transactional
+    public DispatchResponse createForTrip(Long orderId, Long actorId) {
+        return createInternal(orderId, actorId, false);
+    }
+
+    @Transactional
+    public DispatchResponse createRedeliveryForTrip(Long orderId, Long actorId) {
+        return createInternal(orderId, actorId, true);
+    }
+
+    private DispatchResponse createInternal(Long orderId, Long actorId, boolean redelivery) {
+        var order = orders.findForUpdateById(orderId).orElseThrow(() -> new NotFoundException("Không tìm thấy đơn hàng"));
+        boolean hasHistory = dispatches.hasDispatch(orderId);
+        if (hasHistory != redelivery) {
+            throw new ConflictException(redelivery
+                    ? "Không có phiếu xuất kho cũ để giao lại"
+                    : "Đơn đã xuất kho; giao lại phải qua kiểm nhận và reservation mới");
+        }
+        order.markDispatched();
+        var lines = items.findAllByOrder_Id(orderId).stream()
+                .map(item -> new ReservationLine(item.getId(), item.getProductId(), item.getQuantity())).toList();
+        var exported = stock.dispatch(orderId, lines, actorId, order.getFulfillmentType() == FulfillmentType.COUNTER);
+        return dispatches.create(orderId, actorId, order.getStatus(), exported);
+    }
+
+    public List<DispatchResponse> list(Long orderId) {
+        if (!orders.existsById(orderId)) throw new NotFoundException("Không tìm thấy đơn hàng");
+        return dispatches.findAllByOrderId(orderId);
+    }
+
+    public DispatchResponse find(Long orderId, Long dispatchId) {
+        return dispatches.findById(dispatchId).filter(d -> d.orderId().equals(orderId))
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy phiếu xuất kho"));
+    }
+}

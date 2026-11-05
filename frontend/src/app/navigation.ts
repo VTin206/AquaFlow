@@ -1,4 +1,16 @@
-import { Boxes, Building2, FileBarChart, History, LayoutDashboard, type LucideIcon, Package, ShoppingBag, Smartphone, Truck, Users } from 'lucide-react'
+import {
+  Boxes,
+  Building2,
+  FileBarChart,
+  History,
+  LayoutDashboard,
+  type LucideIcon,
+  Package,
+  ShoppingBag,
+  Smartphone,
+  Truck,
+  Users,
+} from 'lucide-react'
 
 export type NavItem = { path: string; label: string; icon: LucideIcon }
 
@@ -10,7 +22,7 @@ export const navGroups: { label: string; items: NavItem[] }[] = [
       { path: '/orders', label: 'Đơn hàng', icon: ShoppingBag },
       { path: '/inventory', label: 'Kho hàng', icon: Boxes },
       { path: '/delivery', label: 'Giao hàng', icon: Truck },
-      { path: '/driver', label: 'Chuyến của tôi', icon: Smartphone },
+      { path: '/driver', label: 'Màn hình tài xế', icon: Smartphone },
     ],
   },
   {
@@ -19,6 +31,7 @@ export const navGroups: { label: string; items: NavItem[] }[] = [
       { path: '/products', label: 'Sản phẩm', icon: Package },
       { path: '/suppliers', label: 'Nhà cung cấp', icon: Building2 },
       { path: '/customers', label: 'Khách hàng', icon: Users },
+      { path: '/staff', label: 'Tài khoản nhân viên', icon: Users },
       { path: '/reports', label: 'Báo cáo', icon: FileBarChart },
       { path: '/activity', label: 'Nhật ký', icon: History },
     ],

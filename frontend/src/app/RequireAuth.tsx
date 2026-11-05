@@ -1,10 +1,18 @@
 import { Navigate, Outlet, useLocation } from 'react-router'
-import { useAuth } from '../features/auth/useAuth'
+import { useAuth } from '@/features/auth/useAuth'
+import { accountDestination, isStaff } from '@/features/auth/accountAccess'
 
 export function RequireAuth() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
   const location = useLocation()
 
-  if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: location.pathname }} />
+  // Khách vào trang chủ thì thấy cửa hàng; trang quản lý khác vẫn đòi đăng nhập rồi quay lại đúng trang.
+  if (!isAuthenticated)
+    return location.pathname === '/' ? (
+      <Navigate to="/shop" replace />
+    ) : (
+      <Navigate to="/login" replace state={{ from: location.pathname }} />
+    )
+  if (!isStaff(user)) return <Navigate to={accountDestination(user)} replace />
   return <Outlet />
 }

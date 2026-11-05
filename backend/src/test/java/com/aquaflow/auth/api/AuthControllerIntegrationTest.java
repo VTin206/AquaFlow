@@ -13,7 +13,6 @@ import com.aquaflow.inventory.repository.BottleTypeRepository;
 import com.aquaflow.inventory.repository.ProductRepository;
 import com.aquaflow.inventory.repository.SupplierRepository;
 import com.aquaflow.auth.application.JwtService;
-import com.aquaflow.delivery.application.DeliveryTripService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +39,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 @AutoConfigureMockMvc
 class AuthControllerIntegrationTest {
+    @MockBean private com.aquaflow.auth.repository.RoleRepository roleRepository;
+
+    @MockBean private com.aquaflow.inventory.repository.InventoryMovementReadRepository inventoryMovementReadRepository;
+    @MockBean private com.aquaflow.inventory.repository.InventoryReturnRepository inventoryReturnRepository;
+    @MockBean private com.aquaflow.activity.ActivityRepository activityRepository;
+    @MockBean private com.aquaflow.report.ReportRepository reportRepository;
+    @MockBean private com.aquaflow.delivery.repository.DeliveryRepository deliveryRepository;
+    @MockBean private com.aquaflow.customer.order.repository.DispatchRepository dispatchRepository;
+    @MockBean private com.aquaflow.inventory.application.StockDispatchService stockDispatchService;
+    @MockBean private com.aquaflow.workspace.repository.StoreSettingsRepository storeSettingsRepository;
+    @MockBean private com.aquaflow.workspace.repository.NotificationRepository notificationRepository;
+
+
 
     @MockBean
     private com.aquaflow.inventory.application.PurchaseReceiptService purchaseReceiptService;
@@ -49,6 +61,12 @@ class AuthControllerIntegrationTest {
 
     @MockBean
     private com.aquaflow.inventory.application.StockReservationService stockReservationService;
+
+    @MockBean
+    private com.aquaflow.inventory.repository.RedeliveryEligibilityRepository redeliveryEligibilityRepository;
+
+    @MockBean
+    private com.aquaflow.inventory.application.RedeliveryReservationService redeliveryReservationService;
 
     @Autowired
     private MockMvc mockMvc;
@@ -86,9 +104,6 @@ class AuthControllerIntegrationTest {
 
     @MockBean
     private OrderItemRepository orderItemRepository;
-
-    @MockBean
-    private DeliveryTripService deliveryTripService;
 
     private User activeUser;
 
@@ -145,29 +160,13 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
-    void adminCanReadDeliveryTripList() throws Exception {
-        when(deliveryTripService.findAll()).thenReturn(java.util.List.of());
-        mockMvc.perform(get("/api/v1/delivery/trips"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    @WithMockUser(roles = "SALES_STAFF")
-    void salesStaffCanReadDeliveryTripList() throws Exception {
-        when(deliveryTripService.findAll()).thenReturn(java.util.List.of());
-        mockMvc.perform(get("/api/v1/delivery/trips"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
     @WithMockUser(roles = "DELIVERY_STAFF")
-    void deliveryStaffCannotUseManagementListOrCreateEndpoint() throws Exception {
-        mockMvc.perform(get("/api/v1/delivery/trips"))
-                .andExpect(status().isForbidden());
+    void deliveryStaffCannotCreateOrDispatchTrips() throws Exception {
         mockMvc.perform(post("/api/v1/delivery/trips")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"driverId\":1}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/delivery/trips/1/dispatch"))
                 .andExpect(status().isForbidden());
     }
 

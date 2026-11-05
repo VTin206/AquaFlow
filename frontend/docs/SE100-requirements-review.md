@@ -120,7 +120,7 @@ Các phần pháp lý ở mục 6.8 được ghi nhận là yêu cầu nghiệp 
 
 ## 8. Kiểm tra thay đổi
 
-Chạy trong `frontend`: `npm run lint`, `npm run build`, `npm run test:orders`.
+Chạy trong `frontend`: `npm run lint`, `npm run build`, `npm test`.
 
 Kiểm thử nghiệp vụ tự động tập trung vào: đơn nhiều dòng, số lượng nguyên dương, cộng dồn sản phẩm trùng, không âm tồn/không trừ dở dang khi lỗi, giữ hàng khi xác nhận, chốt giá, hủy giải phóng giữ hàng, chặn hàng hết hạn, quầy không đi giao, giao thất bại/giao lại, thu một phần/đủ, nhận trước hoặc thu trước, không thu quá dư hoặc trùng tham chiếu.
 

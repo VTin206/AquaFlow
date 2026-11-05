@@ -11,7 +11,6 @@ import com.aquaflow.inventory.api.dto.ProductResponse;
 import com.aquaflow.inventory.application.BottleTypeService;
 import com.aquaflow.inventory.application.ProductService;
 import com.aquaflow.inventory.application.SupplierService;
-import com.aquaflow.delivery.application.DeliveryTripService;
 import com.aquaflow.customer.order.application.OrderService;
 import com.aquaflow.shared.api.ConflictException;
 import com.aquaflow.shared.api.NotFoundException;
@@ -29,6 +28,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -43,6 +43,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 @AutoConfigureMockMvc
 class ProductControllerIntegrationTest {
+    @MockitoBean private com.aquaflow.auth.repository.RoleRepository roleRepository;
+
+    @MockitoBean private com.aquaflow.inventory.repository.InventoryMovementReadRepository inventoryMovementReadRepository;
+    @MockitoBean private com.aquaflow.inventory.repository.InventoryReturnRepository inventoryReturnRepository;
+    @MockitoBean private com.aquaflow.activity.ActivityRepository activityRepository;
+    @MockitoBean private com.aquaflow.report.ReportRepository reportRepository;
+    @MockitoBean private com.aquaflow.delivery.repository.DeliveryRepository deliveryRepository;
+    @MockitoBean private com.aquaflow.customer.order.repository.DispatchRepository dispatchRepository;
+    @MockitoBean private com.aquaflow.inventory.application.StockDispatchService stockDispatchService;
+    @MockitoBean private com.aquaflow.workspace.repository.StoreSettingsRepository storeSettingsRepository;
+    @MockitoBean private com.aquaflow.workspace.repository.NotificationRepository notificationRepository;
+
+
 
     @MockitoBean
     private com.aquaflow.inventory.application.PurchaseReceiptService purchaseReceiptService;
@@ -52,6 +65,12 @@ class ProductControllerIntegrationTest {
 
     @MockitoBean
     private com.aquaflow.inventory.application.StockReservationService stockReservationService;
+
+    @MockitoBean
+    private com.aquaflow.inventory.repository.RedeliveryEligibilityRepository redeliveryEligibilityRepository;
+
+    @MockitoBean
+    private com.aquaflow.inventory.application.RedeliveryReservationService redeliveryReservationService;
 
     private static final String VALID_BODY = """
             {"sku":"NUOC-19L","name":"Nước 19L","brand":"Aqua","unit":"Bình","bottleTypeId":1,"salePrice":20000}
@@ -68,9 +87,6 @@ class ProductControllerIntegrationTest {
 
     @MockitoBean
     private BottleTypeService bottleTypeService;
-
-    @MockitoBean
-    private DeliveryTripService deliveryTripService;
 
     @MockitoBean
     private UserRepository userRepository;
@@ -100,7 +116,28 @@ class ProductControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/products"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].sku").value("NUOC-19L"))
+                .andExpect(jsonPath("$[0].image").value("/images/test.png"))
                 .andExpect(jsonPath("$[0].bottleTypeName").value("Bình 19L"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminWithoutActiveFilterListsEveryProduct() throws Exception {
+        when(productService.findAll(null)).thenReturn(List.of(sampleProduct()));
+
+        mockMvc.perform(get("/api/v1/products"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].sku").value("NUOC-19L"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminWithoutActiveFilterListsEveryBottleType() throws Exception {
+        when(bottleTypeService.findAll(null)).thenReturn(List.of(new com.aquaflow.inventory.api.dto.BottleTypeResponse(1L, "Bình 19L", BigDecimal.valueOf(50000), false)));
+
+        mockMvc.perform(get("/api/v1/bottle-types"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].active").value(false));
     }
 
     @Test
@@ -114,21 +151,17 @@ class ProductControllerIntegrationTest {
 
     @Test
     @WithMockUser(roles = "SALES_STAFF")
-    void salesStaffCanReadOnlyActiveProducts() throws Exception {
-        when(productService.findAll(true)).thenReturn(List.of(sampleProduct()));
-
-        mockMvc.perform(get("/api/v1/products?active=false"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].active").value(true));
-
-        verify(productService).findAll(true);
+    void salesStaffCanReadInactiveProducts() throws Exception {
+        when(productService.findAll(false)).thenReturn(List.of());
+        mockMvc.perform(get("/api/v1/products?active=false")).andExpect(status().isOk());
+        verify(productService).findAll(false);
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     void adminCanRequestInactiveProducts() throws Exception {
         ProductResponse inactive = new ProductResponse(2L, "OLD-SKU", "Old water", null, "Bottle",
-                null, null, null, BigDecimal.TEN, false, Instant.now());
+                null, null, null, BigDecimal.TEN, false, Instant.now(), null);
         when(productService.findAll(false)).thenReturn(List.of(inactive));
 
         mockMvc.perform(get("/api/v1/products?active=false"))
@@ -141,7 +174,7 @@ class ProductControllerIntegrationTest {
     @Test
     void anonymousUserCannotReadInactiveProductById() throws Exception {
         ProductResponse inactive = new ProductResponse(2L, "OLD-SKU", "Old water", null, "Bottle",
-                null, null, null, BigDecimal.TEN, false, Instant.now());
+                null, null, null, BigDecimal.TEN, false, Instant.now(), null);
         when(productService.findById(2L)).thenReturn(inactive);
 
         mockMvc.perform(get("/api/v1/products/2"))
@@ -167,6 +200,18 @@ class ProductControllerIntegrationTest {
                         .content(VALID_BODY))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminCanSendImageAndReadItInResponse() throws Exception {
+        when(productService.create(any(CreateProductRequest.class))).thenReturn(sampleProduct());
+        mockMvc.perform(post("/api/v1/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_BODY.replace("\"salePrice\":20000", "\"salePrice\":20000,\"image\":\"/images/test.png\"")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.image").value("/images/test.png"));
+        verify(productService).create(argThat(request -> "/images/test.png".equals(request.image())));
     }
 
     @Test
@@ -227,6 +272,6 @@ class ProductControllerIntegrationTest {
 
     private ProductResponse sampleProduct() {
         return new ProductResponse(1L, "NUOC-19L", "Nước 19L", "Aqua", "Bình", null,
-                1L, "Bình 19L", new BigDecimal("20000"), true, Instant.now());
+                1L, "Bình 19L", new BigDecimal("20000"), true, Instant.now(), "/images/test.png");
     }
 }

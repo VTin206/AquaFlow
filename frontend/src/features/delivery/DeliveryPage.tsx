@@ -1,22 +1,24 @@
 import { useState } from 'react'
 import { Badge, Button, Card, Col, Empty, Row, Segmented, Skeleton, Typography } from 'antd'
 import { Clock3, Eye, MapPin, Package, Phone } from 'lucide-react'
-import { Page } from '../../shared/components/Page'
-import { QueryError } from '../../shared/components/QueryError'
-import { Money } from '../../shared/components/Money'
-import { dueTone } from '../../shared/utils/money'
-import { AdvanceStatusButton } from '../orders/components/AdvanceStatusButton'
-import { amountDue, type Order, type OrderStatus } from '../orders/types'
-import { useOrders } from '../orders/useOrders'
-import { OrderDetailsModal } from '../orders/components/OrderDetailsModal'
+import { Page } from '@/shared/components/Page'
+import { QueryError } from '@/shared/components/QueryError'
+import { Money } from '@/shared/components/Money'
+import { dueTone } from '@/shared/utils/money'
+import { AdvanceStatusButton } from '@/features/orders/components/AdvanceStatusButton'
+import { amountDue, type Order, type OrderStatus } from '@/features/orders/types'
+import { useOrders } from '@/features/orders/useOrders'
+import { OrderDetailsModal } from '@/features/orders/components/OrderDetailsModal'
 import { TripsPanel } from './components/TripsPanel'
+import { useIsDemo } from '@/shared/features'
+import { LiveDeliveryPage } from './LiveDeliveryPage'
 
 // Bảng giao hàng: mỗi cột là một bước, đơn đi từ trái sang phải.
 const columns: { status: OrderStatus; title: string; hint: string; color: string }[] = [
   { status: 'Chờ xác nhận', title: 'Chờ xác nhận', hint: 'Gọi lại cho khách để xác nhận', color: '#f59f00' },
-  { status: 'Đang chuẩn bị', title: 'Đang chuẩn bị', hint: 'Soạn hàng, sẵn sàng xuất kho', color: '#1c7ed6' },
+  { status: 'Đang chuẩn bị', title: 'Đang chuẩn bị', hint: 'Xếp vào chuyến, xuất kho ở chi tiết chuyến', color: '#1c7ed6' },
   { status: 'Đang giao', title: 'Đang giao', hint: 'Xác nhận khi khách đã nhận hàng', color: '#0b7a83' },
-  { status: 'Giao thất bại', title: 'Giao thất bại', hint: 'Kiểm tra lý do trước khi giao lại', color: '#c34444' },
+  { status: 'Giao thất bại', title: 'Giao thất bại', hint: 'Kiểm hàng hoàn ở Kho hàng rồi giao lại', color: '#c34444' },
 ]
 
 function DeliveryCard({ order, onDetails }: { order: Order; onDetails: () => void }) {
@@ -47,11 +49,13 @@ function DeliveryCard({ order, onDetails }: { order: Order; onDetails: () => voi
       </div>
       {order.status === 'Giao thất bại' && (
         <Typography.Paragraph type="danger" className="af-delivery-reason">
-          {order.history.at(-1)?.message}
+          {order.history.filter((event) => event.message.startsWith('Giao thất bại')).at(-1)?.message}
         </Typography.Paragraph>
       )}
       <div className="af-delivery-footer">
-        <Button size="small" icon={<Eye size={15} />} onClick={onDetails} aria-label={`Chi tiết đơn ${order.id}`}>Chi tiết</Button>
+        <Button size="small" icon={<Eye size={15} />} onClick={onDetails} aria-label={`Chi tiết đơn ${order.id}`}>
+          Chi tiết
+        </Button>
         <AdvanceStatusButton order={order} />
       </div>
     </Card>
@@ -59,6 +63,10 @@ function DeliveryCard({ order, onDetails }: { order: Order; onDetails: () => voi
 }
 
 export function DeliveryPage() {
+  return useIsDemo() ? <DemoDeliveryPage /> : <LiveDeliveryPage />
+}
+
+function DemoDeliveryPage() {
   const ordersQuery = useOrders()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [view, setView] = useState<'trips' | 'board'>('trips')

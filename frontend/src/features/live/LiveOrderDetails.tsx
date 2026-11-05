@@ -1,0 +1,306 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Alert, App, Button, Card, Descriptions, Modal, Popconfirm, Space, Table, Tag } from 'antd'
+import { OrderTotals } from '@/shared/components/OrderTotals'
+import { QueryError } from '@/shared/components/QueryError'
+import { currency } from '@/shared/utils/format'
+import { useStaff } from '@/features/auth/useStaff'
+import { catalogApi } from './catalogApi'
+import {
+  canCancel,
+  canConfirm,
+  canPrepare,
+  confirmOrderHint,
+  orderApi,
+  orderStatusLabels,
+  paymentStatusLabels,
+  channelLabels,
+  type OrderStatus,
+} from './orderApi'
+import { invalidateLiveData } from './invalidateLiveData'
+import { modalWidth } from '@/shared/utils/modal'
+import { canDispatch, dispatchApi } from './dispatchApi'
+import { OrderProgress } from '@/features/orders/OrderProgress'
+import { OrderDeliveryHistory } from '@/features/orders/OrderDeliveryHistory'
+
+const dateTime = (value: string | null) => (value ? new Date(value).toLocaleString('vi-VN') : '—')
+const statusColors: Record<OrderStatus, string> = {
+  PENDING: 'gold',
+  CONFIRMED: 'blue',
+  PREPARING: 'blue',
+  OUT_FOR_DELIVERY: 'cyan',
+  DELIVERED: 'green',
+  COMPLETED: 'green',
+  CANCELLED: 'default',
+}
+
+/** Màu trạng thái thanh toán theo quy ước tiền: cam còn phải thu, xanh đã thu, đỏ đang hoàn. */
+const paymentTagColors: Record<keyof typeof paymentStatusLabels, string> = {
+  UNPAID: 'orange',
+  PARTIALLY_PAID: 'orange',
+  PAID: 'green',
+  REFUND_PENDING: 'red',
+  REFUNDED: 'default',
+}
+
+/** Chi tiết đơn: giữ hàng, chuẩn bị, xuất kho tại quầy và xem phiếu xuất theo lô. */
+export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => void }) {
+  const staff = useStaff()
+  const canManage = staff?.role === 'ADMIN' || staff?.role === 'SALES_STAFF'
+  const { message } = App.useApp()
+  const queryClient = useQueryClient()
+  const query = useQuery({
+    queryKey: ['live', 'order', staff?.name, staff?.role, id],
+    queryFn: () => orderApi.detail(id),
+    enabled: canManage,
+    refetchInterval: 15000,
+  })
+  const catalog = useQuery({ queryKey: ['live', 'catalog'], queryFn: catalogApi.products })
+  const receipts = useQuery({
+    queryKey: ['live', 'dispatches', staff?.name, staff?.role, id],
+    queryFn: () => dispatchApi.list(id),
+    enabled: canManage,
+    refetchInterval: 15000,
+  })
+  const dispatch = useMutation({
+    mutationFn: () => dispatchApi.create(id),
+    onSuccess: async (receipt) => {
+      await invalidateLiveData(queryClient)
+      message.success(`Đã xuất kho. Phiếu #${receipt.id}.`)
+    },
+    onError: async (error: Error) => {
+      await invalidateLiveData(queryClient)
+      message.error(error.message)
+    },
+  })
+  const update = useMutation({
+    mutationFn: (status: 'CONFIRMED' | 'PREPARING' | 'CANCELLED') => orderApi.updateStatus(id, status),
+    onSuccess: (order) => {
+      void invalidateLiveData(queryClient)
+      message.success(
+        order.status === 'CONFIRMED'
+          ? `Đã xác nhận đơn ${order.orderCode} và giữ hàng trong kho.`
+          : order.status === 'PREPARING'
+            ? `Đơn ${order.orderCode} chuyển sang "Đang chuẩn bị".`
+            : `Đã hủy đơn ${order.orderCode}.`,
+      )
+    },
+    // Đơn có thể đã đổi trạng thái ở nơi khác (409): tải lại để hiện trạng thái mới.
+    onError: (error: Error) => {
+      void invalidateLiveData(queryClient)
+      message.error(error.message)
+    },
+  })
+  const order = query.data
+  const actions =
+    order && canManage && (canConfirm(order) || canPrepare(order) || canCancel(order) || canDispatch(order)) ? (
+      <Space wrap>
+        {canCancel(order) && (
+          <Popconfirm
+            title={`Hủy đơn ${order.orderCode}?`}
+            description={
+              order.status === 'PENDING' ? 'Đơn chưa giữ hàng nên không ảnh hưởng tồn kho.' : 'Hàng đã giữ cho đơn sẽ được trả lại tồn kho.'
+            }
+            okText="Hủy đơn"
+            okButtonProps={{ danger: true }}
+            cancelText="Không"
+            onConfirm={() => update.mutate('CANCELLED')}
+          >
+            <Button danger loading={update.isPending && update.variables === 'CANCELLED'} disabled={update.isPending || dispatch.isPending}>
+              Hủy đơn
+            </Button>
+          </Popconfirm>
+        )}
+        {canConfirm(order) && (
+          <Popconfirm
+            title={`Xác nhận đơn ${order.orderCode}?`}
+            description={confirmOrderHint}
+            okText="Xác nhận"
+            cancelText="Chưa"
+            onConfirm={() => update.mutate('CONFIRMED')}
+          >
+            <Button
+              type="primary"
+              loading={update.isPending && update.variables === 'CONFIRMED'}
+              disabled={update.isPending || dispatch.isPending}
+            >
+              Xác nhận đơn
+            </Button>
+          </Popconfirm>
+        )}
+        {canPrepare(order) && (
+          <Popconfirm
+            title={`Chuẩn bị hàng cho đơn ${order.orderCode}?`}
+            description={
+              order.fulfillmentType === 'DELIVERY'
+                ? 'Đơn chuyển sang "Đang chuẩn bị" để soạn hàng trước khi xuất giao.'
+                : 'Đơn chuyển sang "Đang chuẩn bị" để soạn hàng cho khách.'
+            }
+            okText="Chuẩn bị"
+            cancelText="Chưa"
+            onConfirm={() => update.mutate('PREPARING')}
+          >
+            <Button
+              type="primary"
+              loading={update.isPending && update.variables === 'PREPARING'}
+              disabled={update.isPending || dispatch.isPending}
+            >
+              Chuẩn bị hàng
+            </Button>
+          </Popconfirm>
+        )}
+        {canDispatch(order) && (
+          <Popconfirm
+            title="Bàn giao hàng cho khách tại quầy?"
+            description="Xuất toàn bộ hàng đã giữ, trừ tồn thực tế và lập phiếu xuất. Sau bước này không thể hủy đơn trực tiếp."
+            okText="Xuất kho"
+            cancelText="Chưa"
+            onConfirm={() => dispatch.mutateAsync()}
+            okButtonProps={{ loading: dispatch.isPending }}
+          >
+            <Button type="primary" loading={dispatch.isPending} disabled={update.isPending || dispatch.isPending}>
+              Xuất kho / giao tại quầy
+            </Button>
+          </Popconfirm>
+        )}
+      </Space>
+    ) : null
+  return (
+    <Modal
+      open
+      title={order ? `Đơn ${order.orderCode}` : 'Chi tiết đơn hàng'}
+      width={modalWidth.large}
+      onCancel={onClose}
+      footer={
+        <Space wrap>
+          <Button onClick={onClose}>Đóng</Button>
+          {actions}
+        </Space>
+      }
+    >
+      {query.isError ? (
+        <QueryError error={query.error} onRetry={query.refetch} />
+      ) : (
+        <Card loading={query.isPending}>
+          {order && (
+            <>
+              <OrderProgress order={order} />
+              {canManage && order.fulfillmentType === 'DELIVERY' && order.status === 'PREPARING' && (
+                <Alert
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                  title="Xuất kho đơn giao từ trang Giao hàng"
+                  description="Thêm đơn vào chuyến giao trước. Quản lý xuất kho toàn bộ đơn trong chuyến để tồn kho và trạng thái được cập nhật cùng nhau."
+                />
+              )}
+              <Descriptions
+                column={{ xs: 1, sm: 2 }}
+                items={[
+                  { key: 'customer', label: 'Người nhận', children: order.recipientName || 'Khách tại quầy' },
+                  { key: 'phone', label: 'Điện thoại', children: order.recipientPhone || '—' },
+                  { key: 'address', label: 'Địa chỉ', children: order.deliveryAddress || '—' },
+                  { key: 'area', label: 'Khu vực', children: order.deliveryArea || '—' },
+                  {
+                    key: 'status',
+                    label: 'Trạng thái',
+                    children: <Tag color={statusColors[order.status]}>{orderStatusLabels[order.status] ?? order.status}</Tag>,
+                  },
+                  { key: 'payment', label: 'Thanh toán', children: paymentStatusLabels[order.paymentStatus] ?? order.paymentStatus },
+                  { key: 'channel', label: 'Kênh', children: channelLabels[order.channel] ?? order.channel },
+                  { key: 'method', label: 'Nhận hàng', children: order.fulfillmentType === 'DELIVERY' ? 'Giao tận nơi' : 'Tại quầy' },
+                  { key: 'created', label: 'Ngày tạo', children: dateTime(order.createdAt) },
+                  { key: 'appointment', label: 'Giờ hẹn', children: dateTime(order.requestedDeliveryAt) },
+                  { key: 'confirmed', label: 'Xác nhận lúc', children: dateTime(order.confirmedAt) },
+                  { key: 'cancelled', label: 'Hủy lúc', children: dateTime(order.cancelledAt) },
+                  { key: 'note', label: 'Ghi chú', children: order.note || '—' },
+                ]}
+              />
+              {catalog.isError && (
+                <Alert
+                  type="warning"
+                  title="Không tải được tên sản phẩm; đang hiển thị mã định danh."
+                  action={<Button onClick={() => void catalog.refetch()}>Thử lại</Button>}
+                />
+              )}
+              <Table
+                rowKey="id"
+                dataSource={order.items}
+                pagination={false}
+                scroll={{ x: 550 }}
+                columns={[
+                  {
+                    title: 'Sản phẩm',
+                    dataIndex: 'productId',
+                    render: (productId: number) =>
+                      catalog.data?.find((product) => product.id === productId)?.name ?? `Sản phẩm #${productId}`,
+                  },
+                  { title: 'Số lượng', dataIndex: 'quantity', align: 'right', width: 90 },
+                  { title: 'Đơn giá', dataIndex: 'unitPrice', align: 'right', render: currency },
+                  { title: 'Thành tiền', dataIndex: 'lineTotal', align: 'right', render: currency },
+                ]}
+              />
+              <OrderTotals
+                rows={[
+                  { label: 'Tiền hàng', value: currency(order.subtotal) },
+                  ...(Number(order.discountAmount) > 0 ? [{ label: 'Giảm giá', value: `−${currency(order.discountAmount)}` }] : []),
+                  ...(order.fulfillmentType === 'DELIVERY'
+                    ? [{ label: 'Phí giao', value: Number(order.deliveryFee) > 0 ? currency(order.deliveryFee) : 'Miễn phí' }]
+                    : []),
+                ]}
+                total={{ label: 'Tổng cộng', value: currency(order.total) }}
+                after={
+                  order.status !== 'CANCELLED' && (
+                    <div className="is-status">
+                      <Tag color={paymentTagColors[order.paymentStatus]}>
+                        {paymentStatusLabels[order.paymentStatus] ?? order.paymentStatus}
+                      </Tag>
+                    </div>
+                  )
+                }
+              />
+              {canConfirm(order) && (
+                <Alert
+                  type="warning"
+                  showIcon
+                  style={{ marginTop: 12 }}
+                  title="Đơn đang chờ xác nhận"
+                  description="Kiểm tra thông tin với khách rồi xác nhận để giữ hàng trong kho."
+                />
+              )}
+              {order.fulfillmentType === 'DELIVERY' && <OrderDeliveryHistory orderId={id} />}
+              {receipts.isPending && <p>Đang tải thông tin xuất kho…</p>}
+              {receipts.isSuccess && receipts.data.length === 0 && (
+                <Alert type="info" title="Đơn chưa có phiếu xuất kho." style={{ marginTop: 16 }} />
+              )}
+              {receipts.isError && <QueryError error={receipts.error} onRetry={receipts.refetch} />}
+              {receipts.data?.map((receipt) => (
+                <Card key={receipt.id} size="small" title={`Phiếu xuất #${receipt.id}`} style={{ marginTop: 16 }}>
+                  <p>
+                    Xuất lúc {dateTime(receipt.dispatchedAt)} · Nhân viên #{receipt.performedBy}
+                  </p>
+                  <Table
+                    rowKey={(line) => `${line.orderItemId}-${line.batchId}`}
+                    dataSource={receipt.items}
+                    pagination={false}
+                    scroll={{ x: 450 }}
+                    columns={[
+                      {
+                        title: 'Sản phẩm',
+                        dataIndex: 'productId',
+                        render: (productId: number) =>
+                          catalog.data?.find((product) => product.id === productId)?.name ?? `Sản phẩm #${productId}`,
+                      },
+                      { title: 'Lô', dataIndex: 'lotCode' },
+                      { title: 'Hạn dùng', dataIndex: 'expiresOn' },
+                      { title: 'Đã xuất', dataIndex: 'quantity', align: 'right' },
+                    ]}
+                  />
+                </Card>
+              ))}
+            </>
+          )}
+        </Card>
+      )}
+    </Modal>
+  )
+}
