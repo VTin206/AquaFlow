@@ -17,6 +17,10 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    ResponseEntity<ApiError> handleAccessDenied(org.springframework.security.access.AccessDeniedException exception, HttpServletRequest request) {
+        return error(HttpStatus.FORBIDDEN, exception.getMessage(), request);
+    }
 
     @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
     ResponseEntity<ApiError> handleMissingParameter(org.springframework.web.bind.MissingServletRequestParameterException exception,

@@ -56,7 +56,7 @@ export function LiveDeliveryPage({ driverView = false }: { driverView?: boolean 
   const available = useQuery({ queryKey: ['live', 'delivery-available', ...who], queryFn: deliveryApi.available, enabled: admin })
   const attempts = useQuery({
     queryKey: ['live', 'delivery-attempts', ...who, history?.tripId, history?.order.orderId],
-    queryFn: () => deliveryApi.attempts(history!.tripId, history!.order.orderId),
+    queryFn: () => deliveryApi.assignmentAttempts(history!.order.id),
     enabled: history !== null,
   })
   const change = useMutation({
@@ -176,7 +176,9 @@ export function LiveDeliveryPage({ driverView = false }: { driverView?: boolean 
                     description="Thao tác xuất kho được thực hiện nguyên chuyến trong một transaction. Nếu một đơn lỗi, toàn bộ sẽ được hoàn tác."
                     onConfirm={() => execute(() => deliveryApi.dispatch(trip.id))}
                   >
-                    <Button danger loading={change.isPending} disabled={change.isPending}>Xuất kho chuyến</Button>
+                    <Button danger loading={change.isPending} disabled={change.isPending}>
+                      Xuất kho chuyến
+                    </Button>
                   </Popconfirm>
                 )}
                 {canOperate && trip.status === 'CREATED' && (
@@ -184,7 +186,16 @@ export function LiveDeliveryPage({ driverView = false }: { driverView?: boolean 
                     title="Xác nhận tài xế đã nhận hàng và khởi hành?"
                     onConfirm={() => execute(() => deliveryApi.depart(trip.id))}
                   >
-                    <Button type="primary" loading={change.isPending} disabled={!trip.driverId || !trip.orders.length || trip.orders.some((o) => o.orderStatus !== 'OUT_FOR_DELIVERY') || change.isPending}>
+                    <Button
+                      type="primary"
+                      loading={change.isPending}
+                      disabled={
+                        !trip.driverId ||
+                        !trip.orders.length ||
+                        trip.orders.some((o) => o.orderStatus !== 'OUT_FOR_DELIVERY') ||
+                        change.isPending
+                      }
+                    >
                       Khởi hành
                     </Button>
                   </Popconfirm>
@@ -243,7 +254,15 @@ export function LiveDeliveryPage({ driverView = false }: { driverView?: boolean 
                     <Alert type="warning" title={order.latestAttempt.failureReason} style={{ marginBottom: 12 }} />
                   )}
                   <Space wrap>
-                    {canOperate && trip.status === 'IN_PROGRESS' && order.latestAttempt?.outcome !== 'SUCCESS' && (
+                    {admin && trip.status === 'CREATED' && order.orderStatus === 'PREPARING' && (
+                      <Popconfirm
+                        title="Xuất kho toàn bộ đơn này?"
+                        onConfirm={() => execute(() => deliveryApi.dispatchAssignment(order.id))}
+                      >
+                        <Button disabled={change.isPending}>Dispatch đơn</Button>
+                      </Popconfirm>
+                    )}
+                    {canOperate && trip.status === 'IN_PROGRESS' && !order.latestAttempt && (
                       <Button
                         type="primary"
                         disabled={change.isPending}
@@ -326,7 +345,7 @@ export function LiveDeliveryPage({ driverView = false }: { driverView?: boolean 
                   return deliveryApi.add(action.tripId!, values.orderId!, selectedOrder?.redeliveryEligible ?? false)
                 }
                 if (action.kind === 'result')
-                  return deliveryApi.result(action.tripId, action.order.orderId, {
+                  return deliveryApi.assignmentResult(action.order.id, {
                     outcome: values.outcome!,
                     recipientName: values.outcome === 'SUCCESS' ? values.recipientName : undefined,
                     failureReason: values.outcome === 'FAILED' ? values.failureReason : undefined,

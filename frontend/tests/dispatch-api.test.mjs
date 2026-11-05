@@ -38,9 +38,9 @@ test('dispatch creates a receipt with POST, reads resources and preserves confli
   try {
     const { dispatchApi, canDispatch } = await import('/src/features/live/dispatchApi.ts')
     for (const status of ['PENDING', 'CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY', 'DELIVERED', 'COMPLETED', 'CANCELLED']) {
-      assert.equal(canDispatch({ status, fulfillmentType: 'DELIVERY' }), false)
+      assert.equal(canDispatch({ status, fulfillmentType: 'DELIVERY' }), status === 'PREPARING')
     }
-    assert.equal(canDispatch({ status: 'PREPARING', fulfillmentType: 'COUNTER' }), true)
+    assert.equal(canDispatch({ status: 'PREPARING', fulfillmentType: 'COUNTER' }), false)
     assert.deepEqual(await dispatchApi.list(8), [])
     assert.deepEqual(await dispatchApi.create(8), receipt)
     assert.deepEqual(await dispatchApi.list(8), [receipt])

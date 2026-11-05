@@ -1,5 +1,7 @@
 # Sprint 3 – Delivery Trip API
 
+The assignment-based BE3 contract is documented in [BE3 delivery process](BE3_DELIVERY_PROCESS.md). Its four requested endpoints are available alongside the compatible trip resources below. Each assignment now accepts one outcome; after FAILED, redelivery requires return inspection and a new assignment. All Dispatch endpoints reject COUNTER orders.
+
 All endpoints require a Bearer JWT. `ADMIN` and `SALES_STAFF` manage trips. `DELIVERY_STAFF` may view only trips assigned to their authenticated user and record delivery attempts. The server derives actor IDs from the authenticated principal.
 
 ## Trip management

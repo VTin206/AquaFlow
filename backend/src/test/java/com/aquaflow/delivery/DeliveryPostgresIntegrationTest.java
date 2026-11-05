@@ -39,6 +39,56 @@ class DeliveryPostgresIntegrationTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired DeliveryService service;
     @Autowired MockMvc mvc;
+    @Autowired com.aquaflow.delivery.application.DeliveryAssignmentService assignmentService;
+
+    @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void assignmentRestContractRejectsDuplicateDispatchAndRequiresReturnBeforeRedelivery() throws Exception {
+        long trip = service.create(new CreateTripRequest(driverId, null), ownerId, true).id();
+        long assignment = service.addOrder(trip, new AddOrderRequest(orderId), ownerId, true).orders().getFirst().id();
+        String base = "/api/v1/delivery/assignments/" + assignment;
+        mvc.perform(post(base + "/dispatch")).andExpect(status().isUnauthorized());
+        mvc.perform(post(base + "/dispatch").with(actor(driverId, "DELIVERY_STAFF"))).andExpect(status().isForbidden());
+        mvc.perform(post(base + "/dispatch").with(actor(ownerId, "SALES_STAFF")))
+            .andExpect(status().isCreated()).andExpect(header().exists("Location"))
+            .andExpect(jsonPath("$.orderStatus").value("OUT_FOR_DELIVERY"));
+        mvc.perform(post(base + "/dispatch").with(actor(ownerId, "ADMIN"))).andExpect(status().isConflict());
+        service.start(trip, driverId, false);
+        mvc.perform(get(base + "/attempts").with(actor(otherDriverId, "DELIVERY_STAFF"))).andExpect(status().isForbidden());
+        mvc.perform(post(base + "/attempts").with(actor(driverId, "DELIVERY_STAFF"))
+            .contentType("application/json").content("{\"outcome\":\"FAILED\"}")).andExpect(status().isBadRequest());
+        mvc.perform(post(base + "/attempts").with(actor(otherDriverId, "DELIVERY_STAFF"))
+            .contentType("application/json").content("{\"outcome\":\"FAILED\",\"failureReason\":\"Absent\"}"))
+            .andExpect(status().isForbidden());
+        mvc.perform(post(base + "/attempts").with(actor(driverId, "DELIVERY_STAFF"))
+            .contentType("application/json").content("{\"outcome\":\"FAILED\",\"failureReason\":\"Absent\"}"))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.attemptedAt").isNotEmpty());
+        mvc.perform(post(base + "/attempts").with(actor(driverId, "DELIVERY_STAFF"))
+            .contentType("application/json").content("{\"outcome\":\"SUCCESS\",\"recipientName\":\"Customer\"}"))
+            .andExpect(status().isConflict());
+        mvc.perform(get(base + "/attempts").with(actor(driverId, "DELIVERY_STAFF")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].outcome").value("FAILED"));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM inventory_movements WHERE reference_type='ORDER' AND reference_id=? AND movement_type='RETURN'", Integer.class, orderId)).isZero();
+        long attempt = assignmentService.attempts(assignment, driverId, false).getFirst().id();
+        service.settle(trip, new SettleTripRequest(BigDecimal.ZERO, BigDecimal.ZERO, 0, 0, null), ownerId, true);
+        var pending = returns.pending().stream().filter(p -> p.orderId() == orderId).findFirst().orElseThrow();
+        String body = "{\"lines\":[{\"loadItemId\":" + pending.lines().getFirst().loadItemId() + ",\"sellable\":2}]}";
+        String inspection = "/api/v1/delivery/attempts/" + attempt + "/return-inspection";
+        mvc.perform(post(inspection).with(actor(driverId, "DELIVERY_STAFF")).contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(post(inspection).with(actor(ownerId, "SALES_STAFF")).contentType("application/json").content(body)).andExpect(status().isCreated());
+        mvc.perform(post(inspection).with(actor(ownerId, "ADMIN")).contentType("application/json").content(body)).andExpect(status().isConflict());
+        long nextTrip = service.create(new CreateTripRequest(driverId, null), ownerId, true).id();
+        long next = service.addOrder(nextTrip, new AddOrderRequest(orderId, true), ownerId, true).orders().getFirst().id();
+        assertThat(next).isNotEqualTo(assignment);
+        mvc.perform(post("/api/v1/delivery/assignments/" + next + "/dispatch").with(actor(ownerId, "ADMIN"))).andExpect(status().isCreated());
+        service.start(nextTrip, driverId, false);
+        mvc.perform(post("/api/v1/delivery/assignments/" + next + "/attempts").with(actor(driverId, "DELIVERY_STAFF"))
+            .contentType("application/json").content("{\"outcome\":\"SUCCESS\",\"recipientName\":\"Customer\"}"))
+            .andExpect(status().isCreated());
+        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id=?", String.class, orderId)).isEqualTo("DELIVERED");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_dispatches WHERE order_id=?", Integer.class, orderId)).isEqualTo(2);
+        assertThat(assignmentService.attempts(assignment, driverId, false).getFirst().outcome()).isEqualTo(Outcome.FAILED);
+    }
 
     @Autowired com.aquaflow.inventory.application.InventoryReturnService returns;
 
@@ -337,12 +387,6 @@ class DeliveryPostgresIntegrationTest {
         assertThat(started.status()).isEqualTo("IN_PROGRESS");
         assertThat(jdbc.queryForObject("SELECT SUM(quantity_loaded) FROM delivery_load_items WHERE assignment_id = ?",
                 Long.class, started.orders().getFirst().id())).isEqualTo(2L);
-
-        service.recordResult(tripId, orderId,
-                new DeliveryResultRequest(Outcome.FAILED, null, "Khach vang nha", null), driverId, false);
-        assertThat(jdbc.queryForObject("SELECT delivery_failed FROM orders WHERE id = ?", Boolean.class, orderId)).isTrue();
-        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id = ?", String.class, orderId))
-                .isEqualTo("OUT_FOR_DELIVERY");
 
         service.recordResult(tripId, orderId,
                 new DeliveryResultRequest(Outcome.SUCCESS, "Nguoi nhan", null, "Giao lai thanh cong"), driverId, false);

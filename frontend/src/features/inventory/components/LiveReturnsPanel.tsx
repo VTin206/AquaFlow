@@ -13,7 +13,7 @@ export function LiveReturnsPanel() {
   const [detail, setDetail] = useState<ReturnInspection | null>(null)
   return <>
     <Alert type="info" showIcon title="Kiểm hàng sau khi chuyến giao thất bại đã kết thúc."
-      description="Nhập lại đúng lô phần còn bán được, ghi nhận riêng hàng hỏng. Xác nhận hoàn toàn bộ sẽ hủy đơn; muốn giao lại, tạo đơn mới. Phiếu hoàn không tự hoàn tiền." />
+      description="Nhập lại đúng lô phần còn bán được, ghi nhận riêng hàng hỏng. Xác nhận hoàn toàn bộ sẽ hủy đơn. Để giao lại chính đơn này sau kiểm nhận, vào Giao hàng, mở chuyến mới và thêm đơn có nhãn ‘Đã kiểm nhận, giao lại’. Phiếu hoàn không tự hoàn tiền." />
     <Tabs items={[
       { key: 'pending', label: `Chờ kiểm (${pending.data?.length ?? 0})`, children: pending.isError
         ? <QueryError error={pending.error} onRetry={pending.refetch} />
@@ -49,7 +49,7 @@ function InspectionModal({ order, onClose }: { order: PendingReturn; onClose: ()
   const [form] = Form.useForm<{ sellable: number[]; note?: string }>()
   const quantities: number[] = Form.useWatch('sellable', form) ?? []
   const damaged = order.lines.some((line, i) => (quantities[i] ?? line.quantity) < line.quantity)
-  const mutation = useMutation({ mutationFn: returnApi.create, onSuccess: async () => {
+  const mutation = useMutation({ mutationFn: returnApi.inspectAttempt, onSuccess: async () => {
     await invalidateLiveData(client)
     message.success('Đã kiểm nhận hàng hoàn và hủy đơn.')
     onClose()
@@ -59,7 +59,7 @@ function InspectionModal({ order, onClose }: { order: PendingReturn; onClose: ()
     okText="Nhận hàng hoàn và hủy đơn" confirmLoading={mutation.isPending} onOk={() => form.submit()}>
     <Alert type="warning" showIcon title="Xác nhận đã nhận đủ hàng bên dưới. Phiếu không thể sửa sau khi lưu." />
     <Form form={form} layout="vertical" initialValues={{ sellable: order.lines.map(line => line.expiresOn <= today ? 0 : line.quantity) }}
-      onFinish={values => mutation.mutate({ orderId: order.orderId, note: values.note, lines: order.lines.map((line, i) => ({ loadItemId: line.loadItemId, sellable: values.sellable[i] })) })}>
+      onFinish={values => mutation.mutate({ attemptId: order.attemptId, note: values.note, lines: order.lines.map((line, i) => ({ loadItemId: line.loadItemId, sellable: values.sellable[i] })) })}>
       <Table rowKey="loadItemId" dataSource={order.lines} pagination={false} scroll={{ x: 650 }} columns={[
         { title: 'Sản phẩm', dataIndex: 'productName' }, { title: 'Lô', dataIndex: 'lotCode' }, { title: 'HSD', dataIndex: 'expiresOn' },
         { title: 'Mang về', dataIndex: 'quantity' },

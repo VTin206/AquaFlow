@@ -140,6 +140,21 @@ public class DeliveryRepository {
                 "SELECT EXISTS(SELECT 1 FROM order_dispatches WHERE order_id = ?)", Boolean.class, orderId));
     }
 
+    public record AssignmentContext(long id, long tripId, long orderId, boolean active) {}
+
+    public AssignmentContext assignment(long id) {
+        return jdbc.query("SELECT id, trip_id, order_id, active FROM delivery_assignments WHERE id = ?",
+                (rs, n) -> new AssignmentContext(rs.getLong("id"), rs.getLong("trip_id"), rs.getLong("order_id"), rs.getBoolean("active")), id)
+                .stream().findFirst().orElseThrow(() -> new NotFoundException("Không tìm thấy phân công giao hàng"));
+    }
+
+    public AssignmentContext assignmentForAttempt(long id) {
+        Long assignmentId = jdbc.query("SELECT assignment_id FROM delivery_attempts WHERE id = ?",
+                (rs, n) -> rs.getLong(1), id).stream().findFirst()
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy lần giao"));
+        return assignment(assignmentId);
+    }
+
     public boolean isAssigned(long orderId) {
         return Boolean.TRUE.equals(jdbc.queryForObject(
                 "SELECT EXISTS(SELECT 1 FROM delivery_assignments WHERE order_id = ? AND active)",

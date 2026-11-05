@@ -196,8 +196,8 @@ public class DeliveryService {
         requireVisible(trip, actorId, admin);
         requireStatus(trip, "IN_PROGRESS");
         var assignment = repository.activeAssignment(tripId, orderId);
-        if (repository.latestOutcome(assignment.id()).orElse(null) == Outcome.SUCCESS) {
-            throw new ConflictException("Đơn đã được ghi nhận giao thành công");
+        if (repository.latestOutcome(assignment.id()).isPresent()) {
+            throw new ConflictException("Lần phân công đã có kết quả. Giao lại phải qua kiểm nhận hàng hoàn và phân công mới");
         }
         if (request.outcome() == Outcome.SUCCESS) {
             if (DeliveryRepository.clean(request.recipientName()) == null) {

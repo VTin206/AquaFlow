@@ -15,7 +15,7 @@ public class InventoryReturnRepository {
 
     // Only the most recent trip owns the physical goods. Active reassignment excludes a return.
     private static final String PENDING = """
-        SELECT o.id, o.order_code, o.recipient_name, a.id AS assignment_id, da.failure_reason
+        SELECT o.id, o.order_code, o.recipient_name, a.id AS assignment_id, da.failure_reason, da.id AS attempt_id
         FROM orders o
         JOIN LATERAL (SELECT * FROM delivery_assignments x WHERE x.order_id=o.id
             AND EXISTS (SELECT 1 FROM delivery_load_items l WHERE l.assignment_id=x.id)
@@ -31,7 +31,7 @@ public class InventoryReturnRepository {
     public List<Pending> pending() {
         return jdbc.query(PENDING + " ORDER BY o.id", (rs, n) -> new Pending(rs.getLong("id"),
             rs.getString("order_code"), rs.getString("recipient_name"), rs.getLong("assignment_id"),
-            rs.getString("failure_reason"), lines(rs.getLong("assignment_id"), null)));
+            rs.getString("failure_reason"), lines(rs.getLong("assignment_id"), null), rs.getLong("attempt_id")));
     }
     public void lockOrder(long id) {
         if (jdbc.query("SELECT id FROM orders WHERE id=? FOR UPDATE", (rs,n)->rs.getLong(1), id).isEmpty())

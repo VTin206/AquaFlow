@@ -81,6 +81,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/customer/orders/guest").permitAll()
                         .requestMatchers("/api/v1/delivery/drivers", "/api/v1/delivery/available-orders").hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers(HttpMethod.POST, "/api/v1/delivery/trips").hasAnyRole("ADMIN", "SALES_STAFF")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/delivery/assignments/*/dispatch", "/api/v1/delivery/attempts/*/return-inspection")
+                                .hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers(HttpMethod.POST, "/api/v1/delivery/trips/*/orders", "/api/v1/delivery/trips/*/dispatch")
                                 .hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/delivery/trips/*/driver", "/api/v1/delivery/trips/*/settlement")
