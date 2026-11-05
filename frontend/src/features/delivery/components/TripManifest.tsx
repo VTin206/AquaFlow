@@ -1,12 +1,14 @@
 import { PrintHeader } from '@/shared/print/PrintHeader'
 import { currency, printDate } from '@/shared/utils/format'
-import { amountDue, jugCount, type Order } from '@/features/orders/types'
+import { jugCount, knownAmountDue, type Order } from '@/features/orders/types'
 import type { StoreSettings } from '@/features/settings/types'
 import type { Trip } from '../types'
 
 /** Phiếu chuyến cho tài xế mang theo: danh sách điểm giao, tiền và vỏ cần xử lý, cột ký nhận. */
 export function TripManifest({ trip, stops, settings }: { trip: Trip; stops: Order[]; settings?: StoreSettings }) {
-  const totalDue = stops.reduce((sum, order) => sum + amountDue(order), 0)
+  // Đơn đã thu một phần chưa biết số còn lại nên để trống cho tài xế ghi tay, không cộng vào tổng.
+  const totalDue = stops.reduce((sum, order) => sum + (knownAmountDue(order) ?? 0), 0)
+  const hasUnknownDue = stops.some((order) => knownAmountDue(order) === null)
   const totalJugs = stops.reduce((sum, order) => sum + jugCount(order), 0)
   return (
     <article className="af-doc af-doc-landscape">
@@ -20,7 +22,7 @@ export function TripManifest({ trip, stops, settings }: { trip: Trip; stops: Ord
           Số điểm giao: <strong>{stops.length}</strong>
         </span>
         <span>
-          Tổng cần thu: <strong>{currency(totalDue)}</strong> · Bình: <strong>{totalJugs}</strong>
+          Tổng cần thu: <strong>{hasUnknownDue ? 'từ ' : ''}{currency(totalDue)}</strong> · Bình: <strong>{totalJugs}</strong>
         </span>
       </section>
       <table className="af-doc-table">
@@ -40,7 +42,7 @@ export function TripManifest({ trip, stops, settings }: { trip: Trip; stops: Ord
             <tr key={order.id}>
               <td>{index + 1}</td>
               <td>
-                <strong>{order.id}</strong>
+                <strong>{order.code ?? order.id}</strong>
                 <br />
                 {order.customer}
                 <br />
@@ -51,7 +53,7 @@ export function TripManifest({ trip, stops, settings }: { trip: Trip; stops: Ord
                 {order.floor ? ` · lầu ${order.floor}` : ''}
               </td>
               <td>{order.items}</td>
-              <td className="af-doc-num">{currency(amountDue(order))}</td>
+              <td className="af-doc-num">{knownAmountDue(order) === null ? '' : currency(knownAmountDue(order) ?? 0)}</td>
               <td className="af-doc-num">{jugCount(order) || '—'}</td>
               <td className="af-doc-sign-cell" />
             </tr>

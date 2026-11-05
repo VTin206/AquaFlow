@@ -292,7 +292,11 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
       ) : (
         <>
           <OrderFocusBanner
-            focus={liveOrderFocus(order, lastAttempt?.outcome === 'FAILED' ? (lastAttempt.failureReason ?? null) : undefined)}
+            focus={liveOrderFocus(
+              order,
+              lastAttempt?.outcome === 'FAILED' ? (lastAttempt.failureReason ?? null) : undefined,
+              order.fulfillmentType === 'DELIVERY' && trips.isSuccess && !trips.data.length,
+            )}
           />
           {order.status !== 'CANCELLED' && <OrderProgress order={order} showStatus={false} />}
           {catalog.isError && (

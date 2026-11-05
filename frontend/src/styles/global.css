@@ -1449,6 +1449,22 @@ body {
   display: flex;
   justify-content: space-between;
 }
+/* Mã đơn thật khá dài: mã tự cắt bớt để số tiền luôn nằm trong thẻ. */
+.af-delivery-top {
+  gap: 8px;
+}
+.af-delivery-top > .ant-btn {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.af-delivery-top > :not(.ant-btn) {
+  flex: none;
+}
 .af-delivery-customer {
   color: var(--af-text-strong);
   font-weight: 600;
@@ -1827,6 +1843,16 @@ body {
 }
 .af-order-trips header a {
   margin-left: auto;
+}
+.af-trip-stop-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+}
+.af-text-danger {
+  color: var(--af-danger);
 }
 .af-order-footer {
   align-items: center;

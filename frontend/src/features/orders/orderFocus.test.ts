@@ -30,6 +30,11 @@ describe('liveOrderFocus', () => {
     expect(liveOrderFocus(live('OUT_FOR_DELIVERY'), null).description).toBe('Tài xế không ghi lý do.')
   })
 
+  it('warns when a dispatched order has no trip to record a result on', () => {
+    expect(liveOrderFocus(live('OUT_FOR_DELIVERY'), undefined, true).tone).toBe('alert')
+    expect(liveOrderFocus(live('PREPARING'), undefined, true).tone).toBe('action')
+  })
+
   it('ignores an old failure once the order is finished', () => {
     expect(liveOrderFocus(live('DELIVERED'), 'Khách vắng nhà').tone).toBe('done')
     expect(liveOrderFocus(live('CANCELLED'), 'Khách vắng nhà').tone).toBe('muted')

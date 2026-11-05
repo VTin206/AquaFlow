@@ -9,6 +9,8 @@ export type OrderFocus = { tone: 'action' | 'alert' | 'waiting' | 'done' | 'mute
 export function liveOrderFocus(
   order: Pick<LiveOrder, 'status' | 'fulfillmentType' | 'paymentStatus'>,
   failureReason?: string | null,
+  /** Đơn đang giao mà không thuộc chuyến nào, ví dụ đơn xuất kho từ trước khi có chuyến giao. */
+  withoutTrip = false,
 ): OrderFocus {
   const open = !['DELIVERED', 'COMPLETED', 'CANCELLED'].includes(order.status)
   if (open && failureReason !== undefined) {
@@ -24,6 +26,9 @@ export function liveOrderFocus(
         ? { tone: 'action', title: 'Cần xếp vào chuyến giao', description: 'Quản lý xuất kho cả chuyến ở trang Giao hàng.' }
         : { tone: 'waiting', title: 'Đang soạn hàng cho khách', description: 'Khách nhận tại quầy.' }
     case 'OUT_FOR_DELIVERY':
+      if (withoutTrip) {
+        return { tone: 'alert', title: 'Đơn đang giao nhưng không thuộc chuyến nào', description: 'Chưa ghi được kết quả giao cho đơn này. Hãy báo quản trị kiểm tra.' }
+      }
       return { tone: 'waiting', title: 'Đang giao cho khách', description: 'Chờ tài xế ghi kết quả giao hàng.' }
     case 'CANCELLED':
       return { tone: 'muted', title: 'Đơn đã hủy' }
