@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, Button, Card, Grid, Input, Select, Tooltip } from 'antd'
+import { Alert, Button, Card, Grid, Input, Select, Tabs, Tooltip } from 'antd'
 import { FunnelX, Plus, Search, SlidersHorizontal } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { Page } from '@/shared/components/Page'
@@ -32,6 +32,11 @@ export function OrdersPage() {
   const statuses = useOrderStatuses()
   const countOf = (value: string) => (value === ALL ? orders.length : orders.filter((order) => order.status === value).length)
   const pending = countOf('Chờ xác nhận')
+  const statusValue = statuses.includes(status as never) ? status : ALL
+  const statusOptions = [ALL, ...statuses].map((value) => ({
+    value,
+    label: <CountLabel label={value} count={countOf(value)} urgent={value === 'Chờ xác nhận'} />,
+  }))
   // Bộ lọc thanh toán đã lưu từ bản dùng thử bị bỏ qua khi BE chưa có phiếu thu.
   const paymentFilter = showPayments ? payment : ALL
   const hasFilters = Boolean(query.trim() || status !== ALL || method !== ALL || paymentFilter !== ALL)
@@ -72,18 +77,28 @@ export function OrdersPage() {
           <QueryError error={ordersQuery.error} onRetry={ordersQuery.refetch} />
         ) : (
           <>
+            {/* Máy tính: tab trạng thái thấy ngay số đơn; điện thoại không đủ chỗ nên dùng ô chọn. */}
+            {!narrow && (
+              <Tabs
+                className="af-order-tabs"
+                size="small"
+                aria-label="Lọc trạng thái đơn"
+                activeKey={statusValue}
+                onChange={(value) => updateFilters({ status: value })}
+                items={statusOptions.map(({ value, label }) => ({ key: value, label }))}
+              />
+            )}
             <div className="af-toolbar">
               <div className="af-order-filters">
-                <Select
-                  aria-label="Lọc trạng thái đơn"
-                  style={{ minWidth: 205 }}
-                  value={statuses.includes(status as never) ? status : ALL}
-                  onChange={(value) => updateFilters({ status: String(value) })}
-                  options={[ALL, ...statuses].map((value) => ({
-                    value,
-                    label: <CountLabel label={value} count={countOf(value)} urgent={value === 'Chờ xác nhận'} />,
-                  }))}
-                />
+                {narrow && (
+                  <Select
+                    aria-label="Lọc trạng thái đơn"
+                    style={{ minWidth: 205 }}
+                    value={statusValue}
+                    onChange={(value) => updateFilters({ status: String(value) })}
+                    options={statusOptions}
+                  />
+                )}
                 {narrow && (
                   <Button
                     icon={<SlidersHorizontal size={16} />}

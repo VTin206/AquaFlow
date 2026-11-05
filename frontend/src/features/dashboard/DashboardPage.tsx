@@ -8,6 +8,8 @@ import { PanelHeading } from '@/shared/components/PanelHeading'
 import { QueryError } from '@/shared/components/QueryError'
 import { useFeature } from '@/shared/features'
 import { compactCurrency, currency, shortDate } from '@/shared/utils/format'
+import { canOpen } from '@/features/auth/permissions'
+import { useStaff } from '@/features/auth/useStaff'
 import { ReceiveStockModal } from '@/features/inventory/components/ReceiveStockModal'
 import { useStockItems } from '@/features/inventory/useInventory'
 import { OrderDetails } from '@/features/orders/components/OrderDetails'
@@ -60,7 +62,9 @@ const TASK_LIMIT = 8
 
 export function DashboardPage() {
   const hasPayments = useFeature('orderPayments')
-  const showRevenue = useFeature('revenueReports')
+  const staff = useStaff()
+  // API báo cáo chỉ cho chủ cửa hàng, cùng quyền với trang Báo cáo.
+  const showRevenue = useFeature('revenueReports') && staff !== null && canOpen(staff.role, '/reports')
   const ordersQuery = useOrderList()
   const productsQuery = useLowStock()
   const revenueQuery = useDailyRevenue(showRevenue)
@@ -132,7 +136,7 @@ export function DashboardPage() {
         order,
         'unpaid',
         hasPayments ? `Đã thu ${currency(order.total - amountDue(order))} / ${currency(order.total)}` : order.paymentStatusLabel,
-        openButton(order, 'Thu tiền'),
+        openButton(order, hasPayments ? 'Thu tiền' : 'Xem đơn'),
       ),
     ),
     ...lowStock.map((product): Task => ({
@@ -278,7 +282,7 @@ export function DashboardPage() {
         </Col>
       </Row>
 
-      {/* Số liệu trong ngày; doanh thu và tiền đã thu cần API báo cáo. */}
+      {/* Số liệu trong ngày; "Còn phải thu" cần phiếu thu, chưa có thì BE chỉ cho biết trạng thái nên không cộng được. */}
       <dl className="af-dash-today">
         <div>
           <dt>Đơn tạo hôm nay</dt>
@@ -294,16 +298,18 @@ export function DashboardPage() {
               </dd>
             </div>
             <div>
-              <dt>Đã thu hôm nay</dt>
+              <dt>Thu ròng hôm nay</dt>
               <dd>{today ? currency(today.collected) : '—'}</dd>
             </div>
-            <div>
-              <dt>Còn phải thu</dt>
-              <dd>
-                {currency(unpaid.reduce((sum, order) => sum + amountDue(order), 0))}
-                <small>{unpaid.length} đơn</small>
-              </dd>
-            </div>
+            {hasPayments && (
+              <div>
+                <dt>Còn phải thu</dt>
+                <dd>
+                  {currency(unpaid.reduce((sum, order) => sum + amountDue(order), 0))}
+                  <small>{unpaid.length} đơn</small>
+                </dd>
+              </div>
+            )}
           </>
         )}
       </dl>

@@ -36,12 +36,12 @@ export const backendFeatures = {
   notifications: true,
   /** Đăng ký CUSTOMER qua /auth/register, đăng nhập qua /auth/login. */
   customerAccounts: true,
-  /** Doanh thu, tiền đã thu trên Tổng quan (chờ API báo cáo). */
-  revenueReports: false,
+  /** Doanh thu, tiền đã thu trên Tổng quan qua ReportController (API chỉ cho chủ cửa hàng). */
+  revenueReports: true,
   /** Khách tự tra cứu đơn theo mã + số điện thoại hoặc liên kết riêng (chờ API công khai). */
   orderTracking: false,
-  /** In hóa đơn, phiếu giao (cần thông tin cửa hàng trên chứng từ). */
-  orderPrinting: false,
+  /** In hóa đơn, phiếu giao; thông tin cửa hàng trên chứng từ lấy từ StoreSettingsController. */
+  orderPrinting: true,
   /** Báo trước phí giao cho khách trên trang đặt hàng (BE tính khi xác nhận). */
   deliveryQuote: false,
   /** Thông tin cửa hàng và ngưỡng cảnh báo qua StoreSettingsController. */

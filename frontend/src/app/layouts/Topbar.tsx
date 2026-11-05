@@ -4,6 +4,7 @@ import { Bell, ChevronDown, Clock3, Menu as MenuIcon, ShoppingCart, Waves } from
 import { Link } from 'react-router'
 import { useStaff } from '@/features/auth/useStaff'
 import { useFeature } from '@/shared/features'
+import { GlobalSearch } from './GlobalSearch'
 import { NotificationPopover } from './NotificationPopover'
 import { ThemeToggle } from './ThemeToggle'
 import { initialsOf, useAccountMenuItems } from './useAccountMenu'
@@ -65,6 +66,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
       </div>
       <div className="af-topbar-right">
         {staff?.isDemo && <span className="af-demo-label">Dữ liệu mẫu</span>}
+        <GlobalSearch />
         <Tooltip title={staff?.isDemo ? 'Trang khách đặt hàng (dùng chung dữ liệu mẫu trong tab này)' : 'Trang khách đặt hàng'}>
           <Link to="/shop" className="af-notification-link" aria-label="Mở trang khách đặt hàng">
             <ShoppingCart size={19} aria-hidden />
