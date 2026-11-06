@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Card, Empty, Form, InputNumber, Modal, Popconfirm, Progress, Select, Skeleton, Tag } from 'antd'
-import { Clock3, History, Map, Package, Phone, Recycle, Wallet } from 'lucide-react'
+import { App, Button, Card, Empty, Form, InputNumber, Modal, Popconfirm, Progress, Segmented, Skeleton, Tag } from 'antd'
+import { Clock3, History, Map, Package, Phone, Recycle, RefreshCw, Wallet } from 'lucide-react'
+import { TransferQr } from '@/shared/payment/TransferQr'
+import { useSettings } from '@/features/settings/settingsService'
 import { mapsSearchUrl } from '@/shared/address/maps'
 import { useAuth } from '@/features/auth/useAuth'
 import { useStaff } from '@/features/auth/useStaff'
@@ -34,10 +36,16 @@ export function LiveDriverPage() {
   return (
     <div className="af-driver">
       <header className="af-driver-head">
-        <h1>Chuyến của tôi</h1>
-        <p>
-          {staff?.name} · {driverToday()}
-        </p>
+        <div>
+          <h1>Chuyến của tôi</h1>
+          <p>
+            {staff?.name} · {driverToday()}
+          </p>
+        </div>
+        {/* Trang tự làm mới 15 giây một lần; nút này để lấy ngay đơn cửa hàng vừa xếp thêm. */}
+        <Button icon={<RefreshCw size={16} />} loading={trips.isFetching} onClick={() => void trips.refetch()}>
+          Làm mới
+        </Button>
       </header>
       {trips.isError ? (
         <QueryError error={trips.error} onRetry={trips.refetch} />
@@ -128,6 +136,12 @@ function DriverTrip({ trip }: { trip: DeliveryTrip }) {
               </span>
             </li>
           ))}
+          {order.recipientPhone && (
+            <li>
+              <Phone size={15} />
+              <a href={`tel:${order.recipientPhone}`}>{order.recipientPhone}</a>
+            </li>
+          )}
           {order.requestedDeliveryAt && (
             <li>
               <Clock3 size={15} />
@@ -182,7 +196,7 @@ function DriverTrip({ trip }: { trip: DeliveryTrip }) {
           )}
           {active && !order.latestAttempt && (
             <Button size="large" type="primary" className="af-driver-primary" disabled={change.isPending} onClick={() => setResult(order)}>
-              Ghi kết quả giao
+              Kết quả giao
             </Button>
           )}
         </div>
@@ -323,6 +337,9 @@ function CollectionModal({
   const [form] = Form.useForm()
   const [requestId] = useState(() => crypto.randomUUID())
   const balance = data.balances.find((b) => b.orderId === order.orderId)!
+  const method = Form.useWatch('method', form)
+  const amount: number | undefined = Form.useWatch('amount', form)
+  const { data: settings } = useSettings()
   return (
     <Modal
       open
@@ -359,13 +376,20 @@ function CollectionModal({
           />
         </Form.Item>
         <Form.Item name="method" label="Phương thức" rules={[{ required: true }]}>
-          <Select
+          <Segmented
+            block
             options={[
               { value: 'CASH', label: 'Tiền mặt' },
-              { value: 'BANK_TRANSFER', label: 'Đã nhận chuyển khoản' },
+              { value: 'BANK_TRANSFER', label: 'Chuyển khoản' },
             ]}
           />
         </Form.Item>
+        {method === 'BANK_TRANSFER' && (
+          <div className="af-driver-qr">
+            <TransferQr settings={settings} amount={amount && amount > 0 ? amount : balance.due} note={order.orderCode} />
+            <p className="af-form-hint">Đưa mã cho khách quét. Chỉ bấm Ghi nhận sau khi thấy tiền vào tài khoản cửa hàng.</p>
+          </div>
+        )}
         <Form.Item
           name="bottlesReturned"
           label="Số vỏ đã nhận"

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button, Card, Empty, Progress, Skeleton, Tag } from 'antd'
-import { Clock3, Map, Package, Phone, Recycle, Wallet } from 'lucide-react'
+import { Clock3, Map, Package, Phone, Recycle, RefreshCw, Wallet } from 'lucide-react'
 import { mapsSearchUrl } from '@/shared/address/maps'
 import { useStaff } from '@/features/auth/useStaff'
 import { QueryError } from '@/shared/components/QueryError'
@@ -44,10 +44,22 @@ function DemoDriverPage() {
     <>
       <div className="af-driver">
         <header className="af-driver-head">
-          <h1>Chuyến của tôi</h1>
-          <p>
-            {staff?.name} · {driverToday()}
-          </p>
+          <div>
+            <h1>Chuyến của tôi</h1>
+            <p>
+              {staff?.name} · {driverToday()}
+            </p>
+          </div>
+          <Button
+            icon={<RefreshCw size={16} />}
+            loading={tripsQuery.isFetching || ordersQuery.isFetching}
+            onClick={() => {
+              void tripsQuery.refetch()
+              void ordersQuery.refetch()
+            }}
+          >
+            Làm mới
+          </Button>
         </header>
 
         {tripsQuery.isError || ordersQuery.isError ? (
@@ -152,6 +164,12 @@ function DriverTrip({ trip, stops, onCollect }: { trip: Trip; stops: Order[]; on
                   <Package size={15} />
                   <span>{order.items}</span>
                 </li>
+                {order.phone && (
+                  <li>
+                    <Phone size={15} />
+                    <a href={`tel:${order.phone.replace(/s/g, '')}`}>{order.phone}</a>
+                  </li>
+                )}
                 {order.appointment && (
                   <li>
                     <Clock3 size={15} />

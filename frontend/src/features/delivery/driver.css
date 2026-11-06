@@ -231,3 +231,19 @@
     display: inline-flex;
   }
 }
+.af-driver-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.af-driver-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.af-driver-facts a {
+  font-weight: 600;
+}
