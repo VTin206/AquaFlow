@@ -580,6 +580,9 @@ body {
 .af-tone.is-danger {
   --tone: var(--af-danger);
 }
+.af-tone.is-info {
+  --tone: var(--af-primary);
+}
 .af-tone.is-neutral {
   --tone: var(--af-text-strong);
 }
@@ -667,8 +670,55 @@ body {
   font-size: 22px;
   line-height: 1.35;
 }
-.af-inventory-stats {
+/* Khung "Cần xử lý" của kho: danh sách việc, không phải thẻ số. */
+.af-attention {
   margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--af-border);
+  border-radius: 12px;
+  background: var(--af-surface);
+}
+.af-attention h2 {
+  margin: 0 0 6px;
+  color: var(--af-text-strong);
+  font-size: 14px;
+  font-weight: 600;
+}
+.af-attention ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.af-attention li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+}
+.af-attention li + li {
+  border-top: 1px dashed var(--af-border);
+}
+.af-attention-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--af-primary);
+}
+.af-attention li.is-danger .af-attention-dot {
+  background: var(--af-danger);
+}
+.af-attention li.is-warning .af-attention-dot {
+  background: var(--af-warning);
+}
+.af-attention-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--af-text);
+}
+.af-attention li.is-danger .af-attention-text {
+  color: var(--af-danger);
+  font-weight: 600;
 }
 .af-stat-danger .ant-statistic-content {
   color: var(--af-danger);
@@ -693,7 +743,12 @@ body {
   padding: 20px;
 }
 .af-order-groups {
-  padding: 12px 16px 0;
+  padding: 16px 20px 0;
+}
+@media (max-width: 767px) {
+  .af-order-groups {
+    padding: 12px 16px 0;
+  }
 }
 .af-order-group {
   display: flex;
@@ -713,10 +768,6 @@ body {
 .af-order-group small {
   font-size: 12px;
   white-space: normal;
-}
-.af-order-tabs .ant-tabs-nav {
-  margin: 0;
-  padding: 4px 20px 0;
 }
 .af-global-search ul {
   display: grid;
@@ -1370,6 +1421,32 @@ body {
   }
   .af-brand-filter {
     flex-basis: 105px;
+  }
+  /* Thanh trạng thái chiếm một hàng riêng, dòng "Hiển thị…" xuống dưới thay vì bị ép gãy từng chữ. */
+  .af-catalog-results {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    row-gap: 8px;
+  }
+  .af-catalog-results .ant-segmented {
+    flex: 1 1 100%;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .af-catalog-results .ant-segmented-item {
+    flex: 1 0 auto;
+  }
+  .af-catalog-results .ant-segmented-item-label {
+    padding-inline: 6px;
+  }
+  /* Hai cột thẻ: tên thương hiệu giữ một dòng, thẻ loại nước xuống dưới khi hẹp. */
+  .af-product-brand-line {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    white-space: nowrap;
+  }
+  .ant-row .af-product-card .ant-card-body {
+    padding: 10px;
   }
 }
 .af-product-card .ant-card-body {
@@ -2682,3 +2759,34 @@ body {
     width: 100%;
   }
 }
+
+/* Lý do giao thất bại chọn nhanh: chip đủ to để chạm bằng ngón tay. */
+.af-reason-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.af-reason-picks .ant-tag-checkable {
+  margin: 0;
+  padding: 6px 12px;
+  border: 1px solid var(--af-border);
+  border-radius: 999px;
+  font-size: 14px;
+}
+
+/* Ô lọc đang bật: viền, nền nhạt và chữ màu chính, giống ô thương hiệu đang chọn. */
+.ant-select.af-filter-on,
+.ant-input-affix-wrapper.af-filter-on {
+  border-color: var(--af-primary);
+  background: var(--af-primary-soft);
+}
+.ant-select.af-filter-on .ant-select-content,
+.ant-select.af-filter-on .ant-select-selection-item,
+.ant-select.af-filter-on .ant-select-suffix,
+.ant-input-affix-wrapper.af-filter-on input,
+.ant-input-affix-wrapper.af-filter-on .af-input-icon {
+  color: var(--af-primary);
+  font-weight: 500;
+}
+

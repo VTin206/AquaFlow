@@ -1,4 +1,5 @@
 import { useIsDemo } from '@/shared/features'
+import { filterOn } from '@/shared/utils/filterOn'
 import { LiveReportsPage } from './LiveReportsPage'
 import { useState } from 'react'
 import {
@@ -261,7 +262,7 @@ function DemoReportsPage() {
             value={channels}
             onChange={setChannels}
             options={reportChannels.map((channel) => ({ value: channel, label: channel }))}
-            className="af-report-filter"
+            className={`af-report-filter ${filterOn(channels.length > 0)}`}
           />
           <Select
             allowClear
@@ -270,7 +271,7 @@ function DemoReportsPage() {
             value={method}
             onChange={setMethod}
             options={methodOptions}
-            className="af-report-filter"
+            className={`af-report-filter ${filterOn(Boolean(method))}`}
           />
           <Button
             icon={<Download size={16} />}

@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { Button, Card, Grid, Input, Segmented, Select, Tabs, Tooltip } from 'antd'
+import { ToneLabel } from '@/shared/components/ToneLabel'
+import { filterOn } from '@/shared/utils/filterOn'
+import { Button, Card, Grid, Input, Segmented, Select, Tooltip } from 'antd'
 import { FunnelX, Plus, Search, SlidersHorizontal } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { Page } from '@/shared/components/Page'
@@ -69,41 +71,31 @@ export function OrdersPage() {
           <QueryError error={ordersQuery.error} onRetry={ordersQuery.refetch} />
         ) : (
           <>
-            {/* 4 nhóm theo việc cần làm; trạng thái chi tiết lọc trong ô chọn. Điện thoại: 4 ô chia đều, số ở trên, tên ở dưới. */}
-            {narrow ? (
-              <div className="af-order-groups">
-                <Segmented<OrderGroupKey>
-                  block
-                  aria-label="Nhóm đơn hàng"
-                  value={activeGroup}
-                  onChange={(value) => updateFilters({ group: value, status: ALL })}
-                  options={orderGroups.map(({ key, label }) => {
-                    const count = countGroup(key)
-                    return {
-                      value: key,
-                      label: (
+            {/* 4 nhóm theo việc cần làm, cùng kiểu thanh lọc với các trang khác; trạng thái chi tiết lọc trong ô chọn. Điện thoại: 4 ô chia đều, số ở trên, tên ở dưới. */}
+            <div className="af-order-groups">
+              <Segmented<OrderGroupKey>
+                block={narrow}
+                aria-label="Nhóm đơn hàng"
+                value={activeGroup}
+                onChange={(value) => updateFilters({ group: value, status: ALL })}
+                options={orderGroups.map(({ key, label, tone }) => {
+                  const count = countGroup(key)
+                  return {
+                    value: key,
+                    label: narrow ? (
+                      <ToneLabel tone={tone}>
                         <span className="af-order-group">
                           <strong className={key === 'need' && count > 0 ? 'is-urgent' : undefined}>{count}</strong>
                           <small>{label}</small>
                         </span>
-                      ),
-                    }
-                  })}
-                />
-              </div>
-            ) : (
-              <Tabs
-                className="af-order-tabs"
-                size="small"
-                aria-label="Nhóm đơn hàng"
-                activeKey={activeGroup}
-                onChange={(value) => updateFilters({ group: value as OrderGroupKey, status: ALL })}
-                items={orderGroups.map(({ key, label }) => ({
-                  key,
-                  label: <CountLabel label={label} count={countGroup(key)} urgent={key === 'need'} />,
-                }))}
+                      </ToneLabel>
+                    ) : (
+                      <CountLabel label={label} count={count} urgent={key === 'need'} tone={tone} />
+                    ),
+                  }
+                })}
               />
-            )}
+            </div>
             <div className="af-toolbar">
               <div className="af-order-filters">
                 {narrow && (
@@ -120,6 +112,7 @@ export function OrdersPage() {
                     {groupStatuses.length > 1 && (
                       <Select
                         aria-label="Lọc trạng thái trong nhóm"
+                        className={filterOn(statusValue !== ALL)}
                         style={{ minWidth: 190 }}
                         value={statusValue}
                         onChange={(value) => updateFilters({ status: String(value) })}
@@ -128,6 +121,7 @@ export function OrdersPage() {
                     )}
                     <Select
                       aria-label="Lọc hình thức nhận"
+                      className={filterOn(method !== ALL)}
                       value={method}
                       onChange={(value) => updateFilters({ method: value })}
                       style={{ minWidth: 160 }}
@@ -139,6 +133,7 @@ export function OrdersPage() {
                     <Tooltip title={showPayments ? undefined : 'Backend chưa hỗ trợ phiếu thu'}>
                       <Select
                         aria-label="Lọc thanh toán"
+                        className={filterOn(paymentFilter !== ALL)}
                         value={paymentFilter}
                         disabled={!showPayments}
                         onChange={(value) => updateFilters({ payment: value })}
@@ -159,11 +154,13 @@ export function OrdersPage() {
                 aria-label="Tìm đơn hàng"
                 value={query}
                 onChange={(event) => updateFilters({ query: event.target.value })}
-                className="af-search"
+                className={`af-search ${filterOn(Boolean(query.trim()))}`}
               />
             </div>
             <div className="af-filter-summary">
-              <span role="status">{ordersQuery.isPending ? 'Đang tải đơn hàng…' : `${visible.length} / ${orders.length} đơn hàng`}</span>
+              <span role="status">
+                {ordersQuery.isPending ? 'Đang tải đơn hàng…' : `${visible.length} / ${countGroup(activeGroup)} đơn hàng`}
+              </span>
               {hasFilters && (
                 <Button type="link" size="small" className="af-clear-filter" icon={<FunnelX size={14} />} onClick={resetFilters}>
                   Xóa bộ lọc

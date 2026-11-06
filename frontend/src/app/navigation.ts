@@ -7,7 +7,6 @@ import {
   type LucideIcon,
   Package,
   ShoppingBag,
-  Smartphone,
   Truck,
   UserCog,
   Users,
@@ -23,7 +22,6 @@ export const navGroups: { label: string; items: NavItem[] }[] = [
       { path: '/orders', label: 'Đơn hàng', icon: ShoppingBag },
       { path: '/inventory', label: 'Kho hàng', icon: Boxes },
       { path: '/delivery', label: 'Giao hàng', icon: Truck },
-      { path: '/driver', label: 'Màn hình tài xế', icon: Smartphone },
     ],
   },
   {
