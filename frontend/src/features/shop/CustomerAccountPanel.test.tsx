@@ -13,7 +13,15 @@ vi.mock('./customerAccountApi', async original => ({
   customerAccountApi: { profile: vi.fn(), updateProfile: vi.fn(), addresses: vi.fn(), createAddress: vi.fn(), updateAddress: vi.fn(), deleteAddress: vi.fn() },
 }))
 const profile = { fullName: 'Khách', email: 'khach@test.com', phone: '0901234567' }
-const address: SavedAddress = { id: 1, customerId: 2, recipientName: 'Người nhận', recipientPhone: '0901234567', addressLine: '12 Đường A', area: 'Quận 1', isDefault: true }
+const address: SavedAddress = { id: 1, customerId: 2, recipientName: 'Người nhận', recipientPhone: '0901234567', addressLine: '12 Đường A', area: 'Phường Bến Thành', isDefault: true }
+/** Chọn phường/xã trong ô chọn: gõ không dấu để lọc rồi bấm đúng mục. */
+const pickWard = async (search: string, ward: string) => {
+  const box = screen.getByLabelText('Phường/Xã')
+  fireEvent.mouseDown(box)
+  fireEvent.change(box, { target: { value: search } })
+  fireEvent.click(await screen.findByTitle(ward))
+}
+
 const clients: QueryClient[] = []
 const show = () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
@@ -60,11 +68,11 @@ test('adds an address from the empty state and refreshes the list', async () => 
   fireEvent.click(screen.getByRole('button', { name: 'Thêm địa chỉ' }))
   fireEvent.change(screen.getByLabelText('Tên người nhận'), { target: { value: address.recipientName } })
   fireEvent.change(screen.getByLabelText('Địa chỉ'), { target: { value: address.addressLine } })
-  fireEvent.change(screen.getByLabelText('Khu vực'), { target: { value: address.area } })
+  await pickWard('ben thanh', address.area)
   vi.mocked(customerAccountApi.createAddress).mockResolvedValue(address)
   vi.mocked(customerAccountApi.addresses).mockResolvedValue([address])
   fireEvent.click(screen.getByRole('button', { name: 'Lưu địa chỉ' }))
-  expect(await screen.findByText('12 Đường A, Quận 1')).toBeTruthy()
+  expect(await screen.findByText('12 Đường A, Phường Bến Thành')).toBeTruthy()
   expect(customerAccountApi.createAddress).toHaveBeenCalledWith({ recipientName: address.recipientName, recipientPhone: address.recipientPhone, addressLine: address.addressLine, area: address.area, isDefault: true })
 })
 

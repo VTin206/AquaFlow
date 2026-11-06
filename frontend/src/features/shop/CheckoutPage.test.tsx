@@ -45,9 +45,16 @@ const renderPage = () =>
     </App></QueryClientProvider>,
   )
 const type = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } })
-const fillDelivery = () => {
+/** Chọn phường/xã trong ô chọn: gõ không dấu để lọc rồi bấm đúng mục. */
+const pickWard = async (search: string, ward: string) => {
+  const box = screen.getByLabelText('Phường/Xã')
+  fireEvent.mouseDown(box)
+  fireEvent.change(box, { target: { value: search } })
+  fireEvent.click(await screen.findByTitle(ward))
+}
+const fillDelivery = async () => {
   type('Địa chỉ giao', '12 Đường Test')
-  type('Khu vực', 'Quận 1')
+  await pickWard('ben thanh', 'Phường Bến Thành')
 }
 const placeOrder = () => fireEvent.click(screen.getAllByRole('button', { name: /Đặt đơn/ })[0])
 
@@ -82,17 +89,17 @@ test('giao sớm nhất không gửi giờ hẹn, đơn gửi đúng thông tin 
   renderPage()
   type('Tên người nhận', ' Khách Thử ')
   type('Số điện thoại', '090 123 4567')
-  fillDelivery()
+  await fillDelivery()
   placeOrder()
   await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledTimes(1))
-  expect(mocks.mutateAsync.mock.calls[0][0]).toMatchObject({ customer: 'Khách Thử', phone: '0901234567', address: '12 Đường Test', area: 'Quận 1', appointment: undefined })
+  expect(mocks.mutateAsync.mock.calls[0][0]).toMatchObject({ customer: 'Khách Thử', phone: '0901234567', address: '12 Đường Test', area: 'Phường Bến Thành', appointment: undefined })
 })
 
 test('chọn giờ thì bắt buộc có giờ, chưa chọn không tạo đơn', async () => {
   renderPage()
   type('Tên người nhận', 'Khách Thử')
   type('Số điện thoại', '0901234567')
-  fillDelivery()
+  await fillDelivery()
   fireEvent.click(screen.getByLabelText('Chọn giờ'))
   placeOrder()
   expect(await screen.findByText('Chọn giờ nhận hàng.')).toBeTruthy()
