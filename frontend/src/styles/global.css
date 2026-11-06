@@ -667,8 +667,55 @@ body {
   font-size: 22px;
   line-height: 1.35;
 }
-.af-inventory-stats {
+/* Khung "Cần xử lý" của kho: danh sách việc, không phải thẻ số. */
+.af-attention {
   margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--af-border);
+  border-radius: 12px;
+  background: var(--af-surface);
+}
+.af-attention h2 {
+  margin: 0 0 6px;
+  color: var(--af-text-strong);
+  font-size: 14px;
+  font-weight: 600;
+}
+.af-attention ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.af-attention li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+}
+.af-attention li + li {
+  border-top: 1px dashed var(--af-border);
+}
+.af-attention-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--af-primary);
+}
+.af-attention li.is-danger .af-attention-dot {
+  background: var(--af-danger);
+}
+.af-attention li.is-warning .af-attention-dot {
+  background: var(--af-warning);
+}
+.af-attention-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--af-text);
+}
+.af-attention li.is-danger .af-attention-text {
+  color: var(--af-danger);
+  font-weight: 600;
 }
 .af-stat-danger .ant-statistic-content {
   color: var(--af-danger);
