@@ -6,6 +6,7 @@ import { useAuth } from '@/features/auth/useAuth'
 import { movementApi, movementLabels, type InventoryMovement, type MovementFilter, type MovementType } from '@/features/live/movementApi'
 import { LiveOrderDetails } from '@/features/live/LiveOrderDetails'
 import { QueryError } from '@/shared/components/QueryError'
+import { ViewButton } from '@/shared/components/ViewButton'
 import { tableScrollHeight } from '@/shared/utils/table'
 import { isoToVnDate } from '../expiry'
 
@@ -73,7 +74,7 @@ export function LiveMovementsPanel() {
           className="af-data-table af-table-flush"
           loading={query.isPending}
           dataSource={query.data?.content ?? []}
-          scroll={{ x: 1100, y: tableScrollHeight }}
+          scroll={{ x: 1200, y: tableScrollHeight }}
           pagination={{
             current: filter.page + 1,
             pageSize: filter.size,
@@ -138,11 +139,19 @@ export function LiveMovementsPanel() {
               ),
             },
             { title: 'Người thực hiện', dataIndex: 'performedByName', width: 160 },
+            {
+              title: 'Thao tác',
+              key: 'actions',
+              width: 100,
+              fixed: 'right',
+              render: (_, item) => <ViewButton subject={`giao dịch kho #${item.id}`} onClick={() => setSelected(item.id)} />,
+            },
           ]}
         />
       )}
       <Modal
         open={selected !== null}
+        centered
         title={`Giao dịch kho #${selected ?? ''}`}
         onCancel={() => setSelected(null)}
         footer={

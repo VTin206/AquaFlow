@@ -123,27 +123,11 @@ span.af-activity-target {
 }
 .af-activity-time {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  min-width: 72px;
-  padding: 4px 6px;
-  border: 0;
-  border-radius: 8px;
-  background: none;
+  align-items: center;
+  gap: 8px;
   color: var(--af-text-secondary);
-  font: inherit;
   font-size: 13px;
   white-space: nowrap;
-  cursor: pointer;
-}
-.af-activity-time small {
-  color: var(--af-primary);
-  font-size: 12px;
-}
-.af-activity-time:hover,
-.af-activity-time:focus-visible {
-  background: var(--af-surface-hover);
 }
 .af-activity-more {
   margin-top: 8px;
@@ -178,10 +162,7 @@ span.af-activity-target {
   }
   .af-activity-time {
     grid-column: 2;
-    flex-direction: row;
     justify-content: space-between;
-    align-items: center;
-    padding: 2px 0;
   }
 }
 .af-activity-body.is-stale {

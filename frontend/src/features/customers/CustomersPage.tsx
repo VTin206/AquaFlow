@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { App, Button, Card, Col, Dropdown, Grid, Input, Row, Segmented, Statistic, Table, Tag, Tooltip, type TableColumnsType } from 'antd'
-import { Ellipsis, Eye, FileSpreadsheet, Plus, Search } from 'lucide-react'
+import { Ellipsis, FileSpreadsheet, Plus, Search } from 'lucide-react'
+import { ViewButton } from '@/shared/components/ViewButton'
 import { useLinkedQuery } from '@/shared/utils/useLinkedQuery'
 import { BulkBar } from '@/shared/components/BulkBar'
 import { Page } from '@/shared/components/Page'
@@ -220,14 +221,7 @@ export function CustomersPage() {
       width: 130,
       render: (_, customer) => (
         <span className="af-row-actions">
-          <Tooltip title="Xem hồ sơ">
-            <Button
-              size="small"
-              icon={<Eye size={15} />}
-              aria-label={`Xem hồ sơ ${customer.name}`}
-              onClick={() => setProfileId(customer.id)}
-            />
-          </Tooltip>
+          <ViewButton title="Xem hồ sơ" subject={customer.name} onClick={() => setProfileId(customer.id)} />
           <Button size="small" onClick={() => setOrderFor(customer)}>
             Tạo đơn
           </Button>

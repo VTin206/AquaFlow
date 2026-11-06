@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Collapse, Descriptions, Drawer, Dropdown, Modal, Popconfirm, Skeleton, Tag, type MenuProps } from 'antd'
+import { App, Button, Collapse, Descriptions, Dropdown, Modal, Popconfirm, Skeleton, Tag, type MenuProps } from 'antd'
 import { Ellipsis, MapPin, Phone, Truck } from 'lucide-react'
 import { Money } from '@/shared/components/Money'
 import { QueryError } from '@/shared/components/QueryError'
 import { usePrinter } from '@/shared/print/usePrinter'
+import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
 import { currency } from '@/shared/utils/format'
 import { dueTone } from '@/shared/utils/money'
 import { useStaff } from '@/features/auth/useStaff'
@@ -67,9 +68,9 @@ export function LiveTripDrawer({ tripId, onClose }: { tripId: number; onClose: (
 
   if (!trip) {
     return (
-      <Drawer open onClose={onClose} size={600} title={`Chuyến #${tripId}`}>
+      <Modal open centered onCancel={onClose} width={modalWidth.medium} footer={null} title={`Chuyến #${tripId}`}>
         {detail.isError ? <QueryError error={detail.error} onRetry={detail.refetch} /> : <Skeleton active />}
-      </Drawer>
+      </Modal>
     )
   }
 
@@ -150,17 +151,19 @@ export function LiveTripDrawer({ tripId, onClose }: { tripId: number; onClose: (
 
   return (
     <>
-      <Drawer
+      <Modal
         open
-        onClose={onClose}
-        size={600}
+        centered
+        onCancel={onClose}
+        width={modalWidth.medium}
+        styles={modalScrollBody}
         title={
           <div className="af-profile-head">
             <span className="af-trip-icon">
               <Truck size={20} />
             </span>
             <div className="af-cell-stack">
-              <span className="af-profile-name">Chuyến #{trip.id}</span>
+              <span className="af-profile-name">Chuyến #{trip.id} <TripStatusTag status={liveTripStatus(trip)} /></span>
               <small>
                 {trip.driverName ?? 'Chưa phân tài xế'}
                 {trip.vehicle ? ` · ${trip.vehicle}` : ''}
@@ -168,7 +171,7 @@ export function LiveTripDrawer({ tripId, onClose }: { tripId: number; onClose: (
             </div>
           </div>
         }
-        extra={<TripStatusTag status={liveTripStatus(trip)} />}
+
         footer={
           <div className="af-order-footer">
             <div>
@@ -313,7 +316,7 @@ export function LiveTripDrawer({ tripId, onClose }: { tripId: number; onClose: (
             ]}
           />
         )}
-      </Drawer>
+      </Modal>
 
       {action && (
         <DeliveryActionModal

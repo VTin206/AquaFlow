@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Badge, Button, Card, Col, Empty, Row, Skeleton, Tag, Typography } from 'antd'
-import { Clock3, Eye, MapPin, Package, Phone } from 'lucide-react'
+import { Clock3, MapPin, Package, Phone } from 'lucide-react'
+import { ViewButton } from '@/shared/components/ViewButton'
 import { Money } from '@/shared/components/Money'
 import { QueryError } from '@/shared/components/QueryError'
 import { useIsDemo } from '@/shared/features'
@@ -63,9 +64,7 @@ function DeliveryCard({ order, failureReason, orphan, action, onDetails }: CardP
         </Tag>
       )}
       <div className="af-delivery-footer">
-        <Button size="small" icon={<Eye size={15} />} onClick={onDetails} aria-label={`Chi tiết đơn ${code}`}>
-          Chi tiết
-        </Button>
+        <ViewButton subject={`đơn ${code}`} onClick={onDetails} />
         {action}
       </div>
     </Card>

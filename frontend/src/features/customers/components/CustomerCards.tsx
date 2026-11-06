@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Button, Select, Tooltip } from 'antd'
-import { Eye, Plus } from 'lucide-react'
+import { Button, Select } from 'antd'
+import { Plus } from 'lucide-react'
+import { ViewButton } from '@/shared/components/ViewButton'
 import { MobileRecordList } from '@/shared/components/MobileRecordList'
 import { useFeature } from '@/shared/features'
 import { Unsupported } from '@/shared/components/Unsupported'
@@ -69,9 +70,7 @@ export function CustomerCards({ customers, loading, emptyText, onProfile, onCrea
             <dd>{showBottles ? `${customer.bottlesHeld} vỏ` : <Unsupported />}</dd>
           </dl>
           <div className="af-record-actions">
-            <Tooltip title="Xem hồ sơ">
-              <Button icon={<Eye size={16} />} onClick={() => onProfile(customer.id)} aria-label={`Xem hồ sơ ${customer.name}`} />
-            </Tooltip>
+            <ViewButton title="Xem hồ sơ" subject={customer.name} size="middle" onClick={() => onProfile(customer.id)} />
             <Button icon={<Plus size={16} />} onClick={() => onCreateOrder(customer)} aria-label={`Tạo đơn cho ${customer.name}`}>
               Tạo đơn
             </Button>

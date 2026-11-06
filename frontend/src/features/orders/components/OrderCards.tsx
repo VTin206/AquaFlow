@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Button, Select, Space } from 'antd'
-import { Eye } from 'lucide-react'
+import { Select, Space } from 'antd'
+import { ViewButton } from '@/shared/components/ViewButton'
 import { MobileRecordList } from '@/shared/components/MobileRecordList'
 import { Money } from '@/shared/components/Money'
 import { useFeature } from '@/shared/features'
@@ -83,9 +83,7 @@ export function OrderCards({ orders, loading, compact, emptyText, onDetails, fil
           </dl>
           <p className="af-record-meta">{paymentLabel(order)}</p>
           <div className="af-record-actions">
-            <Button icon={<Eye size={16} />} onClick={() => onDetails(order.id)} aria-label={`Chi tiết đơn ${order.code ?? order.id}`}>
-              Chi tiết
-            </Button>
+            <ViewButton subject={`đơn ${order.code ?? order.id}`} size="middle" onClick={() => onDetails(order.id)} />
             {!compact && <OrderNextAction order={order} size="middle" />}
           </div>
         </article>

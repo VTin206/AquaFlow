@@ -4,7 +4,7 @@ import { useSaveSupplier } from '../useSuppliers'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { useFeature } from '@/shared/features'
 import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
-import { modalWidth } from '@/shared/utils/modal'
+import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
 
 /** Thêm mới khi không có `supplier`; sửa khi có. */
 export function SupplierFormModal({ supplier, onClose, onSaved }: { supplier?: Supplier; onClose: () => void; onSaved: () => void }) {
@@ -44,7 +44,7 @@ export function SupplierFormModal({ supplier, onClose, onSaved }: { supplier?: S
       confirmLoading={save.isPending}
       cancelButtonProps={{ disabled: save.isPending }}
       closable={!save.isPending}
-      styles={{ body: { maxHeight: 'calc(100dvh - 200px)', overflowY: 'auto', paddingTop: 16 } }}
+      styles={{ body: { ...modalScrollBody.body, paddingTop: 16 } }}
     >
       <Form<SupplierDraft>
         form={form}

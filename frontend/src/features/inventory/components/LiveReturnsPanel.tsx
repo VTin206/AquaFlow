@@ -5,6 +5,7 @@ import { returnApi, usePendingReturns, type PendingReturn, type ReturnInspection
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { OrderFocusBanner } from '@/features/orders/components/OrderSheet'
 import { QueryError } from '@/shared/components/QueryError'
+import { ViewButton } from '@/shared/components/ViewButton'
 import { modalWidth } from '@/shared/utils/modal'
 
 export function LiveReturnsPanel() {
@@ -47,7 +48,7 @@ export function LiveReturnsPanel() {
                     {
                       title: 'Thao tác',
                       render: (_, row) => (
-                        <Button type="primary" onClick={() => setSelected(row)}>
+                        <Button size="small" type="primary" onClick={() => setSelected(row)}>
                           Kiểm hàng
                         </Button>
                       ),
@@ -74,7 +75,7 @@ export function LiveReturnsPanel() {
                     { title: 'Phiếu', dataIndex: 'id' },
                     { title: 'Đơn', dataIndex: 'orderCode' },
                     { title: 'Ngày kiểm', dataIndex: 'createdAt', render: (v: string) => new Date(v).toLocaleString('vi-VN') },
-                    { title: 'Thao tác', render: (_, row) => <Button onClick={() => setDetail(row)}>Chi tiết</Button> },
+                    { title: 'Thao tác', width: 100, render: (_, row) => <ViewButton subject={`phiếu hoàn #${row.id}`} onClick={() => setDetail(row)} /> },
                   ]}
                 />
                 <Space style={{ padding: 12 }}>
@@ -94,6 +95,7 @@ export function LiveReturnsPanel() {
       {selected && <InspectionModal key={selected.orderId} order={selected} onClose={() => setSelected(null)} />}
       <Modal
         open={!!detail}
+        centered
         onCancel={() => setDetail(null)}
         footer={null}
         title={`Phiếu hoàn #${detail?.id ?? ''} · ${detail?.orderCode ?? ''}`}

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { App, Avatar, Button, Card, DatePicker, Descriptions, Drawer, Empty, Grid, Input, Segmented, Select, Skeleton, Switch, Tag } from 'antd'
+import { App, Avatar, Button, Card, DatePicker, Descriptions, Empty, Grid, Input, Modal, Segmented, Select, Skeleton, Switch, Tag } from 'antd'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
 import {
@@ -19,6 +19,8 @@ import {
 import { useNavigate } from 'react-router'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
+import { ViewButton } from '@/shared/components/ViewButton'
+import { modalWidth } from '@/shared/utils/modal'
 import { downloadCsv } from '@/shared/utils/csv'
 import { OrderDetails } from '@/features/orders/components/OrderDetails'
 import { csvSafeCell } from './activityApi'
@@ -248,12 +250,12 @@ export function ActivityPage() {
                             )}
                           </div>
                         </div>
-                        <button type="button" className="af-activity-time" title="Xem chi tiết" onClick={() => setSelected(item)}>
+                        <div className="af-activity-time">
                           <time dateTime={item.at} title={dayjs(item.at).format('DD/MM/YYYY HH:mm:ss')}>
                             {relativeTime(item.at)}
                           </time>
-                          <small>Chi tiết</small>
-                        </button>
+                          <ViewButton subject={`hoạt động lúc ${dayjs(item.at).format('HH:mm DD/MM')}`} onClick={() => setSelected(item)} />
+                        </div>
                       </li>
                     )
                   })}
@@ -268,24 +270,27 @@ export function ActivityPage() {
           </div>
         )}
       </Card>
-      <Drawer
+      <Modal
         open={selected !== null}
-        onClose={() => setSelected(null)}
+        centered
+        onCancel={() => setSelected(null)}
         title="Chi tiết hoạt động"
-        size={420}
-        extra={
-          selected &&
-          canOpen(selected) && (
-            <Button
-              type="primary"
-              onClick={() => {
-                openEntity(selected)
-                setSelected(null)
-              }}
-            >
-              {selected.entity?.type === 'ORDER' ? 'Mở đơn hàng' : entityPages[selected.entity!.type].label}
-            </Button>
-          )
+        width={modalWidth.small}
+        footer={
+          <>
+            <Button onClick={() => setSelected(null)}>Đóng</Button>
+            {selected && canOpen(selected) && (
+              <Button
+                type="primary"
+                onClick={() => {
+                  openEntity(selected)
+                  setSelected(null)
+                }}
+              >
+                {selected.entity?.type === 'ORDER' ? 'Mở đơn hàng' : entityPages[selected.entity!.type].label}
+              </Button>
+            )}
+          </>
         }
       >
         {selected && (
@@ -305,7 +310,7 @@ export function ActivityPage() {
             <p className="af-form-hint">Nhật ký chưa ghi lại giá trị trước và sau khi sửa.</p>
           </>
         )}
-      </Drawer>
+      </Modal>
       {orderId && <OrderDetails id={orderId} onClose={() => setOrderId(null)} />}
     </Page>
   )

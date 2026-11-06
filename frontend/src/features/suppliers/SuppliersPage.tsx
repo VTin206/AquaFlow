@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react'
-import { App, Button, Card, Dropdown, Empty, Input, Segmented, Space, Table, Tag, Tooltip, type TableColumnsType } from 'antd'
+import { App, Button, Card, Descriptions, Dropdown, Empty, Input, Modal, Segmented, Table, Tag, type TableColumnsType } from 'antd'
 import { Ellipsis, Pencil, Plus, Search } from 'lucide-react'
+import { ViewButton } from '@/shared/components/ViewButton'
+import { modalWidth } from '@/shared/utils/modal'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
 import { CountLabel } from '@/shared/components/CountLabel'
@@ -30,10 +32,13 @@ export function SuppliersPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [editing, setEditing] = useState<Supplier | null>()
+  const [viewingId, setViewingId] = useState<string>()
   const keyword = query.trim()
   const allSuppliers = suppliersQuery.data ?? []
   const suppliers = status === 'all' ? allSuppliers : allSuppliers.filter((supplier) => supplier.active === (status === 'active'))
   const activeCount = allSuppliers.filter((supplier) => supplier.active).length
+  // Đọc lại từ danh sách để sau khi sửa hoặc ngừng hợp tác, cửa sổ xem hiện ngay dữ liệu mới.
+  const viewing = allSuppliers.find((supplier) => supplier.id === viewingId)
   const statusOptions: { value: SupplierStatus; label: ReactNode }[] = [
     { value: 'active', label: <CountLabel label="Đang hợp tác" count={activeCount} tone="success" /> },
     { value: 'inactive', label: <CountLabel label="Ngừng hợp tác" count={allSuppliers.length - activeCount} tone="danger" /> },
@@ -139,31 +144,14 @@ export function SuppliersPage() {
       render: (email?: string) => (!showEmail ? <Unsupported /> : email ? <a href={`mailto:${email}`}>{email}</a> : '—'),
     },
     { title: 'Địa chỉ', dataIndex: 'address', width: 300, ellipsis: true, render: (address?: string) => address || '—' },
-    ...(canManage
-      ? [
-          {
-            title: 'Thao tác',
-            key: 'actions',
-            width: 100,
-            fixed: 'right' as const,
-            render: (_: unknown, supplier: Supplier) => (
-              <Space size={4}>
-                <Tooltip title="Sửa">
-                  <Button
-                    size="small"
-                    icon={<Pencil size={15} />}
-                    aria-label={`Sửa ${supplier.name}`}
-                    onClick={() => setEditing(supplier)}
-                  />
-                </Tooltip>
-                <Dropdown trigger={['click']} menu={{ items: rowMenu(supplier) }}>
-                  <Button size="small" type="text" icon={<Ellipsis size={16} />} aria-label={`Thao tác khác với ${supplier.name}`} />
-                </Dropdown>
-              </Space>
-            ),
-          },
-        ]
-      : []),
+    {
+      title: 'Thao tác',
+      key: 'actions',
+      width: 100,
+      fixed: 'right' as const,
+      // Sửa và ngừng hợp tác ít dùng: xem trước, các nút nằm trong cửa sổ chi tiết.
+      render: (_: unknown, supplier: Supplier) => <ViewButton subject={supplier.name} onClick={() => setViewingId(supplier.id)} />,
+    },
   ]
 
   return (
@@ -265,6 +253,50 @@ export function SuppliersPage() {
           </>
         )}
       </Card>
+      <Modal
+        open={viewing !== undefined}
+        centered
+        width={modalWidth.small}
+        onCancel={() => setViewingId(undefined)}
+        title={
+          <span className="af-name-with-tag">
+            {viewing?.name}
+            {viewing && !viewing.active && <Tag className="af-inactive-tag">Ngừng hợp tác</Tag>}
+          </span>
+        }
+        footer={
+          canManage && viewing ? (
+            <div className="af-order-footer">
+              <div>
+                <Dropdown trigger={['click']} menu={{ items: rowMenu(viewing) }}>
+                  <Button icon={<Ellipsis size={16} />}>Thao tác khác</Button>
+                </Dropdown>
+              </div>
+              <div>
+                <Button type="primary" icon={<Pencil size={15} />} onClick={() => setEditing(viewing)}>
+                  Sửa thông tin
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button onClick={() => setViewingId(undefined)}>Đóng</Button>
+          )
+        }
+      >
+        {viewing && (
+          <Descriptions
+            column={1}
+            size="small"
+            items={[
+              { key: 'code', label: 'Mã', children: viewing.code },
+              ...(showContact ? [{ key: 'contact', label: 'Người liên hệ', children: viewing.contactName || '—' }] : []),
+              { key: 'phone', label: 'Điện thoại', children: viewing.phone ? <a href={`tel:${viewing.phone}`}>{viewing.phone}</a> : '—' },
+              ...(showEmail ? [{ key: 'email', label: 'Email', children: viewing.email ? <a href={`mailto:${viewing.email}`}>{viewing.email}</a> : '—' }] : []),
+              { key: 'address', label: 'Địa chỉ', children: viewing.address || '—' },
+            ]}
+          />
+        )}
+      </Modal>
       {editing !== undefined && (
         <SupplierFormModal
           key={editing?.id ?? 'new'}

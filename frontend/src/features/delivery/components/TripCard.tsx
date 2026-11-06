@@ -1,5 +1,6 @@
 import { Button, Card, Progress } from 'antd'
 import { Truck } from 'lucide-react'
+import { ViewButton } from '@/shared/components/ViewButton'
 import type { TripViewStatus } from '../tripFocus'
 import { TripStatusTag } from './TripStatusTag'
 
@@ -30,9 +31,13 @@ export function TripCard({ code, status, driver, vehicle, finished, total, dueLa
       <Progress percent={Math.round((finished / Math.max(1, total)) * 100)} size="small" format={() => `${finished}/${total}`} />
       <div className="af-trip-card-foot">
         <small>{dueLabel}</small>
-        <Button size="small" type={needsSettling ? 'primary' : 'default'}>
-          {needsSettling ? 'Đối soát' : 'Chi tiết'}
-        </Button>
+        {needsSettling ? (
+          <Button size="small" type="primary">
+            Đối soát
+          </Button>
+        ) : (
+          <ViewButton subject={`chuyến ${code}`} />
+        )}
       </div>
     </Card>
   )
