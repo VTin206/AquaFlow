@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-export type Tone = 'success' | 'warning' | 'danger' | 'neutral'
+export type Tone = 'success' | 'warning' | 'danger' | 'info' | 'neutral'
 
 /** Nhãn trạng thái; trong Segmented, ô đang chọn đổi màu chữ theo trạng thái (xem global.css). */
 export function ToneLabel({ tone, children }: { tone: Tone; children: ReactNode }) {

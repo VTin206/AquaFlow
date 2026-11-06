@@ -580,12 +580,20 @@ body {
 .af-tone.is-danger {
   --tone: var(--af-danger);
 }
+.af-tone.is-info {
+  --tone: var(--af-primary);
+}
 .af-tone.is-neutral {
   --tone: var(--af-text-strong);
 }
 .ant-segmented .ant-segmented-item-selected-text .af-tone {
   color: var(--tone);
 }
+/* Tab đang chọn (trang Đơn hàng) cũng đổi màu chữ, số đếm và gạch chân theo trạng thái. */
+.ant-tabs-tab-active .af-tone {
+  color: var(--tone);
+}
+.ant-tabs-tab-active .af-tone .af-count,
 .ant-segmented-item-selected-text .af-tone .af-count {
   background: var(--tone);
   color: var(--af-on-primary);
@@ -2784,4 +2792,14 @@ body {
 .ant-input-affix-wrapper.af-filter-on .af-input-icon {
   color: var(--af-primary);
   font-weight: 500;
+}
+
+.af-order-tabs:has(.ant-tabs-tab-active .is-warning) .ant-tabs-ink-bar {
+  background: var(--af-warning);
+}
+.af-order-tabs:has(.ant-tabs-tab-active .is-success) .ant-tabs-ink-bar {
+  background: var(--af-success);
+}
+.af-order-tabs:has(.ant-tabs-tab-active .is-neutral) .ant-tabs-ink-bar {
+  background: var(--af-text-strong);
 }

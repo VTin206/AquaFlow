@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ToneLabel } from '@/shared/components/ToneLabel'
 import { filterOn } from '@/shared/utils/filterOn'
 import { Button, Card, Grid, Input, Segmented, Select, Tabs, Tooltip } from 'antd'
 import { FunnelX, Plus, Search, SlidersHorizontal } from 'lucide-react'
@@ -78,15 +79,17 @@ export function OrdersPage() {
                   aria-label="Nhóm đơn hàng"
                   value={activeGroup}
                   onChange={(value) => updateFilters({ group: value, status: ALL })}
-                  options={orderGroups.map(({ key, label }) => {
+                  options={orderGroups.map(({ key, label, tone }) => {
                     const count = countGroup(key)
                     return {
                       value: key,
                       label: (
-                        <span className="af-order-group">
-                          <strong className={key === 'need' && count > 0 ? 'is-urgent' : undefined}>{count}</strong>
-                          <small>{label}</small>
-                        </span>
+                        <ToneLabel tone={tone}>
+                          <span className="af-order-group">
+                            <strong className={key === 'need' && count > 0 ? 'is-urgent' : undefined}>{count}</strong>
+                            <small>{label}</small>
+                          </span>
+                        </ToneLabel>
                       ),
                     }
                   })}
@@ -99,9 +102,9 @@ export function OrdersPage() {
                 aria-label="Nhóm đơn hàng"
                 activeKey={activeGroup}
                 onChange={(value) => updateFilters({ group: value as OrderGroupKey, status: ALL })}
-                items={orderGroups.map(({ key, label }) => ({
+                items={orderGroups.map(({ key, label, tone }) => ({
                   key,
-                  label: <CountLabel label={label} count={countGroup(key)} urgent={key === 'need'} />,
+                  label: <CountLabel label={label} count={countGroup(key)} urgent={key === 'need'} tone={tone} />,
                 }))}
               />
             )}
