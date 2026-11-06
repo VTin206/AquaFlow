@@ -74,7 +74,7 @@ export function LiveMovementsPanel() {
           className="af-data-table af-table-flush"
           loading={query.isPending}
           dataSource={query.data?.content ?? []}
-          scroll={{ x: 1200, y: tableScrollHeight }}
+          scroll={{ x: 1212, y: tableScrollHeight }}
           pagination={{
             current: filter.page + 1,
             pageSize: filter.size,
@@ -142,7 +142,8 @@ export function LiveMovementsPanel() {
             {
               title: 'Thao tác',
               key: 'actions',
-              width: 100,
+              width: 112,
+              align: 'center' as const,
               fixed: 'right',
               render: (_, item) => <ViewButton subject={`giao dịch kho #${item.id}`} onClick={() => setSelected(item.id)} />,
             },

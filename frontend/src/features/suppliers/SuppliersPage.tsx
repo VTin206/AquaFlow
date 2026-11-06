@@ -147,7 +147,8 @@ export function SuppliersPage() {
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 100,
+      width: 112,
+      align: 'center' as const,
       fixed: 'right' as const,
       // Sửa và ngừng hợp tác ít dùng: xem trước, các nút nằm trong cửa sổ chi tiết.
       render: (_: unknown, supplier: Supplier) => <ViewButton subject={supplier.name} onClick={() => setViewingId(supplier.id)} />,
@@ -291,7 +292,15 @@ export function SuppliersPage() {
               { key: 'code', label: 'Mã', children: viewing.code },
               ...(showContact ? [{ key: 'contact', label: 'Người liên hệ', children: viewing.contactName || '—' }] : []),
               { key: 'phone', label: 'Điện thoại', children: viewing.phone ? <a href={`tel:${viewing.phone}`}>{viewing.phone}</a> : '—' },
-              ...(showEmail ? [{ key: 'email', label: 'Email', children: viewing.email ? <a href={`mailto:${viewing.email}`}>{viewing.email}</a> : '—' }] : []),
+              ...(showEmail
+                ? [
+                    {
+                      key: 'email',
+                      label: 'Email',
+                      children: viewing.email ? <a href={`mailto:${viewing.email}`}>{viewing.email}</a> : '—',
+                    },
+                  ]
+                : []),
               { key: 'address', label: 'Địa chỉ', children: viewing.address || '—' },
             ]}
           />

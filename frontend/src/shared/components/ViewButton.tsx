@@ -15,7 +15,12 @@ type Props = {
 export function ViewButton({ title = 'Xem chi tiết', subject, size = 'small', onClick }: Props) {
   return (
     <Tooltip title={title}>
-      <Button size={size} icon={<Eye size={size === 'small' ? 15 : 16} />} aria-label={subject ? `${title} ${subject}` : title} onClick={onClick} />
+      <Button
+        size={size}
+        icon={<Eye size={size === 'small' ? 15 : 16} />}
+        aria-label={subject ? `${title} ${subject}` : title}
+        onClick={onClick}
+      />
     </Tooltip>
   )
 }

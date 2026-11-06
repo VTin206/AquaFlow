@@ -68,7 +68,8 @@ export function StaffAccountsPage() {
               },
               {
                 title: 'Thao tác',
-                width: 100,
+                width: 112,
+                align: 'center' as const,
                 render: (_, account) => <ViewButton subject={account.fullName} onClick={() => setViewingId(account.id)} />,
               },
             ]}
@@ -145,7 +146,11 @@ function AccountDetails({
             {
               key: 'status',
               label: 'Trạng thái',
-              children: <Tag color={account.status === 'ACTIVE' ? 'green' : 'default'}>{account.status === 'ACTIVE' ? 'Đang hoạt động' : 'Đã khóa'}</Tag>,
+              children: (
+                <Tag color={account.status === 'ACTIVE' ? 'green' : 'default'}>
+                  {account.status === 'ACTIVE' ? 'Đang hoạt động' : 'Đã khóa'}
+                </Tag>
+              ),
             },
           ]}
         />

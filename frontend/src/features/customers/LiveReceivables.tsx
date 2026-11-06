@@ -22,7 +22,7 @@ export function LiveReceivables() {
         { title: 'Khách hàng', render: (_, item) => <><Button type="link" onClick={() => setCustomer(item)}>{item.name}</Button>{!item.active && <Tag>Đã lưu trữ</Tag>}</> },
         { title: 'Còn phải thu', dataIndex: 'due', align: 'right', render: currency },
         { title: 'Cần hoàn khách', dataIndex: 'refundDue', align: 'right', render: currency },
-        { title: 'Thao tác', key: 'actions', width: 100, render: (_, item) => <ViewButton title="Xem công nợ" subject={item.name} onClick={() => setCustomer(item)} /> },
+        { title: 'Thao tác', key: 'actions', width: 112, align: 'center' as const, render: (_, item) => <ViewButton title="Xem công nợ" subject={item.name} onClick={() => setCustomer(item)} /> },
       ]} />
     ) }]} />
     <Modal open={!!customer} title={`Công nợ — ${customer?.name ?? ''}`} footer={null} onCancel={() => setCustomer(undefined)} width={modalWidth.medium} centered>
@@ -32,7 +32,7 @@ export function LiveReceivables() {
         { title: 'Đã thu ròng', dataIndex: 'paid', render: currency, align: 'right' },
         { title: 'Còn phải thu', dataIndex: 'due', render: currency, align: 'right' },
         { title: 'Cần hoàn', dataIndex: 'refundDue', render: currency, align: 'right' },
-        { title: 'Thao tác', key: 'actions', width: 100, render: (_, item) => <ViewButton subject={`đơn ${item.orderCode}`} onClick={() => setOrderId(item.orderId)} /> },
+        { title: 'Thao tác', key: 'actions', width: 112, align: 'center' as const, render: (_, item) => <ViewButton subject={`đơn ${item.orderCode}`} onClick={() => setOrderId(item.orderId)} /> },
       ]} />}
     </Modal>
     {orderId !== undefined && <LiveOrderDetails id={orderId} onClose={() => setOrderId(undefined)} />}

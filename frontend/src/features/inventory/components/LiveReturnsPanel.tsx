@@ -75,7 +75,7 @@ export function LiveReturnsPanel() {
                     { title: 'Phiếu', dataIndex: 'id' },
                     { title: 'Đơn', dataIndex: 'orderCode' },
                     { title: 'Ngày kiểm', dataIndex: 'createdAt', render: (v: string) => new Date(v).toLocaleString('vi-VN') },
-                    { title: 'Thao tác', width: 100, render: (_, row) => <ViewButton subject={`phiếu hoàn #${row.id}`} onClick={() => setDetail(row)} /> },
+                    { title: 'Thao tác', width: 112, align: 'center' as const, render: (_, row) => <ViewButton subject={`phiếu hoàn #${row.id}`} onClick={() => setDetail(row)} /> },
                   ]}
                 />
                 <Space style={{ padding: 12 }}>
