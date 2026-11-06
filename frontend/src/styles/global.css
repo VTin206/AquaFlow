@@ -2078,7 +2078,20 @@ body {
 }
 .af-address-row {
   display: flex;
+  align-items: flex-start;
   gap: 6px;
+}
+.af-address-line {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 6px;
+}
+@media (max-width: 575px) {
+  .af-address-line {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .af-known-customer {
   margin-top: -12px;

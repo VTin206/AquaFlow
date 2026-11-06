@@ -7,6 +7,7 @@ import { ThemedArea } from '@/app/layouts/ThemedArea'
 import { RequireAuth } from './RequireAuth'
 import { usePageSupported } from '@/shared/features'
 import { RequireCustomer } from './RequireCustomer'
+import { ScrollToTop } from './ScrollToTop'
 
 // Mỗi trang được tải khi người dùng mở tới, giúp lần tải đầu nhẹ hơn.
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })))
@@ -51,6 +52,7 @@ const pageFallback = (
 export function App() {
   return (
     <Suspense fallback={pageFallback}>
+      <ScrollToTop />
       <Routes>
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />

@@ -8,7 +8,8 @@ import { AccountMenu } from './components/AccountMenu'
 import { CartDrawer } from './components/CartDrawer'
 import { UkFlag, VietnamFlag } from './components/Flags'
 import { ShopFooter } from './components/ShopFooter'
-import { useShopContact, useShopDemo, useShopFeature } from './shopService'
+import { shopKeys, useShopContact, useShopDemo, useShopFeature } from './shopService'
+import { useHomeLink, type FreshState } from '@/app/useHomeLink'
 import './shop.css'
 
 /**
@@ -23,6 +24,9 @@ export function ShopLayout() {
   const { demoGuest, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const goHome = useHomeLink('/shop', shopKeys.products)
+  // Bấm logo: dựng lại trang từ đầu để bộ lọc và trang về mặc định.
+  const fresh = (location.state as FreshState | null)?.fresh
   // Có trang trước trong app thì quay lại; mở thẳng bằng link hoặc vừa đặt đơn xong thì về trang chủ cửa hàng.
   const placed = (location.state as { placed?: boolean } | null)?.placed
   const goBack = () => (location.key !== 'default' && !placed ? navigate(-1) : navigate('/shop'))
@@ -72,7 +76,7 @@ export function ShopLayout() {
       </div>
       <header className="af-shop-header">
         <div className="af-shop-header-inner">
-          <Link to="/shop" className="af-shop-brand">
+          <Link to="/shop" className="af-shop-brand" onClick={goHome}>
             <span className="af-brand-mark">
               <Waves size={22} strokeWidth={2.2} />
             </span>
@@ -137,7 +141,7 @@ export function ShopLayout() {
             Quay lại
           </Button>
         )}
-        <Outlet context={{ openCart: () => setCartOpen(true) }} />
+        <Outlet key={fresh ?? 'page'} context={{ openCart: () => setCartOpen(true) }} />
       </main>
       <ShopFooter demo={demo} contact={settings} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />

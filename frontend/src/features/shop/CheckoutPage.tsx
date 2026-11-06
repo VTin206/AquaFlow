@@ -17,6 +17,7 @@ import { usePlaceWebOrder, useShopContact, useShopFeature, useShopProducts } fro
 import { useAuth } from '@/features/auth/useAuth'
 import { isCustomer } from '@/features/auth/accountAccess'
 import { SavedAddressPicker } from './SavedAddressPicker'
+import { WardSelect } from '@/shared/address/WardSelect'
 
 type CheckoutForm = {
   customer: string
@@ -232,8 +233,13 @@ export function CheckoutPage() {
                 >
                   <Input.TextArea autoComplete="street-address" rows={2} placeholder="Số nhà, tên đường, tòa nhà, tầng" />
                 </Form.Item>
-                <Form.Item name="area" label="Khu vực" rules={[{ required: true, whitespace: true, message: 'Nhập khu vực giao.' }, { max: 150 }]}>
-                  <Input autoComplete="address-level2" placeholder="Phường hoặc quận" />
+                <Form.Item
+                  name="area"
+                  label="Phường/Xã"
+                  extra="Cửa hàng giao trong TP. Hồ Chí Minh."
+                  rules={[{ required: true, whitespace: true, message: 'Chọn phường/xã giao hàng.' }, { max: 150 }]}
+                >
+                  <WardSelect />
                 </Form.Item>
                 <Form.Item name="when" label="Giờ nhận hàng">
                   <Radio.Group
