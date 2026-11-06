@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { filterOn } from '@/shared/utils/filterOn'
 import { Button, Card, Grid, Input, Segmented, Select, Tabs, Tooltip } from 'antd'
 import { FunnelX, Plus, Search, SlidersHorizontal } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
@@ -120,6 +121,7 @@ export function OrdersPage() {
                     {groupStatuses.length > 1 && (
                       <Select
                         aria-label="Lọc trạng thái trong nhóm"
+                        className={filterOn(statusValue !== ALL)}
                         style={{ minWidth: 190 }}
                         value={statusValue}
                         onChange={(value) => updateFilters({ status: String(value) })}
@@ -128,6 +130,7 @@ export function OrdersPage() {
                     )}
                     <Select
                       aria-label="Lọc hình thức nhận"
+                      className={filterOn(method !== ALL)}
                       value={method}
                       onChange={(value) => updateFilters({ method: value })}
                       style={{ minWidth: 160 }}
@@ -139,6 +142,7 @@ export function OrdersPage() {
                     <Tooltip title={showPayments ? undefined : 'Backend chưa hỗ trợ phiếu thu'}>
                       <Select
                         aria-label="Lọc thanh toán"
+                        className={filterOn(paymentFilter !== ALL)}
                         value={paymentFilter}
                         disabled={!showPayments}
                         onChange={(value) => updateFilters({ payment: value })}
@@ -159,11 +163,13 @@ export function OrdersPage() {
                 aria-label="Tìm đơn hàng"
                 value={query}
                 onChange={(event) => updateFilters({ query: event.target.value })}
-                className="af-search"
+                className={`af-search ${filterOn(Boolean(query.trim()))}`}
               />
             </div>
             <div className="af-filter-summary">
-              <span role="status">{ordersQuery.isPending ? 'Đang tải đơn hàng…' : `${visible.length} / ${orders.length} đơn hàng`}</span>
+              <span role="status">
+                {ordersQuery.isPending ? 'Đang tải đơn hàng…' : `${visible.length} / ${countGroup(activeGroup)} đơn hàng`}
+              </span>
               {hasFilters && (
                 <Button type="link" size="small" className="af-clear-filter" icon={<FunnelX size={14} />} onClick={resetFilters}>
                   Xóa bộ lọc

@@ -1,4 +1,5 @@
 import { useState, type KeyboardEvent, type ReactNode } from 'react'
+import { filterOn } from '@/shared/utils/filterOn'
 import { useLinkedQuery } from '@/shared/utils/useLinkedQuery'
 import {
   App,
@@ -356,6 +357,7 @@ export function ProductsPage() {
         <div className="af-catalog-filters">
           <Input
             aria-label="Tìm sản phẩm"
+            className={filterOn(Boolean(query.trim()))}
             allowClear
             prefix={<Search size={16} className="af-input-icon" />}
             placeholder="Tìm tên, mã hàng, thương hiệu..."
@@ -368,6 +370,7 @@ export function ProductsPage() {
           <Tooltip title={showDetails ? undefined : 'Backend chưa hỗ trợ loại nước'}>
             <Select
               aria-label="Loại nước"
+              className={filterOn(Boolean(category))}
               allowClear
               disabled={!showDetails}
               placeholder={showDetails ? 'Tất cả loại nước' : 'Loại nước (chưa hỗ trợ)'}
@@ -381,6 +384,7 @@ export function ProductsPage() {
           </Tooltip>
           <Select
             aria-label="Quy cách"
+            className={filterOn(Boolean(packaging))}
             allowClear
             placeholder="Tất cả quy cách"
             value={packaging}
@@ -393,6 +397,7 @@ export function ProductsPage() {
           <Tooltip title={showDetails ? undefined : 'Backend chưa hỗ trợ dung tích'}>
             <Select
               aria-label="Dung tích"
+              className={filterOn(Boolean(capacity))}
               allowClear
               disabled={!showDetails}
               placeholder={showDetails ? 'Tất cả dung tích' : 'Dung tích (chưa hỗ trợ)'}

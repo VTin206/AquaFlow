@@ -2770,3 +2770,18 @@ body {
   border-radius: 999px;
   font-size: 14px;
 }
+
+/* Ô lọc đang bật: viền, nền nhạt và chữ màu chính, giống ô thương hiệu đang chọn. */
+.ant-select.af-filter-on,
+.ant-input-affix-wrapper.af-filter-on {
+  border-color: var(--af-primary);
+  background: var(--af-primary-soft);
+}
+.ant-select.af-filter-on .ant-select-content,
+.ant-select.af-filter-on .ant-select-selection-item,
+.ant-select.af-filter-on .ant-select-suffix,
+.ant-input-affix-wrapper.af-filter-on input,
+.ant-input-affix-wrapper.af-filter-on .af-input-icon {
+  color: var(--af-primary);
+  font-weight: 500;
+}
