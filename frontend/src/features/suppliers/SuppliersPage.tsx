@@ -123,7 +123,7 @@ export function SuppliersPage() {
     {
       title: 'Liên hệ',
       dataIndex: 'phone',
-      width: 200,
+      width: 240,
       render: (_, supplier) => (
         <div className="af-cell-stack">
           {showContact ? (
@@ -133,18 +133,17 @@ export function SuppliersPage() {
           ) : (
             <Unsupported label="Người liên hệ: chưa hỗ trợ" />
           )}
-          <small>{supplier.phone ? <a href={`tel:${supplier.phone}`}>{supplier.phone}</a> : '—'}</small>
+          <small>{supplier.phone ? <a href={`tel:${supplier.phone}`}>{supplier.phone}</a> : 'Chưa có số điện thoại'}</small>
+          {/* Email là một cách liên hệ nên nằm chung cột, không tách cột riêng. */}
+          {showEmail && supplier.email && (
+            <small className="af-cell-truncate" title={supplier.email}>
+              <a href={`mailto:${supplier.email}`}>{supplier.email}</a>
+            </small>
+          )}
         </div>
       ),
     },
-    {
-      title: 'Email',
-      dataIndex: 'email',
-      width: 230,
-      ellipsis: true,
-      render: (email?: string) => (!showEmail ? <Unsupported /> : email ? <a href={`mailto:${email}`}>{email}</a> : '—'),
-    },
-    { title: 'Địa chỉ', dataIndex: 'address', width: 300, ellipsis: true, render: (address?: string) => address || '—' },
+    { title: 'Địa chỉ', dataIndex: 'address', width: 340, ellipsis: true, render: (address?: string) => address || '—' },
     {
       title: 'Thao tác',
       key: 'actions',
@@ -218,7 +217,7 @@ export function SuppliersPage() {
                 },
               }}
               rowClassName={(supplier) => (supplier.active ? '' : 'af-row-inactive')}
-              scroll={{ x: 890, y: tableScrollHeight }}
+              scroll={{ x: 950, y: tableScrollHeight }}
               locale={{
                 emptyText: (
                   <Empty
