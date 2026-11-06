@@ -16,8 +16,8 @@ export const backendFeatures = {
   customerProfileExtras: true,
   /** Số còn phải thu theo khách từ sổ thanh toán thật. */
   customerDebt: true,
-  /** Sổ vỏ bình và tiền cọc (chưa có API). */
-  bottleLedger: false,
+  /** Sổ vỏ bình và tiền cọc từ BottleLedgerController. */
+  bottleLedger: true,
   /** Ảnh sản phẩm được lưu và trả về qua ProductController. */
   productImage: true,
   /** Loại nước, dung tích để lọc danh mục (ProductResponse chưa có). */

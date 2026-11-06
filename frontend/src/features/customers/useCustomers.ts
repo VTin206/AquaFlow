@@ -5,6 +5,7 @@ import { useStaff } from '@/features/auth/useStaff'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { orderApi } from '@/features/live/orderApi'
 import { paymentApi } from '@/features/live/paymentApi'
+import { bottleLedgerApi } from '@/features/live/bottleLedgerApi'
 import { customerService } from './customerService'
 import { initialsOf, type BottleAction, type Customer, type CustomerDraft } from './types'
 import { latest } from './lastOrder'
@@ -25,7 +26,7 @@ type CustomerResponse = {
   note?: string | null
 }
 
-/** Công nợ lấy từ số dư thật; sổ vỏ chưa có API và vẫn ẩn qua useFeature. */
+/** Các số dư được bổ sung từ API sổ thanh toán và sổ vỏ. */
 const fromResponse = (customer: CustomerResponse, orders: number, debt = 0): Customer => ({
   id: String(customer.id),
   name: customer.fullName,
@@ -47,7 +48,8 @@ const fromResponse = (customer: CustomerResponse, orders: number, debt = 0): Cus
  * BE chưa trả địa chỉ mặc định trong danh sách khách nên tạm lấy địa chỉ giao của đơn gần nhất.
  */
 async function liveCustomers() {
-  const [customers, orders, balances] = await Promise.all([api.get<CustomerResponse[]>('/sales/customers'), orderApi.list(), paymentApi.customers()])
+  const [customers, orders, balances, bottles] = await Promise.all([api.get<CustomerResponse[]>('/sales/customers'), orderApi.list(), paymentApi.customers(), bottleLedgerApi.balances()])
+  const bottleBalances = new Map(bottles.map(balance => [balance.customerId, balance]))
   const due = new Map(balances.map(balance => [balance.customerId, Number(balance.due)]))
   const byCustomer = new Map<number, typeof orders>()
   for (const order of orders)
@@ -60,6 +62,8 @@ async function liveCustomers() {
       ...fromResponse(customer, own.length, due.get(customer.id) ?? 0),
       lastOrderAt,
       mainAddress: lastOrder?.deliveryAddress ?? undefined,
+      bottlesHeld: bottleBalances.get(customer.id)?.bottlesHeld ?? 0,
+      depositHeld: Number(bottleBalances.get(customer.id)?.depositHeld ?? 0),
     }
   })
 }

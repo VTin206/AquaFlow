@@ -1,0 +1,65 @@
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Button, Card, Input, Modal, Skeleton, Table, Tag } from 'antd'
+import { useStaff } from '@/features/auth/useStaff'
+import { bottleLedgerApi, type BottleBalance } from '@/features/live/bottleLedgerApi'
+import { LiveBottleTypes } from '@/features/live/LiveBottleTypes'
+import { QueryError } from '@/shared/components/QueryError'
+import { currency } from '@/shared/utils/format'
+import { matchesSearch } from '@/shared/utils/search'
+import { LiveBottleLedger } from './LiveBottleLedger'
+
+export function LiveBottleOverview() {
+  const staff = useStaff()
+  const [search, setSearch] = useState('')
+  const [customer, setCustomer] = useState<BottleBalance>()
+  const [types, setTypes] = useState(false)
+  const query = useQuery({ queryKey: ['live', 'bottle-balances', staff?.name, staff?.role], queryFn: bottleLedgerApi.balances })
+  return (
+    <Card title="Quản lý vỏ bình / tiền cọc" extra={<Button onClick={() => setTypes(true)}>Danh mục loại vỏ</Button>}>
+      <p>Sổ theo khách hàng, bao gồm hồ sơ đã lưu trữ. Chọn khách để ghi nhận giao/thu vỏ, thu/hoàn cọc và xem lịch sử.</p>
+      <Input
+        placeholder="Tìm khách trong sổ vỏ"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        allowClear
+        style={{ marginBottom: 12 }}
+      />
+      {query.isError ? (
+        <QueryError error={query.error} onRetry={query.refetch} />
+      ) : query.isPending ? (
+        <Skeleton active />
+      ) : (
+        <Table
+          rowKey="customerId"
+          dataSource={query.data.filter((c) => matchesSearch(search, c.name))}
+          pagination={{ pageSize: 8 }}
+          scroll={{ x: 650 }}
+          locale={{ emptyText: 'Chưa có khách hàng phù hợp.' }}
+          columns={[
+            {
+              title: 'Khách hàng',
+              render: (_, c) => (
+                <>
+                  <Button type="link" onClick={() => setCustomer(c)}>
+                    {c.name}
+                  </Button>
+                  {!c.active && <Tag>Đã lưu trữ</Tag>}
+                </>
+              ),
+            },
+            { title: 'Vỏ đang giữ', dataIndex: 'bottlesHeld', align: 'right' },
+            { title: 'Cọc đang giữ', dataIndex: 'depositHeld', render: currency, align: 'right' },
+            { title: 'Có thể hoàn', dataIndex: 'refundable', render: currency, align: 'right' },
+          ]}
+        />
+      )}
+      {customer && (
+        <Modal open title={`Vỏ & cọc · ${customer.name}`} width={900} footer={null} onCancel={() => setCustomer(undefined)}>
+          <LiveBottleLedger customerId={customer.customerId} />
+        </Modal>
+      )}
+      {types && <LiveBottleTypes onClose={() => setTypes(false)} />}
+    </Card>
+  )
+}
