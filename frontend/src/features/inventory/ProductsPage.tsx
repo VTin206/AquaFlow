@@ -225,7 +225,7 @@ export function ProductsPage() {
                   .filter(Boolean)
                   .join(' · ')
             return (
-              <Col key={product.id} xs={24} sm={12} lg={8} xl={6}>
+              <Col key={product.id} xs={12} sm={12} lg={8} xl={6}>
                 {/* Người quản lý bấm thẻ để sửa; thao tác khác nằm trong ⋯ ở góc ảnh. */}
                 <Card
                   className={`af-product-card${product.active ? '' : ' is-inactive'}${canManage ? ' is-editable' : ''}`}

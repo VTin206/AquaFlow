@@ -1418,6 +1418,32 @@ body {
   .af-brand-filter {
     flex-basis: 105px;
   }
+  /* Thanh trạng thái chiếm một hàng riêng, dòng "Hiển thị…" xuống dưới thay vì bị ép gãy từng chữ. */
+  .af-catalog-results {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    row-gap: 8px;
+  }
+  .af-catalog-results .ant-segmented {
+    flex: 1 1 100%;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .af-catalog-results .ant-segmented-item {
+    flex: 1 0 auto;
+  }
+  .af-catalog-results .ant-segmented-item-label {
+    padding-inline: 6px;
+  }
+  /* Hai cột thẻ: tên thương hiệu giữ một dòng, thẻ loại nước xuống dưới khi hẹp. */
+  .af-product-brand-line {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    white-space: nowrap;
+  }
+  .ant-row .af-product-card .ant-card-body {
+    padding: 10px;
+  }
 }
 .af-product-card .ant-card-body {
   padding: 14px;
