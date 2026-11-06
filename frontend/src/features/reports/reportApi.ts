@@ -10,7 +10,7 @@ export type LiveReport = {
   sales: Record<'ordersCreated' | 'ordersCancelled' | 'ordersDelivered' | 'goods' | 'discounts' | 'deliveryFees' | 'returnsValue' | 'revenue' | 'cashIn' | 'transferIn' | 'refunds' | 'netPayments' | 'undatedDeliveredOrders', number>
   days: { date: string; revenue: number; collected: number; orders: number }[]
   channels: { channel: keyof typeof channelLabels; orders: number; revenue: number }[]
-  deposits: { collected: number; refunded: number; held: number; bottlesHeld: number }
+  deposits: { collected: number; refunded: number; forfeited?: number; held: number; bottlesHeld: number }
   receipts: { count: number; value: number; damaged: number }
 }
 const params = (query: object) => {

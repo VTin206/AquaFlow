@@ -77,7 +77,8 @@ public class ReportRepository {
     public Map<String,Object> deposits(MapSqlParameterSource p) {
         return jdbc.queryForMap("""
           SELECT COALESCE(SUM(amount) FILTER(WHERE direction IN ('COLLECT','ADJUST_COLLECT') AND created_at>=:start),0) AS collected,
-            COALESCE(SUM(amount) FILTER(WHERE direction IN ('REFUND','ADJUST_REFUND') AND created_at>=:start),0) AS refunded,
+            COALESCE(SUM(amount) FILTER(WHERE direction IN ('REFUND','ADJUST_REFUND') AND entry_kind IS DISTINCT FROM 'LOSS' AND created_at>=:start),0) AS refunded,
+            COALESCE(SUM(amount) FILTER(WHERE entry_kind='LOSS' AND created_at>=:start),0) AS forfeited,
             COALESCE(SUM(CASE WHEN direction IN ('COLLECT','ADJUST_COLLECT') THEN amount ELSE -amount END),0) AS held,
             (SELECT COALESCE(SUM(CASE WHEN movement IN ('GIVE','ADJUST_GIVE') THEN quantity ELSE -quantity END),0) FROM bottle_transactions WHERE occurred_at<:end) AS "bottlesHeld"
           FROM deposit_transactions WHERE created_at<:end

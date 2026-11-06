@@ -13,6 +13,7 @@ import { currency } from '@/shared/utils/format'
 import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
 import { useFeature, useLiveOnly } from '@/shared/features'
 import { LiveReceivables } from './LiveReceivables'
+import { LiveBottleOverview } from './LiveBottleOverview'
 import { Unsupported } from '@/shared/components/Unsupported'
 import { OrderIntakeModal } from '@/features/orders/components/OrderIntakeModal'
 import { CustomerDrawer } from './components/CustomerDrawer'
@@ -363,6 +364,7 @@ export function CustomersPage() {
       />
       {orderFor && <OrderIntakeModal key={orderFor.id} defaultCustomer={orderFor} onClose={() => setOrderFor(null)} />}
       {live && <LiveReceivables />}
+      {live && <LiveBottleOverview />}
     </Page>
   )
 }

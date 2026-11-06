@@ -16,6 +16,7 @@ import { LiveCustomerAddresses } from '@/features/live/LiveCustomerAddresses'
 import { customerCode, refundableOf, type BottleEntry, type Customer } from '../types'
 import { useBottleLedger, useCustomers, useDeactivateCustomer } from '../useCustomers'
 import { BottleActionModal, type BottleActionKind } from './BottleActionModal'
+import { LiveBottleLedger } from '../LiveBottleLedger'
 
 type CustomerDrawerProps = {
   customerId: string
@@ -261,7 +262,7 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
             {
               key: 'bottles',
               label: 'Vỏ & cọc',
-              children: !showBottles ? (
+              children: canManageAddresses ? <LiveBottleLedger customerId={Number(customerId)} /> : !showBottles ? (
                 <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Tính năng đang phát triển — chờ backend bổ sung." />
               ) : (
                 <>
