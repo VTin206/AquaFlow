@@ -29,6 +29,8 @@ class PaymentIntegrationTest {
     @Autowired PlatformTransactionManager manager;
     long actor, customer, order;
     @BeforeEach void setup() {
+        // Keep this fixture independent of other test classes and their execution order.
+        jdbc.update("INSERT INTO roles(code,name) VALUES ('ADMIN','Administrator') ON CONFLICT (code) DO NOTHING");
         actor=jdbc.queryForObject("INSERT INTO users(role_id,full_name,email,password_hash) VALUES ((SELECT id FROM roles WHERE code='ADMIN'),'Cashier',?,'unused') RETURNING id",Long.class,UUID.randomUUID()+"@payment.test");
         customer=jdbc.queryForObject("INSERT INTO customers(full_name) VALUES ('Payment customer') RETURNING id",Long.class);
         order=jdbc.queryForObject("INSERT INTO orders(order_code,customer_id,created_by,channel,fulfillment_type,status,subtotal) VALUES (?,?,?,'COUNTER','COUNTER','PREPARING',100000) RETURNING id",Long.class,UUID.randomUUID().toString(),customer,actor);
