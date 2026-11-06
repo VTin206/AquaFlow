@@ -5,6 +5,7 @@ describe('maps links', () => {
   it('adds the city only when the address lacks it', () => {
     expect(decodeURIComponent(mapsSearchUrl('12 Lê Lợi, Quận 1'))).toContain('12 Lê Lợi, Quận 1, TP. Hồ Chí Minh')
     expect(decodeURIComponent(mapsSearchUrl('12 Lê Lợi, Phường Bến Thành, TP. Hồ Chí Minh'))).not.toContain('Minh, TP.')
+    expect(decodeURIComponent(mapsSearchUrl('KCN Long Hậu, tỉnh Tây Ninh'))).not.toContain('Hồ Chí Minh')
   })
 
   it('routes through stops in order and ends at the last one', () => {

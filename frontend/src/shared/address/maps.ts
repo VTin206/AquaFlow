@@ -3,8 +3,8 @@ import { HCM_CITY } from './hcmWards'
 /** Số điểm Google Maps nhận trong một lộ trình qua đường dẫn (1 điểm đến + 9 điểm dừng). */
 export const MAX_ROUTE_STOPS = 10
 
-/** Địa chỉ cũ chưa ghi thành phố thì thêm TP. Hồ Chí Minh để Google tìm đúng nơi. */
-const withCity = (address: string) => (/hồ chí minh|hcm/i.test(address) ? address : `${address}, ${HCM_CITY}`)
+/** Địa chỉ cũ chưa ghi tỉnh/thành thì thêm TP. Hồ Chí Minh để Google tìm đúng nơi. */
+const withCity = (address: string) => (/hồ chí minh|hcm|tỉnh |thành phố |tp./i.test(address) ? address : `${address}, ${HCM_CITY}`)
 
 /** Mở Google Maps tại một địa chỉ; không cần khóa API. */
 export const mapsSearchUrl = (address: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(withCity(address.trim()))}`
