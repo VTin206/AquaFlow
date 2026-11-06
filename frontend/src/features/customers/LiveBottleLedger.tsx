@@ -70,7 +70,7 @@ function BottleForm({
     >
       <p>
         {kind === 'GIVE'
-          ? 'Ghi số vỏ thực tế đã giao cho khách. Ghi rõ mã đơn hoặc lý do để đối chiếu; không ghi lại vỏ đã có trong sổ.'
+          ? 'Dùng cho giao vỏ ngoài luồng giao hàng hoặc bàn giao tại quầy. Chuyến giao có liên kết đã tự ghi vỏ khi giao thành công; không ghi lại. Ghi rõ mã đơn hoặc lý do để đối chiếu.'
           : kind === 'LOSS'
             ? 'Giảm số vỏ khách giữ và cấn trừ cọc theo nghĩa vụ của số vỏ mất/vỡ, tối đa bằng cọc đang giữ. Không phải hoàn tiền cho khách.'
             : kind === 'RECEIVE'

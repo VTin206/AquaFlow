@@ -42,8 +42,8 @@ export const backendFeatures = {
   orderTracking: false,
   /** In hóa đơn, phiếu giao; thông tin cửa hàng trên chứng từ lấy từ StoreSettingsController. */
   orderPrinting: true,
-  /** Báo trước phí giao cho khách trên trang đặt hàng (BE tính khi xác nhận). */
-  deliveryQuote: false,
+  /** Báo trước phí giao cho khách trên trang đặt hàng (API báo giá và tính lại khi tạo đơn). */
+  deliveryQuote: true,
   /** Thông tin cửa hàng và ngưỡng cảnh báo qua StoreSettingsController. */
   storeSettings: true,
 } satisfies Record<string, boolean>

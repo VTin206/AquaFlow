@@ -35,6 +35,15 @@ public record GuestOrderCreateRequest(
         List<@NotNull @Valid OrderItemRequest> items,
 
         @Size(max = 500, message = "Note must not exceed 500 characters")
-        String note
+        String note,
+        @jakarta.validation.constraints.Min(0) @jakarta.validation.constraints.Max(30) int stairFloor,
+        @jakarta.validation.constraints.PositiveOrZero java.math.BigDecimal expectedTotal
 ) {
+    public GuestOrderCreateRequest(
+            String recipientName, String recipientPhone, String deliveryAddress, String deliveryArea,
+            OffsetDateTime requestedDeliveryAt, List<OrderItemRequest> items, String note) {
+        this(recipientName, recipientPhone, deliveryAddress,
+                deliveryArea, requestedDeliveryAt, items, note, 0, null);
+    }
+
 }

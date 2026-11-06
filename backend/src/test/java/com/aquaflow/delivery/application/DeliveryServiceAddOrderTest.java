@@ -40,7 +40,7 @@ class DeliveryServiceAddOrderTest {
     @BeforeEach
     void setUp() {
         service = new DeliveryService(repository, assignmentDispatch, redeliveryReservations,
-                orderRepository, orderItemRepository);
+                orderRepository, orderItemRepository, org.mockito.Mockito.mock(DeliveryBottleService.class));
     }
 
     private void tripAndOrder(String orderStatus, String fulfillment, boolean deliveryFailed) {
