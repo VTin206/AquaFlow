@@ -1,5 +1,7 @@
 package com.aquaflow.customer.order.domain;
 
+import org.springframework.test.util.ReflectionTestUtils;
+
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -112,12 +114,22 @@ class OrderDomainTest {
     }
 
     @Test
-    void transitionToAllowsOutForDeliveryForDeliveryOrder() {
+    void transitionToRejectsOutForDeliveryBecauseDispatchOwnsThatStep() {
         Order order = createOrder();
         order.transitionTo(OrderStatus.CONFIRMED);
         order.transitionTo(OrderStatus.PREPARING);
 
-        order.transitionTo(OrderStatus.OUT_FOR_DELIVERY);
+        assertThatThrownBy(() -> order.transitionTo(OrderStatus.OUT_FOR_DELIVERY))
+                .isInstanceOf(InvalidOrderStatusTransitionException.class);
+    }
+
+    @Test
+    void markDispatchedMovesPreparingDeliveryOrderToOutForDelivery() {
+        Order order = createOrder();
+        order.transitionTo(OrderStatus.CONFIRMED);
+        order.transitionTo(OrderStatus.PREPARING);
+
+        order.markDispatched();
 
         assertThat(order.getStatus())
                 .isEqualTo(OrderStatus.OUT_FOR_DELIVERY);
@@ -137,5 +149,34 @@ class OrderDomainTest {
                 OffsetDateTime.parse("2027-01-15T09:00:00+07:00"),
                 new BigDecimal("10.00"),
                 "Order domain test");
+    }
+
+    @Test
+    void prepareForRedeliveryClearsCancellationTimestamp() {
+        Order order = createOrder();
+        order.transitionTo(OrderStatus.CANCELLED);
+        ReflectionTestUtils.setField(order, "deliveryFailed", true);
+
+        assertThat(order.getCancelledAt()).isNotNull();
+
+        order.prepareForRedelivery();
+
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PREPARING);
+        assertThat(order.getCancelledAt()).isNull();
+    }
+
+    @Test
+    void cancelPreparedRedeliveryRestoresCancellationTimestamp() {
+        Order order = createOrder();
+        order.transitionTo(OrderStatus.CANCELLED);
+        ReflectionTestUtils.setField(order, "deliveryFailed", true);
+
+        order.prepareForRedelivery();
+        assertThat(order.getCancelledAt()).isNull();
+
+        order.cancelPreparedRedelivery();
+
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(order.getCancelledAt()).isNotNull();
     }
 }

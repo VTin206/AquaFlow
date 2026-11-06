@@ -30,7 +30,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Run against a disposable PostgreSQL instance. */
 @SpringBootTest(properties = "app.jwt.secret=test-test-test-test-test-test-test-test")
 @EnabledIfEnvironmentVariable(named = "DB_URL", matches = ".+")
 @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
@@ -347,7 +346,6 @@ class DeliveryPostgresIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id = ?", String.class, orderId)).isEqualTo("CANCELLED");
         assertThat(jdbc.queryForObject("SELECT reserved FROM inventory_balances WHERE batch_id = ?", Integer.class, batchId)).isZero();
 
-        // Make the first dispatch lot unavailable for a new reservation so the redelivery uses a different lot.
         jdbc.update("UPDATE product_batches SET expires_on = ? WHERE id = ?", LocalDate.now().minusDays(1), batchId);
         long redeliveryBatch = jdbc.queryForObject("""
                 INSERT INTO product_batches(product_id, lot_code, expires_on)
@@ -357,6 +355,8 @@ class DeliveryPostgresIntegrationTest {
 
         long replacement = service.create(new CreateTripRequest(otherDriverId, null), ownerId, true).id();
         service.addOrder(replacement, new AddOrderRequest(orderId, true), ownerId, true);
+        assertThat(jdbc.queryForObject("SELECT cancelled_at FROM orders WHERE id = ?",
+                java.time.OffsetDateTime.class, orderId)).isNull();
         startTrip(replacement, otherDriverId);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_dispatches WHERE order_id = ?", Integer.class, orderId))
                 .isEqualTo(2);
@@ -365,7 +365,6 @@ class DeliveryPostgresIntegrationTest {
                 JOIN delivery_assignments a ON a.id = l.assignment_id WHERE a.trip_id = ?
                 """, Integer.class, replacement)).isEqualTo(2);
 
-        // A historical trip must show its own assignment manifest, not the latest redelivery dispatch.
         var firstTripOrder = service.get(trip, ownerId, true).orders().getFirst();
         var redeliveryTripOrder = service.get(replacement, ownerId, true).orders().getFirst();
         assertThat(firstTripOrder.items()).hasSize(1);

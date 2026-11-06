@@ -101,4 +101,17 @@ class RedeliveryReservationServiceTest {
         reservation.dispatchOutstanding();
         return reservation;
     }
+
+    @Test
+    void rejectsWhenReturnInspectionIsOnlyPartialAndSomeGoodsRemainOutside() {
+        when(reservationRepository.findByOrderItemIdIn(List.of(1L))).thenReturn(List.of(dispatched()));
+        when(eligibilityRepository.summarize(List.of(1L)))
+                .thenReturn(List.of(new LoadSummary(1L, 2, 1)));
+
+        assertThatThrownBy(() -> service.reserve(LINES))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("chưa hoàn tất kiểm nhận");
+
+        verify(reservationService, never()).reserveLines(any());
+    }
 }

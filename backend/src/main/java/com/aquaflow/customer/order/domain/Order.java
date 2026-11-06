@@ -210,7 +210,6 @@ public class Order {
         }
     }
 
-    /** Only the transactional dispatch workflow may advance past PREPARING. */
     public void markDispatched() {
         if (status != OrderStatus.PREPARING) {
             throw new com.aquaflow.shared.api.ConflictException("Chỉ xuất kho đơn đang chuẩn bị");
@@ -220,16 +219,15 @@ public class Order {
                 : OrderStatus.DELIVERED;
     }
 
-    /** Reopens a failed delivery only after the delivery workflow has reserved replacement stock. */
     public void prepareForRedelivery() {
         if (!OrderStatusPolicy.canPrepareForRedelivery(status, fulfillmentType, deliveryFailed)) {
             throw new com.aquaflow.shared.api.ConflictException(
                     "Chỉ đơn DELIVERY đã giao thất bại mới được đưa vào quy trình giao lại");
         }
         status = OrderStatus.PREPARING;
+        cancelledAt = null;
     }
 
-    /** Returns an unshipped redelivery to the inspected-return queue when its trip is cancelled. */
     public void cancelPreparedRedelivery() {
         if (status != OrderStatus.PREPARING || fulfillmentType != FulfillmentType.DELIVERY || !deliveryFailed) {
             throw new com.aquaflow.shared.api.ConflictException("Đơn không ở trạng thái chuẩn bị giao lại");
