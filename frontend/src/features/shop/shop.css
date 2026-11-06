@@ -1248,6 +1248,25 @@
   align-items: flex-start;
   gap: 4px;
 }
+.af-shop-cart-link {
+  flex: none;
+  display: block;
+  border-radius: 8px;
+}
+.af-shop-cart-name {
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+}
+.af-shop-cart-name:hover,
+.af-shop-cart-name:focus-visible {
+  color: var(--af-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.af-shop-cart-link:hover .af-shop-cart-thumb {
+  border-color: var(--af-primary);
+}
 .af-shop-cart-head strong {
   flex: 1;
   min-width: 0;
