@@ -8,7 +8,6 @@ import { CountLabel } from '@/shared/components/CountLabel'
 import { ToneLabel } from '@/shared/components/ToneLabel'
 import { QueryError } from '@/shared/components/QueryError'
 import { useColumnSort } from '@/shared/components/sortableColumn'
-import { Money } from '@/shared/components/Money'
 import { downloadExcel, type ExcelColumn } from '@/shared/utils/excel'
 import { currency } from '@/shared/utils/format'
 import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
@@ -21,6 +20,7 @@ import { CustomerCards } from './components/CustomerCards'
 import { customerCode, type Customer } from './types'
 import { useActivateCustomer, useArchivedCustomers, useCustomers } from './useCustomers'
 import { matchesSearch } from '@/shared/utils/search'
+import { CustomerDebt } from './components/CustomerDebt'
 
 export function CustomersPage() {
   const screens = Grid.useBreakpoint()
@@ -200,7 +200,7 @@ export function CustomersPage() {
           align: 'right',
           width: 140,
           sorter: (a, b) => a.debt - b.debt,
-          render: (debt: number) => (debt > 0 ? <Money value={debt} tone="due" /> : <span className="af-text-muted">—</span>),
+          render: (debt: number, customer) => <CustomerDebt debt={debt} orders={customer.orders} />,
         }
       : { title: 'Còn phải thu', key: 'debt', align: 'right', width: 140, render: () => <Unsupported /> },
     showBottles
