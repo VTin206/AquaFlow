@@ -106,7 +106,7 @@ export function SuppliersPage() {
     {
       ...sort.column('Nhà cung cấp', 'name', 'text'),
       dataIndex: 'name',
-      width: 260,
+      width: 380,
       sorter: (a, b) => a.name.localeCompare(b.name, 'vi'),
       render: (_, supplier) => (
         <div className="af-cell-stack">
@@ -123,7 +123,7 @@ export function SuppliersPage() {
     {
       title: 'Liên hệ',
       dataIndex: 'phone',
-      width: 240,
+      width: 190,
       render: (_, supplier) => (
         <div className="af-cell-stack">
           {showContact ? (
@@ -143,7 +143,7 @@ export function SuppliersPage() {
         </div>
       ),
     },
-    { title: 'Địa chỉ', dataIndex: 'address', width: 340, ellipsis: true, render: (address?: string) => address || '—' },
+    { title: 'Địa chỉ', dataIndex: 'address', width: 280, ellipsis: true, render: (address?: string) => address || '—' },
     {
       title: 'Thao tác',
       key: 'actions',
@@ -217,7 +217,7 @@ export function SuppliersPage() {
                 },
               }}
               rowClassName={(supplier) => (supplier.active ? '' : 'af-row-inactive')}
-              scroll={{ x: 950, y: tableScrollHeight }}
+              scroll={{ x: 962, y: tableScrollHeight }}
               locale={{
                 emptyText: (
                   <Empty
