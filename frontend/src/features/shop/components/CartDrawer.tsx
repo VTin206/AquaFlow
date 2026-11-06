@@ -1,6 +1,6 @@
 import { Button, Drawer, Empty, InputNumber, Popconfirm, Skeleton, Space } from 'antd'
 import { Minus, Plus } from 'lucide-react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { currency } from '@/shared/utils/format'
 import { QueryError } from '@/shared/components/QueryError'
 import { useCartActions, useCart } from '../cart'
@@ -29,12 +29,27 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
           <ul className="af-shop-cart">
             {lines.map(({ productId, quantity, product }) => {
               const name = product?.name ?? `Sản phẩm ${productId}`
+              // Sản phẩm đã bỏ khỏi danh mục thì không còn trang chi tiết để mở.
+              const detail = product ? `/shop/products/${encodeURIComponent(productId)}` : undefined
               return (
                 <li key={productId}>
-                  <CartThumb product={product} />
+                  {detail ? (
+                    // Ảnh và tên cùng dẫn tới một trang; ảnh bỏ khỏi thứ tự Tab để không phải qua hai lần.
+                    <Link to={detail} onClick={onClose} tabIndex={-1} aria-hidden className="af-shop-cart-link">
+                      <CartThumb product={product} />
+                    </Link>
+                  ) : (
+                    <CartThumb product={product} />
+                  )}
                   <div className="af-shop-cart-body">
                     <div className="af-shop-cart-head">
-                      <strong>{name}</strong>
+                      {detail ? (
+                        <Link to={detail} onClick={onClose} className="af-shop-cart-name" title="Xem chi tiết sản phẩm">
+                          <strong>{name}</strong>
+                        </Link>
+                      ) : (
+                        <strong>{name}</strong>
+                      )}
                       <button
                         type="button"
                         className="af-shop-cart-remove"
