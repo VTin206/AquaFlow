@@ -7,7 +7,10 @@ import type { ReactNode } from 'react'
 
 export type CheckoutLine = CartLine & { product?: ShopProduct }
 
+
+
 /** Danh sách hàng và tiền của đơn đang đặt. `fee === null` nghĩa là cửa hàng báo phí khi xác nhận. */
+
 export function CheckoutReview({ lines, subtotal, fee, depositHint }: { lines: CheckoutLine[]; subtotal: number; fee: number | null; depositHint: ReactNode }) {
   return (
     <>
@@ -32,7 +35,7 @@ export function CheckoutReview({ lines, subtotal, fee, depositHint }: { lines: C
         </div>
         <div>
           <dt>Phí giao</dt>
-          <dd>{fee === null ? 'Cửa hàng báo khi xác nhận' : fee === 0 ? 'Miễn phí' : <span className="af-money">{currency(fee)}</span>}</dd>
+          <dd>{fee === null ? 'Chưa có báo phí' : fee === 0 ? 'Miễn phí' : <span className="af-money">{currency(fee)}</span>}</dd>
         </div>
         <div className="is-total">
           <dt>{fee === null ? 'Tạm tính' : 'Tổng cộng'}</dt>

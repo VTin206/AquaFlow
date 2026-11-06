@@ -26,15 +26,17 @@ public class DeliveryService {
     private final RedeliveryReservationService redeliveryReservations;
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    private final DeliveryBottleService bottleLedger;
 
     public DeliveryService(DeliveryRepository repository, AssignmentDispatchService assignmentDispatch,
                           RedeliveryReservationService redeliveryReservations,
-                          OrderRepository orderRepository, OrderItemRepository orderItemRepository) {
+                          OrderRepository orderRepository, OrderItemRepository orderItemRepository, DeliveryBottleService bottleLedger) {
         this.repository = repository;
         this.assignmentDispatch = assignmentDispatch;
         this.redeliveryReservations = redeliveryReservations;
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
+        this.bottleLedger = bottleLedger;
     }
 
     public List<TripResponse> list(long actorId, boolean admin) {
@@ -180,6 +182,7 @@ public class DeliveryService {
                 throw new ConflictException("Đơn " + orderId + " không còn đủ điều kiện lên chuyến");
             }
             repository.createLoadManifest(tripId, orderId);
+            bottleLedger.capture(tripId,orderId);
         }
         repository.startTrip(tripId);
         return repository.viewTrip(repository.findTrip(tripId));
@@ -203,6 +206,7 @@ public class DeliveryService {
                 throw new BadRequestException("Giao thành công không được kèm lý do thất bại");
             }
             repository.recordSuccess(orderId, assignment.id());
+            bottleLedger.give(assignment.id(),orderId,actorId);
         } else {
             if (DeliveryRepository.clean(request.failureReason()) == null) {
                 throw new BadRequestException("Cần ghi lý do giao hàng thất bại");
@@ -266,6 +270,7 @@ public class DeliveryService {
         // Find the assignment before any writes; another driver's order is never accepted.
         var assignment = repository.activeAssignment(tripId, orderId);
         if (repository.collectionExists(assignment.id(), request)) return repository.collections(tripId);
+        if(request.bottlesReturned()>0) throw new BadRequestException("Vui lòng ghi nhận thu vỏ theo từng loại tại mục Vỏ của đơn");
         requireStatus(trip, "IN_PROGRESS");
         var order = repository.lockOrder(orderId);
         if (!List.of("OUT_FOR_DELIVERY", "DELIVERED").contains(order.status())) throw new ConflictException("Order cannot receive collections");

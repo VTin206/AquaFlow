@@ -10,6 +10,8 @@ export type GuestOrderInput = {
   items: { productId: number; quantity: number }[]
   requestedDeliveryAt?: string
   note?: string
+  stairFloor?: number
+  expectedTotal?: number
 }
 
 export const guestOrderApi = {

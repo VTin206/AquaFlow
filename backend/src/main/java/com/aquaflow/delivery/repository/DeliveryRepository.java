@@ -447,8 +447,6 @@ public class DeliveryRepository {
                 INSERT INTO delivery_collections(assignment_id,payment_id,request_id,amount,method,bottles_returned,recorded_by)
                 VALUES (?,?,?,?,?,?,?)
                 """, assignmentId, paymentId, request.requestId(), request.amount(), request.method(), request.bottlesReturned(), actorId);
-        var balance = balance(orderId);
-        jdbc.update("UPDATE orders SET payment_status=? WHERE id=?",
-                balance.due().signum()==0 ? "PAID" : balance.paid().signum()>0 ? "PARTIALLY_PAID" : "UNPAID", orderId);
+        jdbc.queryForObject("SELECT refresh_order_payment_status(?)",Object.class,orderId);
     }
 }

@@ -79,6 +79,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/store-settings/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/sales/**").hasAnyRole("ADMIN", "SALES_STAFF")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/delivery-quotes").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/customer/orders/guest").permitAll()
 
                         // Delivery option lists expose store-wide data and are restricted to store staff.
@@ -133,6 +134,9 @@ public class SecurityConfig {
                                 .hasAnyRole("ADMIN", "SALES_STAFF")
 
                         // Fail closed for future/unlisted Delivery routes instead of granting access by default.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/delivery/assignments/*/bottles").hasAnyRole("ADMIN", "SALES_STAFF", "DELIVERY_STAFF")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/delivery/assignments/*/bottle-returns/*").hasAnyRole("ADMIN", "SALES_STAFF", "DELIVERY_STAFF")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/delivery/assignments/*/bottle-returns").hasAnyRole("ADMIN", "SALES_STAFF", "DELIVERY_STAFF")
                         .requestMatchers("/api/v1/delivery/**").denyAll()
                         .requestMatchers("/api/v1/customer/account/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/v1/customer/**").hasAnyRole("ADMIN", "CUSTOMER")

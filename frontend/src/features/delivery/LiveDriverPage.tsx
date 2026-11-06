@@ -13,6 +13,7 @@ import { modalWidth } from '@/shared/utils/modal'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { OrderFocusBanner } from '@/features/orders/components/OrderSheet'
 import { collectionApi, deliveryApi, type CollectionInput, type DeliveryStop, type DeliveryTrip, type TripCollections } from './deliveryApi'
+import { DeliveryBottlesButton } from './components/DeliveryBottlesButton'
 import { AttemptsTimeline } from './components/AttemptsTimeline'
 import { DeliveryActionModal } from './components/DeliveryActionModal'
 import { TripStatusTag } from './components/TripStatusTag'
@@ -177,8 +178,8 @@ function DriverTrip({ trip, showDriver }: { trip: DeliveryTrip; showDriver: bool
             </Button>
           )}
           {active && (
-            <Button size="large" disabled={!receipts.data || change.isPending} onClick={() => setCollect(order)}>
-              Thu tiền / nhận vỏ
+            <Button size="large" disabled={!balance || balance.due <= 0 || change.isPending} onClick={() => setCollect(order)}>
+              Thu tiền
             </Button>
           )}
           {order.latestAttempt && (
@@ -186,6 +187,7 @@ function DriverTrip({ trip, showDriver }: { trip: DeliveryTrip; showDriver: bool
               Lịch sử giao
             </Button>
           )}
+          <DeliveryBottlesButton assignmentId={order.id} orderCode={order.orderCode} />
           {active && !order.latestAttempt && (
             <Button size="large" type="primary" className="af-driver-primary" disabled={change.isPending} onClick={() => setResult(order)}>
               Ghi kết quả giao
@@ -324,7 +326,7 @@ function CollectionModal({
   return (
     <Modal
       open
-      title={`Thu tiền / nhận vỏ · ${order.orderCode}`}
+      title={`Thu tiền · ${order.orderCode}`}
       width={modalWidth.small}
       onCancel={onClose}
       onOk={() => form.submit()}
@@ -335,16 +337,16 @@ function CollectionModal({
       okText="Ghi nhận"
       cancelText="Hủy"
     >
-      <p>Còn phải thu: {currency(balance.due)}. Chỉ ghi nhận tiền và vỏ đã nhận thực tế.</p>
+      <p>Còn phải thu: {currency(balance.due)}. Chỉ ghi nhận tiền đã nhận thực tế. Thu vỏ theo từng loại tại nút Vỏ của đơn.</p>
       <Form
         form={form}
         layout="vertical"
         disabled={loading}
         initialValues={{ amount: balance.due, method: 'CASH', bottlesReturned: 0 }}
-        onFinish={(values) => onSave({ ...values, requestId })}
+        onFinish={(values) => onSave({ ...values, bottlesReturned: 0, requestId })}
       >
-        <Form.Item name="amount" label="Số tiền nhận" rules={[{ required: true }, { type: 'number', min: 0, max: balance.due }]}>
-          <InputNumber min={0} max={balance.due} precision={2} style={{ width: '100%' }} />
+        <Form.Item name="amount" label="Số tiền nhận" rules={[{ required: true }, { type: 'number', min: 0.01, max: balance.due }]}>
+          <InputNumber min={0.01} max={balance.due} precision={2} style={{ width: '100%' }} />
         </Form.Item>
         <Form.Item name="method" label="Phương thức" rules={[{ required: true }]}>
           <Select
@@ -353,13 +355,6 @@ function CollectionModal({
               { value: 'BANK_TRANSFER', label: 'Đã nhận chuyển khoản' },
             ]}
           />
-        </Form.Item>
-        <Form.Item
-          name="bottlesReturned"
-          label="Số vỏ đã nhận"
-          rules={[{ required: true }, { type: 'integer', min: 0, max: balance.bottlesToExchange }]}
-        >
-          <InputNumber min={0} max={balance.bottlesToExchange} precision={0} style={{ width: '100%' }} />
         </Form.Item>
       </Form>
       {data.receipts

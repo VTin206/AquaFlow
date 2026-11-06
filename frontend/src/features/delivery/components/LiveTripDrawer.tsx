@@ -19,6 +19,7 @@ import { liveTripFocus, liveTripStatus } from '../tripFocus'
 import { useAvailableOrders, useDeliveryDrivers, useLiveTrip, useTripCollections } from '../useLiveTrips'
 import { AttemptsTimeline } from './AttemptsTimeline'
 import { DeliveryActionModal, type DeliveryAction } from './DeliveryActionModal'
+import { DeliveryBottlesButton } from './DeliveryBottlesButton'
 import { TripManifest } from './TripManifest'
 import { TripStatusTag } from './TripStatusTag'
 import { TripRouteButton } from './TripRouteButton'
@@ -283,6 +284,7 @@ export function LiveTripDrawer({ tripId, onClose }: { tripId: number; onClose: (
                           Ghi kết quả
                         </Button>
                       )}
+                      <DeliveryBottlesButton assignmentId={stop.id} orderCode={stop.orderCode} />
                     </div>
                   </div>
                 </div>
