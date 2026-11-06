@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 })
 class HealthControllerTest {
     @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.payment.PaymentRepository paymentRepository;
+    @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.bottle.BottleLedgerRepository bottleLedgerRepository;
     @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.auth.repository.PasswordResetRepository passwordResetRepository;
     @MockBean private com.aquaflow.auth.repository.RoleRepository roleRepository;
 

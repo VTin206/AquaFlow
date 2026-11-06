@@ -40,6 +40,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class AuthControllerIntegrationTest {
     @MockBean private com.aquaflow.payment.PaymentRepository paymentRepository;
+    @MockBean private com.aquaflow.bottle.BottleLedgerRepository bottleLedgerRepository;
     @MockBean private com.aquaflow.auth.repository.PasswordResetRepository passwordResetRepository;
     @MockBean private com.aquaflow.auth.repository.RoleRepository roleRepository;
 
