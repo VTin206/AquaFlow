@@ -1,5 +1,22 @@
 import { useState } from 'react'
-import { App, Button, Card, Col, Dropdown, Grid, Input, Row, Segmented, Statistic, Table, Tag, Tooltip, type TableColumnsType } from 'antd'
+import {
+  App,
+  Button,
+  Card,
+  Col,
+  Dropdown,
+  Grid,
+  Input,
+  Row,
+  Segmented,
+  Select,
+  Statistic,
+  Table,
+  Tag,
+  Tooltip,
+  type TableColumnsType,
+} from 'antd'
+import dayjs from 'dayjs'
 import { Ellipsis, FileSpreadsheet, Plus, Search } from 'lucide-react'
 import { ViewButton } from '@/shared/components/ViewButton'
 import { useLinkedQuery } from '@/shared/utils/useLinkedQuery'
@@ -23,6 +40,7 @@ import { customerCode, type Customer } from './types'
 import { useActivateCustomer, useArchivedCustomers, useCustomers } from './useCustomers'
 import { matchesSearch } from '@/shared/utils/search'
 import { CustomerDebt } from './components/CustomerDebt'
+import { idleOptions, lastOrderLabel, matchesIdle, type IdleFilter } from './lastOrder'
 
 export function CustomersPage() {
   const live = useLiveOnly()
@@ -45,11 +63,20 @@ export function CustomersPage() {
   // undefined: đóng; null: thêm mới; Customer: sửa.
   const [editing, setEditing] = useState<Customer | null | undefined>(undefined)
   const [orderFor, setOrderFor] = useState<Customer | null>(null)
+  // Lọc khách lâu chưa mua để gọi mời đặt nước.
+  const [idle, setIdle] = useState<IdleFilter>('all')
 
   const customers = customersQuery.data ?? []
-  const visible = customers.filter((customer) =>
-    matchesSearch(query, `${customerCode(customer)} ${customer.name} ${customer.phone} ${customer.area}`, customer.phone),
+  const visible = customers.filter(
+    (customer) =>
+      matchesIdle(customer.lastOrderAt, idle) &&
+      matchesSearch(
+        query,
+        `${customerCode(customer)} ${customer.name} ${customer.phone} ${customer.area} ${customer.mainAddress ?? ''}`,
+        customer.phone,
+      ),
   )
+  const filtered = Boolean(query.trim()) || idle !== 'all'
   // Chỉ tính các khách còn hiện theo ô tìm kiếm.
   const checked = visible.filter((customer) => checkedIds.includes(customer.id))
   const exportChecked = async () => {
@@ -62,6 +89,11 @@ export function CustomersPage() {
       ...(showArea ? [{ title: 'Khu vực', width: 20, value: (customer: Customer) => customer.area }] : []),
       { title: 'Địa chỉ giao', width: 40, value: (customer) => customer.addresses.join('; ') },
       { title: 'Số đơn', width: 10, format: 'count', value: (customer) => customer.orders },
+      {
+        title: 'Lần mua gần nhất',
+        width: 18,
+        value: (customer) => (customer.lastOrderAt ? dayjs(customer.lastOrderAt).format('DD/MM/YYYY') : ''),
+      },
       ...(showBottles
         ? [
             { title: 'Vỏ đang giữ', width: 12, format: 'count', value: (customer: Customer) => customer.bottlesHeld } as const,
@@ -170,7 +202,7 @@ export function CustomersPage() {
       ...sort.column('Khách hàng', 'name', 'text'),
       dataIndex: 'name',
       // Cột tên nhận phần dư khi màn hình rộng, các cột số giữ vừa nội dung.
-      minWidth: 260,
+      minWidth: 220,
       sorter: (a, b) => a.name.localeCompare(b.name, 'vi'),
       render: (_, customer) => (
         <div className="af-cell-stack">
@@ -188,13 +220,38 @@ export function CustomersPage() {
         </div>
       ),
     },
-    { title: 'Khu vực', dataIndex: 'area', ellipsis: true, render: (area: string) => (showArea ? area : <Unsupported />) },
     {
-      ...sort.column('Số đơn', 'orders', 'number'),
-      dataIndex: 'orders',
-      align: 'right',
-      width: 100,
-      sorter: (a, b) => a.orders - b.orders,
+      title: 'Địa chỉ',
+      key: 'address',
+      width: 240,
+      render: (_, customer) => {
+        const address = customer.mainAddress || (showArea ? customer.area : '')
+        return address ? (
+          <span className="af-cell-clamp" title={address}>
+            {address}
+          </span>
+        ) : (
+          <span className="af-text-muted">Chưa có địa chỉ</span>
+        )
+      },
+    },
+    {
+      ...sort.column('Lần mua gần nhất', 'lastOrderAt', 'time'),
+      dataIndex: 'lastOrderAt',
+      width: 160,
+      sorter: (a, b) => (a.lastOrderAt ?? '').localeCompare(b.lastOrderAt ?? ''),
+      render: (at: string | undefined, customer) => (
+        <div className="af-cell-stack">
+          {at ? (
+            <Tooltip title={dayjs(at).format('HH:mm DD/MM/YYYY')}>
+              <span>{lastOrderLabel(at)}</span>
+            </Tooltip>
+          ) : (
+            <span className="af-text-muted">{lastOrderLabel(at)}</span>
+          )}
+          {customer.orders > 0 && <small>{customer.orders} đơn</small>}
+        </div>
+      ),
     },
     showDebt
       ? {
@@ -212,13 +269,19 @@ export function CustomersPage() {
           dataIndex: 'bottlesHeld',
           width: 130,
           sorter: (a, b) => a.bottlesHeld - b.bottlesHeld,
-          render: (count: number) => (count > 0 ? <Tag color="orange">{count} vỏ</Tag> : <Tag>Không</Tag>),
+          render: (count: number, customer) => (
+            <div className="af-cell-stack">
+              <span>{count > 0 ? <Tag color="orange">{count} vỏ</Tag> : <Tag>Không</Tag>}</span>
+              {customer.depositHeld > 0 && <small>Cọc {currency(customer.depositHeld)}</small>}
+            </div>
+          ),
         }
       : { title: 'Vỏ đang giữ', key: 'bottlesHeld', width: 130, render: () => <Unsupported /> },
     {
       title: 'Thao tác',
       key: 'action',
       width: 130,
+      fixed: 'right',
       render: (_, customer) => (
         <span className="af-row-actions">
           <ViewButton title="Xem hồ sơ" subject={customer.name} onClick={() => setProfileId(customer.id)} />
@@ -278,11 +341,20 @@ export function CustomersPage() {
               <Input
                 allowClear
                 prefix={<Search size={16} className="af-input-icon" />}
-                placeholder="Tìm mã, tên, số điện thoại, khu vực..."
+                placeholder="Tìm mã, tên, số điện thoại, địa chỉ..."
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 className="af-search"
               />
+              {view === 'active' && (
+                <Select<IdleFilter>
+                  aria-label="Lọc theo lần mua gần nhất"
+                  className="af-customer-idle"
+                  value={idle}
+                  onChange={setIdle}
+                  options={idleOptions}
+                />
+              )}
             </div>
             {view === 'archived' ? (
               archivedQuery.isError ? (
@@ -303,10 +375,10 @@ export function CustomersPage() {
               )
             ) : screens.md === false ? (
               <CustomerCards
-                key={query}
+                key={query + idle}
                 customers={visible}
                 loading={customersQuery.isPending}
-                emptyText={query.trim() ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.'}
+                emptyText={filtered ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.'}
                 onProfile={setProfileId}
                 onCreateOrder={setOrderFor}
               />
@@ -318,7 +390,7 @@ export function CustomersPage() {
                   </Button>
                 </BulkBar>
                 <Table<Customer>
-                  key={query}
+                  key={query + idle}
                   className="af-data-table af-table-flush"
                   size="middle"
                   rowKey="id"
@@ -326,8 +398,8 @@ export function CustomersPage() {
                   dataSource={visible}
                   loading={customersQuery.isPending}
                   pagination={tablePagination}
-                  locale={{ emptyText: query.trim() ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.' }}
-                  scroll={{ x: 964, y: tableScrollHeight }}
+                  locale={{ emptyText: filtered ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.' }}
+                  scroll={{ x: 1050, y: tableScrollHeight }}
                   rowSelection={{
                     selectedRowKeys: checked.map((customer) => customer.id),
                     onChange: (keys) => setCheckedIds(keys.map(String)),

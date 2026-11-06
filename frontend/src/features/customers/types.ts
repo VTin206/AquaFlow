@@ -28,6 +28,10 @@ export type Customer = CustomerRecord & {
   depositHeld: number
   /** Tổng tiền hàng còn phải thu trên các đơn chưa hủy. */
   debt: number
+  /** Thời điểm đặt đơn gần nhất (không tính đơn đã hủy); thiếu là chưa mua lần nào. */
+  lastOrderAt?: string
+  /** Địa chỉ hiện trong danh sách: địa chỉ mặc định, bản thật tạm lấy địa chỉ giao của đơn gần nhất. */
+  mainAddress?: string
 }
 
 export type CustomerDraft = Pick<CustomerRecord, 'name' | 'phone' | 'type' | 'area' | 'addresses' | 'note'>

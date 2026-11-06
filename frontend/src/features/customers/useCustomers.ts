@@ -7,6 +7,7 @@ import { orderApi } from '@/features/live/orderApi'
 import { paymentApi } from '@/features/live/paymentApi'
 import { customerService } from './customerService'
 import { initialsOf, type BottleAction, type Customer, type CustomerDraft } from './types'
+import { latest } from './lastOrder'
 
 export const customerKeys = {
   all: ['customers'] as const,
@@ -41,14 +42,26 @@ const fromResponse = (customer: CustomerResponse, orders: number, debt = 0): Cus
   debt,
 })
 
-/** Số đơn tính từ đơn thật (không tính đơn đã hủy). */
+/**
+ * Số đơn, lần mua gần nhất và địa chỉ tính từ đơn thật (không tính đơn đã hủy).
+ * BE chưa trả địa chỉ mặc định trong danh sách khách nên tạm lấy địa chỉ giao của đơn gần nhất.
+ */
 async function liveCustomers() {
   const [customers, orders, balances] = await Promise.all([api.get<CustomerResponse[]>('/sales/customers'), orderApi.list(), paymentApi.customers()])
   const due = new Map(balances.map(balance => [balance.customerId, Number(balance.due)]))
-  const counts = new Map<number, number>()
+  const byCustomer = new Map<number, typeof orders>()
   for (const order of orders)
-    if (order.customerId !== null && order.status !== 'CANCELLED') counts.set(order.customerId, (counts.get(order.customerId) ?? 0) + 1)
-  return customers.map((customer) => fromResponse(customer, counts.get(customer.id) ?? 0, due.get(customer.id) ?? 0))
+    if (order.customerId !== null && order.status !== 'CANCELLED') byCustomer.set(order.customerId, [...(byCustomer.get(order.customerId) ?? []), order])
+  return customers.map((customer) => {
+    const own = byCustomer.get(customer.id) ?? []
+    const lastOrderAt = latest(own.map((order) => order.createdAt))
+    const lastOrder = own.find((order) => order.createdAt === lastOrderAt)
+    return {
+      ...fromResponse(customer, own.length, due.get(customer.id) ?? 0),
+      lastOrderAt,
+      mainAddress: lastOrder?.deliveryAddress ?? undefined,
+    }
+  })
 }
 
 const useLiveKey = () => {

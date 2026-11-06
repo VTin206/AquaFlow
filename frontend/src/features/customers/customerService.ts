@@ -2,7 +2,8 @@ import { db } from '@/mocks/db'
 import { mockError, mockRequest } from '@/mocks/mockRequest'
 import { logActivity, mockActor, requireRole } from '@/mocks/session'
 import { PICKUP_FEE, PICKUP_FEE_BELOW } from '@/shared/policy'
-import { amountDue } from '@/features/orders/types'
+import { amountDue, createdAtOf } from '@/features/orders/types'
+import { latest } from './lastOrder'
 import {
   DEPOSIT_PER_BOTTLE,
   guessCustomerType,
@@ -84,6 +85,13 @@ const toView = (record: CustomerRecord): Customer => {
     bottlesHeld: balance.bottles,
     depositHeld: balance.deposit,
     debt: orders.filter((order) => order.status !== 'Đã hủy').reduce((sum, order) => sum + amountDue(order), 0),
+    // Tính cả đơn đã đóng của các ngày trước (dữ liệu báo cáo) để ngày mua gần nhất sát thực tế.
+    lastOrderAt: latest(
+      [...db.archivedOrders.filter((order) => order.customerId === record.id), ...orders]
+        .filter((order) => order.status !== 'Đã hủy')
+        .map(createdAtOf),
+    ),
+    mainAddress: record.addresses[0],
   }
 }
 
