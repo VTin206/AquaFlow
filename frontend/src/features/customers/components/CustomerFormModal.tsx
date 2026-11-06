@@ -7,6 +7,7 @@ import { useFeature, useIsDemo } from '@/shared/features'
 import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 import { modalWidth } from '@/shared/utils/modal'
 import { WardSelect } from '@/shared/address/WardSelect'
+import { AddressLineField } from '@/shared/address/AddressLineField'
 
 type CustomerFormModalProps = { open: boolean; customer?: Customer; onClose: () => void; onSaved?: (customer: Customer) => void }
 
@@ -109,7 +110,7 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
                 {fields.map((field, index) => (
                   <div className="af-address-row" key={field.key}>
                     <Form.Item name={field.name} rules={[{ max: 255 }]} noStyle>
-                      <Input placeholder="Số nhà, tên đường, phường/xã, tỉnh/thành phố" aria-label={`Địa chỉ ${index + 1}`} />
+                      <AddressLineField label={`Địa chỉ ${index + 1}`} />
                     </Form.Item>
                     <Button
                       type="text"
