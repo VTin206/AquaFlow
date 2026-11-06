@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Button, Card, Input, Modal, Skeleton, Table, Tag } from 'antd'
+import { ViewButton } from '@/shared/components/ViewButton'
+import { modalWidth } from '@/shared/utils/modal'
 import { useStaff } from '@/features/auth/useStaff'
 import { bottleLedgerApi, type BottleBalance } from '@/features/live/bottleLedgerApi'
 import { LiveBottleTypes } from '@/features/live/LiveBottleTypes'
@@ -34,7 +36,7 @@ export function LiveBottleOverview() {
           rowKey="customerId"
           dataSource={query.data.filter((c) => matchesSearch(search, c.name))}
           pagination={{ pageSize: 8 }}
-          scroll={{ x: 650 }}
+          scroll={{ x: 760 }}
           locale={{ emptyText: 'Chưa có khách hàng phù hợp.' }}
           columns={[
             {
@@ -51,11 +53,18 @@ export function LiveBottleOverview() {
             { title: 'Vỏ đang giữ', dataIndex: 'bottlesHeld', align: 'right' },
             { title: 'Cọc đang giữ', dataIndex: 'depositHeld', render: currency, align: 'right' },
             { title: 'Có thể hoàn', dataIndex: 'refundable', render: currency, align: 'right' },
+            {
+              title: 'Thao tác',
+              key: 'actions',
+              width: 112,
+              align: 'center',
+              render: (_, c) => <ViewButton title="Xem sổ vỏ" subject={c.name} onClick={() => setCustomer(c)} />,
+            },
           ]}
         />
       )}
       {customer && (
-        <Modal open title={`Vỏ & cọc · ${customer.name}`} width={900} footer={null} onCancel={() => setCustomer(undefined)}>
+        <Modal open centered title={`Vỏ & cọc · ${customer.name}`} width={modalWidth.large} footer={null} onCancel={() => setCustomer(undefined)}>
           <LiveBottleLedger customerId={customer.customerId} />
         </Modal>
       )}
