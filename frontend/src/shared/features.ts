@@ -14,8 +14,8 @@ export const backendFeatures = {
   customerType: true,
   /** Khu vực và ghi chú trên hồ sơ khách (CustomerController). */
   customerProfileExtras: true,
-  /** Công nợ của khách (chưa có luồng thanh toán). */
-  customerDebt: false,
+  /** Số còn phải thu theo khách từ sổ thanh toán thật. */
+  customerDebt: true,
   /** Sổ vỏ bình và tiền cọc (chưa có API). */
   bottleLedger: false,
   /** Ảnh sản phẩm được lưu và trả về qua ProductController. */
@@ -24,8 +24,8 @@ export const backendFeatures = {
   productCatalogDetails: false,
   /** Tồn kho tối thiểu để cảnh báo sắp hết (ProductController, mặc định 10). */
   lowStockThreshold: true,
-  /** Phiếu thu, số còn phải thu của đơn (BE chỉ có trạng thái thanh toán, chưa có luồng thu tiền). */
-  orderPayments: false,
+  /** Phiếu thu/hoàn và số còn phải thu từ PaymentController. */
+  orderPayments: true,
 
   /** Kiểm hàng hoàn theo lô sau chuyến giao thất bại (Inventory Return API). */
   deliveryReturns: true,

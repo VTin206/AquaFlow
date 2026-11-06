@@ -7,6 +7,7 @@ import { channelLabels, orderApi, paymentStatusLabels, type LiveOrder } from '@/
 import { orderStatuses } from './orderStatus'
 import { walkInName, type Order, type OrderStatus } from './types'
 import { useAdvanceOrderStatus, useOrders } from './useOrders'
+import { paymentApi, type OrderBalance } from '@/features/live/paymentApi'
 
 /**
  * Danh sách đơn cho trang Đơn hàng: bản dùng thử đọc mock, tài khoản thật đọc OrderController
@@ -25,7 +26,7 @@ const statusOf: Record<LiveOrder['status'], OrderStatus> = {
 const timeOf = (iso: string) =>
   new Date(iso).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 
-export function fromLiveOrder(order: LiveOrder, products: CatalogProduct[]): Order {
+export function fromLiveOrder(order: LiveOrder, products: CatalogProduct[], balance?: OrderBalance): Order {
   const lines = order.items.map((item) => {
     const product = products.find((candidate) => candidate.id === item.productId)
     return {
@@ -56,7 +57,8 @@ export function fromLiveOrder(order: LiveOrder, products: CatalogProduct[]): Ord
     appointment: order.requestedDeliveryAt ?? undefined,
     note: order.note ?? undefined,
     payments: [],
-    paymentStatusLabel: order.status === 'CANCELLED' ? 'Đã hủy' : paymentStatusLabels[order.paymentStatus],
+    paymentBalance: balance ? { paid: Number(balance.paid), due: Number(balance.due), refundDue: Number(balance.refundDue) } : undefined,
+    paymentStatusLabel: order.status === 'CANCELLED' && order.paymentStatus === 'UNPAID' ? 'Đã hủy' : paymentStatusLabels[order.paymentStatus],
     history: [{ at: order.createdAt, message: 'Tạo đơn' }],
     stockReserved: ['CONFIRMED', 'PREPARING'].includes(order.status),
   }
@@ -64,9 +66,10 @@ export function fromLiveOrder(order: LiveOrder, products: CatalogProduct[]): Ord
 
 /** Tên sản phẩm lấy từ danh mục; không tải được thì vẫn hiện đơn với mã sản phẩm. */
 async function liveOrders() {
-  const [orders, products] = await Promise.all([orderApi.list(), catalogApi.products().catch(() => [])])
+  const [orders, products, balances] = await Promise.all([orderApi.list(), catalogApi.products().catch(() => []), paymentApi.balances()])
+  const byOrder = new Map(balances.map(balance => [balance.orderId, balance]))
   return orders
-    .map((order) => fromLiveOrder(order, products))
+    .map((order) => fromLiveOrder(order, products, byOrder.get(order.id)))
     .sort((a, b) => (b.history[0]?.at ?? '').localeCompare(a.history[0]?.at ?? ''))
 }
 

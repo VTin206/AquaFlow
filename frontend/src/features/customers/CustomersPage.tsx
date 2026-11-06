@@ -12,7 +12,8 @@ import { Money } from '@/shared/components/Money'
 import { downloadExcel, type ExcelColumn } from '@/shared/utils/excel'
 import { currency } from '@/shared/utils/format'
 import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
-import { useFeature } from '@/shared/features'
+import { useFeature, useLiveOnly } from '@/shared/features'
+import { LiveReceivables } from './LiveReceivables'
 import { Unsupported } from '@/shared/components/Unsupported'
 import { OrderIntakeModal } from '@/features/orders/components/OrderIntakeModal'
 import { CustomerDrawer } from './components/CustomerDrawer'
@@ -23,6 +24,7 @@ import { useActivateCustomer, useArchivedCustomers, useCustomers } from './useCu
 import { matchesSearch } from '@/shared/utils/search'
 
 export function CustomersPage() {
+  const live = useLiveOnly()
   const screens = Grid.useBreakpoint()
   const showArea = useFeature('customerProfileExtras')
   const showDebt = useFeature('customerDebt')
@@ -360,6 +362,7 @@ export function CustomersPage() {
         onSaved={(customer) => editing === null && setProfileId(customer.id)}
       />
       {orderFor && <OrderIntakeModal key={orderFor.id} defaultCustomer={orderFor} onClose={() => setOrderFor(null)} />}
+      {live && <LiveReceivables />}
     </Page>
   )
 }

@@ -32,6 +32,8 @@ import { useCopyOrderMessage } from '@/features/orders/useCopyOrderMessage'
 import { useOrderDeliveryHistory } from '@/features/orders/useOrderDeliveryHistory'
 import { useSettings } from '@/features/settings/settingsService'
 import { usePrinter } from '@/shared/print/usePrinter'
+import { LiveOrderPayments } from './LiveOrderPayments'
+import { useOrderPayments } from './paymentApi'
 
 const dateTime = (value: string | null) => (value ? new Date(value).toLocaleString('vi-VN') : '—')
 const statusColors: Record<OrderStatus, string> = {
@@ -62,6 +64,7 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
   const canManage = staff?.role === 'ADMIN' || staff?.role === 'SALES_STAFF'
   const { message } = App.useApp()
   const queryClient = useQueryClient()
+  const payments = useOrderPayments(id)
   const orderQueryKey = ['live', 'order', staff?.name, staff?.role, id]
   const query = useQuery({
     queryKey: orderQueryKey,
@@ -117,8 +120,8 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
   const { data: settings } = useSettings()
   const order = query.data
   // Chưa tải được danh mục thì vẫn hiện đơn với mã sản phẩm, nhưng chưa cho in để chứng từ không thiếu tên hàng.
-  const viewOrder = order ? fromLiveOrder(order, catalog.data ?? []) : undefined
-  const canPrint = Boolean(catalog.data && settings)
+  const viewOrder = order ? fromLiveOrder(order, catalog.data ?? [], payments.data?.balance) : undefined
+  const canPrint = Boolean(catalog.data && settings && payments.data)
   const lastAttempt = trips.data?.at(-1)?.assignment.latestAttempt
   const lastTrip = trips.data?.at(-1)?.trip
 
@@ -225,6 +228,7 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
   const productName = (productId: number) => catalog.data?.find((product) => product.id === productId)?.name ?? `Sản phẩm #${productId}`
   const moreSections: CollapseProps['items'] = order
     ? [
+        { key: 'payments', label: 'Thanh toán', extra: payments.data ? `Còn phải thu ${currency(payments.data.balance.due)}` : undefined, children: <LiveOrderPayments orderId={id} /> },
         ...(order.fulfillmentType === 'DELIVERY' && canSeeTrips
           ? [
               {
@@ -365,7 +369,7 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
               />
             </OrderLines>
           </div>
-          <Collapse ghost className="af-order-more" items={moreSections} />
+          <Collapse ghost className="af-order-more" defaultActiveKey={['payments']} items={moreSections} />
         </>
       )}
       {printer.portal}

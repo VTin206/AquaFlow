@@ -4,6 +4,7 @@ import { useIsDemo } from '@/shared/features'
 import { useStaff } from '@/features/auth/useStaff'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { orderApi } from '@/features/live/orderApi'
+import { paymentApi } from '@/features/live/paymentApi'
 import { customerService } from './customerService'
 import { initialsOf, type BottleAction, type Customer, type CustomerDraft } from './types'
 
@@ -23,8 +24,8 @@ type CustomerResponse = {
   note?: string | null
 }
 
-/** Sổ vỏ, công nợ BE chưa có nên để giá trị trung tính; giao diện ẩn chúng qua `useFeature`. */
-const fromResponse = (customer: CustomerResponse, orders: number): Customer => ({
+/** Công nợ lấy từ số dư thật; sổ vỏ chưa có API và vẫn ẩn qua useFeature. */
+const fromResponse = (customer: CustomerResponse, orders: number, debt = 0): Customer => ({
   id: String(customer.id),
   name: customer.fullName,
   phone: customer.phone ?? '',
@@ -37,16 +38,17 @@ const fromResponse = (customer: CustomerResponse, orders: number): Customer => (
   orders,
   bottlesHeld: 0,
   depositHeld: 0,
-  debt: 0,
+  debt,
 })
 
 /** Số đơn tính từ đơn thật (không tính đơn đã hủy). */
 async function liveCustomers() {
-  const [customers, orders] = await Promise.all([api.get<CustomerResponse[]>('/sales/customers'), orderApi.list()])
+  const [customers, orders, balances] = await Promise.all([api.get<CustomerResponse[]>('/sales/customers'), orderApi.list(), paymentApi.customers()])
+  const due = new Map(balances.map(balance => [balance.customerId, Number(balance.due)]))
   const counts = new Map<number, number>()
   for (const order of orders)
     if (order.customerId !== null && order.status !== 'CANCELLED') counts.set(order.customerId, (counts.get(order.customerId) ?? 0) + 1)
-  return customers.map((customer) => fromResponse(customer, counts.get(customer.id) ?? 0))
+  return customers.map((customer) => fromResponse(customer, counts.get(customer.id) ?? 0, due.get(customer.id) ?? 0))
 }
 
 const useLiveKey = () => {
