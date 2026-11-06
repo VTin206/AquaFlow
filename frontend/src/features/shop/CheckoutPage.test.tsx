@@ -30,6 +30,7 @@ vi.mock('./cart', () => ({
   useCartActions: () => ({ clear: vi.fn() }),
 }))
 vi.mock('./shopService', () => ({
+  useShopDemo: () => false,
   useShopContact: () => ({ openingHours: '6:00 – 21:00 hằng ngày' }),
   useShopFeature: (name: string) => (name === 'deliveryQuote' ? mocks.feeQuoted : false),
   useShopProducts: () => ({ data: [{ id: '1', name: 'Nước 19L', price: 50000, unit: 'Bình', available: true }], isPending: false, isError: false }),

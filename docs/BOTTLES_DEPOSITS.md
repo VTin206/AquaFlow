@@ -3,6 +3,8 @@
 Vào **Khách hàng → Quản lý vỏ bình / tiền cọc**, hoặc mở hồ sơ khách → **Vỏ & cọc**.
 Danh mục loại vỏ dùng API hiện có; sổ giao dịch dùng API thật. Sổ tổng hợp bao gồm khách đã lưu trữ.
 
+Trang đặt hàng lấy `bottleTypeId` của sản phẩm và giá cọc từ `GET /api/v1/bottle-types?active=true`, gộp số lượng theo loại vỏ. Hiển thị cọc dự kiến nếu khách không đổi vỏ, tách khỏi tiền hàng; không ghi thu cọc khi gửi đơn. Giá được tải lại khi mở trang, quay lại cửa sổ và mỗi 30 giây. Nếu thiếu giá hoặc API lỗi, trang không hiển thị tổng cọc suy đoán và cho phép tải lại. Mức cọc cố định chỉ dùng trong bản Demo.
+
 ## Nghiệp vụ
 
 - ADMIN/SALES_STAFF xem sổ, giao vỏ, thu vỏ và thu cọc. Chỉ ADMIN được hoàn cọc và báo mất/vỡ. CUSTOMER/DELIVERY_STAFF không truy cập API sổ quản trị.

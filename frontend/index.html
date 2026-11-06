@@ -9,7 +9,14 @@
     <title>AquaFlow | Quản lý đại lý nước</title>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="root">
+      <main style="max-width:600px;margin:48px auto;padding:24px;font-family:system-ui,sans-serif;line-height:1.6;color:#172b4d;background:#fff;border-radius:16px">
+        <h1 id="af-startup-title">Đang mở AquaFlow…</h1>
+        <p id="af-startup-description" role="status">Nếu chờ lâu, hãy kiểm tra kết nối mạng và tải lại trang.</p>
+        <a href="" style="color:#205b96">Tải lại trang</a>
+        <noscript><p>Bạn cần bật JavaScript trong trình duyệt để sử dụng AquaFlow.</p></noscript>
+      </main>
+    </div>
+    <script type="module" src="/src/bootstrap.ts"></script>
   </body>
 </html>

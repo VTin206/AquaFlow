@@ -25,6 +25,7 @@ export type ShopProduct = Pick<Product, 'id' | 'name' | 'brand' | 'unit' | 'pric
   available: boolean | null
   unitsPerCase?: number | null
   bottleTypeName?: string | null
+  bottleTypeId?: number | null
 }
 
 /** Dữ liệu mẫu khi đăng nhập bản dùng thử, hoặc khi dev chọn "xem như khách". */
@@ -59,6 +60,7 @@ export const toShopProduct = (product: CatalogProduct): ShopProduct => ({
   available: product.active ? null : false,
   unitsPerCase: product.unitsPerCase,
   bottleTypeName: product.bottleTypeName,
+  bottleTypeId: product.bottleTypeId,
   image: resolveProductImage(product),
   catalog: inferCatalog(product.name, product.unit),
 })
