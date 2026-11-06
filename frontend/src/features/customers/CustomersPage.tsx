@@ -201,8 +201,8 @@ export function CustomersPage() {
     {
       ...sort.column('Khách hàng', 'name', 'text'),
       dataIndex: 'name',
-      // Cột tên nhận phần dư khi màn hình rộng, các cột số giữ vừa nội dung.
-      minWidth: 220,
+      // Tên dài thì cắt "…" và hiện đủ khi rê chuột; phần dư của màn rộng dành cho cột địa chỉ.
+      width: 200,
       sorter: (a, b) => a.name.localeCompare(b.name, 'vi'),
       render: (_, customer) => (
         <div className="af-cell-stack">
@@ -223,7 +223,7 @@ export function CustomersPage() {
     {
       title: 'Địa chỉ',
       key: 'address',
-      width: 240,
+      minWidth: 246,
       render: (_, customer) => {
         const address = customer.mainAddress || (showArea ? customer.area : '')
         return address ? (
@@ -236,9 +236,9 @@ export function CustomersPage() {
       },
     },
     {
-      ...sort.column('Lần mua gần nhất', 'lastOrderAt', 'time'),
+      ...sort.column('Mua gần nhất', 'lastOrderAt', 'time'),
       dataIndex: 'lastOrderAt',
-      width: 160,
+      width: 155,
       sorter: (a, b) => (a.lastOrderAt ?? '').localeCompare(b.lastOrderAt ?? ''),
       render: (at: string | undefined, customer) => (
         <div className="af-cell-stack">
@@ -258,25 +258,27 @@ export function CustomersPage() {
           ...sort.column('Còn phải thu', 'debt', 'number'),
           dataIndex: 'debt',
           align: 'right',
-          width: 140,
+          width: 150,
           sorter: (a, b) => a.debt - b.debt,
           render: (debt: number, customer) => <CustomerDebt debt={debt} orders={customer.orders} />,
         }
-      : { title: 'Còn phải thu', key: 'debt', align: 'right', width: 140, render: () => <Unsupported /> },
+      : { title: 'Còn phải thu', key: 'debt', align: 'right', width: 150, render: () => <Unsupported /> },
     showBottles
       ? {
           ...sort.column('Vỏ đang giữ', 'bottlesHeld', 'number'),
           dataIndex: 'bottlesHeld',
-          width: 130,
+          width: 145,
           sorter: (a, b) => a.bottlesHeld - b.bottlesHeld,
           render: (count: number, customer) => (
             <div className="af-cell-stack">
-              <span>{count > 0 ? <Tag color="orange">{count} vỏ</Tag> : <Tag>Không</Tag>}</span>
+              <span>
+                <Tag color={count > 0 ? 'orange' : undefined}>{count} vỏ</Tag>
+              </span>
               {customer.depositHeld > 0 && <small>Cọc {currency(customer.depositHeld)}</small>}
             </div>
           ),
         }
-      : { title: 'Vỏ đang giữ', key: 'bottlesHeld', width: 130, render: () => <Unsupported /> },
+      : { title: 'Vỏ đang giữ', key: 'bottlesHeld', width: 145, render: () => <Unsupported /> },
     {
       title: 'Thao tác',
       key: 'action',
@@ -399,7 +401,7 @@ export function CustomersPage() {
                   loading={customersQuery.isPending}
                   pagination={tablePagination}
                   locale={{ emptyText: filtered ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.' }}
-                  scroll={{ x: 1050, y: tableScrollHeight }}
+                  scroll={{ x: 1074, y: tableScrollHeight }}
                   rowSelection={{
                     selectedRowKeys: checked.map((customer) => customer.id),
                     onChange: (keys) => setCheckedIds(keys.map(String)),
