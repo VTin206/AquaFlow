@@ -48,7 +48,11 @@ function handleFormKeys(event: KeyboardEvent<HTMLElement>) {
 
 export function CheckoutPage() {
   const { user } = useAuth()
+
   const demo = useShopDemo()
+
+  const quoteFee = useShopFeature('deliveryQuote')
+
   const cart = useCart()
   const actions = useCartActions()
   const products = useShopProducts()
@@ -74,6 +78,7 @@ export function CheckoutPage() {
   const subtotal = lines.reduce((sum, line) => sum + (line.product?.price ?? 0) * line.quantity, 0)
   const units = lines.reduce((sum, line) => sum + line.quantity, 0)
   const jugs = lines.filter((line) => line.product?.unit === 'Bình').reduce((sum, line) => sum + line.quantity, 0)
+
   const validFloor = Number.isInteger(floor) && floor >= 0 && floor <= 30
   const quote = useQuery({
     queryKey: ['shop', 'delivery-quote', cart, floor],
@@ -86,6 +91,10 @@ export function CheckoutPage() {
   const fee = demo ? suggestedDeliveryFee({ units, jugs, floor }) : quoteBlocked ? null : quote.data!.deliveryFee
   const quotedSubtotal = !demo && !quoteBlocked ? quote.data!.subtotal : subtotal
   const total = quotedSubtotal + (fee ?? 0)
+
+  const fee = quoteFee ? suggestedDeliveryFee({ units, jugs, floor: 0 }) : null
+  const total = subtotal + (fee ?? 0)
+
   const depositHint = <CheckoutDeposit lines={lines} />
   const submit = (values: CheckoutForm) => {
     if (submitLock.current || mutation.isPending || invalid || quoteBlocked || !cart.length || products.isError || products.isPending) return
