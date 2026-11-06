@@ -42,7 +42,7 @@ export const activityDescription = (entry: Pick<ActivityLog, 'action' | 'reason'
     ? entry.reason.replace(/\b[A-Z][A-Z_]+\b/g, (code) => codeLabels[code] ?? code)
     : (actionLabels[entry.action] ?? 'Thao tác khác')
 export const activityTarget = (entry: ActivityLog) => {
-  const labels: Record<string, string> = { ORDER: 'Đơn hàng', DISPATCH: 'Phiếu xuất', INVENTORY_RETURN: 'Phiếu hoàn', PRODUCT: 'Sản phẩm', BOTTLE_TYPE: 'Loại vỏ', PURCHASE_RECEIPT: 'Phiếu nhập', SUPPLIER: 'Nhà cung cấp', CUSTOMER: 'Khách hàng', CUSTOMER_ADDRESS: 'Địa chỉ khách', DELIVERY_TRIP: 'Chuyến giao', STORE_SETTINGS: 'Cài đặt cửa hàng' }
+  const labels: Record<string, string> = { STAFF_ACCOUNT: 'Tài khoản nhân viên', ORDER: 'Đơn hàng', DISPATCH: 'Phiếu xuất', INVENTORY_RETURN: 'Phiếu hoàn', PRODUCT: 'Sản phẩm', BOTTLE_TYPE: 'Loại vỏ', PURCHASE_RECEIPT: 'Phiếu nhập', SUPPLIER: 'Nhà cung cấp', CUSTOMER: 'Khách hàng', CUSTOMER_ADDRESS: 'Địa chỉ khách', DELIVERY_TRIP: 'Chuyến giao', STORE_SETTINGS: 'Cài đặt cửa hàng' }
   return entry.target.startsWith(entry.entityType) ? `${labels[entry.entityType] ?? 'Đối tượng'}${entry.entityId === null ? '' : ` #${entry.entityId}`}` : entry.target
 }
 export const csvSafeCell = (value: string) => /^[\s]*[=+@-]/.test(value) || /^[\t\r\n]/.test(value) ? `'${value}` : value
