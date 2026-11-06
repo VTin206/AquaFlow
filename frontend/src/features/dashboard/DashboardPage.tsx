@@ -166,7 +166,7 @@ export function DashboardPage() {
     { count: failed.length, label: 'giao thất bại', to: '/delivery', tone: 'danger' },
     { count: pending.length, label: 'đơn chờ xác nhận', to: ordersLink({ status: 'Chờ xác nhận' }), tone: 'warning' },
     { count: shipping.length, label: 'đang giao', to: '/delivery' },
-    { count: unpaid.length, label: 'đơn chưa thu đủ', to: ordersLink({ payment: 'Còn phải thu' }), tone: 'warning' },
+    { count: unpaid.length, label: 'đơn chưa thu đủ', to: ordersLink({ group: 'done', payment: 'Còn phải thu' }), tone: 'warning' },
     { count: lowStock.length, label: 'sản phẩm sắp hết', to: '/inventory', tone: 'warning' },
   ].filter((item) => item.count > 0)
 

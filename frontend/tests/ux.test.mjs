@@ -38,13 +38,17 @@ test('expired and expiring groups do not overlap at yesterday, today and warning
   assert.equal(expiryStatus('21/10/2026', 0, today), 'fresh')
 })
 test('order filters restore valid selections and recover from corrupt or outdated storage values', () => {
-  const saved = { query: 'Nguyễn 0901', status: 'Đang giao', method: 'Giao tận nơi', payment: 'Còn phải thu' }
+  const saved = { query: 'Nguyễn 0901', group: 'active', status: 'Đang giao', method: 'Giao tận nơi', payment: 'Còn phải thu' }
   assert.deepEqual(parseOrderFilters(JSON.parse(JSON.stringify(saved))), saved)
   for (const value of [null, [], false, 'invalid', 7]) {
     assert.deepEqual(parseOrderFilters(value), initialOrderFilters)
   }
   assert.deepEqual(parseOrderFilters({ query: 15, status: 'OLD', method: {}, payment: 'UNKNOWN' }), initialOrderFilters)
   assert.deepEqual(parseOrderFilters({ query: 'Giữ từ khóa', status: 'OLD' }), { ...initialOrderFilters, query: 'Giữ từ khóa' })
+  // Bộ lọc lưu trước khi có nhóm: tự chọn nhóm chứa trạng thái; nhóm lạ thì bỏ.
+  assert.equal(parseOrderFilters({ status: 'Đang giao' }).group, 'active')
+  assert.equal(parseOrderFilters({ status: 'Đã hủy' }).group, 'all')
+  assert.equal(parseOrderFilters({ group: 'OLD' }).group, '')
 })
 test('order intake matches full phone numbers only, across +84 and separators', () => {
   assert.equal(samePhone('0903 456 128', '+84903456128'), true)
@@ -119,6 +123,7 @@ test('order links carry filters that survive the URL round trip', () => {
   const params = new URL(ordersLink({ status: 'Chờ xác nhận' }), 'http://local').searchParams
   assert.deepEqual(parseOrderFilters({ status: params.get('status'), payment: params.get('payment') }), {
     ...initialOrderFilters,
+    group: 'need',
     status: 'Chờ xác nhận',
   })
 })
