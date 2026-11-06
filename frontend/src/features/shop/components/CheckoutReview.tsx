@@ -3,11 +3,12 @@ import { currency } from '@/shared/utils/format'
 import type { CartLine } from '../cart'
 import type { ShopProduct } from '../shopService'
 import { CartThumb } from './CartThumb'
+import type { ReactNode } from 'react'
 
 export type CheckoutLine = CartLine & { product?: ShopProduct }
 
 /** Danh sách hàng và tiền của đơn đang đặt. `fee === null` nghĩa là cửa hàng báo phí khi xác nhận. */
-export function CheckoutReview({ lines, subtotal, fee, depositHint }: { lines: CheckoutLine[]; subtotal: number; fee: number | null; depositHint: string }) {
+export function CheckoutReview({ lines, subtotal, fee, depositHint }: { lines: CheckoutLine[]; subtotal: number; fee: number | null; depositHint: ReactNode }) {
   return (
     <>
       <ul className="af-checkout-lines">
@@ -40,7 +41,7 @@ export function CheckoutReview({ lines, subtotal, fee, depositHint }: { lines: C
           </dd>
         </div>
       </dl>
-      <p className="af-form-hint">{depositHint}</p>
+      <div className="af-form-hint">{depositHint}</div>
     </>
   )
 }

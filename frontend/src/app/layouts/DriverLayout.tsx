@@ -7,6 +7,7 @@ import { useStaff } from '@/features/auth/useStaff'
 import { ThemeToggle } from './ThemeToggle'
 import { initialsOf, useAccountMenuItems, useMockSession } from './useAccountMenu'
 import '@/features/delivery/driver.css'
+import { ErrorBoundary } from '../ErrorBoundary'
 
 /**
  * Khung riêng cho nhân viên giao hàng: chỉ có màn hình chuyến, không sidebar, vừa màn hình điện thoại.
@@ -59,7 +60,7 @@ export function DriverLayout() {
             </div>
           }
         >
-          <Outlet />
+          <ErrorBoundary key={pathname} homeHref="/driver"><Outlet /></ErrorBoundary>
         </Suspense>
       </main>
     </div>

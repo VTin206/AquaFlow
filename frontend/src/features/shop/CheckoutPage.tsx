@@ -6,12 +6,12 @@ import { Link, useNavigate, useOutletContext } from 'react-router'
 import type { LiveOrder } from '@/features/live/orderApi'
 import { Money } from '@/shared/components/Money'
 import { QueryError } from '@/shared/components/QueryError'
-import { currency } from '@/shared/utils/format'
 import { focusNextOnEnter } from '@/shared/utils/forms'
-import { DEPOSIT_PER_BOTTLE, suggestedDeliveryFee } from '@/shared/policy'
+import { suggestedDeliveryFee } from '@/shared/policy'
 import { readProfile, saveProfile, useCart, useCartActions } from './cart'
 import { submitCheckoutOnce } from './checkoutSubmit'
 import { CheckoutReview } from './components/CheckoutReview'
+import { CheckoutDeposit } from './components/CheckoutDeposit'
 import { disabledOutsideHours, formatOpeningHours, isWithinOpeningHours, parseOpeningHours } from './openingHours'
 import { usePlaceWebOrder, useShopContact, useShopFeature, useShopProducts } from './shopService'
 import { useAuth } from '@/features/auth/useAuth'
@@ -45,7 +45,6 @@ function handleFormKeys(event: KeyboardEvent<HTMLElement>) {
 export function CheckoutPage() {
   const { user } = useAuth()
   const quoteFee = useShopFeature('deliveryQuote')
-  const showDeposit = useShopFeature('bottleLedger')
   const cart = useCart()
   const actions = useCartActions()
   const products = useShopProducts()
@@ -72,7 +71,7 @@ export function CheckoutPage() {
   const jugs = lines.filter((line) => line.product?.unit === 'Bình').reduce((sum, line) => sum + line.quantity, 0)
   const fee = quoteFee ? suggestedDeliveryFee({ units, jugs, floor: 0 }) : null
   const total = subtotal + (fee ?? 0)
-  const depositHint = `Chưa gồm tiền cọc vỏ.${showDeposit && jugs > 0 ? ` Nếu thiếu vỏ để đổi, cọc ${currency(DEPOSIT_PER_BOTTLE)}/vỏ khi nhận hàng.` : ''}`
+  const depositHint = <CheckoutDeposit lines={lines} />
   const submit = (values: CheckoutForm) => {
     if (submitLock.current || mutation.isPending || invalid || !cart.length || products.isError || products.isPending) return
     setSubmitError(undefined)

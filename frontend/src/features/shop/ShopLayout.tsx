@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Alert, Badge, Button, Dropdown } from 'antd'
 import { ArrowLeft, ChevronDown, Clock3, PackageSearch, Phone, Search, ShoppingCart, Waves } from 'lucide-react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router'
+import { ErrorBoundary } from '@/app/ErrorBoundary'
 import { useAuth } from '@/features/auth/useAuth'
 import { useCart } from './cart'
 import { AccountMenu } from './components/AccountMenu'
@@ -141,7 +142,7 @@ export function ShopLayout() {
             Quay lại
           </Button>
         )}
-        <Outlet key={fresh ?? 'page'} context={{ openCart: () => setCartOpen(true) }} />
+        <ErrorBoundary key={location.pathname} homeHref="/shop"><Outlet key={fresh ?? 'page'} context={{ openCart: () => setCartOpen(true) }} /></ErrorBoundary>
       </main>
       <ShopFooter demo={demo} contact={settings} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
