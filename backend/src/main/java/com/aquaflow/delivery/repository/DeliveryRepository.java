@@ -101,20 +101,55 @@ public class DeliveryRepository {
                 SELECT da.id AS attempt_id, da.attempt_no, da.outcome, da.recipient_name AS actual_recipient,
                        da.failure_reason, da.note AS attempt_note, da.attempted_at
                 FROM delivery_attempts da JOIN delivery_assignments a ON a.id = da.assignment_id
-                WHERE a.trip_id = ? AND a.order_id = ? ORDER BY da.attempt_no DESC
+                WHERE a.trip_id = ? AND a.order_id = ? ORDER BY da.attempt_no DESC, da.id DESC
                 """, (rs, i) -> mapAttempt(rs), tripId, orderId);
     }
 
-    private List<LoadLineResponse> orderLoad(long orderId) {
+    /** Attempt history for the exact assignment addressed by the assignment REST resource. */
+    public List<AttemptResponse> attemptsForAssignment(long assignmentId) {
+        return jdbc.query("""
+                SELECT da.id AS attempt_id, da.attempt_no, da.outcome, da.recipient_name AS actual_recipient,
+                       da.failure_reason, da.note AS attempt_note, da.attempted_at
+                FROM delivery_attempts da
+                WHERE da.assignment_id = ? ORDER BY da.attempt_no DESC, da.id DESC
+                """, (rs, i) -> mapAttempt(rs), assignmentId);
+    }
+
+    /**
+     * Prefer the immutable load manifest captured for this assignment. Looking up the latest order dispatch
+     * alone is incorrect after redelivery because it makes an older trip display the newer dispatch lots.
+     * Before a trip starts its manifest does not exist yet, so use the latest dispatch as the pending-load view.
+     */
+    private List<LoadLineResponse> orderLoad(long assignmentId, long orderId) {
+        List<LoadLineResponse> manifest = jdbc.query("""
+                SELECT b.product_id, p.name, p.unit, b.lot_code, l.quantity_loaded AS quantity
+                FROM delivery_load_items l
+                JOIN product_batches b ON b.id = l.batch_id
+                JOIN products p ON p.id = b.product_id
+                WHERE l.assignment_id = ?
+                ORDER BY b.product_id, b.expires_on, b.id, l.id
+                """, (rs, i) -> new LoadLineResponse(rs.getLong("product_id"), rs.getString("name"),
+                rs.getString("unit"), rs.getString("lot_code"), rs.getInt("quantity")), assignmentId);
+        if (!manifest.isEmpty()) {
+            return manifest;
+        }
         return jdbc.query("""
                 SELECT di.product_id, p.name, p.unit, di.lot_code, di.quantity
                 FROM order_dispatch_items di JOIN order_dispatches d ON d.id = di.dispatch_id
                 JOIN products p ON p.id = di.product_id
                 WHERE d.id = (SELECT id FROM order_dispatches WHERE order_id = ? ORDER BY dispatched_at DESC, id DESC LIMIT 1)
+                  AND EXISTS (
+                      SELECT 1 FROM delivery_assignments a
+                      JOIN delivery_trips t ON t.id = a.trip_id
+                      JOIN orders o ON o.id = a.order_id
+                      WHERE a.id = ? AND a.order_id = ? AND a.active
+                        AND t.status = 'CREATED' AND o.status = 'OUT_FOR_DELIVERY'
+                  )
                 ORDER BY di.id
                 """, (rs, i) -> new LoadLineResponse(rs.getLong("product_id"), rs.getString("name"),
-                rs.getString("unit"), rs.getString("lot_code"), rs.getInt("quantity")), orderId);
+                rs.getString("unit"), rs.getString("lot_code"), rs.getInt("quantity")), orderId, assignmentId, orderId);
     }
+
 
     public Optional<String> activeDriverName(long driverId) {
         return jdbc.query("""
@@ -334,7 +369,7 @@ public class DeliveryRepository {
                 rs.getLong("assignment_id"), rs.getLong("order_id"), rs.getString("order_code"),
                 rs.getString("order_status"), rs.getString("recipient_name"),
                 rs.getString("recipient_phone"), rs.getString("delivery_address"),
-                mapAttempt(rs), orderLoad(rs.getLong("order_id")),
+                mapAttempt(rs), orderLoad(rs.getLong("assignment_id"), rs.getLong("order_id")),
                 rs.getObject("requested_delivery_at", OffsetDateTime.class), rs.getString("note")), trip.id());
         HandoverResponse handover = jdbc.query("""
                 SELECT * FROM handover_records WHERE trip_id = ?
