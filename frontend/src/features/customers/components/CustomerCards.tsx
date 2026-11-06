@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { Button, Select, Tooltip } from 'antd'
 import { Eye, Plus } from 'lucide-react'
 import { MobileRecordList } from '@/shared/components/MobileRecordList'
-import { Money } from '@/shared/components/Money'
 import { useFeature } from '@/shared/features'
 import { Unsupported } from '@/shared/components/Unsupported'
 import { customerCode, type Customer } from '../types'
+import { CustomerDebt } from './CustomerDebt'
 
 type CustomerCardsProps = {
   customers: Customer[]
@@ -64,7 +64,7 @@ export function CustomerCards({ customers, loading, emptyText, onProfile, onCrea
           </p>
           <dl className="af-record-facts">
             <dt>Còn phải thu</dt>
-            <dd>{showDebt ? <Money value={customer.debt} tone={customer.debt > 0 ? 'due' : 'paid'} /> : <Unsupported />}</dd>
+            <dd>{showDebt ? <CustomerDebt debt={customer.debt} orders={customer.orders} /> : <Unsupported />}</dd>
             <dt>Vỏ đang giữ</dt>
             <dd>{showBottles ? `${customer.bottlesHeld} vỏ` : <Unsupported />}</dd>
           </dl>
