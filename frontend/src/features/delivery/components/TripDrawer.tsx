@@ -21,6 +21,8 @@ import { dispatchedIn, openIn } from '../tripService'
 import { useTripAction, useTrips } from '../useTrips'
 import { TripManifest } from './TripManifest'
 import { TripStatusTag } from './TripStatusTag'
+import { TripRouteButton } from './TripRouteButton'
+import { MapLink } from '@/shared/address/MapLink'
 
 /** Chi tiết chuyến: danh sách điểm giao, ghi kết quả từng đơn và đối soát tiền/vỏ khi về. */
 export function TripDrawer({ tripId, onClose }: { tripId: string; onClose: () => void }) {
@@ -170,6 +172,7 @@ export function TripDrawer({ tripId, onClose }: { tripId: string; onClose: () =>
             </Button>
           </div>
         )}
+        <TripRouteButton addresses={stops.map((order) => [order.address, order.area].filter(Boolean).join(', '))} />
         <ol className="af-trip-stops af-trip-stops-detail">
           {stops.map((order, index) => (
             <li key={order.id}>
@@ -192,7 +195,11 @@ export function TripDrawer({ tripId, onClose }: { tripId: string; onClose: () =>
                   </small>
                 )}
                 <div className="af-delivery-line">
-                  <MapPin size={14} /> {order.address}
+                  <MapPin size={14} />
+                  <span>
+                    {order.address}
+                    <MapLink address={[order.address, order.area].filter(Boolean).join(', ')} />
+                  </span>
                 </div>
                 {order.phone && (
                   <div className="af-delivery-line">

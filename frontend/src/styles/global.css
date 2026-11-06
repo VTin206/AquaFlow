@@ -2645,3 +2645,22 @@ body {
   font-size: 13px;
   color: var(--af-text-secondary);
 }
+
+/* Icon mở bản đồ cạnh địa chỉ. */
+.af-map-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+  padding: 2px;
+  border-radius: 6px;
+  color: var(--af-primary);
+  vertical-align: -3px;
+}
+.af-map-link:hover,
+.af-map-link:focus-visible {
+  background: var(--af-primary-soft);
+}
+.af-trip-route {
+  margin: 4px 0 8px;
+}

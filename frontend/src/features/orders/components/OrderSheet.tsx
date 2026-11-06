@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Ban, CircleArrowRight, CircleCheck, Clock3, TriangleAlert, type LucideIcon } from 'lucide-react'
+import { MapLink } from '@/shared/address/MapLink'
 import { currency } from '@/shared/utils/format'
 import type { OrderFocus } from '../orderFocus'
 import type { Order, OrderLine } from '../types'
@@ -36,7 +37,12 @@ export function OrderParty({ order }: { order: Order }) {
       <h3>{delivery ? 'Giao đến' : 'Nhận tại quầy'}</h3>
       <strong>{order.customer}</strong>
       {order.phone && <a href={`tel:${tel}`}>{order.phone}</a>}
-      {delivery && place && <p>{place}</p>}
+      {delivery && place && (
+        <p>
+          {place}
+          <MapLink address={[order.address, order.area].filter(Boolean).join(', ')} />
+        </p>
+      )}
       {order.appointment && (
         <p>
           <span>Hẹn giao</span> {new Date(order.appointment).toLocaleString('vi-VN')}

@@ -21,6 +21,8 @@ import { AttemptsTimeline } from './AttemptsTimeline'
 import { DeliveryActionModal, type DeliveryAction } from './DeliveryActionModal'
 import { TripManifest } from './TripManifest'
 import { TripStatusTag } from './TripStatusTag'
+import { TripRouteButton } from './TripRouteButton'
+import { MapLink } from '@/shared/address/MapLink'
 
 const dateTime = (value: string) => new Date(value).toLocaleString('vi-VN')
 
@@ -200,6 +202,7 @@ export function LiveTripDrawer({ tripId, onClose }: { tripId: number; onClose: (
         }
       >
         <OrderFocusBanner focus={focus} />
+        <TripRouteButton addresses={trip.orders.map((stop) => stop.deliveryAddress)} />
         <ol className="af-trip-stops af-trip-stops-detail">
           {trip.orders.map((stop, index) => {
             const balance = collections.data?.balances.find((item) => item.orderId === stop.orderId)
@@ -220,9 +223,10 @@ export function LiveTripDrawer({ tripId, onClose }: { tripId: number; onClose: (
                   {stop.deliveryAddress && (
                     <div className="af-delivery-line">
                       <MapPin size={14} />
-                      <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stop.deliveryAddress)}`} target="_blank" rel="noreferrer">
+                      <span>
                         {stop.deliveryAddress}
-                      </a>
+                        <MapLink address={stop.deliveryAddress} />
+                      </span>
                     </div>
                   )}
                   {stop.recipientPhone && (

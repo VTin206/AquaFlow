@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Card, Empty, Form, InputNumber, Modal, Popconfirm, Progress, Select, Skeleton, Tag } from 'antd'
 import { Clock3, Map, Package, Phone, Recycle, Wallet } from 'lucide-react'
+import { mapsSearchUrl } from '@/shared/address/maps'
 import { useAuth } from '@/features/auth/useAuth'
 import { useStaff } from '@/features/auth/useStaff'
 import { Money } from '@/shared/components/Money'
@@ -168,7 +169,7 @@ function DriverTrip({ trip, showDriver }: { trip: DeliveryTrip; showDriver: bool
             <Button
               size="large"
               icon={<Map size={18} />}
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.deliveryAddress)}`}
+              href={mapsSearchUrl(order.deliveryAddress)}
               target="_blank"
               rel="noreferrer"
             >

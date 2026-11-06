@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { App, Avatar, Button, Descriptions, Dropdown, Empty, Modal, Space, Table, Tabs, Tag, Typography } from 'antd'
 import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
 import { Ellipsis, Pencil, Phone, ShoppingBag } from 'lucide-react'
+import { MapLink } from '@/shared/address/MapLink'
 import { Money } from '@/shared/components/Money'
 import { useFeature, useLiveOnly } from '@/shared/features'
 import { Unsupported } from '@/shared/components/Unsupported'
@@ -106,7 +107,8 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
           {addresses.map((address) => (
             <li key={address.line}>
               {address.line}
-              {address.area && ` · ${address.area}`}{' '}
+              {address.area && ` · ${address.area}`}
+              <MapLink address={[address.line, address.area].filter(Boolean).join(', ')} />{' '}
               {address.recipientName && (
                 <small>
                   ({address.recipientName} · {address.recipientPhone})

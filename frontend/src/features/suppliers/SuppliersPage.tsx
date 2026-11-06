@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { App, Button, Card, Descriptions, Dropdown, Empty, Input, Modal, Segmented, Table, Tag, type TableColumnsType } from 'antd'
 import { Ellipsis, Pencil, Plus, Search } from 'lucide-react'
 import { ViewButton } from '@/shared/components/ViewButton'
+import { MapLink } from '@/shared/address/MapLink'
 import { modalWidth } from '@/shared/utils/modal'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
@@ -301,7 +302,18 @@ export function SuppliersPage() {
                     },
                   ]
                 : []),
-              { key: 'address', label: 'Địa chỉ', children: viewing.address || '—' },
+              {
+                key: 'address',
+                label: 'Địa chỉ',
+                children: viewing.address ? (
+                  <span>
+                    {viewing.address}
+                    <MapLink address={viewing.address} />
+                  </span>
+                ) : (
+                  '—'
+                ),
+              },
             ]}
           />
         )}
