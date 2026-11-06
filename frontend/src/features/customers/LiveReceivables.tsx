@@ -5,6 +5,8 @@ import { useStaff } from '@/features/auth/useStaff'
 import { paymentApi, type CustomerBalance } from '@/features/live/paymentApi'
 import { LiveOrderDetails } from '@/features/live/LiveOrderDetails'
 import { QueryError } from '@/shared/components/QueryError'
+import { ViewButton } from '@/shared/components/ViewButton'
+import { modalWidth } from '@/shared/utils/modal'
 import { currency } from '@/shared/utils/format'
 
 export function LiveReceivables() {
@@ -20,15 +22,17 @@ export function LiveReceivables() {
         { title: 'Khách hàng', render: (_, item) => <><Button type="link" onClick={() => setCustomer(item)}>{item.name}</Button>{!item.active && <Tag>Đã lưu trữ</Tag>}</> },
         { title: 'Còn phải thu', dataIndex: 'due', align: 'right', render: currency },
         { title: 'Cần hoàn khách', dataIndex: 'refundDue', align: 'right', render: currency },
+        { title: 'Thao tác', key: 'actions', width: 112, align: 'center' as const, render: (_, item) => <ViewButton title="Xem công nợ" subject={item.name} onClick={() => setCustomer(item)} /> },
       ]} />
     ) }]} />
-    <Modal open={!!customer} title={`Công nợ — ${customer?.name ?? ''}`} footer={null} onCancel={() => setCustomer(undefined)} width={760}>
+    <Modal open={!!customer} title={`Công nợ — ${customer?.name ?? ''}`} footer={null} onCancel={() => setCustomer(undefined)} width={modalWidth.medium} centered>
       <p>Số còn phải thu tính trên đơn đã xác nhận, không gồm đơn chờ xác nhận hoặc đã hủy. Mở đơn để ghi nhận thu hoặc hoàn tiền.</p>
       {orders.isPending ? <Skeleton active /> : orders.isError ? <QueryError error={orders.error} onRetry={orders.refetch} /> : <Table rowKey="orderId" size="small" dataSource={orders.data} scroll={{ x: 450 }} columns={[
         { title: 'Đơn hàng', render: (_, item) => <Button type="link" onClick={() => setOrderId(item.orderId)}>{item.orderCode}</Button> },
         { title: 'Đã thu ròng', dataIndex: 'paid', render: currency, align: 'right' },
         { title: 'Còn phải thu', dataIndex: 'due', render: currency, align: 'right' },
         { title: 'Cần hoàn', dataIndex: 'refundDue', render: currency, align: 'right' },
+        { title: 'Thao tác', key: 'actions', width: 112, align: 'center' as const, render: (_, item) => <ViewButton subject={`đơn ${item.orderCode}`} onClick={() => setOrderId(item.orderId)} /> },
       ]} />}
     </Modal>
     {orderId !== undefined && <LiveOrderDetails id={orderId} onClose={() => setOrderId(undefined)} />}

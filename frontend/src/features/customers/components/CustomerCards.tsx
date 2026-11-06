@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { Button, Select, Tooltip } from 'antd'
-import { Eye, Plus } from 'lucide-react'
+import { Button, Select } from 'antd'
+import { Plus } from 'lucide-react'
+import { ViewButton } from '@/shared/components/ViewButton'
 import { MobileRecordList } from '@/shared/components/MobileRecordList'
 import { useFeature } from '@/shared/features'
 import { Unsupported } from '@/shared/components/Unsupported'
 import { customerCode, type Customer } from '../types'
 import { CustomerDebt } from './CustomerDebt'
+import { lastOrderLabel } from '../lastOrder'
 
 type CustomerCardsProps = {
   customers: Customer[]
@@ -14,12 +16,12 @@ type CustomerCardsProps = {
   onProfile: (id: string) => void
   onCreateOrder: (customer: Customer) => void
 }
-type Sort = 'orders' | 'name' | 'debt' | 'bottles'
+type Sort = 'recent' | 'idle' | 'name' | 'debt' | 'bottles'
 
 export function CustomerCards({ customers, loading, emptyText, onProfile, onCreateOrder }: CustomerCardsProps) {
   const showDebt = useFeature('customerDebt')
   const showBottles = useFeature('bottleLedger')
-  const [sort, setSort] = useState<Sort>('orders')
+  const [sort, setSort] = useState<Sort>('recent')
   const sorted = [...customers].sort((a, b) =>
     sort === 'name'
       ? a.name.localeCompare(b.name, 'vi')
@@ -27,7 +29,9 @@ export function CustomerCards({ customers, loading, emptyText, onProfile, onCrea
         ? b.debt - a.debt
         : sort === 'bottles'
           ? b.bottlesHeld - a.bottlesHeld
-          : b.orders - a.orders,
+          : sort === 'idle'
+            ? (a.lastOrderAt ?? '').localeCompare(b.lastOrderAt ?? '')
+            : (b.lastOrderAt ?? '').localeCompare(a.lastOrderAt ?? ''),
   )
 
   return (
@@ -44,7 +48,8 @@ export function CustomerCards({ customers, loading, emptyText, onProfile, onCrea
           value={sort}
           onChange={setSort}
           options={[
-            { value: 'orders', label: 'Số đơn: nhiều trước' },
+            { value: 'recent', label: 'Mua gần đây trước' },
+            { value: 'idle', label: 'Lâu chưa mua trước' },
             { value: 'name', label: 'Tên: A → Z' },
             ...(showDebt ? [{ value: 'debt' as const, label: 'Còn phải thu: cao trước' }] : []),
             ...(showBottles ? [{ value: 'bottles' as const, label: 'Vỏ đang giữ: nhiều trước' }] : []),
@@ -55,12 +60,12 @@ export function CustomerCards({ customers, loading, emptyText, onProfile, onCrea
         <article className="af-record" aria-label={`Khách hàng ${customer.name}`}>
           <div className="af-record-heading">
             <span>{customerCode(customer)}</span>
-            <span>{customer.orders} đơn</span>
+            <span>{lastOrderLabel(customer.lastOrderAt)}</span>
           </div>
           <h3>{customer.name}</h3>
           <p className="af-record-meta">
             {customer.phone && <a href={`tel:${customer.phone.replace(/[\s().-]/g, '')}`}>{customer.phone}</a>}
-            {customer.area && <span>{customer.area}</span>}
+            {(customer.mainAddress || customer.area) && <span>{customer.mainAddress || customer.area}</span>}
           </p>
           <dl className="af-record-facts">
             <dt>Còn phải thu</dt>
@@ -69,9 +74,7 @@ export function CustomerCards({ customers, loading, emptyText, onProfile, onCrea
             <dd>{showBottles ? `${customer.bottlesHeld} vỏ` : <Unsupported />}</dd>
           </dl>
           <div className="af-record-actions">
-            <Tooltip title="Xem hồ sơ">
-              <Button icon={<Eye size={16} />} onClick={() => onProfile(customer.id)} aria-label={`Xem hồ sơ ${customer.name}`} />
-            </Tooltip>
+            <ViewButton title="Xem hồ sơ" subject={customer.name} size="middle" onClick={() => onProfile(customer.id)} />
             <Button icon={<Plus size={16} />} onClick={() => onCreateOrder(customer)} aria-label={`Tạo đơn cho ${customer.name}`}>
               Tạo đơn
             </Button>

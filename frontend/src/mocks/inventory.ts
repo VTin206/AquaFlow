@@ -16,17 +16,21 @@ const demoReceipts: {
 }[] = [
   {
     id: 'PN-0001',
-    supplierId: 'NCC-001',
+    supplierId: 'NCC-002',
     receivedAt: '2026-10-10',
     receiver: 'Nguyễn An',
-    lines: [
-      ['P-009', 'VH2609-20L', '2026-09-26', '2027-03-26', 20, 0, 42000],
-      ['P-016', 'AQ2608-500', '2026-08-15', '2027-08-15', 24, 1, 68000],
-    ],
+    lines: [['P-009', 'VH2609-20L', '2026-09-26', '2027-03-26', 20, 0, 42000]],
+  },
+  {
+    id: 'PN-0003',
+    supplierId: 'NCC-003',
+    receivedAt: '2026-10-12',
+    receiver: 'Nguyễn An',
+    lines: [['P-016', 'AQ2608-500', '2026-08-15', '2027-08-15', 24, 1, 68000]],
   },
   {
     id: 'PN-0002',
-    supplierId: 'NCC-002',
+    supplierId: 'NCC-001',
     receivedAt: '2026-10-14',
     receiver: 'Nguyễn An',
     note: 'Thiếu 2 thùng so với hóa đơn, nhà cung cấp hẹn bù chuyến sau.',

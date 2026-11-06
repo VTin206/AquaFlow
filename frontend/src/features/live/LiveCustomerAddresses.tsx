@@ -95,16 +95,16 @@ export function LiveCustomerAddresses({
               {
                 title: 'Thao tác',
                 render: (_: unknown, item: Address) => (
-                  <>
+                  <span className="af-row-actions">
                     <Tooltip title="Sửa">
-                      <Button type="link" icon={<Pencil size={15} />} aria-label="Sửa địa chỉ" onClick={() => open(item)} />
+                      <Button size="small" icon={<Pencil size={15} />} aria-label="Sửa địa chỉ" onClick={() => open(item)} />
                     </Tooltip>
                     <Popconfirm title="Xóa địa chỉ này?" onConfirm={() => remove.mutate(item.id)}>
-                      <Button type="link" danger>
+                      <Button size="small" type="text" danger>
                         Xóa
                       </Button>
                     </Popconfirm>
-                  </>
+                  </span>
                 ),
               },
             ]}

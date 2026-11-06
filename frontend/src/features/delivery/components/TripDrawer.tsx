@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { App, Button, Descriptions, Drawer, Dropdown, Form, Input, InputNumber, Popconfirm, Select, Space, Tag, Typography } from 'antd'
+import { App, Button, Descriptions, Dropdown, Modal, Form, Input, InputNumber, Popconfirm, Select, Space, Tag, Typography } from 'antd'
 import { Ellipsis, MapPin, Phone, Truck } from 'lucide-react'
 import { usePrinter } from '@/shared/print/usePrinter'
+import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
 import { Money } from '@/shared/components/Money'
 import { dueTone } from '@/shared/utils/money'
 import { currency } from '@/shared/utils/format'
@@ -20,6 +21,8 @@ import { dispatchedIn, openIn } from '../tripService'
 import { useTripAction, useTrips } from '../useTrips'
 import { TripManifest } from './TripManifest'
 import { TripStatusTag } from './TripStatusTag'
+import { TripRouteButton } from './TripRouteButton'
+import { MapLink } from '@/shared/address/MapLink'
 
 /** Chi tiết chuyến: danh sách điểm giao, ghi kết quả từng đơn và đối soát tiền/vỏ khi về. */
 export function TripDrawer({ tripId, onClose }: { tripId: string; onClose: () => void }) {
@@ -65,17 +68,19 @@ export function TripDrawer({ tripId, onClose }: { tripId: string; onClose: () =>
 
   return (
     <>
-      <Drawer
+      <Modal
         open
-        onClose={onClose}
-        size={600}
+        centered
+        onCancel={onClose}
+        width={modalWidth.medium}
+        styles={modalScrollBody}
         title={
           <div className="af-profile-head">
             <span className="af-trip-icon">
               <Truck size={20} />
             </span>
             <div className="af-cell-stack">
-              <span className="af-profile-name">Chuyến {trip.id}</span>
+              <span className="af-profile-name">Chuyến {trip.id} <TripStatusTag status={trip.status} /></span>
               <small>
                 {trip.driver}
                 {trip.vehicle ? ` · ${trip.vehicle}` : ''}
@@ -83,7 +88,7 @@ export function TripDrawer({ tripId, onClose }: { tripId: string; onClose: () =>
             </div>
           </div>
         }
-        extra={<TripStatusTag status={trip.status} />}
+
         footer={
           <div className="af-order-footer">
             <div>
@@ -167,6 +172,7 @@ export function TripDrawer({ tripId, onClose }: { tripId: string; onClose: () =>
             </Button>
           </div>
         )}
+        <TripRouteButton addresses={stops.map((order) => [order.address, order.area].filter(Boolean).join(', '))} />
         <ol className="af-trip-stops af-trip-stops-detail">
           {stops.map((order, index) => (
             <li key={order.id}>
@@ -189,7 +195,11 @@ export function TripDrawer({ tripId, onClose }: { tripId: string; onClose: () =>
                   </small>
                 )}
                 <div className="af-delivery-line">
-                  <MapPin size={14} /> {order.address}
+                  <MapPin size={14} />
+                  <span>
+                    {order.address}
+                    <MapLink address={[order.address, order.area].filter(Boolean).join(', ')} />
+                  </span>
                 </div>
                 {order.phone && (
                   <div className="af-delivery-line">
@@ -329,7 +339,7 @@ export function TripDrawer({ tripId, onClose }: { tripId: string; onClose: () =>
             ]}
           />
         )}
-      </Drawer>
+      </Modal>
       {orderId && <OrderDetailsModal key={orderId} orderId={orderId} onClose={() => setOrderId(null)} />}
       {printer.portal}
     </>

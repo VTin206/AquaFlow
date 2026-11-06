@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, App, Button, Dropdown, Form, Input, InputNumber, Modal, Segmented, Space, Table, Tag, Tooltip } from 'antd'
-import { Ellipsis, Pencil } from 'lucide-react'
+import { Ellipsis, Pencil, Plus, RefreshCw } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
@@ -145,11 +145,11 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
               ]}
             />
           )}
-          <Button onClick={() => void types.refetch()} loading={types.isFetching}>
+          <Button icon={<RefreshCw size={16} />} onClick={() => void types.refetch()} loading={types.isFetching}>
             Làm mới
           </Button>
           {admin && (
-            <Button type="primary" onClick={() => setEditing(null)}>
+            <Button type="primary" icon={<Plus size={16} />} onClick={() => setEditing(null)}>
               Thêm loại vỏ
             </Button>
           )}

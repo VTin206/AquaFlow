@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { App, Avatar, Button, Descriptions, Drawer, Dropdown, Empty, Space, Table, Tabs, Tag, Tooltip, Typography } from 'antd'
+import { App, Avatar, Button, Descriptions, Dropdown, Empty, Modal, Space, Table, Tabs, Tag, Typography } from 'antd'
+import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
 import { Ellipsis, Pencil, Phone, ShoppingBag } from 'lucide-react'
+import { MapLink } from '@/shared/address/MapLink'
 import { Money } from '@/shared/components/Money'
 import { useFeature, useLiveOnly } from '@/shared/features'
 import { Unsupported } from '@/shared/components/Unsupported'
@@ -106,7 +108,8 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
           {addresses.map((address) => (
             <li key={address.line}>
               {address.line}
-              {address.area && ` · ${address.area}`}{' '}
+              {address.area && ` · ${address.area}`}
+              <MapLink address={[address.line, address.area].filter(Boolean).join(', ')} />{' '}
               {address.recipientName && (
                 <small>
                   ({address.recipientName} · {address.recipientPhone})
@@ -129,10 +132,12 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
 
   return (
     <>
-      <Drawer
+      <Modal
         open
-        onClose={onClose}
-        size={640}
+        centered
+        onCancel={onClose}
+        width={modalWidth.medium}
+        styles={modalScrollBody}
         title={
           <div className="af-profile-head">
             <Avatar className="af-avatar" size={44}>
@@ -148,22 +153,26 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
             </div>
           </div>
         }
-        extra={
-          <Space className="af-drawer-actions">
-            <Button type="primary" icon={<ShoppingBag size={15} />} aria-label="Tạo đơn" onClick={() => onCreateOrder(customer)}>
-              Tạo đơn
-            </Button>
-            <Tooltip title="Sửa hồ sơ">
-              <Button icon={<Pencil size={15} />} aria-label="Sửa hồ sơ" onClick={() => onEdit(customer)} />
-            </Tooltip>
-            {/* Lưu trữ ít khi dùng nên nằm trong menu ⋯, không tô đỏ vì lịch sử vẫn giữ. */}
-            <Dropdown
-              trigger={['click']}
-              menu={{ items: [{ key: 'archive', label: 'Lưu trữ hồ sơ', danger: true, disabled: deactivate.isPending, onClick: archive }] }}
-            >
-              <Button icon={<Ellipsis size={16} />} aria-label="Thao tác khác" />
-            </Dropdown>
-          </Space>
+        footer={
+          <div className="af-order-footer">
+            <div>
+              {/* Lưu trữ ít khi dùng nên nằm trong menu Thao tác khác, không tô đỏ vì lịch sử vẫn giữ. */}
+              <Dropdown
+                trigger={['click']}
+                menu={{ items: [{ key: 'archive', label: 'Lưu trữ hồ sơ', danger: true, disabled: deactivate.isPending, onClick: archive }] }}
+              >
+                <Button icon={<Ellipsis size={16} />}>Thao tác khác</Button>
+              </Dropdown>
+            </div>
+            <div>
+              <Button icon={<Pencil size={15} />} onClick={() => onEdit(customer)}>
+                Sửa hồ sơ
+              </Button>
+              <Button type="primary" icon={<ShoppingBag size={15} />} onClick={() => onCreateOrder(customer)}>
+                Tạo đơn
+              </Button>
+            </div>
+          </div>
         }
       >
         <div className="af-profile-summary">
@@ -336,7 +345,7 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
             },
           ]}
         />
-      </Drawer>
+      </Modal>
       {managingAddresses && (
         <LiveCustomerAddresses customerId={Number(customer.id)} customerName={customer.name} onClose={() => setManagingAddresses(false)} />
       )}

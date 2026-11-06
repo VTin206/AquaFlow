@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Button, Card, Empty, Progress, Select, Skeleton, Tag } from 'antd'
 import { Clock3, Map, Package, Phone, Recycle, Wallet } from 'lucide-react'
+import { mapsSearchUrl } from '@/shared/address/maps'
 import { useStaff } from '@/features/auth/useStaff'
 import { QueryError } from '@/shared/components/QueryError'
 import { Money } from '@/shared/components/Money'
@@ -30,7 +31,6 @@ const readDriver = () => {
   }
 }
 
-const mapsUrl = (address: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
 
 /** Màn hình điện thoại cho tài xế: chỉ chuyến của mình, nút gọi/chỉ đường lớn, ghi kết quả từng điểm. */
 export function DriverPage() {
@@ -194,7 +194,7 @@ function DriverTrip({ trip, stops, onDetails }: { trip: Trip; stops: Order[]; on
                   Gọi
                 </Button>
               )}
-              <Button size="large" icon={<Map size={18} />} href={mapsUrl(order.address)} target="_blank" rel="noreferrer">
+              <Button size="large" icon={<Map size={18} />} href={mapsSearchUrl([order.address, order.area].filter(Boolean).join(', '))} target="_blank" rel="noreferrer">
                 Chỉ đường
               </Button>
               <Button size="large" onClick={() => onDetails(order.id)}>

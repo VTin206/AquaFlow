@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Badge, Button, Card, Col, Empty, Row, Skeleton, Tag, Typography } from 'antd'
-import { Clock3, Eye, MapPin, Package, Phone } from 'lucide-react'
+import { Clock3, MapPin, Package, Phone } from 'lucide-react'
+import { MapLink } from '@/shared/address/MapLink'
+import { ViewButton } from '@/shared/components/ViewButton'
 import { Money } from '@/shared/components/Money'
 import { QueryError } from '@/shared/components/QueryError'
 import { useIsDemo } from '@/shared/features'
@@ -35,7 +37,11 @@ function DeliveryCard({ order, failureReason, orphan, action, onDetails }: CardP
       </div>
       <div className="af-delivery-customer">{order.customer}</div>
       <div className="af-delivery-line">
-        <MapPin size={14} /> {order.address}
+        <MapPin size={14} />
+        <span>
+          {order.address}
+          <MapLink address={[order.address, order.area].filter(Boolean).join(', ')} />
+        </span>
       </div>
       {order.phone && (
         <div className="af-delivery-line">
@@ -63,9 +69,7 @@ function DeliveryCard({ order, failureReason, orphan, action, onDetails }: CardP
         </Tag>
       )}
       <div className="af-delivery-footer">
-        <Button size="small" icon={<Eye size={15} />} onClick={onDetails} aria-label={`Chi tiết đơn ${code}`}>
-          Chi tiết
-        </Button>
+        <ViewButton subject={`đơn ${code}`} onClick={onDetails} />
         {action}
       </div>
     </Card>

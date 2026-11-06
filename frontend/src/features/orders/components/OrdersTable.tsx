@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Button, Grid, Space, Table, Tooltip, type TableColumnsType } from 'antd'
-import { Eye } from 'lucide-react'
+import { Button, Grid, Space, Table, type TableColumnsType } from 'antd'
+import { ViewButton } from '@/shared/components/ViewButton'
 import { Money } from '@/shared/components/Money'
 import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
 import { useColumnSort } from '@/shared/components/sortableColumn'
@@ -135,14 +135,7 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
       fixed: 'right',
       render: (_, order) => (
         <Space size={6}>
-          <Tooltip title="Xem chi tiết">
-            <Button
-              size="small"
-              icon={<Eye size={15} />}
-              onClick={() => setSelectedId(order.id)}
-              aria-label={`Chi tiết đơn ${order.code ?? order.id}`}
-            />
-          </Tooltip>
+          <ViewButton subject={`đơn ${order.code ?? order.id}`} onClick={() => setSelectedId(order.id)} />
           {!compact && <OrderNextAction order={order} dense />}
         </Space>
       ),

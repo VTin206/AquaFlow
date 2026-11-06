@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, App, Button, Card, Form, Input, Modal, Select, Space, Table, Tag } from 'antd'
+import { Alert, App, Button, Card, Descriptions, Form, Input, Modal, Select, Table, Tag } from 'antd'
+import { KeyRound, Pencil, Plus } from 'lucide-react'
+import { ViewButton } from '@/shared/components/ViewButton'
+import { modalWidth } from '@/shared/utils/modal'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
 import { useIsDemo } from '@/shared/features'
@@ -15,6 +18,7 @@ export function StaffAccountsPage() {
   const client = useQueryClient()
   const { message } = App.useApp()
   const [action, setAction] = useState<Action | null>(null)
+  const [viewingId, setViewingId] = useState<number>()
   const query = useQuery({ queryKey: ['live', 'staff-accounts', user?.email], queryFn: staffApi.list, enabled: !demo })
   const save = useMutation({
     mutationFn: (operation: () => Promise<unknown>) => operation(),
@@ -30,7 +34,7 @@ export function StaffAccountsPage() {
       title="Tài khoản nhân viên"
       description="Tạo tài khoản bán hàng và giao hàng; mỗi người đăng nhập bằng email và mật khẩu riêng."
       actions={
-        <Button type="primary" disabled={demo} onClick={() => setAction({ kind: 'create' })}>
+        <Button type="primary" icon={<Plus size={16} />} disabled={demo} onClick={() => setAction({ kind: 'create' })}>
           Thêm nhân viên
         </Button>
       }
@@ -64,17 +68,19 @@ export function StaffAccountsPage() {
               },
               {
                 title: 'Thao tác',
-                render: (_, account) => (
-                  <Space>
-                    <Button onClick={() => setAction({ kind: 'edit', account })}>Sửa / khóa</Button>
-                    <Button onClick={() => setAction({ kind: 'password', account })}>Đặt mật khẩu</Button>
-                  </Space>
-                ),
+                width: 112,
+                align: 'center' as const,
+                render: (_, account) => <ViewButton subject={account.fullName} onClick={() => setViewingId(account.id)} />,
               },
             ]}
           />
         </Card>
       )}
+      <AccountDetails
+        account={query.data?.find((account) => account.id === viewingId)}
+        onClose={() => setViewingId(undefined)}
+        onAction={(kind, account) => setAction({ kind, account })}
+      />
       {action && (
         <AccountForm
           key={action.kind + ('account' in action ? action.account.id : '')}
@@ -93,6 +99,63 @@ export function StaffAccountsPage() {
         />
       )}
     </Page>
+  )
+}
+
+/** Xem tài khoản trước; sửa, khóa và đặt mật khẩu ít dùng nên nằm trong cửa sổ này thay vì ngoài bảng. */
+function AccountDetails({
+  account,
+  onClose,
+  onAction,
+}: {
+  account?: StaffAccount
+  onClose: () => void
+  onAction: (kind: 'edit' | 'password', account: StaffAccount) => void
+}) {
+  return (
+    <Modal
+      open={account !== undefined}
+      centered
+      width={modalWidth.small}
+      onCancel={onClose}
+      title={account?.fullName}
+      footer={
+        account && (
+          <div className="af-order-footer">
+            <div />
+            <div>
+              <Button icon={<KeyRound size={15} />} onClick={() => onAction('password', account)}>
+                Đặt mật khẩu
+              </Button>
+              <Button type="primary" icon={<Pencil size={15} />} onClick={() => onAction('edit', account)}>
+                Sửa / khóa
+              </Button>
+            </div>
+          </div>
+        )
+      }
+    >
+      {account && (
+        <Descriptions
+          column={1}
+          size="small"
+          items={[
+            { key: 'email', label: 'Email đăng nhập', children: account.email },
+            { key: 'role', label: 'Vai trò', children: roleLabel(account.role) },
+            { key: 'phone', label: 'Điện thoại', children: account.phone || '—' },
+            {
+              key: 'status',
+              label: 'Trạng thái',
+              children: (
+                <Tag color={account.status === 'ACTIVE' ? 'green' : 'default'}>
+                  {account.status === 'ACTIVE' ? 'Đang hoạt động' : 'Đã khóa'}
+                </Tag>
+              ),
+            },
+          ]}
+        />
+      )}
+    </Modal>
   )
 }
 
