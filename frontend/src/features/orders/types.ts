@@ -56,6 +56,7 @@ export type DeliveryResult = {
 export type OrderBottles = { delivered: number; returned: number; deposit: number }
 
 export type Order = {
+  paymentBalance?: { paid: number; due: number; refundDue: number }
   id: string
   /** Mã hiển thị khi khác `id` (tài khoản thật: orderCode của BE). */
   code?: string
@@ -110,13 +111,14 @@ export type OrderDraft = {
 }
 
 export const paidAmount = (order: Order) =>
-  order.payments.reduce((sum, payment) => sum + (payment.refund ? -payment.amount : payment.amount), 0)
-export const amountDue = (order: Order) => Math.max(0, order.total - paidAmount(order))
+  order.paymentBalance?.paid ?? order.payments.reduce((sum, payment) => sum + (payment.refund ? -payment.amount : payment.amount), 0)
+export const amountDue = (order: Order) => order.paymentBalance?.due ?? Math.max(0, order.total - paidAmount(order))
 /**
- * Số còn phải thu dùng cho chứng từ. BE chưa có phiếu thu, chỉ trả trạng thái thanh toán,
- * nên `amountDue` sẽ sai với đơn đã trả tiền; "Thanh toán một phần" không biết số tiền nên trả null.
+ * Ưu tiên số dư API cho chứng từ; màn hình chỉ có trạng thái giữ cách hiển thị an toàn
+ * khi chưa biết số tiền đã thu của đơn thanh toán một phần.
  */
 export const knownAmountDue = (order: Order): number | null => {
+  if (order.paymentBalance) return order.paymentBalance.due
   if (order.paymentStatusLabel === undefined) return amountDue(order)
   if (order.paymentStatusLabel === 'Chưa thanh toán') return order.total
   return order.paymentStatusLabel === 'Thanh toán một phần' ? null : 0

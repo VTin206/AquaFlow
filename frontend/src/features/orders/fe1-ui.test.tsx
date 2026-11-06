@@ -21,6 +21,11 @@ import type { LiveOrder } from '@/features/live/orderApi'
 import { orderApi } from '@/features/live/orderApi'
 import { dispatchApi, type DispatchReceipt } from '@/features/live/dispatchApi'
 import { LiveOrderDetails } from '@/features/live/LiveOrderDetails'
+vi.mock('@/features/live/paymentApi', async original => {
+  const actual = await original<typeof import('@/features/live/paymentApi')>()
+  actual.paymentApi.list = vi.fn().mockResolvedValue({ balance: { orderId: 12, orderCode: 'ORDER-12', customerId: 5, status: 'PREPARING', total: 10000, received: 0, refunded: 0, paid: 0, due: 10000, refundDue: 0 }, payments: [] })
+  return actual
+})
 
 vi.mock('@/features/auth/authService', () => ({ authService: { login: vi.fn(), me: vi.fn() } }))
 vi.mock('@/features/shop/customerOrderApi', () => ({ customerOrderApi: { list: vi.fn(), detail: vi.fn() } }))
