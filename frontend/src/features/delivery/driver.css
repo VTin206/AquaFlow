@@ -86,11 +86,20 @@
   gap: 8px 20px;
   color: var(--af-text-secondary);
 }
-.af-driver-totals span,
-.af-driver-facts li {
+.af-driver-totals span {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+/* Dòng dài (tên hàng) xuống dòng mà icon vẫn giữ cỡ và nằm ngang dòng đầu. */
+.af-driver-facts li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.af-driver-facts li > svg {
+  flex: none;
+  margin-top: 3px;
 }
 .af-driver-totals strong {
   color: var(--af-text-strong);
@@ -143,23 +152,37 @@
 .af-driver-note {
   color: var(--af-warning);
 }
+/* Nút phụ (Gọi, Chỉ đường, Thu tiền, Lịch sử) xếp một hàng, icon trên chữ dưới cho vừa màn hình hẹp. */
 .af-driver-actions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
-.af-driver-actions .ant-btn {
-  height: 48px;
+.af-driver-actions > .ant-btn {
+  flex: 1 1 0;
+  min-width: 72px;
+  flex-direction: column;
+  gap: 2px;
+  height: 58px;
+  padding: 4px 6px;
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: normal;
+}
+.af-driver-actions > .ant-btn .ant-btn-icon {
+  margin: 0;
 }
 /* Hành động chính của điểm giao chiếm cả hàng để dễ bấm trên điện thoại. */
 .af-driver-result,
-.af-driver-actions .af-driver-primary {
-  grid-column: 1 / -1;
+.af-driver-actions > .af-driver-primary {
+  flex: 1 0 100%;
 }
 .af-driver-result .ant-btn,
-.af-driver-actions .af-driver-primary {
+.af-driver-actions > .af-driver-primary {
+  flex-direction: row;
   width: 100%;
-  height: 48px;
+  height: 52px;
+  font-size: 16px;
   font-weight: 600;
 }
 .af-driver-summary .af-order-focus {
@@ -195,4 +218,14 @@
   display: flex;
   justify-content: space-between;
   gap: 8px;
+}
+.af-text-success {
+  color: var(--af-money-paid);
+  font-weight: 600;
+}
+/* Thanh tài xế không có nút menu nên đủ chỗ cho biểu tượng ở mọi cỡ màn hình. */
+@media (max-width: 360px) {
+  .af-driver-bar .af-topbar-brand .af-brand-mark {
+    display: inline-flex;
+  }
 }

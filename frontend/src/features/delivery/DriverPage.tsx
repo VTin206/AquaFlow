@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Button, Card, Empty, Progress, Select, Skeleton, Tag } from 'antd'
+import { Button, Card, Empty, Progress, Skeleton, Tag } from 'antd'
 import { Clock3, Map, Package, Phone, Recycle, Wallet } from 'lucide-react'
 import { mapsSearchUrl } from '@/shared/address/maps'
 import { useStaff } from '@/features/auth/useStaff'
@@ -13,24 +13,15 @@ import { OrderFocusBanner } from '@/features/orders/components/OrderSheet'
 import { OrderStatusTag } from '@/features/orders/components/OrderStatusTag'
 import { amountDue, deliveryAttempts, jugCount, type Order } from '@/features/orders/types'
 import { useOrders } from '@/features/orders/useOrders'
+import { TripRouteButton } from './components/TripRouteButton'
 import { TripStatusTag } from './components/TripStatusTag'
-import { drivers, type Trip } from './types'
+import type { Trip } from './types'
 import { driverTripFocus } from './tripFocus'
 import { dispatchedIn, openIn } from './tripService'
 import { useTrips } from './useTrips'
 import { useIsDemo } from '@/shared/features'
 import { LiveDriverPage } from './LiveDriverPage'
-
-const DRIVER_KEY = 'aquaflow.driver'
-const readDriver = () => {
-  try {
-    const saved = localStorage.getItem(DRIVER_KEY)
-    return saved && drivers.includes(saved) ? saved : drivers[0]
-  } catch {
-    return drivers[0]
-  }
-}
-
+import { DriverDue, driverToday } from './driverParts'
 
 /** Màn hình điện thoại cho tài xế: chỉ chuyến của mình, nút gọi/chỉ đường lớn, ghi kết quả từng điểm. */
 export function DriverPage() {
@@ -39,49 +30,25 @@ export function DriverPage() {
 
 function DemoDriverPage() {
   const staff = useStaff()
-  const [chosen, setDriver] = useState(readDriver)
-  // Tài khoản giao hàng chỉ xem chuyến của chính mình; chủ cửa hàng chọn tài xế để xem thay.
-  const ownTrips = staff?.role === 'DELIVERY_STAFF'
-  const driver = ownTrips ? staff.name : chosen
   const tripsQuery = useTrips()
   const ordersQuery = useOrders()
-  const [orderId, setOrderId] = useState<string | null>(null)
+  const [payingId, setPayingId] = useState<string | null>(null)
   const orders = ordersQuery.data ?? []
-  const myTrips = (tripsQuery.data ?? []).filter((trip) => trip.driver === driver && trip.status !== 'Đã đối soát')
+  const myTrips = (tripsQuery.data ?? []).filter((trip) => trip.driver === staff?.name && trip.status !== 'Đã đối soát')
 
   useEffect(() => {
     document.title = 'Chuyến của tôi | AquaFlow'
   }, [])
-
-  const chooseDriver = (value: string) => {
-    setDriver(value)
-    try {
-      localStorage.setItem(DRIVER_KEY, value)
-    } catch {
-      // Không lưu được thì lần sau chọn lại.
-    }
-  }
 
   return (
     <>
       <div className="af-driver">
         <header className="af-driver-head">
           <h1>Chuyến của tôi</h1>
-          {ownTrips && (
-            <p>
-              {driver} · {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit' })}
-            </p>
-          )}
+          <p>
+            {staff?.name} · {driverToday()}
+          </p>
         </header>
-        {!ownTrips && (
-          <>
-            <label className="af-driver-picker">
-              <span>Tài xế</span>
-              <Select value={driver} onChange={chooseDriver} options={drivers.map((name) => ({ value: name, label: name }))} />
-            </label>
-            <p className="af-form-hint">Đang xem thay tài xế. Nhân viên giao hàng đăng nhập sẽ chỉ thấy chuyến của mình.</p>
-          </>
-        )}
 
         {tripsQuery.isError || ordersQuery.isError ? (
           <Card>
@@ -105,17 +72,17 @@ function DemoDriverPage() {
               key={trip.id}
               trip={trip}
               stops={trip.orderIds.map((id) => orders.find((order) => order.id === id)).filter((order) => order !== undefined)}
-              onDetails={setOrderId}
+              onCollect={setPayingId}
             />
           ))
         )}
       </div>
-      {orderId && <OrderDetailsModal key={orderId} orderId={orderId} onClose={() => setOrderId(null)} />}
+      {payingId && <OrderDetailsModal key={payingId} orderId={payingId} payOnly onClose={() => setPayingId(null)} />}
     </>
   )
 }
 
-function DriverTrip({ trip, stops, onDetails }: { trip: Trip; stops: Order[]; onDetails: (id: string) => void }) {
+function DriverTrip({ trip, stops, onCollect }: { trip: Trip; stops: Order[]; onCollect: (id: string) => void }) {
   const pending = stops.filter((order) => openIn(trip, order))
   const finished = stops.filter((order) => !openIn(trip, order))
   const waiting = pending.filter((order) => !dispatchedIn(trip, order)).length
@@ -151,63 +118,89 @@ function DriverTrip({ trip, stops, onDetails }: { trip: Trip; stops: Order[]; on
             nextCustomer: pending[0]?.customer,
           })}
         />
+        <TripRouteButton
+          size="large"
+          block
+          label="Xem lộ trình các điểm còn lại"
+          addresses={pending.map((order) => [order.address, order.area].filter(Boolean).join(', '))}
+        />
       </Card>
 
       <ol className="af-driver-stops">
-        {pending.map((order, index) => (
-          <li key={order.id} className="af-driver-stop">
-            <div className="af-trip-stop-top">
-              <span className="af-trip-stop-index">{index + 1}</span>
-              <strong className="af-driver-customer">{order.customer}</strong>
-              {dispatchedIn(trip, order) ? <OrderStatusTag status={order.status} method={order.method} /> : <Tag>Chờ xuất kho</Tag>}
-              <LateTag order={order} />
-            </div>
-            <p className="af-driver-address">
-              {order.address}
-              {order.floor ? ` · lầu ${order.floor} (thang bộ)` : ''}
-            </p>
-            <ul className="af-driver-facts">
-              <li>
-                <Package size={15} /> {order.items}
-              </li>
-              {order.appointment && (
+        {pending.map((order, index) => {
+          const orderDue = amountDue(order)
+          return (
+            <li key={order.id} className="af-driver-stop">
+              <div className="af-trip-stop-top">
+                <span className="af-trip-stop-index">{index + 1}</span>
+                <strong className="af-driver-customer">{order.customer}</strong>
+                {/* Cả chuyến đang giao thì không lặp lại thẻ "Đang giao" ở từng điểm. */}
+                {!dispatchedIn(trip, order) ? (
+                  <Tag>Chờ xuất kho</Tag>
+                ) : (
+                  order.status !== 'Đang giao' && <OrderStatusTag status={order.status} method={order.method} />
+                )}
+                <LateTag order={order} />
+              </div>
+              <small className="af-text-muted">{order.id}</small>
+              <p className="af-driver-address">
+                {order.address}
+                {order.floor ? ` · lầu ${order.floor} (thang bộ)` : ''}
+              </p>
+              <ul className="af-driver-facts">
                 <li>
-                  <Clock3 size={15} /> Hẹn {new Date(order.appointment).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                  <Package size={15} />
+                  <span>{order.items}</span>
                 </li>
-              )}
-              <li>
-                <Wallet size={15} /> Thu <Money value={amountDue(order)} tone={dueTone(amountDue(order))} />
-                {jugCount(order) ? ` · đổi ${jugCount(order)} vỏ` : ''}
-              </li>
-              {order.note && <li className="af-driver-note">{order.note}</li>}
-              {deliveryAttempts(order)
-                .filter((attempt) => !attempt.success)
-                .map((attempt) => (
-                  <li key={attempt.at} className="af-text-danger">
-                    Lần trước thất bại ({new Date(attempt.at).toLocaleDateString('vi-VN')}): {attempt.reason}
+                {order.appointment && (
+                  <li>
+                    <Clock3 size={15} />
+                    <span>Hẹn {new Date(order.appointment).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
                   </li>
-                ))}
-            </ul>
-            <div className="af-driver-actions">
-              {order.phone && (
-                <Button size="large" icon={<Phone size={18} />} href={`tel:${order.phone.replace(/\s/g, '')}`}>
-                  Gọi
+                )}
+                <li>
+                  <Wallet size={15} />
+                  <span>
+                    <DriverDue due={orderDue} />
+                    {jugCount(order) ? ` · đổi ${jugCount(order)} vỏ` : ''}
+                  </span>
+                </li>
+                {order.note && <li className="af-driver-note">{order.note}</li>}
+                {deliveryAttempts(order)
+                  .filter((attempt) => !attempt.success)
+                  .map((attempt) => (
+                    <li key={attempt.at} className="af-text-danger">
+                      Lần trước thất bại ({new Date(attempt.at).toLocaleDateString('vi-VN')}): {attempt.reason}
+                    </li>
+                  ))}
+              </ul>
+              <div className="af-driver-actions">
+                {order.phone && (
+                  <Button size="large" icon={<Phone size={18} />} href={`tel:${order.phone.replace(/\s/g, '')}`}>
+                    Gọi
+                  </Button>
+                )}
+                <Button
+                  size="large"
+                  icon={<Map size={18} />}
+                  href={mapsSearchUrl([order.address, order.area].filter(Boolean).join(', '))}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Chỉ đường
                 </Button>
-              )}
-              <Button size="large" icon={<Map size={18} />} href={mapsSearchUrl([order.address, order.area].filter(Boolean).join(', '))} target="_blank" rel="noreferrer">
-                Chỉ đường
-              </Button>
-              <Button size="large" onClick={() => onDetails(order.id)}>
-                Thu tiền
-              </Button>
-              {order.status === 'Đang giao' && (
-                <span className="af-driver-result">
-                  <AdvanceStatusButton order={order} size="large" primary />
-                </span>
-              )}
-            </div>
-          </li>
-        ))}
+                <Button size="large" icon={<Wallet size={18} />} disabled={orderDue <= 0} onClick={() => onCollect(order.id)}>
+                  Thu tiền
+                </Button>
+                {order.status === 'Đang giao' && (
+                  <span className="af-driver-result">
+                    <AdvanceStatusButton order={order} size="large" primary />
+                  </span>
+                )}
+              </div>
+            </li>
+          )
+        })}
       </ol>
 
       {finished.length > 0 && (
