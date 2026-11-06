@@ -1,5 +1,26 @@
+import dayjs, { type Dayjs } from 'dayjs'
 import { shortDate } from '@/shared/utils/format'
 import type { DailyRevenue, ReportRange } from './reportService'
+
+export type ReportPreset = { label: string; value: [Dayjs, Dayjs] }
+
+/** Các kỳ chọn nhanh; kỳ đang diễn ra tính tới hôm nay. Tính lại mỗi lần gọi để mở qua đêm vẫn đúng ngày. */
+export function reportPresets(now: Dayjs = dayjs()): ReportPreset[] {
+  const lastMonth = now.startOf('month').subtract(1, 'month')
+  const quarter = now.startOf('year').month(now.month() - (now.month() % 3))
+  const lastYear = now.startOf('year').subtract(1, 'year')
+  return [
+    { label: 'Hôm nay', value: [now, now] },
+    { label: '7 ngày qua', value: [now.subtract(6, 'day'), now] },
+    { label: '30 ngày qua', value: [now.subtract(29, 'day'), now] },
+    { label: 'Tháng này', value: [now.startOf('month'), now] },
+    { label: 'Tháng trước', value: [lastMonth, lastMonth.endOf('month')] },
+    { label: 'Quý này', value: [quarter, now] },
+    { label: 'Quý trước', value: [quarter.subtract(3, 'month'), quarter.subtract(1, 'day')] },
+    { label: 'Năm nay', value: [now.startOf('year'), now] },
+    { label: 'Năm trước', value: [lastYear, lastYear.endOf('year')] },
+  ]
+}
 
 export type Granularity = 'day' | 'week' | 'month'
 

@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
-import { App, Badge, Menu, Tooltip, type MenuProps } from 'antd'
+import { useState, type ReactNode } from 'react'
+import { Badge, Button, Menu, Modal, Tooltip, type MenuProps } from 'antd'
 import { CircleQuestionMark, Droplets, PanelLeftClose, PanelLeftOpen, Settings2, type LucideIcon } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router'
 import { navGroups } from '@/app/navigation'
@@ -20,7 +20,7 @@ type SidebarProps = {
 export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: SidebarProps) {
   const location = useLocation()
   const navigate = useNavigate()
-  const { message } = App.useApp()
+  const [helpOpen, setHelpOpen] = useState(false)
   const staff = useStaff()
   const { data: settings } = useSettings(useFeature('storeSettings'))
   const supported = usePageSupported()
@@ -134,10 +134,36 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: Sid
             !supported('/settings') && <small className="af-menu-soon">Chưa hỗ trợ</small>,
             location.pathname === '/settings',
           )}
-        {footerLink('Trợ giúp', <CircleQuestionMark size={18} strokeWidth={1.8} />, () =>
-          message.info('Hướng dẫn sử dụng sẽ được bổ sung.'),
-        )}
+        {footerLink('Trợ giúp', <CircleQuestionMark size={18} strokeWidth={1.8} />, () => setHelpOpen(true))}
       </div>
+      <Modal
+        title="Hướng dẫn nhanh"
+        open={helpOpen}
+        centered
+        onCancel={() => setHelpOpen(false)}
+        footer={
+          <Button type="primary" onClick={() => setHelpOpen(false)}>
+            Đã hiểu
+          </Button>
+        }
+      >
+        <p>Quy trình một đơn giao hàng:</p>
+        <ol className="af-help-steps">
+          <li>
+            <strong>Đơn hàng:</strong> tạo đơn hoặc nhận đơn từ trang khách, xác nhận rồi chuẩn bị hàng.
+          </li>
+          <li>
+            <strong>Giao hàng:</strong> xếp đơn vào chuyến, chọn tài xế, xuất kho.
+          </li>
+          <li>
+            <strong>Màn hình tài xế:</strong> tài xế khởi hành và ghi kết quả từng điểm giao.
+          </li>
+          <li>
+            <strong>Giao hàng:</strong> đối soát tiền và vỏ khi tài xế về.
+          </li>
+        </ol>
+        <p className="af-form-hint">Trên máy tính, nhấn Ctrl + K để tìm nhanh.</p>
+      </Modal>
     </div>
   )
 }

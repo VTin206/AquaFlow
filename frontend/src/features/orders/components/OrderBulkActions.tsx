@@ -13,7 +13,7 @@ import { amountDue, orderedAtOf, type Order } from '../types'
 
 const codeOf = (order: Order) => order.code ?? order.id
 
-/** Thao tác cho các đơn đã tích chọn: xác nhận đơn chờ, in chứng từ (bản dùng thử), xuất Excel. */
+/** Thao tác cho các đơn đã tích chọn: xác nhận đơn chờ, in chứng từ, xuất Excel. */
 export function OrderBulkActions({ orders, onSelect }: { orders: Order[]; onSelect: (ids: string[]) => void }) {
   const { message, modal } = App.useApp()
   const showPayments = useFeature('orderPayments')
@@ -132,7 +132,10 @@ export function OrderBulkActions({ orders, onSelect }: { orders: Order[]; onSele
               ],
             }}
           >
-            <Button icon={<Printer size={16} />}>In</Button>
+            {/* Chờ thông tin cửa hàng để chứng từ không bị thiếu phần đầu. */}
+            <Button icon={<Printer size={16} />} disabled={!settings}>
+              In
+            </Button>
           </Dropdown>
         )}
         <Button icon={<FileSpreadsheet size={16} />} loading={exporting} onClick={() => void exportExcel()}>

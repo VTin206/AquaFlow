@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
-import { Alert, App, Button, Card, Descriptions, Modal, Popconfirm, Space, Table, Tag } from 'antd'
+import { Alert, App, Button, Collapse, Descriptions, Dropdown, Modal, Popconfirm, Skeleton, Table, Tag, type CollapseProps } from 'antd'
+import { Ellipsis } from 'lucide-react'
 import { OrderTotals } from '@/shared/components/OrderTotals'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { useStaff } from '@/features/auth/useStaff'
+import { tripLabels } from '@/features/delivery/deliveryApi'
 import { catalogApi } from './catalogApi'
 import {
   canCancel,
@@ -18,10 +20,20 @@ import {
   type OrderStatus,
 } from './orderApi'
 import { invalidateLiveData } from './invalidateLiveData'
-import { modalWidth } from '@/shared/utils/modal'
-import { canDispatch, dispatchApi } from './dispatchApi'
+import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
+import { canDispatch, canHandover, dispatchApi } from './dispatchApi'
 import { OrderProgress } from '@/features/orders/OrderProgress'
 import { OrderDeliveryHistory } from '@/features/orders/OrderDeliveryHistory'
+import { OrderFocusBanner, OrderLines, OrderParty } from '@/features/orders/components/OrderSheet'
+import { fromLiveOrder } from '@/features/orders/orderData'
+import { liveOrderFocus } from '@/features/orders/orderFocus'
+import { DeliverySlipDocument, InvoiceDocument } from '@/features/orders/print/OrderDocuments'
+import { useCopyOrderMessage } from '@/features/orders/useCopyOrderMessage'
+import { useOrderDeliveryHistory } from '@/features/orders/useOrderDeliveryHistory'
+import { useSettings } from '@/features/settings/settingsService'
+import { usePrinter } from '@/shared/print/usePrinter'
+import { LiveOrderPayments } from './LiveOrderPayments'
+import { useOrderPayments } from './paymentApi'
 
 const dateTime = (value: string | null) => (value ? new Date(value).toLocaleString('vi-VN') : '—')
 const statusColors: Record<OrderStatus, string> = {
@@ -43,14 +55,19 @@ const paymentTagColors: Record<keyof typeof paymentStatusLabels, string> = {
   REFUNDED: 'default',
 }
 
-/** Chi tiết đơn: giữ hàng, chuẩn bị, chuyển sang chuyến để Dispatch và xem phiếu xuất theo lô. */
+/**
+ * Chi tiết đơn, sắp theo thứ tự người dùng cần: đơn đang cần gì → ai nhận, hàng gì, bao nhiêu tiền → một hành động chính.
+ * Giao hàng, xuất kho và thông tin phụ gập lại, chỉ hiện tóm tắt cho tới khi cần xem.
+ */
 export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => void }) {
   const staff = useStaff()
   const canManage = staff?.role === 'ADMIN' || staff?.role === 'SALES_STAFF'
   const { message } = App.useApp()
   const queryClient = useQueryClient()
+  const payments = useOrderPayments(id)
+  const orderQueryKey = ['live', 'order', staff?.name, staff?.role, id]
   const query = useQuery({
-    queryKey: ['live', 'order', staff?.name, staff?.role, id],
+    queryKey: orderQueryKey,
     queryFn: () => orderApi.detail(id),
     enabled: canManage,
     refetchInterval: 15000,
@@ -62,6 +79,7 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
     enabled: canManage,
     refetchInterval: 15000,
   })
+  const { allowed: canSeeTrips, query: trips } = useOrderDeliveryHistory(id)
   const update = useMutation({
     mutationFn: (status: 'CONFIRMED' | 'PREPARING' | 'CANCELLED') => orderApi.updateStatus(id, status),
     onSuccess: (order) => {
@@ -80,141 +98,257 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
       message.error(error.message)
     },
   })
+  const handover = useMutation({
+    mutationFn: () => dispatchApi.create(id),
+    onSuccess: async (receipt) => {
+      // Chỉ đổi trạng thái sau khi BE đã xuất kho thành công; không đánh dấu đã thanh toán.
+      queryClient.setQueryData<NonNullable<typeof query.data>>(orderQueryKey, (current) =>
+        current ? { ...current, status: receipt.orderStatus } : current,
+      )
+      message.success('Đã xuất kho và bàn giao hàng cho khách tại quầy.')
+      await invalidateLiveData(queryClient)
+    },
+    onError: async (error: Error) => {
+      message.error(error.message)
+      // Bao gồm trường hợp nhân viên khác đã bàn giao đơn này (409).
+      await invalidateLiveData(queryClient)
+    },
+  })
+  const busy = update.isPending || handover.isPending
+  const printer = usePrinter()
+  const copyMessage = useCopyOrderMessage()
+  const { data: settings } = useSettings()
   const order = query.data
-  const actions =
-    order && canManage && (canConfirm(order) || canPrepare(order) || canCancel(order) || canDispatch(order)) ? (
-      <Space wrap>
-        {canCancel(order) && (
-          <Popconfirm
-            title={`Hủy đơn ${order.orderCode}?`}
-            description={
-              order.status === 'PENDING' ? 'Đơn chưa giữ hàng nên không ảnh hưởng tồn kho.' : 'Hàng đã giữ cho đơn sẽ được trả lại tồn kho.'
-            }
-            okText="Hủy đơn"
-            okButtonProps={{ danger: true }}
-            cancelText="Không"
-            onConfirm={() => update.mutate('CANCELLED')}
-          >
-            <Button danger loading={update.isPending && update.variables === 'CANCELLED'} disabled={update.isPending}>
-              Hủy đơn
-            </Button>
-          </Popconfirm>
-        )}
-        {canConfirm(order) && (
-          <Popconfirm
-            title={`Xác nhận đơn ${order.orderCode}?`}
-            description={confirmOrderHint}
-            okText="Xác nhận"
-            cancelText="Chưa"
-            onConfirm={() => update.mutate('CONFIRMED')}
-          >
-            <Button type="primary" loading={update.isPending && update.variables === 'CONFIRMED'} disabled={update.isPending}>
-              Xác nhận đơn
-            </Button>
-          </Popconfirm>
-        )}
-        {canPrepare(order) && (
-          <Popconfirm
-            title={`Chuẩn bị hàng cho đơn ${order.orderCode}?`}
-            description={
-              order.fulfillmentType === 'DELIVERY'
-                ? 'Đơn chuyển sang "Đang chuẩn bị" để soạn hàng trước khi xuất giao.'
-                : 'Đơn chuyển sang "Đang chuẩn bị" để soạn hàng cho khách.'
-            }
-            okText="Chuẩn bị"
-            cancelText="Chưa"
-            onConfirm={() => update.mutate('PREPARING')}
-          >
-            <Button type="primary" loading={update.isPending && update.variables === 'PREPARING'} disabled={update.isPending}>
-              Chuẩn bị hàng
-            </Button>
-          </Popconfirm>
-        )}
-        {canDispatch(order) && (
-          <Link to="/delivery" onClick={onClose}>
-            <Button type="primary" disabled={update.isPending}>
-              Xếp chuyến / Dispatch
-            </Button>
-          </Link>
-        )}
-      </Space>
+  // Chưa tải được danh mục thì vẫn hiện đơn với mã sản phẩm, nhưng chưa cho in để chứng từ không thiếu tên hàng.
+  const viewOrder = order ? fromLiveOrder(order, catalog.data ?? [], payments.data?.balance) : undefined
+  const canPrint = Boolean(catalog.data && settings && payments.data)
+  const lastAttempt = trips.data?.at(-1)?.assignment.latestAttempt
+  const lastTrip = trips.data?.at(-1)?.trip
+
+  const moreMenu =
+    viewOrder && viewOrder.status !== 'Đã hủy' ? (
+      <Dropdown
+        trigger={['click']}
+        menu={{
+          items: [
+            { key: 'copy', label: 'Sao chép tin nhắn xác nhận', onClick: () => void copyMessage(viewOrder, settings?.storeName) },
+            {
+              key: 'invoice',
+              label: 'In hóa đơn bán lẻ',
+              disabled: !canPrint,
+              onClick: () => printer.print(<InvoiceDocument order={viewOrder} settings={settings} />),
+            },
+            ...(viewOrder.method === 'Giao tận nơi'
+              ? [
+                  {
+                    key: 'slip',
+                    label: 'In phiếu giao hàng',
+                    disabled: !canPrint,
+                    onClick: () => printer.print(<DeliverySlipDocument order={viewOrder} settings={settings} />),
+                  },
+                ]
+              : []),
+          ],
+        }}
+      >
+        <Button icon={<Ellipsis size={16} />}>Thao tác khác</Button>
+      </Dropdown>
     ) : null
+
+  const primaryAction =
+    order && canManage ? (
+      canConfirm(order) ? (
+        <Popconfirm
+          title={`Xác nhận đơn ${order.orderCode}?`}
+          description={confirmOrderHint}
+          okText="Xác nhận"
+          cancelText="Chưa"
+          onConfirm={() => update.mutate('CONFIRMED')}
+        >
+          <Button type="primary" loading={update.isPending && update.variables === 'CONFIRMED'} disabled={update.isPending}>
+            Xác nhận đơn
+          </Button>
+        </Popconfirm>
+      ) : canPrepare(order) ? (
+        <Popconfirm
+          title={`Chuẩn bị hàng cho đơn ${order.orderCode}?`}
+          description={
+            order.fulfillmentType === 'DELIVERY'
+              ? 'Đơn chuyển sang "Đang chuẩn bị" để soạn hàng trước khi xuất giao.'
+              : 'Đơn chuyển sang "Đang chuẩn bị" để soạn hàng cho khách.'
+          }
+          okText="Chuẩn bị"
+          cancelText="Chưa"
+          onConfirm={() => update.mutate('PREPARING')}
+        >
+          <Button type="primary" loading={update.isPending && update.variables === 'PREPARING'} disabled={update.isPending}>
+            Chuẩn bị hàng
+          </Button>
+        </Popconfirm>
+      ) : canHandover(order) ? (
+        <Popconfirm
+          title={`Bàn giao đơn ${order.orderCode} tại quầy?`}
+          description="Xác nhận khách đã nhận đủ hàng. Hệ thống xuất toàn bộ hàng đã giữ và ghi nhận khách đã nhận hàng; thanh toán được theo dõi riêng."
+          okText="Xác nhận bàn giao"
+          cancelText="Chưa"
+          disabled={busy}
+          okButtonProps={{ loading: handover.isPending, disabled: busy }}
+          onConfirm={() => { if (!busy) handover.mutate() }}
+        >
+          <Button type="primary" loading={handover.isPending} disabled={busy}>
+            Bàn giao tại quầy
+          </Button>
+        </Popconfirm>
+      ) : canDispatch(order) ? (
+        <Link to="/delivery" onClick={onClose}>
+          <Button type="primary" disabled={update.isPending}>
+            Xếp chuyến
+          </Button>
+        </Link>
+      ) : null
+    ) : null
+
+  const cancelAction =
+    order && canManage && canCancel(order) ? (
+      <Popconfirm
+        title={`Hủy đơn ${order.orderCode}?`}
+        description={order.status === 'PENDING' ? 'Đơn chưa giữ hàng nên không ảnh hưởng tồn kho.' : 'Hàng đã giữ cho đơn sẽ được trả lại tồn kho.'}
+        okText="Hủy đơn"
+        okButtonProps={{ danger: true }}
+        disabled={busy}
+        cancelText="Không"
+        onConfirm={() => { if (!busy) update.mutate('CANCELLED') }}
+      >
+        <Button type="text" danger loading={update.isPending && update.variables === 'CANCELLED'} disabled={busy}>
+          Hủy đơn
+        </Button>
+      </Popconfirm>
+    ) : null
+
+  const productName = (productId: number) => catalog.data?.find((product) => product.id === productId)?.name ?? `Sản phẩm #${productId}`
+  const moreSections: CollapseProps['items'] = order
+    ? [
+        { key: 'payments', label: 'Thanh toán', extra: payments.data ? `Còn phải thu ${currency(payments.data.balance.due)}` : undefined, children: <LiveOrderPayments orderId={id} /> },
+        ...(order.fulfillmentType === 'DELIVERY' && canSeeTrips
+          ? [
+              {
+                key: 'delivery',
+                label: 'Giao hàng',
+                extra: lastTrip
+                  ? `Chuyến #${lastTrip.id} · ${tripLabels[lastTrip.status]}`
+                  : trips.isSuccess
+                    ? canCancel(order)
+                      ? 'Chưa xếp chuyến'
+                      : 'Không thuộc chuyến nào'
+                    : undefined,
+                children: <OrderDeliveryHistory orderId={id} />,
+              },
+            ]
+          : []),
+        {
+          key: 'stock',
+          label: 'Xuất kho',
+          extra: receipts.data ? (receipts.data.length ? `${receipts.data.length} phiếu` : 'Chưa xuất') : undefined,
+          children: receipts.isError ? (
+            <QueryError error={receipts.error} onRetry={receipts.refetch} />
+          ) : receipts.isPending ? (
+            <Skeleton active />
+          ) : !receipts.data.length ? (
+            <p className="af-order-more-empty">Đơn chưa có phiếu xuất kho.</p>
+          ) : (
+            receipts.data.map((receipt) => (
+              <div key={receipt.id} className="af-order-receipt">
+                <p>
+                  <strong>Phiếu xuất #{receipt.id}</strong> · {dateTime(receipt.dispatchedAt)}
+                </p>
+                <Table
+                  rowKey={(line) => `${line.orderItemId}-${line.batchId}`}
+                  size="small"
+                  dataSource={receipt.items}
+                  pagination={false}
+                  scroll={{ x: 450 }}
+                  columns={[
+                    { title: 'Sản phẩm', dataIndex: 'productId', render: productName },
+                    { title: 'Lô', dataIndex: 'lotCode' },
+                    { title: 'Hạn dùng', dataIndex: 'expiresOn' },
+                    { title: 'Đã xuất', dataIndex: 'quantity', align: 'right' },
+                  ]}
+                />
+              </div>
+            ))
+          ),
+        },
+        {
+          key: 'info',
+          label: 'Thông tin đơn',
+          extra: channelLabels[order.channel] ?? order.channel,
+          children: (
+            <Descriptions
+              size="small"
+              column={{ xs: 1, sm: 2 }}
+              items={[
+                { key: 'channel', label: 'Kênh', children: channelLabels[order.channel] ?? order.channel },
+                { key: 'created', label: 'Ngày tạo', children: dateTime(order.createdAt) },
+                ...(order.confirmedAt ? [{ key: 'confirmed', label: 'Xác nhận lúc', children: dateTime(order.confirmedAt) }] : []),
+                ...(order.cancelledAt ? [{ key: 'cancelled', label: 'Hủy lúc', children: dateTime(order.cancelledAt) }] : []),
+              ]}
+            />
+          ),
+        },
+      ]
+    : []
+
   return (
     <Modal
       open
-      title={order ? `Đơn ${order.orderCode}` : 'Chi tiết đơn hàng'}
-      width={modalWidth.large}
+      width={modalWidth.medium}
+      styles={modalScrollBody}
       onCancel={onClose}
+      title={
+        <span className="af-order-title">
+          <span>{order ? `Đơn ${order.orderCode}` : 'Chi tiết đơn hàng'}</span>
+          {order && <Tag color={statusColors[order.status]}>{orderStatusLabels[order.status] ?? order.status}</Tag>}
+        </span>
+      }
       footer={
-        <Space wrap>
-          <Button onClick={onClose}>Đóng</Button>
-          {actions}
-        </Space>
+        order ? (
+          <div className="af-order-footer">
+            <div>{cancelAction}</div>
+            <div>
+              {moreMenu}
+              {primaryAction}
+            </div>
+          </div>
+        ) : null
       }
     >
       {query.isError ? (
         <QueryError error={query.error} onRetry={query.refetch} />
+      ) : !order || !viewOrder ? (
+        <Skeleton active />
       ) : (
-        <Card loading={query.isPending}>
-          {order && (
-            <>
-              <OrderProgress order={order} />
-              {canManage && order.fulfillmentType === 'DELIVERY' && order.status === 'PREPARING' && (
-                <Alert
-                  type="info"
-                  showIcon
-                  style={{ marginBottom: 16 }}
-                  title="Xuất kho đơn giao từ trang Giao hàng"
-                  description="Thêm đơn vào chuyến giao trước. Quản lý xuất kho toàn bộ đơn trong chuyến để tồn kho và trạng thái được cập nhật cùng nhau."
-                />
-              )}
-              <Descriptions
-                column={{ xs: 1, sm: 2 }}
-                items={[
-                  { key: 'customer', label: 'Người nhận', children: order.recipientName || 'Khách tại quầy' },
-                  { key: 'phone', label: 'Điện thoại', children: order.recipientPhone || '—' },
-                  { key: 'address', label: 'Địa chỉ', children: order.deliveryAddress || '—' },
-                  { key: 'area', label: 'Khu vực', children: order.deliveryArea || '—' },
-                  {
-                    key: 'status',
-                    label: 'Trạng thái',
-                    children: <Tag color={statusColors[order.status]}>{orderStatusLabels[order.status] ?? order.status}</Tag>,
-                  },
-                  { key: 'payment', label: 'Thanh toán', children: paymentStatusLabels[order.paymentStatus] ?? order.paymentStatus },
-                  { key: 'channel', label: 'Kênh', children: channelLabels[order.channel] ?? order.channel },
-                  { key: 'method', label: 'Nhận hàng', children: order.fulfillmentType === 'DELIVERY' ? 'Giao tận nơi' : 'Tại quầy' },
-                  { key: 'created', label: 'Ngày tạo', children: dateTime(order.createdAt) },
-                  { key: 'appointment', label: 'Giờ hẹn', children: dateTime(order.requestedDeliveryAt) },
-                  { key: 'confirmed', label: 'Xác nhận lúc', children: dateTime(order.confirmedAt) },
-                  { key: 'cancelled', label: 'Hủy lúc', children: dateTime(order.cancelledAt) },
-                  { key: 'note', label: 'Ghi chú', children: order.note || '—' },
-                ]}
-              />
-              {catalog.isError && (
-                <Alert
-                  type="warning"
-                  title="Không tải được tên sản phẩm; đang hiển thị mã định danh."
-                  action={<Button onClick={() => void catalog.refetch()}>Thử lại</Button>}
-                />
-              )}
-              <Table
-                rowKey="id"
-                dataSource={order.items}
-                pagination={false}
-                scroll={{ x: 550 }}
-                columns={[
-                  {
-                    title: 'Sản phẩm',
-                    dataIndex: 'productId',
-                    render: (productId: number) =>
-                      catalog.data?.find((product) => product.id === productId)?.name ?? `Sản phẩm #${productId}`,
-                  },
-                  { title: 'Số lượng', dataIndex: 'quantity', align: 'right', width: 90 },
-                  { title: 'Đơn giá', dataIndex: 'unitPrice', align: 'right', render: currency },
-                  { title: 'Thành tiền', dataIndex: 'lineTotal', align: 'right', render: currency },
-                ]}
-              />
+        <>
+          <OrderFocusBanner
+            focus={liveOrderFocus(
+              order,
+              lastAttempt?.outcome === 'FAILED' ? (lastAttempt.failureReason ?? null) : undefined,
+              order.fulfillmentType === 'DELIVERY' && trips.isSuccess && !trips.data.length,
+            )}
+          />
+          {order.status !== 'CANCELLED' && <OrderProgress order={order} showStatus={false} />}
+          {catalog.isError && (
+            <Alert
+              type="warning"
+              title="Không tải được tên sản phẩm; đang hiển thị mã định danh."
+              action={<Button onClick={() => void catalog.refetch()}>Thử lại</Button>}
+              style={{ marginBottom: 16 }}
+            />
+          )}
+          <div className="af-order-sheet">
+            <OrderParty order={viewOrder} />
+            <OrderLines lines={viewOrder.lines}>
               <OrderTotals
+                wide
                 rows={[
                   { label: 'Tiền hàng', value: currency(order.subtotal) },
                   ...(Number(order.discountAmount) > 0 ? [{ label: 'Giảm giá', value: `−${currency(order.discountAmount)}` }] : []),
@@ -233,49 +367,12 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
                   )
                 }
               />
-              {canConfirm(order) && (
-                <Alert
-                  type="warning"
-                  showIcon
-                  style={{ marginTop: 12 }}
-                  title="Đơn đang chờ xác nhận"
-                  description="Kiểm tra thông tin với khách rồi xác nhận để giữ hàng trong kho."
-                />
-              )}
-              {order.fulfillmentType === 'DELIVERY' && <OrderDeliveryHistory orderId={id} />}
-              {receipts.isPending && <p>Đang tải thông tin xuất kho…</p>}
-              {receipts.isSuccess && receipts.data.length === 0 && (
-                <Alert type="info" title="Đơn chưa có phiếu xuất kho." style={{ marginTop: 16 }} />
-              )}
-              {receipts.isError && <QueryError error={receipts.error} onRetry={receipts.refetch} />}
-              {receipts.data?.map((receipt) => (
-                <Card key={receipt.id} size="small" title={`Phiếu xuất #${receipt.id}`} style={{ marginTop: 16 }}>
-                  <p>
-                    Xuất lúc {dateTime(receipt.dispatchedAt)} · Nhân viên #{receipt.performedBy}
-                  </p>
-                  <Table
-                    rowKey={(line) => `${line.orderItemId}-${line.batchId}`}
-                    dataSource={receipt.items}
-                    pagination={false}
-                    scroll={{ x: 450 }}
-                    columns={[
-                      {
-                        title: 'Sản phẩm',
-                        dataIndex: 'productId',
-                        render: (productId: number) =>
-                          catalog.data?.find((product) => product.id === productId)?.name ?? `Sản phẩm #${productId}`,
-                      },
-                      { title: 'Lô', dataIndex: 'lotCode' },
-                      { title: 'Hạn dùng', dataIndex: 'expiresOn' },
-                      { title: 'Đã xuất', dataIndex: 'quantity', align: 'right' },
-                    ]}
-                  />
-                </Card>
-              ))}
-            </>
-          )}
-        </Card>
+            </OrderLines>
+          </div>
+          <Collapse ghost className="af-order-more" defaultActiveKey={['payments']} items={moreSections} />
+        </>
       )}
+      {printer.portal}
     </Modal>
   )
 }

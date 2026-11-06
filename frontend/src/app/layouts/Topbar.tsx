@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { Avatar, Button, Dropdown, Tooltip } from 'antd'
 import { Bell, ChevronDown, Clock3, Menu as MenuIcon, ShoppingCart, Waves } from 'lucide-react'
 import { Link } from 'react-router'
+import { useHomeLink } from '@/app/useHomeLink'
 import { useStaff } from '@/features/auth/useStaff'
 import { useFeature } from '@/shared/features'
+import { GlobalSearch } from './GlobalSearch'
 import { NotificationPopover } from './NotificationPopover'
 import { ThemeToggle } from './ThemeToggle'
 import { initialsOf, useAccountMenuItems } from './useAccountMenu'
@@ -43,6 +45,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
   const staff = useStaff()
   const menuItems = useAccountMenuItems()
   const showNotifications = useFeature('notifications')
+  const goHome = useHomeLink('/')
 
   return (
     <header className="af-topbar">
@@ -54,7 +57,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
           icon={<MenuIcon size={20} />}
           onClick={onOpenNav}
         />
-        <Link to="/" className="af-topbar-brand">
+        <Link to="/" className="af-topbar-brand" onClick={goHome}>
           <span className="af-brand-mark">
             <Waves size={22} strokeWidth={2.2} />
           </span>
@@ -65,6 +68,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
       </div>
       <div className="af-topbar-right">
         {staff?.isDemo && <span className="af-demo-label">Dữ liệu mẫu</span>}
+        <GlobalSearch />
         <Tooltip title={staff?.isDemo ? 'Trang khách đặt hàng (dùng chung dữ liệu mẫu trong tab này)' : 'Trang khách đặt hàng'}>
           <Link to="/shop" className="af-notification-link" aria-label="Mở trang khách đặt hàng">
             <ShoppingCart size={19} aria-hidden />

@@ -14,8 +14,8 @@ export const backendFeatures = {
   customerType: true,
   /** Khu vực và ghi chú trên hồ sơ khách (CustomerController). */
   customerProfileExtras: true,
-  /** Công nợ của khách (chưa có luồng thanh toán). */
-  customerDebt: false,
+  /** Số còn phải thu theo khách từ sổ thanh toán thật. */
+  customerDebt: true,
   /** Sổ vỏ bình và tiền cọc (chưa có API). */
   bottleLedger: false,
   /** Ảnh sản phẩm được lưu và trả về qua ProductController. */
@@ -24,8 +24,8 @@ export const backendFeatures = {
   productCatalogDetails: false,
   /** Tồn kho tối thiểu để cảnh báo sắp hết (ProductController, mặc định 10). */
   lowStockThreshold: true,
-  /** Phiếu thu, số còn phải thu của đơn (BE chỉ có trạng thái thanh toán, chưa có luồng thu tiền). */
-  orderPayments: false,
+  /** Phiếu thu/hoàn và số còn phải thu từ PaymentController. */
+  orderPayments: true,
 
   /** Kiểm hàng hoàn theo lô sau chuyến giao thất bại (Inventory Return API). */
   deliveryReturns: true,
@@ -36,12 +36,12 @@ export const backendFeatures = {
   notifications: true,
   /** Đăng ký CUSTOMER qua /auth/register, đăng nhập qua /auth/login. */
   customerAccounts: true,
-  /** Doanh thu, tiền đã thu trên Tổng quan (chờ API báo cáo). */
-  revenueReports: false,
+  /** Doanh thu, tiền đã thu trên Tổng quan qua ReportController (API chỉ cho chủ cửa hàng). */
+  revenueReports: true,
   /** Khách tự tra cứu đơn theo mã + số điện thoại hoặc liên kết riêng (chờ API công khai). */
   orderTracking: false,
-  /** In hóa đơn, phiếu giao (cần thông tin cửa hàng trên chứng từ). */
-  orderPrinting: false,
+  /** In hóa đơn, phiếu giao; thông tin cửa hàng trên chứng từ lấy từ StoreSettingsController. */
+  orderPrinting: true,
   /** Báo trước phí giao cho khách trên trang đặt hàng (BE tính khi xác nhận). */
   deliveryQuote: false,
   /** Thông tin cửa hàng và ngưỡng cảnh báo qua StoreSettingsController. */

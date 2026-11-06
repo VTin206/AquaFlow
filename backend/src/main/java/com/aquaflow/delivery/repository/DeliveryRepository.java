@@ -414,8 +414,7 @@ public class DeliveryRepository {
     public OrderBalance balance(long orderId) {
         return jdbc.queryForObject("""
                 SELECT o.id, o.subtotal-o.discount_amount+o.delivery_fee AS total,
-                  COALESCE((SELECT SUM(CASE WHEN p.direction='IN' THEN p.amount ELSE -p.amount END)
-                    FROM payments p WHERE p.order_id=o.id AND p.status='CONFIRMED'),0) AS paid,
+                  (SELECT b.paid FROM order_payment_balances b WHERE b.order_id=o.id) AS paid,
                   COALESCE((SELECT SUM(oi.quantity) FROM order_items oi JOIN products pr ON pr.id=oi.product_id
                     WHERE oi.order_id=o.id AND pr.bottle_type_id IS NOT NULL),0) AS bottles
                 FROM orders o WHERE o.id=?

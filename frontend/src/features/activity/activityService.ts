@@ -14,4 +14,4 @@ export const activityService = {
     }),
 }
 
-export const useActivity = () => useQuery({ queryKey: ['activity'], queryFn: activityService.list, staleTime: 0 })
+export const useActivity = (enabled = true) => useQuery({ queryKey: ['activity'], queryFn: activityService.list, staleTime: 0, enabled })

@@ -26,6 +26,7 @@ import { useIntakeAddresses, useIntakeProducts, useSubmitIntake, type IntakeAddr
 import { FormSection } from '@/shared/components/FormSection'
 import { ModalTotalFooter } from '@/shared/components/ModalTotalFooter'
 import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
+import { WardSelect } from '@/shared/address/WardSelect'
 
 type OrderIntakeModalProps = {
   onClose: () => void
@@ -344,15 +345,15 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
                     >
                       <AutoComplete
                         options={addresses?.map((saved) => ({ value: saved.line }))}
-                        placeholder="Số nhà, tên đường, phường/xã, tỉnh/thành phố"
+                        placeholder="Số nhà, tên đường"
                         onSelect={(value: string) => {
                           const saved = addresses?.find((item) => item.line === value)
                           if (saved) applyAddress(saved)
                         }}
                       />
                     </Form.Item>
-                    <Form.Item name="area" label="Khu vực" hidden={contactCollapsed} rules={[{ max: 150, message: 'Tối đa 150 ký tự.' }]}>
-                      <Input placeholder="Phường / quận" />
+                    <Form.Item name="area" label="Phường/Xã" hidden={contactCollapsed} rules={[{ max: 150, message: 'Tối đa 150 ký tự.' }]}>
+                      <WardSelect />
                     </Form.Item>
                     <Form.Item
                       name="appointment"

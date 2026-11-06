@@ -31,7 +31,7 @@ import { QueryError } from '@/shared/components/QueryError'
 import { compactCurrency, currency, shortDate } from '@/shared/utils/format'
 import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
 import { DriverDeliveryChart, InlineBar, RevenueChart, ShareBar, TopProductsChart } from './charts'
-import { autoGranularity, granularityLabels, groupRevenue, type Granularity } from './periods'
+import { autoGranularity, granularityLabels, groupRevenue, reportPresets, type Granularity } from './periods'
 import {
   previousRange,
   reportChannels,
@@ -47,14 +47,6 @@ import './reports.css'
 
 const FORMAT = 'YYYY-MM-DD'
 const toRange = ([from, to]: [Dayjs, Dayjs]): ReportRange => ({ from: from.format(FORMAT), to: to.format(FORMAT) })
-
-const presets: { label: string; value: [Dayjs, Dayjs] }[] = [
-  { label: 'Hôm nay', value: [dayjs(), dayjs()] },
-  { label: '7 ngày qua', value: [dayjs().subtract(6, 'day'), dayjs()] },
-  { label: '30 ngày qua', value: [dayjs().subtract(29, 'day'), dayjs()] },
-  { label: 'Tháng này', value: [dayjs().startOf('month'), dayjs()] },
-  { label: 'Tháng trước', value: [dayjs().subtract(1, 'month').startOf('month'), dayjs().subtract(1, 'month').endOf('month')] },
-]
 
 const productColumns: TableColumnsType<ProductReportRow> = [
   { title: 'Sản phẩm', dataIndex: 'name', ellipsis: true, fixed: 'left', width: 240 },
@@ -208,7 +200,7 @@ export function ReportsPage() {
 function DemoReportsPage() {
   const { message } = App.useApp()
   const [exporting, setExporting] = useState(false)
-  const [dates, setDates] = useState<[Dayjs, Dayjs]>(presets[2].value)
+  const [dates, setDates] = useState<[Dayjs, Dayjs]>(() => reportPresets()[2].value)
   const [channels, setChannels] = useState<NonNullable<ReportFilters['channels']>>([])
   const [method, setMethod] = useState<ReportFilters['method']>()
   const [granularity, setGranularity] = useState<Granularity>()
@@ -255,7 +247,7 @@ function DemoReportsPage() {
             disabled={exporting}
             format="DD/MM/YYYY"
             value={dates}
-            presets={presets}
+            presets={reportPresets()}
             disabledDate={(day) => day.isAfter(dayjs(), 'day')}
             onChange={(value) => value?.[0] && value[1] && setDates([value[0], value[1]])}
             className="af-report-range"

@@ -8,7 +8,7 @@ import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { reportApi, channelLabels, type ReportQuery, type ReportSection, type ReportRow } from './reportApi'
 import { RevenueChart } from './charts'
-import { autoGranularity, groupRevenue } from './periods'
+import { autoGranularity, groupRevenue, reportPresets } from './periods'
 import { previousRange } from './reportService'
 import type { ReportColumn } from './exportLiveReport'
 import './reports.css'
@@ -52,7 +52,7 @@ export function LiveReportsPage() {
   const columns = selectedSection?.columns ?? dailyColumns
   return <Page title="Báo cáo" description="Doanh thu, thanh toán, kho và giao hàng từ dữ liệu thực tế, theo ngày Việt Nam."
     actions={<Space wrap>
-      <DatePicker.RangePicker allowClear={false} value={dates} format="DD/MM/YYYY" disabledDate={date => date.isAfter(dayjs(), 'day')}
+      <DatePicker.RangePicker allowClear={false} value={dates} format="DD/MM/YYYY" presets={reportPresets()} disabledDate={date => date.isAfter(dayjs(), 'day')}
         onChange={value => { if (value?.[0] && value[1]) { setDates([value[0], value[1]]); setPage(0) } }} />
       <Select allowClear placeholder="Mọi kênh" value={channel} style={{ width: 150 }} options={Object.entries(channelLabels).map(([value, label]) => ({ value, label }))} onChange={value => { setChannel(value); setPage(0) }} />
       <Select allowClear placeholder="Mọi hình thức" value={method} style={{ width: 170 }} options={[{ value: 'DELIVERY', label: 'Giao tận nơi' }, { value: 'COUNTER', label: 'Tại quầy' }]} onChange={value => { setMethod(value); setPage(0) }} />

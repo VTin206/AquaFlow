@@ -20,6 +20,7 @@ import { RegisterForm } from '@/features/auth/RegisterForm'
 import { useAuth } from '@/features/auth/useAuth'
 import { useStaff } from '@/features/auth/useStaff'
 import { accountDestination, isCustomer } from '@/features/auth/accountAccess'
+import { CustomerAccountPanel } from './CustomerAccountPanel'
 
 /**
  * Trang tài khoản trong cửa hàng (bố cục kiểu Uniqlo): đăng nhập bên trái, tạo tài khoản hoặc mua không cần tài khoản bên phải.
@@ -28,7 +29,7 @@ import { accountDestination, isCustomer } from '@/features/auth/accountAccess'
 export function ShopAccountPage() {
   const { login, logout, enterDemo, isAuthenticated, user } = useAuth()
   const staff = useStaff()
-  const { message, modal } = App.useApp()
+  const { message } = App.useApp()
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string>()
@@ -73,6 +74,7 @@ export function ShopAccountPage() {
             </Button>
           </div>
         </section>
+        {isCustomer(user) && !user.isDemo && <CustomerAccountPanel />}
       </div>
     )
   }
@@ -129,19 +131,9 @@ export function ShopAccountPage() {
                 autoComplete="current-password"
               />
             </Form.Item>
-            <Button
-              type="link"
-              className="af-shop-account-forgot"
-              onClick={() =>
-                modal.info({
-                  title: 'Quên mật khẩu',
-                  content: 'Liên hệ người quản trị cửa hàng để được cấp lại mật khẩu.',
-                  okText: 'Đã hiểu',
-                })
-              }
-            >
+            <Link to="/forgot-password" className="af-shop-account-forgot">
               Quên mật khẩu?
-            </Button>
+            </Link>
             <Button
               type="primary"
               size="large"

@@ -33,6 +33,10 @@ test('activity API preserves server pagination and encodes filters; permission e
     assert.equal(csvSafeCell('  @SUM(1)'), "'  @SUM(1)")
     assert.equal(csvSafeCell('Tạo mới'), 'Tạo mới')
     assert.equal(activityDescription({ action: 'UPDATE', reason: null }), 'Cập nhật')
+    assert.equal(activityDescription({ action: 'transitionStatus', reason: 'Đổi trạng thái đơn → PREPARING' }), 'Đổi trạng thái đơn → Đang chuẩn bị')
+    assert.equal(activityDescription({ action: 'recordResult', reason: 'Ghi kết quả giao hàng · đơn #2 · FAILED' }), 'Ghi kết quả giao hàng · đơn #2 · thất bại')
+    assert.equal(activityDescription({ action: 'collect', reason: 'collect' }), 'Thu tiền / nhận vỏ')
+    assert.equal(activityDescription({ action: 'someNewMethod', reason: 'someNewMethod' }), 'Thao tác khác')
   } finally {
     httpClient.defaults.baseURL = previous
     await new Promise(resolve => server.close(resolve))

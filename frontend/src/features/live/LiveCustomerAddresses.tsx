@@ -6,6 +6,7 @@ import { api } from '@/shared/api/client'
 import { QueryError } from '@/shared/components/QueryError'
 import { invalidateLiveData } from './invalidateLiveData'
 import { modalWidth } from '@/shared/utils/modal'
+import { WardSelect } from '@/shared/address/WardSelect'
 
 type Address = {
   id: number
@@ -133,8 +134,8 @@ export function LiveCustomerAddresses({
           <Form.Item label="Địa chỉ" name="addressLine" rules={[{ required: true }]}>
             <Input.TextArea />
           </Form.Item>
-          <Form.Item label="Khu vực" name="area" rules={[{ max: 150 }]}>
-            <Input />
+          <Form.Item label="Phường/Xã" name="area" rules={[{ max: 150 }]}>
+            <WardSelect />
           </Form.Item>
           <Form.Item name="isDefault" valuePropName="checked">
             <Checkbox>Địa chỉ mặc định</Checkbox>

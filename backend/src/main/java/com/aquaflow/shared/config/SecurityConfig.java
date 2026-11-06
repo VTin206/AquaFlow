@@ -61,6 +61,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/health", "/error").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/register").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/password-reset-requests", "/api/v1/auth/password-resets").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/store-profile").permitAll()
                         // Public catalog is intentionally limited to the existing collection/detail endpoints.
                         // Do not use /** here: future administrative sub-resources must not become public by accident.
@@ -133,6 +134,7 @@ public class SecurityConfig {
 
                         // Fail closed for future/unlisted Delivery routes instead of granting access by default.
                         .requestMatchers("/api/v1/delivery/**").denyAll()
+                        .requestMatchers("/api/v1/customer/account/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/v1/customer/**").hasAnyRole("ADMIN", "CUSTOMER")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

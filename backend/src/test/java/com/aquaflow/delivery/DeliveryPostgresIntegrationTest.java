@@ -36,6 +36,21 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @AutoConfigureMockMvc
 class DeliveryPostgresIntegrationTest {
     @Autowired JdbcTemplate jdbc;
+    @Autowired com.aquaflow.payment.PaymentService payments;
+
+    @Test void driverAndOfficeCollectionsShareTheSameOutstandingBalance() {
+        jdbc.update("UPDATE orders SET subtotal=30000 WHERE id=?",orderId);
+        long trip=service.create(new CreateTripRequest(driverId,null),ownerId,true).id();
+        service.addOrder(trip,new AddOrderRequest(orderId),ownerId,true);
+        service.dispatch(trip,ownerId,true);
+        service.start(trip,driverId,false);
+        service.collect(trip,orderId,new CollectionRequest(UUID.randomUUID(),new BigDecimal("10000"),"CASH",0),driverId,false);
+        assertThat(payments.payments(orderId).balance().due()).isEqualByComparingTo("20000");
+        assertThat(payments.payments(orderId).payments().getFirst().source()).isEqualTo("DELIVERY");
+        payments.create(orderId,ownerId,new com.aquaflow.payment.PaymentDtos.Create(UUID.randomUUID(),new BigDecimal("20000"),"IN","BANK_TRANSFER",null,null));
+        assertThat(service.collections(trip,driverId,false).balances().getFirst().due()).isZero();
+        assertThatThrownBy(()->service.collect(trip,orderId,new CollectionRequest(UUID.randomUUID(),BigDecimal.ONE,"CASH",0),driverId,false)).isInstanceOf(ConflictException.class);
+    }
     @Autowired DeliveryService service;
     @Autowired MockMvc mvc;
     @Autowired com.aquaflow.delivery.application.DeliveryAssignmentService assignmentService;

@@ -1,66 +1,35 @@
-import { useQuery } from '@tanstack/react-query'
-import { Alert, Button, Card, Descriptions, Empty, Skeleton, Space, Tag, Timeline } from 'antd'
+import { Alert, Descriptions, Empty, Skeleton, Tag, Timeline } from 'antd'
 import { Link } from 'react-router'
-import { useAuth } from '@/features/auth/useAuth'
-import { isStaff } from '@/features/auth/accountAccess'
-import { useStaff } from '@/features/auth/useStaff'
 import { QueryError } from '@/shared/components/QueryError'
 import { tripLabels } from '@/features/delivery/deliveryApi'
-import { orderDeliveryHistory } from './orderDeliveryApi'
-const time = (value: string | null) => (value ? new Date(value).toLocaleString('vi-VN') : '—')
+import { useOrderDeliveryHistory } from './useOrderDeliveryHistory'
 
+const time = (value: string | null) => (value ? new Date(value).toLocaleString('vi-VN') : null)
+
+/** Các chuyến và lần giao của đơn, hiển thị trong mục "Giao hàng" đang gập của chi tiết đơn. */
 export function OrderDeliveryHistory({ orderId }: { orderId: number }) {
-  const { user } = useAuth()
-  const staff = useStaff()
-  const allowed = isStaff(user) && !user?.isDemo && (staff?.role === 'ADMIN' || staff?.role === 'SALES_STAFF')
-  const query = useQuery({
-    queryKey: ['live', 'order-delivery-history', user?.email, staff?.role, orderId],
-    queryFn: () => orderDeliveryHistory(orderId),
-    enabled: allowed,
-    refetchInterval: 15000,
-  })
+  const { allowed, query } = useOrderDeliveryHistory(orderId)
   if (!allowed) return null
+  if (query.isError) return <QueryError error={query.error} onRetry={query.refetch} />
+  if (query.isPending) return <Skeleton active />
+  if (!query.data.length) return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Đơn chưa được phân vào chuyến giao." />
   return (
-    <Card
-      title="Tiến trình giao hàng"
-      style={{ marginTop: 16 }}
-      extra={
-        <Button loading={query.isFetching} onClick={() => void query.refetch()}>
-          Làm mới
-        </Button>
-      }
-    >
-      {query.isError ? (
-        <QueryError error={query.error} onRetry={query.refetch} />
-      ) : query.isPending ? (
-        <Skeleton active />
-      ) : !query.data.length ? (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Đơn chưa được phân vào chuyến giao." />
-      ) : (
-        query.data.map(({ trip, assignment, attempts }) => (
-          <Card
-            key={assignment.id}
-            size="small"
-            style={{ marginBottom: 12 }}
-            title={
-              <Space>
-                Chuyến #{trip.id}
-                <Tag>{tripLabels[trip.status]}</Tag>
-              </Space>
-            }
-            extra={<Link to={`/delivery?tripId=${trip.id}`}>Xem chuyến</Link>}
-          >
-            <Descriptions
-              size="small"
-              column={{ xs: 1, sm: 2 }}
-              items={[
-                { key: 'driver', label: 'Nhân viên giao hàng', children: trip.driverName ?? 'Chưa phân công' },
-                { key: 'vehicle', label: 'Xe', children: trip.vehicle || 'Chưa ghi nhận' },
-                { key: 'created', label: 'Tạo chuyến', children: time(trip.createdAt) },
-                { key: 'started', label: 'Khởi hành', children: time(trip.startedAt) },
-                { key: 'ended', label: 'Kết thúc chuyến', children: time(trip.endedAt) },
-              ]}
-            />
+    <div className="af-order-trips">
+      {query.data.map(({ trip, assignment, attempts }) => {
+        const facts = [
+          { key: 'driver', label: 'Nhân viên giao hàng', children: trip.driverName ?? 'Chưa phân công' },
+          { key: 'vehicle', label: 'Xe', children: trip.vehicle },
+          { key: 'started', label: 'Khởi hành', children: time(trip.startedAt) },
+          { key: 'ended', label: 'Kết thúc chuyến', children: time(trip.endedAt) },
+        ].filter((item) => item.children)
+        return (
+          <article key={assignment.id}>
+            <header>
+              <strong>Chuyến #{trip.id}</strong>
+              <Tag>{tripLabels[trip.status]}</Tag>
+              <Link to={`/delivery?tripId=${trip.id}`}>Xem chuyến</Link>
+            </header>
+            <Descriptions size="small" column={{ xs: 1, sm: 2 }} items={facts} />
             {assignment.latestAttempt?.outcome === 'FAILED' && (
               <Alert
                 type="warning"
@@ -70,9 +39,7 @@ export function OrderDeliveryHistory({ orderId }: { orderId: number }) {
                 style={{ marginBottom: 12 }}
               />
             )}
-            {!attempts.length ? (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có lần giao được ghi nhận." />
-            ) : (
+            {attempts.length > 0 && (
               <Timeline
                 items={attempts.map((attempt) => ({
                   key: attempt.id,
@@ -91,9 +58,9 @@ export function OrderDeliveryHistory({ orderId }: { orderId: number }) {
                 }))}
               />
             )}
-          </Card>
-        ))
-      )}
-    </Card>
+          </article>
+        )
+      })}
+    </div>
   )
 }

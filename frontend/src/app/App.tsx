@@ -7,6 +7,7 @@ import { ThemedArea } from '@/app/layouts/ThemedArea'
 import { RequireAuth } from './RequireAuth'
 import { usePageSupported } from '@/shared/features'
 import { RequireCustomer } from './RequireCustomer'
+import { ScrollToTop } from './ScrollToTop'
 
 // Mỗi trang được tải khi người dùng mở tới, giúp lần tải đầu nhẹ hơn.
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })))
@@ -33,6 +34,8 @@ const CheckoutPage = lazy(() => import('@/features/shop/CheckoutPage').then((m) 
 const TrackPage = lazy(() => import('@/features/shop/TrackPage').then((m) => ({ default: m.TrackPage })))
 const LoginPage = lazy(() => import('@/features/auth/LoginPage').then((m) => ({ default: m.LoginPage })))
 const RegisterPage = lazy(() => import('@/features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })))
+const ForgotPasswordPage = lazy(() => import('@/features/auth/PasswordRecoveryPages').then(m => ({ default: m.ForgotPasswordPage })))
+const ResetPasswordPage = lazy(() => import('@/features/auth/PasswordRecoveryPages').then(m => ({ default: m.ResetPasswordPage })))
 const UnavailablePage = lazy(() => import('@/features/live/UnavailablePage').then((m) => ({ default: m.UnavailablePage })))
 
 /** Trang chưa có API BE: tài khoản thật vẫn mở được nhưng thấy "Chưa hỗ trợ" thay cho dữ liệu mẫu. */
@@ -49,11 +52,14 @@ const pageFallback = (
 export function App() {
   return (
     <Suspense fallback={pageFallback}>
+      <ScrollToTop />
       <Routes>
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
         {/* Trang công khai cho khách đặt hàng và tra cứu đơn, không cần đăng nhập. */}
         <Route element={<ShopLayout />}>
+          <Route path="forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="reset-password" element={<ResetPasswordPage />} />
           <Route path="shop" element={<ShopPage />} />
           <Route element={<RequireCustomer />}>
             <Route path="shop/orders" element={<CustomerOrdersPage />} />

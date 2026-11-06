@@ -4,8 +4,8 @@ import {
   App,
   Button,
   Checkbox,
+  Collapse,
   Descriptions,
-  Divider,
   Dropdown,
   Form,
   Input,
@@ -19,8 +19,9 @@ import {
   Tooltip,
   Typography,
   theme,
+  type CollapseProps,
 } from 'antd'
-import { Printer } from 'lucide-react'
+import { Ellipsis } from 'lucide-react'
 import { Money } from '@/shared/components/Money'
 import { OrderTotals } from '@/shared/components/OrderTotals'
 import { TransferQr } from '@/shared/payment/TransferQr'
@@ -31,15 +32,17 @@ import { can } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/useStaff'
 import { useSettings } from '@/features/settings/settingsService'
 import { canCancel as cancellable, returnableQuantity } from '../orderService'
+import { demoOrderFocus } from '../orderFocus'
+import { nextActionLabel } from '../orderStatus'
 import { DeliverySlipDocument, InvoiceDocument } from '../print/OrderDocuments'
-import { modalWidth } from '@/shared/utils/modal'
+import { useCopyOrderMessage } from '../useCopyOrderMessage'
+import { OrderFocusBanner, OrderLines, OrderParty } from './OrderSheet'
+import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
 import {
   amountDue,
   awaitingReturnInspection,
   paidAmount,
-  paymentLabel,
   returnedValue,
-  type OrderLine,
   type Payment,
   type PaymentDraft,
   type RefundDraft,
@@ -74,6 +77,7 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
   const returnValues = Form.useWatch([], returnForm)
   const { data: settings } = useSettings()
   const printer = usePrinter()
+  const copyMessage = useCopyOrderMessage()
   const order = orders.find((item) => item.id === orderId)
   if (!order) return null
   const role = staff?.role ?? 'SALES_STAFF'
@@ -98,239 +102,99 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
     onError: (error: Error) => message.error(error.message),
   }
 
-  return (
-    <>
-      <Modal
-        open
-        centered
-        className="af-order-details"
-        onCancel={onClose}
-        width={modalWidth.large}
-        footer={null}
-        title={`Chi tiết đơn ${order.id}`}
-        styles={{ body: { maxHeight: 'calc(100dvh - 180px)', overflowY: 'auto', paddingTop: 12, paddingRight: 8 } }}
-      >
-        <Space wrap className="af-detail-actions">
-          <OrderStatusTag status={order.status} method={order.method} />
-          <Tag color={due === 0 ? 'green' : 'orange'}>{paymentLabel(order)}</Tag>
-          <LateTag order={order} />
-          <AdvanceStatusButton order={order} />
-          {canPay && (
-            <Button type="primary" onClick={() => setMode('pay')}>
-              Ghi nhận thanh toán
-            </Button>
-          )}
-          {canCancel && (
-            <Tooltip title={needsRefundRight ? 'Đơn đã thu tiền: cần chủ cửa hàng hủy và hoàn tiền.' : undefined}>
-              <Button danger disabled={needsRefundRight} onClick={() => setMode('cancel')}>
-                Hủy đơn
-              </Button>
-            </Tooltip>
-          )}
-          {canReturn && <Button onClick={() => setMode('return')}>Nhận trả hàng</Button>}
-          <Dropdown
-            trigger={['click']}
-            menu={{
-              items: [
-                {
-                  key: 'invoice',
-                  label: 'Hóa đơn bán lẻ',
-                  onClick: () => printer.print(<InvoiceDocument order={order} settings={settings} />),
-                },
-                ...(order.method === 'Giao tận nơi'
-                  ? [
-                      {
-                        key: 'slip',
-                        label: 'Phiếu giao hàng',
-                        onClick: () => printer.print(<DeliverySlipDocument order={order} settings={settings} />),
-                      },
-                    ]
-                  : []),
-              ],
-            }}
-          >
-            <Button icon={<Printer size={15} />}>In</Button>
-          </Dropdown>
-        </Space>
-        {order.status === 'Đang giao' && can(role, 'cancelOrder') && (
-          <Alert
-            className="af-detail-alert"
-            type="info"
-            showIcon
-            title="Muốn hủy đơn đang giao?"
-            description="Tài xế ghi kết quả “Giao thất bại”, kho kiểm hàng mang về rồi mới hủy được."
-          />
-        )}
-        {awaitingReturnInspection(order) && (
-          <Alert
-            className="af-detail-alert"
-            type="warning"
-            showIcon
-            title="Chờ kiểm hàng hoàn"
-            description="Kiểm hàng mang về ở Kho hàng → Hàng hoàn. Xong mới giao lại hoặc hủy đơn."
-          />
-        )}
-        <Descriptions
-          size="small"
-          title="Thông tin giao nhận"
-          column={{ xs: 1, sm: 2, md: 2, lg: 2, xl: 2, xxl: 2 }}
-          items={[
-            { key: 'customer', label: 'Khách hàng', children: order.customer },
-            { key: 'phone', label: 'Điện thoại', children: order.phone || 'Không cung cấp' },
-            { key: 'method', label: 'Nhận hàng', children: order.method },
-            { key: 'channel', label: 'Kênh tiếp nhận', children: order.channel },
-            {
-              key: 'address',
-              label: 'Địa chỉ đã lưu',
-              children: order.floor ? `${order.address} · lầu ${order.floor} (thang bộ)` : order.address,
-              span: 'filled' as const,
-            },
-            {
-              key: 'time',
-              label: 'Giờ hẹn',
-              children: order.appointment ? new Date(order.appointment).toLocaleString('vi-VN') : 'Chưa hẹn giờ cụ thể',
-            },
-            {
-              key: 'delivered',
-              label: 'Khách nhận lúc',
-              children: order.deliveredAt ? new Date(order.deliveredAt).toLocaleString('vi-VN') : '—',
-            },
-            { key: 'note', label: 'Ghi chú', children: order.note || '—', span: 'filled' as const },
-            ...(order.bottles
-              ? [
-                  {
-                    key: 'bottles',
-                    label: 'Vỏ bình',
-                    span: 'filled' as const,
-                    children: `Giao ${order.bottles.delivered} · Thu về ${order.bottles.returned}${order.bottles.deposit ? ` · Thu cọc ${currency(order.bottles.deposit)} (sổ cọc, ngoài tiền hàng)` : ''}`,
-                  },
-                ]
-              : []),
-          ]}
-        />
-        <Divider style={{ marginBlock: 16 }} />
-        <Typography.Title level={5}>
-          {order.status === 'Chờ xác nhận' ? 'Sản phẩm & giá dự kiến' : 'Sản phẩm & giá đã chốt'}
-        </Typography.Title>
-        <Table<OrderLine>
-          rowKey="productId"
+  const hasAdvance = Boolean(nextActionLabel(order))
+  const moreMenu = [
+    ...(cancelled ? [] : [{ key: 'copy', label: 'Sao chép tin nhắn xác nhận', onClick: () => void copyMessage(order, settings?.storeName) }]),
+    { key: 'invoice', label: 'In hóa đơn bán lẻ', onClick: () => printer.print(<InvoiceDocument order={order} settings={settings} />) },
+    ...(order.method === 'Giao tận nơi'
+      ? [{ key: 'slip', label: 'In phiếu giao hàng', onClick: () => printer.print(<DeliverySlipDocument order={order} settings={settings} />) }]
+      : []),
+    ...(canReturn ? [{ key: 'return', label: 'Nhận trả hàng', onClick: () => setMode('return') }] : []),
+  ]
+  const moreSections: CollapseProps['items'] = [
+    {
+      key: 'payments',
+      label: 'Thanh toán',
+      extra: order.payments.length ? `${order.payments.length} phiếu` : 'Chưa có phiếu',
+      children: order.payments.length ? (
+        <Table<Payment>
+          rowKey="id"
           size="small"
           pagination={false}
-          dataSource={order.lines}
-          scroll={{ x: 500 }}
+          dataSource={order.payments}
+          scroll={{ x: 560 }}
           columns={[
-            { title: 'Sản phẩm', dataIndex: 'name' },
-            { title: 'SL', dataIndex: 'quantity', width: 55, align: 'right' },
-            { title: 'Đơn giá', dataIndex: 'unitPrice', align: 'right', render: currency },
-            { title: 'Thành tiền', key: 'total', align: 'right', render: (_, line) => currency(line.quantity * line.unitPrice) },
-          ]}
-        />
-        <OrderTotals
-          rows={[
-            { label: 'Tiền hàng', value: currency(order.lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0)) },
-            ...(order.method === 'Giao tận nơi'
-              ? [{ label: 'Phí giao', value: order.deliveryFee > 0 ? currency(order.deliveryFee) : 'Miễn phí' }]
-              : []),
-            ...(order.returns?.length ? [{ label: 'Hàng khách trả lại', value: `−${currency(returnedValue(order))}` }] : []),
-          ]}
-          total={{ label: 'Tổng cộng', value: currency(order.total) }}
-          after={
-            cancelled ? (
-              <div className="is-status">
-                <Tag>Đã hủy</Tag>
-              </div>
-            ) : (
-              <>
-                <div className="is-after-total">
-                  <dt>Đã thu</dt>
-                  <dd>
-                    <Money value={paid} tone={paid > 0 ? 'paid' : 'neutral'} />
-                  </dd>
-                </div>
-                <div>
-                  <dt>Còn phải thu</dt>
-                  <dd>
-                    <strong>
-                      <Money value={due} tone={dueTone(due)} />
-                    </strong>
-                  </dd>
-                </div>
-              </>
-            )
-          }
-        />
-        <Divider style={{ marginBlock: 16 }} />
-        <Typography.Title level={5}>Lịch sử thanh toán</Typography.Title>
-        {order.payments.length ? (
-          <Table<Payment>
-            rowKey="id"
-            size="small"
-            pagination={false}
-            dataSource={order.payments}
-            scroll={{ x: 560 }}
-            columns={[
-              {
-                title: 'Phiếu',
-                dataIndex: 'id',
-                render: (id: string, payment) =>
-                  payment.refund ? (
-                    <Space size={4}>
-                      {id}
-                      <Tag color="volcano">Hoàn</Tag>
-                    </Space>
-                  ) : (
-                    id
-                  ),
-              },
-              { title: 'Phương thức', dataIndex: 'method' },
-              {
-                title: 'Số tiền',
-                dataIndex: 'amount',
-                align: 'right',
-                render: (amount: number, payment) =>
-                  payment.refund ? <span style={{ color: token.colorErrorText }}>−{currency(amount)}</span> : currency(amount),
-              },
-              {
-                title: 'Thời điểm / tham chiếu',
-                key: 'detail',
-                render: (_, payment) => (
-                  <div className="af-cell-stack">
-                    <span>{new Date(payment.recordedAt).toLocaleString('vi-VN')}</span>
-                    <small>
-                      {payment.reference || 'Tiền mặt'}
-                      {payment.by ? ` · ${payment.by}` : ''}
-                    </small>
-                  </div>
+            {
+              title: 'Phiếu',
+              dataIndex: 'id',
+              render: (id: string, payment) =>
+                payment.refund ? (
+                  <Space size={4}>
+                    {id}
+                    <Tag color="volcano">Hoàn</Tag>
+                  </Space>
+                ) : (
+                  id
                 ),
-              },
-            ]}
-          />
-        ) : (
-          <Typography.Paragraph type="secondary">Chưa ghi nhận khoản thanh toán.</Typography.Paragraph>
-        )}
-        {order.returns?.length ? (
-          <>
-            <Divider style={{ marginBlock: 16 }} />
-            <Typography.Title level={5}>Hàng trả lại</Typography.Title>
-            <ul className="af-return-list">
-              {order.returns.map((item) => (
-                <li key={item.id}>
-                  <strong>{item.lines.map((line) => `${line.quantity} ${line.unit.toLowerCase()} ${line.name}`).join(', ')}</strong>
-                  <span>
-                    {item.reason} · {item.restocked ? 'Nhập lại kho' : 'Loại bỏ (hỏng)'}
-                    {item.refunded ? ` · Hoàn ${currency(item.refunded)}` : ''}
-                  </span>
+            },
+            { title: 'Phương thức', dataIndex: 'method' },
+            {
+              title: 'Số tiền',
+              dataIndex: 'amount',
+              align: 'right',
+              render: (amount: number, payment) =>
+                payment.refund ? <span style={{ color: token.colorErrorText }}>−{currency(amount)}</span> : currency(amount),
+            },
+            {
+              title: 'Thời điểm / tham chiếu',
+              key: 'detail',
+              render: (_, payment) => (
+                <div className="af-cell-stack">
+                  <span>{new Date(payment.recordedAt).toLocaleString('vi-VN')}</span>
                   <small>
-                    {new Date(item.at).toLocaleString('vi-VN')}
-                    {item.by ? ` · ${item.by}` : ''}
+                    {payment.reference || 'Tiền mặt'}
+                    {payment.by ? ` · ${payment.by}` : ''}
                   </small>
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : null}
-        <Divider style={{ marginBlock: 16 }} />
-        <Typography.Title level={5}>Lịch sử xử lý đơn</Typography.Title>
+                </div>
+              ),
+            },
+          ]}
+        />
+      ) : (
+        <p className="af-order-more-empty">Chưa ghi nhận khoản thanh toán.</p>
+      ),
+    },
+    ...(order.returns?.length
+      ? [
+          {
+            key: 'returns',
+            label: 'Hàng trả lại',
+            extra: `${order.returns.length} lần`,
+            children: (
+              <ul className="af-return-list">
+                {order.returns.map((item) => (
+                  <li key={item.id}>
+                    <strong>{item.lines.map((line) => `${line.quantity} ${line.unit.toLowerCase()} ${line.name}`).join(', ')}</strong>
+                    <span>
+                      {item.reason} · {item.restocked ? 'Nhập lại kho' : 'Loại bỏ (hỏng)'}
+                      {item.refunded ? ` · Hoàn ${currency(item.refunded)}` : ''}
+                    </span>
+                    <small>
+                      {new Date(item.at).toLocaleString('vi-VN')}
+                      {item.by ? ` · ${item.by}` : ''}
+                    </small>
+                  </li>
+                ))}
+              </ul>
+            ),
+          },
+        ]
+      : []),
+    {
+      key: 'history',
+      label: 'Lịch sử xử lý',
+      extra: `${order.history.length} mốc`,
+      children: (
         <Timeline
           items={[...order.history].reverse().map((event, index) => ({
             key: index,
@@ -345,6 +209,116 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
             ),
           }))}
         />
+      ),
+    },
+    {
+      key: 'info',
+      label: 'Thông tin đơn',
+      extra: order.channel,
+      children: (
+        <Descriptions
+          size="small"
+          column={{ xs: 1, sm: 2 }}
+          items={[
+            { key: 'channel', label: 'Kênh tiếp nhận', children: order.channel },
+            ...(order.deliveredAt
+              ? [{ key: 'delivered', label: 'Khách nhận lúc', children: new Date(order.deliveredAt).toLocaleString('vi-VN') }]
+              : []),
+            ...(order.bottles
+              ? [
+                  {
+                    key: 'bottles',
+                    label: 'Vỏ bình',
+                    span: 'filled' as const,
+                    children: `Giao ${order.bottles.delivered} · Thu về ${order.bottles.returned}${order.bottles.deposit ? ` · Thu cọc ${currency(order.bottles.deposit)} (sổ cọc, ngoài tiền hàng)` : ''}`,
+                  },
+                ]
+              : []),
+          ]}
+        />
+      ),
+    },
+  ]
+
+  return (
+    <>
+      <Modal
+        open
+        centered
+        className="af-order-details"
+        onCancel={onClose}
+        width={modalWidth.medium}
+        styles={modalScrollBody}
+        title={
+          <span className="af-order-title">
+            <span>Đơn {order.code ?? order.id}</span>
+            <OrderStatusTag status={order.status} method={order.method} />
+            <LateTag order={order} />
+          </span>
+        }
+        footer={
+          <div className="af-order-footer">
+            <div>
+              {canCancel && (
+                <Tooltip title={needsRefundRight ? 'Đơn đã thu tiền: cần chủ cửa hàng hủy và hoàn tiền.' : undefined}>
+                  <Button type="text" danger disabled={needsRefundRight} onClick={() => setMode('cancel')}>
+                    Hủy đơn
+                  </Button>
+                </Tooltip>
+              )}
+            </div>
+            <div>
+              <Dropdown trigger={['click']} menu={{ items: moreMenu }}>
+                <Button icon={<Ellipsis size={16} />}>Thao tác khác</Button>
+              </Dropdown>
+              {canPay && (
+                <Button type={hasAdvance ? 'default' : 'primary'} onClick={() => setMode('pay')}>
+                  Ghi nhận thanh toán
+                </Button>
+              )}
+              {hasAdvance && <AdvanceStatusButton order={order} size="middle" primary />}
+            </div>
+          </div>
+        }
+      >
+        <OrderFocusBanner focus={demoOrderFocus(order)} />
+        <div className="af-order-sheet">
+          <OrderParty order={order} />
+          <OrderLines lines={order.lines}>
+            <OrderTotals
+              wide
+              rows={[
+                { label: 'Tiền hàng', value: currency(order.lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0)) },
+                ...(order.method === 'Giao tận nơi'
+                  ? [{ label: 'Phí giao', value: order.deliveryFee > 0 ? currency(order.deliveryFee) : 'Miễn phí' }]
+                  : []),
+                ...(order.returns?.length ? [{ label: 'Hàng khách trả lại', value: `−${currency(returnedValue(order))}` }] : []),
+              ]}
+              total={{ label: 'Tổng cộng', value: currency(order.total) }}
+              after={
+                cancelled ? null : (
+                  <>
+                    <div className="is-after-total">
+                      <dt>Đã thu</dt>
+                      <dd>
+                        <Money value={paid} tone={paid > 0 ? 'paid' : 'neutral'} />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Còn phải thu</dt>
+                      <dd>
+                        <strong>
+                          <Money value={due} tone={dueTone(due)} />
+                        </strong>
+                      </dd>
+                    </div>
+                  </>
+                )
+              }
+            />
+          </OrderLines>
+        </div>
+        <Collapse ghost className="af-order-more" items={moreSections} />
       </Modal>
       <Modal
         open={mode === 'pay'}

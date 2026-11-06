@@ -62,6 +62,11 @@ public class User {
         credentialsVersion++;
     }
 
+    public void updateCustomerProfile(String fullName, String phone) {
+        this.fullName = fullName;
+        this.phone = phone;
+    }
+
     protected User() {
     }
 

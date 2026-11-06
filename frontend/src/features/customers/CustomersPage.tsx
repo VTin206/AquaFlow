@@ -1,17 +1,18 @@
 import { useState } from 'react'
 import { App, Button, Card, Col, Dropdown, Grid, Input, Row, Segmented, Statistic, Table, Tag, Tooltip, type TableColumnsType } from 'antd'
 import { Ellipsis, Eye, FileSpreadsheet, Plus, Search } from 'lucide-react'
+import { useLinkedQuery } from '@/shared/utils/useLinkedQuery'
 import { BulkBar } from '@/shared/components/BulkBar'
 import { Page } from '@/shared/components/Page'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { ToneLabel } from '@/shared/components/ToneLabel'
 import { QueryError } from '@/shared/components/QueryError'
 import { useColumnSort } from '@/shared/components/sortableColumn'
-import { Money } from '@/shared/components/Money'
 import { downloadExcel, type ExcelColumn } from '@/shared/utils/excel'
 import { currency } from '@/shared/utils/format'
 import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
-import { useFeature } from '@/shared/features'
+import { useFeature, useLiveOnly } from '@/shared/features'
+import { LiveReceivables } from './LiveReceivables'
 import { Unsupported } from '@/shared/components/Unsupported'
 import { OrderIntakeModal } from '@/features/orders/components/OrderIntakeModal'
 import { CustomerDrawer } from './components/CustomerDrawer'
@@ -20,8 +21,10 @@ import { CustomerCards } from './components/CustomerCards'
 import { customerCode, type Customer } from './types'
 import { useActivateCustomer, useArchivedCustomers, useCustomers } from './useCustomers'
 import { matchesSearch } from '@/shared/utils/search'
+import { CustomerDebt } from './components/CustomerDebt'
 
 export function CustomersPage() {
+  const live = useLiveOnly()
   const screens = Grid.useBreakpoint()
   const showArea = useFeature('customerProfileExtras')
   const showDebt = useFeature('customerDebt')
@@ -36,7 +39,7 @@ export function CustomersPage() {
   // Tải sẵn để hiện số đếm trên bộ lọc.
   const archivedQuery = useArchivedCustomers(canReactivate)
   const activate = useActivateCustomer()
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useLinkedQuery()
   const [profileId, setProfileId] = useState<string | null>(null)
   // undefined: đóng; null: thêm mới; Customer: sửa.
   const [editing, setEditing] = useState<Customer | null | undefined>(undefined)
@@ -199,7 +202,7 @@ export function CustomersPage() {
           align: 'right',
           width: 140,
           sorter: (a, b) => a.debt - b.debt,
-          render: (debt: number) => (debt > 0 ? <Money value={debt} tone="due" /> : <span className="af-text-muted">—</span>),
+          render: (debt: number, customer) => <CustomerDebt debt={debt} orders={customer.orders} />,
         }
       : { title: 'Còn phải thu', key: 'debt', align: 'right', width: 140, render: () => <Unsupported /> },
     showBottles
@@ -359,6 +362,7 @@ export function CustomersPage() {
         onSaved={(customer) => editing === null && setProfileId(customer.id)}
       />
       {orderFor && <OrderIntakeModal key={orderFor.id} defaultCustomer={orderFor} onClose={() => setOrderFor(null)} />}
+      {live && <LiveReceivables />}
     </Page>
   )
 }

@@ -56,6 +56,7 @@ export type DeliveryResult = {
 export type OrderBottles = { delivered: number; returned: number; deposit: number }
 
 export type Order = {
+  paymentBalance?: { paid: number; due: number; refundDue: number }
   id: string
   /** Mã hiển thị khi khác `id` (tài khoản thật: orderCode của BE). */
   code?: string
@@ -76,6 +77,8 @@ export type Order = {
   channel: 'Tại quầy' | 'Điện thoại' | 'Tin nhắn' | 'Website'
   lines: OrderLine[]
   deliveryFee: number
+  /** Số tiền giảm đã trừ vào `total` (tài khoản thật: discountAmount của BE). */
+  discount?: number
   /** Lầu giao bằng thang bộ (0: tầng trệt hoặc có thang máy), dùng tính phụ thu. */
   floor?: number
   appointment?: string
@@ -108,8 +111,18 @@ export type OrderDraft = {
 }
 
 export const paidAmount = (order: Order) =>
-  order.payments.reduce((sum, payment) => sum + (payment.refund ? -payment.amount : payment.amount), 0)
-export const amountDue = (order: Order) => Math.max(0, order.total - paidAmount(order))
+  order.paymentBalance?.paid ?? order.payments.reduce((sum, payment) => sum + (payment.refund ? -payment.amount : payment.amount), 0)
+export const amountDue = (order: Order) => order.paymentBalance?.due ?? Math.max(0, order.total - paidAmount(order))
+/**
+ * Ưu tiên số dư API cho chứng từ; màn hình chỉ có trạng thái giữ cách hiển thị an toàn
+ * khi chưa biết số tiền đã thu của đơn thanh toán một phần.
+ */
+export const knownAmountDue = (order: Order): number | null => {
+  if (order.paymentBalance) return order.paymentBalance.due
+  if (order.paymentStatusLabel === undefined) return amountDue(order)
+  if (order.paymentStatusLabel === 'Chưa thanh toán') return order.total
+  return order.paymentStatusLabel === 'Thanh toán một phần' ? null : 0
+}
 export const paymentLabel = (order: Order) =>
   order.paymentStatusLabel ??
   (order.status === 'Đã hủy'
@@ -217,7 +230,7 @@ export function deliveryTimingOf(order: Order, now = Date.now()) {
             : { label: '—', tone: 'muted' }
   const waited = created && order.status === 'Chờ xác nhận' ? Math.max(0, Math.floor((now - Date.parse(created)) / 60_000)) : null
   const sub = {
-    label: waited !== null ? `chờ ${waitLabel(waited)}` : created ? `đặt ${relativeDateTime(created, new Date(now))}` : `đặt ${order.time}`,
+    label: waited !== null ? `chờ ${lateLabel(waited)}` : created ? `đặt ${relativeDateTime(created, new Date(now))}` : `đặt ${order.time}`,
     title: `Đặt lúc ${orderedAtOf(order).full}`,
   }
   return { main, sub }
@@ -235,10 +248,11 @@ export function compareDeliveryDue(a: Order, b: Order) {
 }
 
 /** Thời gian chờ ngắn gọn: dưới 1 ngày theo giờ/phút, từ 1 ngày trở lên chỉ ghi số ngày. */
-const waitLabel = (minutes: number) => (minutes >= 1440 ? `${Math.floor(minutes / 1440)} ngày` : lateLabel(minutes))
-
-export const lateLabel = (minutes: number) =>
-  minutes >= 60 ? `${Math.floor(minutes / 60)} giờ ${minutes % 60 ? `${minutes % 60} phút` : ''}`.trim() : `${minutes} phút`
+/** Từ 1 ngày trở lên chỉ ghi số ngày: "20 ngày" dễ đọc hơn "493 giờ 29 phút". */
+export const lateLabel = (minutes: number) => {
+  if (minutes >= 1440) return `${Math.floor(minutes / 1440)} ngày`
+  return minutes >= 60 ? `${Math.floor(minutes / 60)} giờ ${minutes % 60 ? `${minutes % 60} phút` : ''}`.trim() : `${minutes} phút`
+}
 
 /** Thông tin đơn khách xem được trên trang tra cứu. */
 export type PublicOrder = Pick<

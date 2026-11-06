@@ -13,6 +13,9 @@ export type DispatchReceipt = {
 export const canDispatch = (order: Pick<LiveOrder, 'status' | 'fulfillmentType'>) =>
   order.status === 'PREPARING' && order.fulfillmentType === 'DELIVERY'
 
+export const canHandover = (order: Pick<LiveOrder, 'status' | 'fulfillmentType'>) =>
+  order.status === 'PREPARING' && order.fulfillmentType === 'COUNTER'
+
 export const dispatchApi = {
   create: (orderId: number) => api.post<DispatchReceipt>(`/sales/orders/${orderId}/dispatches`),
   list: (orderId: number) => api.get<DispatchReceipt[]>(`/sales/orders/${orderId}/dispatches`),

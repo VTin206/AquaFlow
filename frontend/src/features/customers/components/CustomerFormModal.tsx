@@ -6,6 +6,8 @@ import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { useFeature, useIsDemo } from '@/shared/features'
 import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 import { modalWidth } from '@/shared/utils/modal'
+import { WardSelect } from '@/shared/address/WardSelect'
+import { AddressLineField } from '@/shared/address/AddressLineField'
 
 type CustomerFormModalProps = { open: boolean; customer?: Customer; onClose: () => void; onSaved?: (customer: Customer) => void }
 
@@ -93,12 +95,12 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
         </Row>
         <Form.Item
           name="area"
-          label="Khu vực"
+          label="Phường/Xã"
           tooltip="Dùng để lọc và xếp chuyến giao."
           extra={showExtras ? undefined : UNSUPPORTED_HINT}
           rules={[{ max: 80 }]}
         >
-          <Input placeholder="Ví dụ: Bình Thạnh" disabled={!showExtras} />
+          <WardSelect disabled={!showExtras} />
         </Form.Item>
         {inlineAddresses && (
           <Form.List name="addresses">
@@ -108,7 +110,7 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
                 {fields.map((field, index) => (
                   <div className="af-address-row" key={field.key}>
                     <Form.Item name={field.name} rules={[{ max: 255 }]} noStyle>
-                      <Input placeholder="Số nhà, tên đường, phường/xã, tỉnh/thành phố" aria-label={`Địa chỉ ${index + 1}`} />
+                      <AddressLineField label={`Địa chỉ ${index + 1}`} />
                     </Form.Item>
                     <Button
                       type="text"

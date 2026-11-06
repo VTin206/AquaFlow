@@ -5,7 +5,7 @@ import { shopArticles, shopPolicies } from '../shopNews'
 
 type Props = {
   demo: boolean
-  /** Cài đặt cửa hàng chỉ có ở bản dùng thử; tài khoản thật chưa có API nên ẩn phần liên hệ. */
+  /** Thông tin liên hệ công khai (tài khoản thật lấy từ /store-profile); thiếu thì ẩn phần liên hệ. */
   contact?: { storeName?: string; phone?: string; address?: string; email?: string }
 }
 

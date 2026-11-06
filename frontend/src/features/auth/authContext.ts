@@ -1,7 +1,7 @@
 import { createContext } from 'react'
 import type { LoginCredentials } from './authService'
 
-export type AuthUser = { name: string; role: string; email?: string; isDemo?: boolean }
+export type AuthUser = { name: string; role: string; email?: string; phone?: string | null; isDemo?: boolean }
 
 export type AuthContextValue = {
   user: AuthUser | null
@@ -12,6 +12,7 @@ export type AuthContextValue = {
   demoGuest: boolean
   enterDemoGuest: () => void
   logout: () => void
+  updateProfile: (profile: { fullName: string; email: string; phone: string | null }) => void
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

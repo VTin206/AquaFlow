@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { App, Button, Descriptions, Drawer, Form, Input, InputNumber, Popconfirm, Select, Space, Tag, Typography } from 'antd'
-import { MapPin, Phone, Printer, Truck } from 'lucide-react'
+import { App, Button, Descriptions, Drawer, Dropdown, Form, Input, InputNumber, Popconfirm, Select, Space, Tag, Typography } from 'antd'
+import { Ellipsis, MapPin, Phone, Truck } from 'lucide-react'
 import { usePrinter } from '@/shared/print/usePrinter'
 import { Money } from '@/shared/components/Money'
 import { dueTone } from '@/shared/utils/money'
@@ -8,12 +8,14 @@ import { currency } from '@/shared/utils/format'
 import { useSettings } from '@/features/settings/settingsService'
 import { AdvanceStatusButton } from '@/features/orders/components/AdvanceStatusButton'
 import { OrderDetailsModal } from '@/features/orders/components/OrderDetailsModal'
+import { OrderFocusBanner } from '@/features/orders/components/OrderSheet'
 import { LateTag } from '@/features/orders/components/LateTag'
 import { OrderStatusTag } from '@/features/orders/components/OrderStatusTag'
 import { canDispatch } from '@/features/orders/orderService'
 import { amountDue, awaitingReturnInspection, deliveryAttempts, jugCount } from '@/features/orders/types'
 import { useOrders } from '@/features/orders/useOrders'
 import type { SettlementDraft } from '../types'
+import { demoTripFocus } from '../tripFocus'
 import { dispatchedIn, openIn } from '../tripService'
 import { useTripAction, useTrips } from '../useTrips'
 import { TripManifest } from './TripManifest'
@@ -81,48 +83,58 @@ export function TripDrawer({ tripId, onClose }: { tripId: string; onClose: () =>
             </div>
           </div>
         }
-        extra={
-          <Space>
-            <TripStatusTag status={trip.status} />
-            <Button
-              size="small"
-              icon={<Printer size={14} />}
-              aria-label="In phiếu chuyến"
-              onClick={() => printer.print(<TripManifest trip={trip} stops={stops} settings={settings} />)}
-            >
-              In phiếu
-            </Button>
-          </Space>
+        extra={<TripStatusTag status={trip.status} />}
+        footer={
+          <div className="af-order-footer">
+            <div>
+              {!trip.settlement && !trip.departedAt && (
+                <Popconfirm
+                  title="Hủy chuyến này?"
+                  description="Các đơn trở lại danh sách chờ xếp chuyến."
+                  okText="Hủy chuyến"
+                  okButtonProps={{ danger: true }}
+                  cancelText="Giữ"
+                  onConfirm={() => run({ kind: 'cancel', id: trip.id }, 'Đã hủy chuyến.', true)}
+                >
+                  <Button type="text" danger>
+                    Hủy chuyến
+                  </Button>
+                </Popconfirm>
+              )}
+            </div>
+            <div>
+              <Dropdown
+                trigger={['click']}
+                menu={{
+                  items: [
+                    {
+                      key: 'print',
+                      label: 'In phiếu chuyến',
+                      onClick: () => printer.print(<TripManifest trip={trip} stops={stops} settings={settings} />),
+                    },
+                  ],
+                }}
+              >
+                <Button icon={<Ellipsis size={16} />}>Thao tác khác</Button>
+              </Dropdown>
+              {!trip.settlement && undispatched.length > 0 && (
+                <Popconfirm
+                  title={`Xuất kho ${undispatched.length} đơn?`}
+                  description="Xuất toàn bộ hàng đã giữ của từng đơn theo lô (FEFO). Đơn đã xuất không bỏ khỏi chuyến được."
+                  okText="Xuất kho"
+                  cancelText="Chưa"
+                  onConfirm={() => run({ kind: 'dispatch', id: trip.id }, `Đã xuất kho ${undispatched.length} đơn của chuyến ${trip.id}.`)}
+                >
+                  <Button type="primary" loading={action.isPending}>
+                    Xuất kho {undispatched.length} đơn
+                  </Button>
+                </Popconfirm>
+              )}
+            </div>
+          </div>
         }
       >
-        {!trip.settlement && (undispatched.length > 0 || !trip.departedAt) && (
-          <Space className="af-detail-actions" wrap>
-            {undispatched.length > 0 && (
-              <Popconfirm
-                title={`Xuất kho ${undispatched.length} đơn?`}
-                description="Xuất toàn bộ hàng đã giữ của từng đơn theo lô (FEFO). Đơn đã xuất không bỏ khỏi chuyến được."
-                okText="Xuất kho"
-                cancelText="Chưa"
-                onConfirm={() => run({ kind: 'dispatch', id: trip.id }, `Đã xuất kho ${undispatched.length} đơn của chuyến ${trip.id}.`)}
-              >
-                <Button type="primary" loading={action.isPending}>
-                  Xuất kho tất cả ({undispatched.length})
-                </Button>
-              </Popconfirm>
-            )}
-            {!trip.departedAt && (
-              <Popconfirm
-                title="Hủy chuyến này?"
-                description="Các đơn trở lại danh sách chờ xếp chuyến."
-                okText="Hủy chuyến"
-                cancelText="Giữ"
-                onConfirm={() => run({ kind: 'cancel', id: trip.id }, 'Đã hủy chuyến.', true)}
-              >
-                <Button danger>Hủy chuyến</Button>
-              </Popconfirm>
-            )}
-          </Space>
-        )}
+        <OrderFocusBanner focus={demoTripFocus(trip, undispatched.length, done, stops.length)} />
         {!trip.departedAt && addable.length > 0 && (
           <div className="af-trip-add">
             <Select
@@ -155,16 +167,6 @@ export function TripDrawer({ tripId, onClose }: { tripId: string; onClose: () =>
             </Button>
           </div>
         )}
-        {trip.departedAt && !trip.settlement && (
-          <p className="af-trip-progress">
-            Đã có kết quả{' '}
-            <strong>
-              {done}/{stops.length}
-            </strong>{' '}
-            điểm giao. Ghi kết quả từng đơn, sau đó đối soát khi tài xế về.
-          </p>
-        )}
-
         <ol className="af-trip-stops af-trip-stops-detail">
           {stops.map((order, index) => (
             <li key={order.id}>

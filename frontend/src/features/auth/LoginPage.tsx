@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Alert, App, Button, Checkbox, ConfigProvider, Divider, Form, Input, Modal } from 'antd'
+import { App, Button, Checkbox, ConfigProvider, Divider, Form, Input, Modal } from 'antd'
 import { ArrowLeft, ArrowRight, CircleCheck, Headphones, LockKeyhole, Package, Store, Truck, UserRound, Waves } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { backendFeatures } from '@/shared/features'
@@ -176,9 +176,9 @@ export function LoginPage() {
                   <Form.Item name="rememberMe" valuePropName="checked" noStyle>
                     <Checkbox>Ghi nhớ tôi</Checkbox>
                   </Form.Item>
-                  <Button type="link" size="small" onClick={() => setHelpOpen(true)}>
+                  <Link to="/forgot-password">
                     Quên mật khẩu?
-                  </Button>
+                  </Link>
                 </div>
                 <Button
                   type="primary"
@@ -218,13 +218,6 @@ export function LoginPage() {
                 Xem bản dùng thử
               </Button>
             </ConfigProvider>
-            <div className="af-login-preview-note">
-              <Alert
-                type="info"
-                showIcon
-                title="Tài khoản thật quản lý danh mục, khách hàng và xem đơn hàng. Nhập kho và cập nhật đơn đang được hoàn thiện."
-              />
-            </div>
           </section>
         </div>
       </main>
@@ -244,13 +237,7 @@ export function LoginPage() {
           </Button>
         }
       >
-        <p>Nếu bạn chưa có tài khoản hoặc quên mật khẩu, hãy liên hệ người quản trị cửa hàng để được hỗ trợ.</p>
-        <Alert
-          type="info"
-          showIcon
-          title="Auth API"
-          description="Đăng nhập gửi email và mật khẩu tới /api/v1/auth/login. Người quản trị cấp tài khoản trên database trước khi sử dụng."
-        />
+        <p>Nếu bạn quên mật khẩu, hãy liên hệ người quản trị cửa hàng để được hỗ trợ.</p>
       </Modal>
     </div>
   )

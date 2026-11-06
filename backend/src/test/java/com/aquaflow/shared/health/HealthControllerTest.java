@@ -20,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.flywaydb.autoconfigure.FlywayAutoConfiguration"
 })
 class HealthControllerTest {
+    @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.payment.PaymentRepository paymentRepository;
+    @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.auth.repository.PasswordResetRepository passwordResetRepository;
     @MockBean private com.aquaflow.auth.repository.RoleRepository roleRepository;
 
     @MockBean private com.aquaflow.inventory.repository.InventoryMovementReadRepository inventoryMovementReadRepository;

@@ -368,6 +368,35 @@ body {
 .af-sider-link:hover {
   background: var(--af-surface-hover);
 }
+.af-help-steps {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  line-height: 1.7;
+}
+/* Màn hình laptop thấp: thu gọn khoảng cách để thấy đủ menu mà không phải cuộn. Điện thoại giữ nút cao để dễ bấm. */
+@media (min-width: 769px) and (max-height: 940px) {
+  .af-nav {
+    padding-top: 12px;
+  }
+  .af-workspace {
+    margin-bottom: 8px;
+    padding: 8px 10px;
+  }
+  .af-menu .ant-menu-item-group-title {
+    padding: 8px 12px 4px !important;
+  }
+  .af-menu.ant-menu .ant-menu-item {
+    height: 36px;
+    line-height: 36px;
+    margin-block: 2px;
+  }
+  .af-sider-footer {
+    padding: 6px 16px;
+  }
+  .af-sider-link {
+    padding: 6px 12px;
+  }
+}
 /* Sidebar thu gọn: chỉ còn icon, nhãn hiện ở tooltip. */
 .af-workspace-text {
   flex: 1;
@@ -662,6 +691,66 @@ body {
   gap: 16px;
   justify-content: space-between;
   padding: 20px;
+}
+.af-order-groups {
+  padding: 12px 16px 0;
+}
+.af-order-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 0;
+  line-height: 1.25;
+}
+.af-order-group strong {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.af-order-group strong.is-urgent {
+  color: var(--af-danger);
+}
+.af-order-group small {
+  font-size: 12px;
+  white-space: normal;
+}
+.af-order-tabs .ant-tabs-nav {
+  margin: 0;
+  padding: 4px 20px 0;
+}
+.af-global-search ul {
+  display: grid;
+  gap: 2px;
+  list-style: none;
+  margin: 12px 0 0;
+  max-height: min(50dvh, 400px);
+  overflow-y: auto;
+  padding: 0;
+}
+.af-global-search button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: var(--af-text-strong);
+  cursor: pointer;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  padding: 8px 10px;
+  text-align: left;
+  width: 100%;
+}
+.af-global-search button.is-active {
+  background: var(--af-primary-soft);
+}
+.af-global-search small,
+.af-global-search-note {
+  color: var(--af-text-tertiary);
+  font-size: 12px;
+}
+.af-global-search-note {
+  margin: 10px 0 0;
 }
 .af-toolbar-plain {
   border-bottom: 0;
@@ -999,6 +1088,14 @@ body {
   }
   .af-dash-tasks .ant-tag {
     grid-column: 1 / -1;
+  }
+  /* Tên và nội dung chiếm cả hàng, xuống dòng khi dài thay vì bị cột nút ép cắt chữ. */
+  .af-dash-tasks .af-cell-stack {
+    grid-column: 1 / -1;
+  }
+  .af-dash-tasks .af-cell-stack > span,
+  .af-dash-tasks .af-cell-stack small {
+    white-space: normal;
   }
   .af-dash-tasks .af-money {
     grid-column: 1;
@@ -1411,6 +1508,22 @@ body {
   display: flex;
   justify-content: space-between;
 }
+/* Mã đơn thật khá dài: mã tự cắt bớt để số tiền luôn nằm trong thẻ. */
+.af-delivery-top {
+  gap: 8px;
+}
+.af-delivery-top > .ant-btn {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.af-delivery-top > :not(.ant-btn) {
+  flex: none;
+}
 .af-delivery-customer {
   color: var(--af-text-strong);
   font-weight: 600;
@@ -1458,12 +1571,31 @@ body {
   .af-topbar-user-text {
     display: none;
   }
+  .af-topbar-left,
+  .af-topbar-right {
+    flex: none;
+  }
+  .af-topbar-left {
+    gap: 4px;
+  }
   .af-topbar-right {
     gap: 4px;
   }
   .af-topbar-user {
-    padding-left: 10px;
-    margin-left: 2px;
+    padding-left: 6px;
+    margin-left: 0;
+  }
+  /* Điện thoại: giữ biểu tượng thương hiệu, nhường chỗ để các nút đủ rộng và không đè lên nhau. */
+  .af-topbar-brand strong {
+    display: none;
+  }
+  .af-topbar .af-topbar-icon.ant-btn,
+  .af-topbar .af-notification-link,
+  .af-topbar .af-theme-toggle.ant-btn {
+    flex: none;
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
   }
   .af-page {
     padding: 0 16px;
@@ -1645,6 +1777,186 @@ body {
 .af-detail-actions {
   margin-bottom: 16px;
 }
+/* Chi tiết đơn: một tiêu điểm ở đầu, hàng và tiền ở giữa, phần phụ gập lại ở cuối. */
+.af-order-title {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding-right: 28px;
+}
+.af-order-title > span:first-child {
+  overflow-wrap: anywhere;
+}
+.af-order-title .ant-tag {
+  margin: 0;
+}
+.af-order-focus {
+  align-items: flex-start;
+  background: var(--af-surface-muted);
+  border-radius: 10px;
+  color: var(--af-text-secondary);
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 14px;
+}
+.af-order-focus > svg {
+  flex: none;
+  margin-top: 2px;
+}
+.af-order-focus strong {
+  color: var(--af-text-strong);
+  display: block;
+  font-size: 15px;
+}
+.af-order-focus p {
+  color: var(--af-text-secondary);
+  font-size: 13px;
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+.af-order-focus.is-action {
+  background: var(--af-primary-soft);
+  color: var(--af-primary);
+}
+.af-order-focus.is-alert {
+  background: color-mix(in srgb, var(--af-danger) 12%, transparent);
+  color: var(--af-danger);
+}
+.af-order-focus.is-done {
+  color: var(--af-success);
+}
+.af-order-sheet {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+}
+.af-order-sheet h3 {
+  color: var(--af-text-tertiary);
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0 0 8px;
+}
+.af-order-party {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.af-order-party > strong {
+  color: var(--af-text-strong);
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+.af-order-party > a {
+  align-self: flex-start;
+}
+.af-order-party p {
+  color: var(--af-text);
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+.af-order-party p > span {
+  color: var(--af-text-tertiary);
+  display: block;
+  font-size: 12px;
+}
+.af-order-goods {
+  min-width: 0;
+}
+.af-order-goods ul {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+.af-order-goods li {
+  align-items: baseline;
+  display: flex;
+  font-variant-numeric: tabular-nums;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+.af-order-goods li > span {
+  color: var(--af-text-strong);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.af-order-goods li small {
+  color: var(--af-text-tertiary);
+  display: block;
+  font-size: 12px;
+}
+.af-order-goods li > strong {
+  color: var(--af-text);
+  flex: none;
+  font-weight: 500;
+}
+.af-order-more {
+  border-top: 1px solid var(--af-border);
+  margin-top: 20px;
+}
+.af-order-more .ant-collapse-extra {
+  color: var(--af-text-tertiary);
+  font-size: 13px;
+}
+.af-order-more-empty {
+  color: var(--af-text-tertiary);
+  margin: 0;
+}
+.af-order-receipt + .af-order-receipt,
+.af-order-trips > article + article {
+  margin-top: 20px;
+}
+.af-order-receipt > p {
+  margin: 0 0 8px;
+}
+.af-order-trips header {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.af-order-trips header a {
+  margin-left: auto;
+}
+.af-return-fill {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+.af-trip-stop-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+}
+.af-text-danger {
+  color: var(--af-danger);
+}
+.af-order-footer {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+}
+.af-order-footer > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.af-order-footer > div:last-child {
+  margin-left: auto;
+}
+@media (max-width: 575px) {
+  .af-order-sheet {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .af-delivery-reason {
   margin: 10px 0 0;
   font-size: 12px;
@@ -1788,7 +2100,20 @@ body {
 }
 .af-address-row {
   display: flex;
+  align-items: flex-start;
   gap: 6px;
+}
+.af-address-line {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 6px;
+}
+@media (max-width: 575px) {
+  .af-address-line {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .af-known-customer {
   margin-top: -12px;
@@ -2230,5 +2555,93 @@ body {
 .af-bulk-errors {
   margin: 0;
   padding-left: 18px;
+  color: var(--af-text-secondary);
+}
+
+/* Danh sách thẻ trên điện thoại, dùng ở cả trang quản lý nên phải nằm ở CSS chung. */
+.af-mobile-records {
+  padding: 16px;
+}
+.af-mobile-record-controls {
+  margin-bottom: 12px;
+}
+.af-mobile-record-controls > * {
+  width: 100%;
+}
+.af-record-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.af-record {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.af-record-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--af-text-secondary);
+}
+.af-record-heading strong {
+  color: var(--af-primary);
+  font-size: 14px;
+}
+.af-record h3 {
+  margin: 8px 0 4px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--af-text-strong);
+}
+.af-record-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 4px 0 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--af-text-secondary);
+}
+.af-record-meta a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+}
+.af-record-facts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  margin: 12px 0;
+  font-size: 14px;
+}
+.af-record-facts dt {
+  color: var(--af-text-secondary);
+}
+.af-record-facts dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 600;
+}
+.af-record-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.af-mobile-record-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 16px;
+  font-size: 13px;
   color: var(--af-text-secondary);
 }

@@ -1,4 +1,5 @@
 import { useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useLinkedQuery } from '@/shared/utils/useLinkedQuery'
 import {
   App,
   Button,
@@ -68,7 +69,7 @@ export function ProductsPage() {
   const deactivate = useDeactivateProduct()
   const activate = useActivateProduct()
   const canReactivate = useFeature('reactivate')
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useLinkedQuery()
   const [brand, setBrand] = useState<string>()
   const [category, setCategory] = useState<string>()
   const [packaging, setPackaging] = useState<string>()
