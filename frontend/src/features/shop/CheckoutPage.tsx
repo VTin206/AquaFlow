@@ -48,11 +48,7 @@ function handleFormKeys(event: KeyboardEvent<HTMLElement>) {
 
 export function CheckoutPage() {
   const { user } = useAuth()
-
   const demo = useShopDemo()
-
-  const quoteFee = useShopFeature('deliveryQuote')
-
   const cart = useCart()
   const actions = useCartActions()
   const products = useShopProducts()
@@ -91,9 +87,6 @@ export function CheckoutPage() {
   const fee = demo ? suggestedDeliveryFee({ units, jugs, floor }) : quoteBlocked ? null : quote.data!.deliveryFee
   const quotedSubtotal = !demo && !quoteBlocked ? quote.data!.subtotal : subtotal
   const total = quotedSubtotal + (fee ?? 0)
-
-  const fee = quoteFee ? suggestedDeliveryFee({ units, jugs, floor: 0 }) : null
-  const total = subtotal + (fee ?? 0)
 
   const depositHint = <CheckoutDeposit lines={lines} />
   const submit = (values: CheckoutForm) => {
