@@ -1,15 +1,14 @@
 import { useState, type ReactNode } from 'react'
-import { Button, Card, Col, Empty, Row, Space, Statistic, Tag } from 'antd'
+import { Button, Card, Col, Empty, Row, Space, Tag } from 'antd'
 import { ArrowRight, PackagePlus, Plus } from 'lucide-react'
 import { Link } from 'react-router'
-import { BarChart } from '@/shared/components/BarChart'
+import { DashboardMetrics } from './DashboardMetrics'
 import { Page } from '@/shared/components/Page'
 import { PanelHeading } from '@/shared/components/PanelHeading'
 import { QueryError } from '@/shared/components/QueryError'
 import { useFeature } from '@/shared/features'
-import { compactCurrency, currency, shortDate } from '@/shared/utils/format'
-import { canOpen } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/useStaff'
+import { currency, shortDate } from '@/shared/utils/format'
 import { ReceiveStockModal } from '@/features/inventory/components/ReceiveStockModal'
 import { useStockItems } from '@/features/inventory/useInventory'
 import { OrderDetails } from '@/features/orders/components/OrderDetails'
@@ -19,7 +18,7 @@ import { OrdersTable } from '@/features/orders/components/OrdersTable'
 import { useOrderList } from '@/features/orders/orderData'
 import { ordersLink } from '@/features/orders/useOrderFilters'
 import { amountDue, createdAtOf, orderedAtOf, type Order } from '@/features/orders/types'
-import { dayFromToday, localDay, useDailyRevenue } from '@/features/reports/reportService'
+import { dayFromToday, localDay } from '@/features/reports/reportService'
 
 type LowStockRow = { id: string; name: string; unit: string; stock: number; threshold?: number }
 
@@ -63,11 +62,8 @@ const TASK_LIMIT = 8
 export function DashboardPage() {
   const hasPayments = useFeature('orderPayments')
   const staff = useStaff()
-  // API báo cáo chỉ cho chủ cửa hàng, cùng quyền với trang Báo cáo.
-  const showRevenue = useFeature('revenueReports') && staff !== null && canOpen(staff.role, '/reports')
   const ordersQuery = useOrderList()
   const productsQuery = useLowStock()
-  const revenueQuery = useDailyRevenue(showRevenue)
   const [creatingOrder, setCreatingOrder] = useState(false)
   const [receiving, setReceiving] = useState<{ productId?: string } | null>(null)
   const [openedOrder, setOpenedOrder] = useState<string | null>(null)
@@ -80,10 +76,6 @@ export function DashboardPage() {
     .filter((order) => order.status === 'Đang giao')
     .sort((a, b) => (a.appointment ?? '9').localeCompare(b.appointment ?? '9'))
   const lowStock = productsQuery.rows
-  const days = revenueQuery.data ?? []
-  const lastWeek = days.slice(-7)
-  const today = days.at(-1)
-  const yesterday = days.at(-2)
   const todayOrders = orders.filter((order) => {
     const at = createdAtOf(order)
     return at !== undefined && localDay(at) === dayFromToday()
@@ -185,7 +177,8 @@ export function DashboardPage() {
         </>
       }
     >
-      {!loadingTasks && !ordersQuery.isError && (
+      <DashboardMetrics />
+      {!loadingTasks && !ordersQuery.isError && !productsQuery.isError && (
         <p className="af-dash-summary">
           {summary.length === 0
             ? 'Không có việc tồn đọng.'
@@ -214,6 +207,8 @@ export function DashboardPage() {
           >
             {ordersQuery.isError ? (
               <QueryError error={ordersQuery.error} onRetry={ordersQuery.refetch} />
+            ) : productsQuery.isError ? (
+              <QueryError error={productsQuery.error} onRetry={productsQuery.refetch} />
             ) : tasks.length === 0 ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Đã xử lý hết việc tồn đọng." />
             ) : (
@@ -282,77 +277,20 @@ export function DashboardPage() {
         </Col>
       </Row>
 
-      {/* Số liệu trong ngày; "Còn phải thu" cần phiếu thu, chưa có thì BE chỉ cho biết trạng thái nên không cộng được. */}
+      {/* Số đơn vận hành hôm nay, độc lập với kỳ báo cáo kinh doanh phía trên. */}
       <dl className="af-dash-today">
         <div>
           <dt>Đơn tạo hôm nay</dt>
-          <dd>{ordersQuery.isError ? '—' : todayOrders}</dd>
+          <dd>{ordersQuery.isPending ? 'Đang tải…' : ordersQuery.isError ? '—' : todayOrders}</dd>
         </div>
-        {showRevenue && (
-          <>
-            <div>
-              <dt>Doanh thu hôm nay</dt>
-              <dd>
-                {today ? currency(today.revenue) : '—'}
-                {yesterday && <small>Hôm qua {currency(yesterday.revenue)}</small>}
-              </dd>
-            </div>
-            <div>
-              <dt>Thu ròng hôm nay</dt>
-              <dd>{today ? currency(today.collected) : '—'}</dd>
-            </div>
-            {hasPayments && (
-              <div>
-                <dt>Còn phải thu</dt>
-                <dd>
-                  {currency(unpaid.reduce((sum, order) => sum + amountDue(order), 0))}
-                  <small>{unpaid.length} đơn</small>
-                </dd>
-              </div>
-            )}
-          </>
-        )}
+        {hasPayments && staff?.role === 'ADMIN' && <div>
+          <dt>Còn phải thu hiện tại</dt>
+          <dd>{ordersQuery.isPending ? 'Đang tải…' : ordersQuery.isError ? '—' : currency(unpaid.reduce((sum, order) => sum + amountDue(order), 0))}</dd>
+        </div>}
       </dl>
 
       <Row gutter={[16, 16]}>
-        {showRevenue && (
-          <Col xs={24} xl={9}>
-            <Card
-              title={
-                <PanelHeading
-                  title="Doanh thu 7 ngày"
-                  extra={
-                    <Link to="/reports" className="af-text-link">
-                      Báo cáo <ArrowRight size={14} />
-                    </Link>
-                  }
-                />
-              }
-              className="af-card af-fill"
-              loading={revenueQuery.isPending}
-            >
-              {revenueQuery.isError ? (
-                <QueryError error={revenueQuery.error} onRetry={revenueQuery.refetch} />
-              ) : lastWeek.length === 0 ? (
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có dữ liệu doanh thu." />
-              ) : (
-                <>
-                  <Statistic
-                    title="Tổng trong kỳ"
-                    value={currency(lastWeek.reduce((sum, day) => sum + day.revenue, 0))}
-                    className="af-chart-total"
-                  />
-                  <BarChart
-                    data={lastWeek.map((day) => ({ label: shortDate(day.date).slice(3), value: day.revenue }))}
-                    formatValue={compactCurrency}
-                    height={210}
-                  />
-                </>
-              )}
-            </Card>
-          </Col>
-        )}
-        <Col xs={24} xl={showRevenue ? 15 : 24}>
+        <Col xs={24} xl={24}>
           <Card
             title="Đơn hàng gần đây"
             className="af-card af-fill"
