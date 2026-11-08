@@ -141,28 +141,43 @@ public class ReportRepository {
             COALESCE(b.on_hand,0)-COALESCE(m.after_period,0)-COALESCE(m.during,0) AS opening,
             COALESCE(m.received,0) AS received,COALESCE(m.restocked,0) AS restocked,COALESCE(m.issued,0) AS issued,
             COALESCE(m.adjustments,0) AS adjustments,COALESCE(b.on_hand,0)-COALESCE(m.after_period,0) AS closing,
-            COALESCE(d.quantity,0) AS damaged,COALESCE(x.quantity,0) AS discarded
+            COALESCE(d.quantity,0) AS damaged,COALESCE(x.quantity,0) AS discarded,
+            cost.unit_cost AS "latestUnitCost",
+            CASE WHEN COALESCE(b.on_hand,0)-COALESCE(m.after_period,0)=0 THEN 0
+              ELSE ROUND((COALESCE(b.on_hand,0)-COALESCE(m.after_period,0))*cost.unit_cost,2) END AS "closingValue"
           FROM products p LEFT JOIN balances b ON b.product_id=p.id LEFT JOIN movement_totals m ON m.product_id=p.id
           LEFT JOIN damaged d ON d.product_id=p.id LEFT JOIN discarded x ON x.product_id=p.id
+          LEFT JOIN LATERAL (
+            SELECT pi.unit_cost FROM purchase_items pi JOIN purchase_receipts pr ON pr.id=pi.receipt_id
+            WHERE pi.product_id=p.id AND pi.quantity_accepted>0 AND pr.status='CONFIRMED' AND pr.confirmed_at<:end
+            ORDER BY pr.confirmed_at DESC,pr.id DESC,pi.id DESC LIMIT 1
+          ) cost ON TRUE
           WHERE b.product_id IS NOT NULL OR m.product_id IS NOT NULL OR d.product_id IS NOT NULL OR x.product_id IS NOT NULL
           """;
         return page(sql,"issued DESC, \"productId\"",p,page,size);
     }
     public Page delivery(MapSqlParameterSource p,int page,int size) {
         String sql=ORDERS+"""
-          , attempts AS (
-            SELECT t.driver_id,COUNT(*) FILTER(WHERE da.outcome='SUCCESS') AS delivered,
+          , ordered_attempts AS (
+            SELECT da.*,a.order_id,t.driver_id,
+              ROW_NUMBER() OVER(PARTITION BY a.order_id ORDER BY da.attempted_at,da.id) AS delivery_number
+            FROM delivery_attempts da JOIN delivery_assignments a ON a.id=da.assignment_id
+            JOIN delivery_trips t ON t.id=a.trip_id
+          ), attempts AS (
+            SELECT da.driver_id,COUNT(*) FILTER(WHERE da.outcome='SUCCESS') AS delivered,
               COUNT(*) FILTER(WHERE da.outcome='FAILED') AS failed,
+              COUNT(*) FILTER(WHERE da.delivery_number>1) AS redelivered,
               COUNT(*) FILTER(WHERE da.outcome='SUCCESS' AND o.requested_delivery_at IS NOT NULL) AS appointed,
               COUNT(*) FILTER(WHERE da.outcome='SUCCESS' AND da.attempted_at>o.requested_delivery_at) AS late
-            FROM delivery_attempts da JOIN delivery_assignments a ON a.id=da.assignment_id JOIN delivery_trips t ON t.id=a.trip_id
-            JOIN filtered o ON o.id=a.order_id WHERE da.attempted_at>=:start AND da.attempted_at<:end GROUP BY t.driver_id
+            FROM ordered_attempts da JOIN filtered o ON o.id=da.order_id
+            WHERE da.attempted_at>=:start AND da.attempted_at<:end GROUP BY da.driver_id
           ), handovers AS (
             SELECT driver_id,COUNT(*) AS trips,SUM(cash_reported) AS reported,SUM(cash_confirmed) AS confirmed
             FROM handover_records WHERE handed_over_at>=:start AND handed_over_at<:end GROUP BY driver_id
           ), ids AS (SELECT driver_id FROM attempts UNION SELECT driver_id FROM handovers)
           SELECT COALESCE(ids.driver_id,0) AS "driverId",COALESCE(u.full_name,'Chưa phân công') AS driver,
             COALESCE(a.delivered,0) AS delivered,COALESCE(a.failed,0) AS failed,COALESCE(a.appointed,0) AS appointed,COALESCE(a.late,0) AS late,
+            COALESCE(a.redelivered,0) AS redelivered,
             COALESCE(h.trips,0) AS "settledTrips",COALESCE(h.reported,0) AS "cashReported",COALESCE(h.confirmed,0) AS "cashConfirmed",
             COALESCE(h.reported-h.confirmed,0) AS "cashDifference"
           FROM ids LEFT JOIN users u ON u.id=ids.driver_id LEFT JOIN attempts a ON a.driver_id IS NOT DISTINCT FROM ids.driver_id

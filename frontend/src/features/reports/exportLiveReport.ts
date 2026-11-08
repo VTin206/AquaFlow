@@ -10,7 +10,7 @@ export function buildLiveReportWorkbook(report: LiveReport, query: ReportQuery, 
   sheet.addRow([title])
   sheet.addRow([`${query.from} – ${query.to} · Giờ Việt Nam · ${query.channel ? channelLabels[query.channel] : 'Mọi kênh'} · ${query.method ?? 'Mọi hình thức'}`])
   sheet.addRow([page === undefined ? 'Toàn bộ ngày trong kỳ' : `Trang ${page + 1}, chỉ xuất các dòng đang hiển thị`])
-  sheet.addRow([`Dữ liệu lấy lúc ${report.generatedAt}. Tồn kho, nhập hàng, sổ cọc và đối soát tính cho cả cửa hàng.`])
+  sheet.addRow([`Dữ liệu lấy lúc ${report.generatedAt}. Tồn kho, nhập hàng, sổ cọc và đối soát tính cho cả cửa hàng.${columns.some(column => column.key === 'closingValue') ? ' Giá trị tồn theo giá nhập đã xác nhận gần nhất đến cuối kỳ, không phải giá vốn kế toán; ô giá/giá trị trống nghĩa là chưa có giá nhập.' : ''}${columns.some(column => column.key === 'redelivered') ? ' Giao lại đếm lần giao thứ hai trở đi của cùng đơn, kể cả khác chuyến và lần đầu ngoài kỳ.' : ''}`])
   sheet.addRow(columns.map(column => column.title))
   sheet.getRow(5).font = { bold: true }
   for (const row of rows) sheet.addRow(columns.map(column => row[column.key] ?? ''))

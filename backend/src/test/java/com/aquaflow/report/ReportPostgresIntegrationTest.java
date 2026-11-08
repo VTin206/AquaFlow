@@ -111,6 +111,65 @@ class ReportPostgresIntegrationTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$.sales.revenue").value(0)).andExpect(jsonPath("$.days.length()").value(2))
             .andExpect(jsonPath("$.days[0].collected").value(0));
     }
+    long receipt(long supplier, String status, Instant when, int cost, int accepted) {
+        long receipt=jdbc.queryForObject("INSERT INTO purchase_receipts(supplier_id,status,created_by,confirmed_at) VALUES (?,?,?,?) RETURNING id",Long.class,supplier,status,actor,at(when));
+        jdbc.update("INSERT INTO purchase_items(receipt_id,product_id,quantity_received,quantity_accepted,unit_cost) VALUES (?,?,1,?,?)",receipt,product,accepted,cost);
+        return receipt;
+    }
+    com.fasterxml.jackson.databind.JsonNode inventoryRow(String range) throws Exception {
+        var result=mvc.perform(get(BASE+"/inventory"+range+"&size=100").with(user("owner").roles("ADMIN")))
+            .andExpect(status().isOk()).andReturn();
+        var content=new com.fasterxml.jackson.databind.ObjectMapper().readTree(result.getResponse().getContentAsString()).get("content");
+        for(var row:content) if(row.get("productId").asLong()==product) return row;
+        throw new AssertionError("Fixture product missing from inventory report");
+    }
+    @Test void inventoryValuesUseLatestAcceptedConfirmedCostAtPeriodEndNotFutureOrDraft() throws Exception {
+        long supplier=jdbc.queryForObject("INSERT INTO suppliers(name) VALUES ('Report supplier') RETURNING id",Long.class);
+        receipt(supplier,"CONFIRMED",START.minusSeconds(10),7,1);
+        receipt(supplier,"CONFIRMED",START.plusSeconds(10),11,1);
+        receipt(supplier,"CONFIRMED",START.plusSeconds(10),12,1); // Stable tie: latest receipt ID.
+        receipt(supplier,"DRAFT",START.plusSeconds(20),99,1);
+        receipt(supplier,"CONFIRMED",START.plusSeconds(30),88,0);
+        receipt(supplier,"CONFIRMED",END,77,1); // Next day in Vietnam: excluded.
+        mvc.perform(get(BASE+"/inventory"+RANGE).with(user("owner").roles("ADMIN")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].closing").value(20))
+            .andExpect(jsonPath("$.content[0].latestUnitCost").value(12))
+            .andExpect(jsonPath("$.content[0].closingValue").value(240));
+        var historical=inventoryRow("?from=2026-01-01&to=2026-01-01");
+        org.assertj.core.api.Assertions.assertThat(historical.get("latestUnitCost").decimalValue()).isEqualByComparingTo("7");
+        org.assertj.core.api.Assertions.assertThat(historical.get("closingValue").decimalValue()).isEqualByComparingTo("140");
+    }
+    @Test void missingCostIsUnknownAndEmptyStockHasZeroValue() throws Exception {
+        mvc.perform(get(BASE+"/inventory"+RANGE).with(user("owner").roles("ADMIN")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].latestUnitCost").isEmpty())
+            .andExpect(jsonPath("$.content[0].closingValue").isEmpty());
+        var historical=inventoryRow("?from=2025-12-01&to=2025-12-02");
+        org.assertj.core.api.Assertions.assertThat(historical.get("closing").asInt()).isZero();
+        org.assertj.core.api.Assertions.assertThat(historical.get("closingValue").decimalValue()).isZero();
+    }
+    @Test void redeliveryCountsAcrossAssignmentsAndPreviousPeriodsWithEndExclusive() throws Exception {
+        long trip=jdbc.queryForObject("INSERT INTO delivery_trips(driver_id,created_by,status) VALUES (?,?,'COMPLETED') RETURNING id",Long.class,actor,actor);
+        long assignment=jdbc.queryForObject("INSERT INTO delivery_assignments(trip_id,order_id,active) VALUES (?,?,FALSE) RETURNING id",Long.class,trip,order);
+        jdbc.update("INSERT INTO delivery_attempts(assignment_id,attempt_no,outcome,attempted_at) VALUES (?,1,'FAILED',?),(?,2,'FAILED',?)",assignment,at(START.minusSeconds(1)),assignment,at(END));
+        // Both existing in-period attempts are retries even though one has attempt_no=1.
+        mvc.perform(get(BASE+"/delivery"+RANGE).with(user("owner").roles("ADMIN")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].redelivered").value(2))
+            .andExpect(jsonPath("$.content[0].delivered").value(1)).andExpect(jsonPath("$.content[0].failed").value(1));
+        mvc.perform(get(BASE+"/delivery"+RANGE+"&channel=WEB").with(user("owner").roles("ADMIN")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].redelivered").value(0));
+        mvc.perform(get(BASE+"/delivery?from=2025-12-01&to=2025-12-02").with(user("owner").roles("ADMIN")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content").isEmpty());
+    }
+    @Test void inventoryAndDeliveryAreAdminOnlyAndValidateDates() throws Exception {
+        for(String section:List.of("inventory","delivery")) {
+            mvc.perform(get(BASE+"/"+section+RANGE)).andExpect(status().isUnauthorized());
+            for(String role:List.of("CUSTOMER","SALES_STAFF","DELIVERY_STAFF"))
+                mvc.perform(get(BASE+"/"+section+RANGE).with(user("staff").roles(role))).andExpect(status().isForbidden());
+            for(String range:List.of("?from=2026-01-03&to=2026-01-02", "?from=2024-01-01&to=2026-01-02", "?from=2999-01-01&to=2999-01-02"))
+                mvc.perform(get(BASE+"/"+section+range).with(user("owner").roles("ADMIN"))).andExpect(status().isBadRequest());
+            mvc.perform(post(BASE+"/"+section+RANGE).with(user("owner").roles("ADMIN"))).andExpect(status().isMethodNotAllowed());
+        }
+    }
     @Test void reportsAreAdminReadOnlyAndRejectInvalidFilters() throws Exception {
         mvc.perform(get(BASE+"/summary"+RANGE)).andExpect(status().isUnauthorized());
         for(String role:List.of("CUSTOMER","SALES_STAFF","DELIVERY_STAFF"))
