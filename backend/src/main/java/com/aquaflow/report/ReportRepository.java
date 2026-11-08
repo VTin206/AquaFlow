@@ -41,10 +41,7 @@ public class ReportRepository {
             COUNT(*) AS "ordersDelivered", COALESCE(SUM(subtotal),0) AS "goods",
             COALESCE(SUM(discount_amount),0) AS "discounts",COALESCE(SUM(delivery_fee),0) AS "deliveryFees",
             (SELECT COALESCE(SUM(amount),0) FROM returns) AS "returnsValue",
-            COALESCE(SUM(subtotal-discount_amount),0)-(SELECT COALESCE(SUM(amount),0) FROM returns) AS "revenue",
-            ROUND(CASE WHEN COUNT(*)=0 THEN 0 ELSE
-              (COALESCE(SUM(subtotal-discount_amount),0)-(SELECT COALESCE(SUM(amount),0) FROM returns))/COUNT(*) END,2) AS "averageOrderValue",
-            (SELECT COUNT(*) FROM customers c WHERE c.created_at>=:start AND c.created_at<:end) AS "newCustomers",
+            COALESCE(SUM(subtotal-discount_amount+delivery_fee),0)-(SELECT COALESCE(SUM(amount),0) FROM returns) AS "revenue",
             (SELECT COALESCE(SUM(amount) FILTER(WHERE direction='IN' AND method='CASH'),0) FROM cash) AS "cashIn",
             (SELECT COALESCE(SUM(amount) FILTER(WHERE direction='IN' AND method='BANK_TRANSFER'),0) FROM cash) AS "transferIn",
             (SELECT COALESCE(SUM(amount) FILTER(WHERE direction='OUT'),0) FROM cash) AS "refunds",
@@ -56,7 +53,7 @@ public class ReportRepository {
     public List<Map<String,Object>> daily(MapSqlParameterSource p) {
         return jdbc.queryForList(ORDERS+"""
           , events AS (
-            SELECT (sold_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AS day, subtotal-discount_amount AS revenue,0::numeric AS collected,0 AS orders FROM sold
+            SELECT (sold_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AS day, subtotal-discount_amount+delivery_fee AS revenue,0::numeric AS collected,0 AS orders FROM sold
             UNION ALL SELECT (created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date,-amount,0,0 FROM returns
             UNION ALL SELECT (confirmed_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date,0,CASE WHEN direction='IN' THEN amount ELSE -amount END,0 FROM cash
             UNION ALL SELECT (created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date,0,0,1 FROM filtered WHERE created_at>=:start AND created_at<:end
@@ -71,7 +68,7 @@ public class ReportRepository {
         return jdbc.queryForList(ORDERS+"""
           SELECT c.channel,
             (SELECT COUNT(*) FROM filtered f WHERE f.channel=c.channel AND f.created_at>=:start AND f.created_at<:end) AS orders,
-            (SELECT COALESCE(SUM(subtotal-discount_amount),0) FROM sold s WHERE s.channel=c.channel)
+            (SELECT COALESCE(SUM(subtotal-discount_amount+delivery_fee),0) FROM sold s WHERE s.channel=c.channel)
               -(SELECT COALESCE(SUM(r.amount),0) FROM returns r JOIN filtered f ON f.id=r.order_id WHERE f.channel=c.channel) AS revenue
           FROM (VALUES ('WEB'),('COUNTER'),('PHONE'),('MESSAGE')) c(channel)
           WHERE (:channel IS NULL OR c.channel=:channel) ORDER BY c.channel
@@ -173,7 +170,7 @@ public class ReportRepository {
     public Page customers(MapSqlParameterSource p,int page,int size) {
         String sql=ORDERS+"""
           , events AS (
-            SELECT id,customer_id,subtotal-discount_amount AS revenue,1 AS orders FROM sold
+            SELECT id,customer_id,subtotal-discount_amount+delivery_fee AS revenue,1 AS orders FROM sold
             UNION ALL SELECT o.id,o.customer_id,-r.amount,0 FROM returns r JOIN filtered o ON o.id=r.order_id
           )
           SELECT CASE WHEN e.customer_id IS NULL THEN 'guest' ELSE e.customer_id::text END AS key,
