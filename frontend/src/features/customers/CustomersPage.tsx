@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router'
 import {
   App,
   Button,
@@ -60,7 +61,14 @@ export function CustomersPage() {
   const archivedQuery = useArchivedCustomers(canReactivate)
   const activate = useActivateCustomer()
   const [query, setQuery] = useLinkedQuery()
-  const [profileId, setProfileId] = useState<string | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const profileId = searchParams.get('customerId')
+  const setProfileId = (id: string | null) => setSearchParams(previous => {
+    const next = new URLSearchParams(previous)
+    if (id) next.set('customerId', id)
+    else next.delete('customerId')
+    return next
+  }, { replace: true })
   // undefined: đóng; null: thêm mới; Customer: sửa.
   const [editing, setEditing] = useState<Customer | null | undefined>(undefined)
   const [orderFor, setOrderFor] = useState<Customer | null>(null)

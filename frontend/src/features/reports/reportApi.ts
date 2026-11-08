@@ -7,7 +7,7 @@ export type ReportRow = Record<string, string | number | null>
 export type ReportPage = { content: ReportRow[]; page: number; size: number; totalElements: number }
 export type LiveReport = {
   from: string; to: string; timezone: string; generatedAt: string
-  sales: Record<'ordersCreated' | 'ordersCancelled' | 'ordersDelivered' | 'goods' | 'discounts' | 'deliveryFees' | 'returnsValue' | 'revenue' | 'cashIn' | 'transferIn' | 'refunds' | 'netPayments' | 'undatedDeliveredOrders', number>
+  sales: Record<'averageOrderValue' | 'newCustomers' | 'ordersCreated' | 'ordersCancelled' | 'ordersDelivered' | 'goods' | 'discounts' | 'deliveryFees' | 'returnsValue' | 'revenue' | 'cashIn' | 'transferIn' | 'refunds' | 'netPayments' | 'undatedDeliveredOrders', number>
   days: { date: string; revenue: number; collected: number; orders: number }[]
   channels: { channel: keyof typeof channelLabels; orders: number; revenue: number }[]
   deposits: { collected: number; refunded: number; forfeited?: number; held: number; bottlesHeld: number }
