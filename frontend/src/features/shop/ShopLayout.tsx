@@ -12,20 +12,50 @@ import { shopKeys, useShopContact, useShopDemo, useShopFeature } from './shopSer
 import { useHomeLink, type FreshState } from '@/app/useHomeLink'
 import './shop.css'
 
-const drinkMenuColumns = [
+type DrinkMenuFilter = { brand?: string; group?: string; category?: string }
+type DrinkMenuItem = { label: string; filter: DrinkMenuFilter }
+
+const drinkMenuColumns: { title: string; items: DrinkMenuItem[] }[] = [
   {
     title: 'THƯƠNG HIỆU',
-    items: ['Nước Vĩnh Hảo', 'Nước Lavie', 'Nước Bidrico', 'Nước Ion Life', 'Nước Aquafina', 'Nước Satori', 'Nước Viva', 'M-Water', 'AQUA Water'],
+    items: [
+      { label: 'Nước Vĩnh Hảo', filter: { brand: 'Vĩnh Hảo' } },
+      { label: 'Nước Lavie', filter: { brand: 'LaVie' } },
+      { label: 'Nước Bidrico', filter: { brand: 'Bidrico' } },
+      { label: 'Nước Ion Life', filter: { brand: 'ion Life' } },
+      { label: 'Nước Aquafina', filter: { brand: 'Aquafina' } },
+      { label: 'Nước Satori', filter: { brand: 'Satori' } },
+      { label: 'Nước Viva', filter: { brand: 'LaVie' } },
+      { label: 'M-Water', filter: { brand: 'M-Water' } },
+      { label: 'AQUA Water', filter: { brand: 'AQUA Water' } },
+    ],
   },
   {
     title: 'NƯỚC UỐNG ĐÓNG BÌNH',
-    items: ['Bình nước 19L – 20L vòi bấm', 'Bình nước 19L – 20L úp máy', 'Bình nước 4,5L – 5L', 'Nước uống bổ sung khoáng'],
+    items: [
+      { label: 'Bình nước 19L – 20L vòi bấm', filter: { group: 'jug-tap' } },
+      { label: 'Bình nước 19L – 20L úp máy', filter: { group: 'jug-dispenser' } },
+      { label: 'Bình nước 4,5L – 5L', filter: { group: 'can-5l' } },
+      { label: 'Nước uống bổ sung khoáng', filter: { category: 'Bù khoáng & điện giải' } },
+    ],
   },
   {
     title: 'NƯỚC SUỐI ĐÓNG CHAI',
-    items: ['Chai nhỏ 250ml – 350ml', 'Thùng chai suối 350ml', 'Thùng chai suối 500ml', 'Thùng chai suối Aquafina', 'Thùng chai suối Lavie', 'Thùng chai suối Viva'],
+    items: [
+      { label: 'Chai nhỏ 250ml – 350ml', filter: { group: 'small-350' } },
+      { label: 'Thùng chai suối 350ml', filter: { group: 'small-350' } },
+      { label: 'Thùng chai suối 500ml', filter: { group: 'small-500' } },
+      { label: 'Thùng chai suối Aquafina', filter: { brand: 'Aquafina' } },
+      { label: 'Thùng chai suối Lavie', filter: { brand: 'LaVie' } },
+      { label: 'Thùng chai suối Viva', filter: { brand: 'LaVie' } },
+    ],
   },
-] as const
+]
+
+const drinkMenuHref = (filter: DrinkMenuFilter) => {
+  const params = new URLSearchParams(filter)
+  return `/shop?${params.toString()}#products`
+}
 
 /**
  * Khung trang công khai cho khách, cũng là trang chủ khi chưa đăng nhập.
@@ -110,9 +140,9 @@ export function ShopLayout() {
                     <strong>{column.title}</strong>
                     <ul>
                       {column.items.map((item) => (
-                        <li key={item}>
-                          <Link to="/shop#products" role="menuitem">
-                            {item}
+                        <li key={item.label}>
+                          <Link to={drinkMenuHref(item.filter)} role="menuitem">
+                            {item.label}
                           </Link>
                         </li>
                       ))}
