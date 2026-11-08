@@ -12,27 +12,35 @@ import { autoGranularity, groupRevenue, reportPresets } from './periods'
 import { previousRange } from './reportService'
 import type { ReportColumn } from './exportLiveReport'
 import './reports.css'
+import { useStaff } from '@/features/auth/useStaff'
 
 const sections: Record<ReportSection, { title: string; key: string; columns: ReportColumn[] }> = {
   products: { title: 'Sản phẩm bán', key: 'productId', columns: [
     { key: 'sku', title: 'Mã hàng' }, { key: 'name', title: 'Sản phẩm' }, { key: 'unit', title: 'Đơn vị' }, { key: 'sold', title: 'SL đã giao' }, { key: 'returned', title: 'SL khách trả' }, { key: 'revenue', title: 'Tiền hàng sau giảm giá / trả lại', money: true },
   ] },
   inventory: { title: 'Nhập – xuất – tồn', key: 'productId', columns: [
-    { key: 'name', title: 'Sản phẩm' }, { key: 'unit', title: 'Đơn vị' }, { key: 'opening', title: 'Tồn đầu' }, { key: 'received', title: 'Nhập NCC' }, { key: 'restocked', title: 'Hoàn nhập kho' }, { key: 'issued', title: 'Xuất kho' }, { key: 'adjustments', title: 'Điều chỉnh (+/−)' }, { key: 'closing', title: 'Tồn cuối' }, { key: 'damaged', title: 'Loại khi nhận NCC' }, { key: 'discarded', title: 'Loại khi hoàn hàng' },
+    { key: 'name', title: 'Sản phẩm' }, { key: 'unit', title: 'Đơn vị' }, { key: 'opening', title: 'Tồn đầu' }, { key: 'received', title: 'Nhập NCC' }, { key: 'restocked', title: 'Hoàn nhập kho' }, { key: 'issued', title: 'Xuất kho' }, { key: 'adjustments', title: 'Điều chỉnh (+/−)' }, { key: 'closing', title: 'Tồn cuối' }, { key: 'latestUnitCost', title: 'Giá nhập gần nhất', money: true }, { key: 'closingValue', title: 'Giá trị tồn cuối kỳ', money: true }, { key: 'damaged', title: 'Loại khi nhận NCC' }, { key: 'discarded', title: 'Loại khi hoàn hàng' },
   ] },
   delivery: { title: 'Giao hàng', key: 'driverId', columns: [
-    { key: 'driver', title: 'Tài xế' }, { key: 'delivered', title: 'Lần giao thành công' }, { key: 'failed', title: 'Lần thất bại' }, { key: 'appointed', title: 'Giao có hẹn' }, { key: 'late', title: 'Giao trễ hẹn' }, { key: 'settledTrips', title: 'Chuyến đối soát' }, { key: 'cashReported', title: 'Tiền báo nộp', money: true }, { key: 'cashConfirmed', title: 'Tiền xác nhận nhận', money: true }, { key: 'cashDifference', title: 'Chênh lệch báo − nhận', money: true },
+    { key: 'driver', title: 'Tài xế' }, { key: 'delivered', title: 'Lần giao thành công' }, { key: 'failed', title: 'Lần thất bại' }, { key: 'redelivered', title: 'Lần giao lại' }, { key: 'appointed', title: 'Giao có hẹn' }, { key: 'late', title: 'Giao trễ hẹn' }, { key: 'settledTrips', title: 'Chuyến đối soát' }, { key: 'cashReported', title: 'Tiền báo nộp', money: true }, { key: 'cashConfirmed', title: 'Tiền xác nhận nhận', money: true }, { key: 'cashDifference', title: 'Chênh lệch báo − nhận', money: true },
   ] },
   customers: { title: 'Khách hàng', key: 'key', columns: [
     { key: 'name', title: 'Khách hàng' }, { key: 'orders', title: 'Đơn giao trong kỳ' }, { key: 'revenue', title: 'Doanh thu sau hàng trả', money: true },
   ] },
 }
 const dailyColumns: ReportColumn[] = [{ key: 'date', title: 'Ngày' }, { key: 'revenue', title: 'Doanh thu', money: true }, { key: 'collected', title: 'Thanh toán ròng', money: true }, { key: 'orders', title: 'Đơn tạo' }]
-const columnsOf = (columns: ReportColumn[]) => columns.map(column => ({ title: column.title, dataIndex: column.key, key: column.key, render: (value: string | number | null) => column.money ? currency(Number(value ?? 0)) : value, width: column.money ? 180 : 140 }))
+const columnsOf = (columns: ReportColumn[]) => columns.map(column => ({ title: column.title, dataIndex: column.key, key: column.key, render: (value: string | number | null) => column.money ? value == null ? 'Chưa có giá nhập' : currency(Number(value)) : value, width: column.money ? 180 : 140 }))
 
 export function LiveReportsPage() {
+  const staff = useStaff()
+  return staff?.role === 'ADMIN' ? <LiveReportContent /> : <Alert type="warning" showIcon title="Chỉ ADMIN được xem báo cáo." />
+}
+
+function LiveReportContent() {
   const { message } = App.useApp()
-  const [dates, setDates] = useState<[Dayjs, Dayjs]>([dayjs().subtract(29, 'day'), dayjs()])
+  const today = dayjs(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()))
+  const [dates, setDates] = useState<[Dayjs, Dayjs]>([today.subtract(29, 'day'), today])
+  const [rangeError, setRangeError] = useState<string>()
   const [channel, setChannel] = useState<ReportQuery['channel']>()
   const [method, setMethod] = useState<ReportQuery['method']>()
   const [page, setPage] = useState(0)
@@ -52,8 +60,8 @@ export function LiveReportsPage() {
   const columns = selectedSection?.columns ?? dailyColumns
   return <Page title="Báo cáo" description="Doanh thu, thanh toán, kho và giao hàng từ dữ liệu thực tế, theo ngày Việt Nam."
     actions={<Space wrap>
-      <DatePicker.RangePicker allowClear={false} value={dates} format="DD/MM/YYYY" presets={reportPresets()} disabledDate={date => date.isAfter(dayjs(), 'day')}
-        onChange={value => { if (value?.[0] && value[1]) { setDates([value[0], value[1]]); setPage(0) } }} />
+      <DatePicker.RangePicker allowClear={false} value={dates} format="DD/MM/YYYY" presets={reportPresets(today)} disabledDate={date => date.isAfter(today, 'day')}
+        onChange={value => { if (value?.[0] && value[1]) { if (value[1].diff(value[0], 'day') > 365 || value[1].isAfter(today, 'day')) { setRangeError('Chọn tối đa 366 ngày và không vượt quá hôm nay.'); return }; setRangeError(undefined); setDates([value[0], value[1]]); setPage(0) } }} />
       <Select allowClear placeholder="Mọi kênh" value={channel} style={{ width: 150 }} options={Object.entries(channelLabels).map(([value, label]) => ({ value, label }))} onChange={value => { setChannel(value); setPage(0) }} />
       <Select allowClear placeholder="Mọi hình thức" value={method} style={{ width: 170 }} options={[{ value: 'DELIVERY', label: 'Giao tận nơi' }, { value: 'COUNTER', label: 'Tại quầy' }]} onChange={value => { setMethod(value); setPage(0) }} />
       <Button onClick={() => { void summary.refetch(); void previous.refetch(); if (tab !== 'overview') void details.refetch() }}>Làm mới</Button>
@@ -65,6 +73,7 @@ export function LiveReportsPage() {
         finally { setExporting(false) }
       }}>{tab === 'overview' ? 'Xuất Excel theo ngày' : 'Xuất Excel trang này'}</Button>
     </Space>}>
+    {rangeError && <Alert type="warning" showIcon title={rangeError} />}
     <Alert type="info" showIcon title="Kỳ báo cáo tối đa 366 ngày, gồm cả ngày bắt đầu và kết thúc."
       description="Kênh và hình thức áp dụng cho doanh thu, thanh toán, sản phẩm, khách hàng và kết quả giao. Kho, nhập hàng, sổ cọc và đối soát tài xế tính cho cả cửa hàng." />
     {summary.isError ? <QueryError error={summary.error} onRetry={summary.refetch} /> : <>
@@ -94,10 +103,10 @@ export function LiveReportsPage() {
           ]} /><Typography.Text type="secondary">Sổ cọc/vỏ chỉ phản ánh giao dịch đã lưu; không suy từ đơn hàng.</Typography.Text></Card>
         </> },
         ...Object.entries(sections).map(([key, section]) => ({ key, label: section.title, children: details.isError ? <QueryError error={details.error} onRetry={details.refetch} /> : <Card>
-          {key === 'inventory' && <p>Tồn đầu + nhập NCC + hoàn nhập + điều chỉnh − xuất = tồn cuối. Hàng loại bỏ không nhập vào tồn. Số dư lịch sử được tính lùi từ tồn hiện tại và sổ kho.</p>}
-          {key === 'delivery' && <p>Kết quả tính theo từng lần giao; đối soát tính theo ngày bàn giao và không phải doanh thu hay thanh toán của khách.</p>}
+          {key === 'inventory' && <p>Tồn đầu + nhập NCC + hoàn nhập + điều chỉnh − xuất = tồn cuối. Hàng loại bỏ không nhập vào tồn. Số dư lịch sử được tính lùi từ tồn hiện tại và sổ kho. Giá trị tồn cuối = tồn cuối × giá nhập của hàng đạt từ phiếu đã xác nhận gần nhất đến cuối kỳ. Đây là giá trị vận hành, không phải giá vốn kế toán; chưa có giá nhập thì chưa định giá.</p>}
+          {key === 'delivery' && <p>Kết quả tính theo từng lần giao. Giao lại là lần giao thứ hai trở đi của cùng đơn, kể cả khi đổi chuyến hoặc nhân viên; lần đầu có thể nằm ngoài kỳ. Giao trễ chỉ tính lần giao thành công sau giờ hẹn. Đối soát tính theo ngày bàn giao và không phải doanh thu hay thanh toán của khách.</p>}
           {key === 'customers' && <p>Khách chưa gắn hồ sơ được gộp vào Khách vãng lai.</p>}
-          <Table<ReportRow> rowKey={section.key} loading={details.isPending} columns={columnsOf(section.columns)} dataSource={details.data?.content ?? []} scroll={{ x: key === 'inventory' || key === 'delivery' ? 1500 : 900 }} locale={{ emptyText: 'Chưa có dữ liệu trong kỳ.' }}
+          <Table<ReportRow> rowKey={section.key} loading={details.isPending} columns={columnsOf(section.columns)} dataSource={details.data?.content ?? []} scroll={{ x: key === 'inventory' || key === 'delivery' ? 1500 : 900 }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : 'Chưa có dữ liệu trong kỳ.' }}
             pagination={{ current: page + 1, pageSize: size, total: details.data?.totalElements ?? 0, showSizeChanger: true, pageSizeOptions: [20, 50, 100], onChange: (next, nextSize) => { setPage(nextSize === size ? next - 1 : 0); setSize(nextSize) } }} />
         </Card> })),
       ]} />
