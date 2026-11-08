@@ -5,6 +5,11 @@ public record SupplierResponse(
         String name,
         String phone,
         String address,
-        boolean active
+        boolean active,
+        String contactName,
+        String email
 ) {
+    public SupplierResponse(Long id, String name, String phone, String address, boolean active) {
+        this(id, name, phone, address, active, null, null);
+    }
 }

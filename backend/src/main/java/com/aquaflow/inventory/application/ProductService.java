@@ -18,10 +18,13 @@ import com.aquaflow.inventory.domain.BottleType;
 public class ProductService {
     private final ProductRepository productRepository;
     private final BottleTypeRepository bottleTypeRepository;
+    private final com.aquaflow.workspace.repository.StoreSettingsRepository settings;
 
-    public ProductService(ProductRepository productRepository, BottleTypeRepository bottleTypeRepository) {
+    public ProductService(ProductRepository productRepository, BottleTypeRepository bottleTypeRepository,
+                          com.aquaflow.workspace.repository.StoreSettingsRepository settings) {
         this.productRepository = productRepository;
         this.bottleTypeRepository = bottleTypeRepository;
+        this.settings = settings;
     }
 
     @Transactional
@@ -33,6 +36,8 @@ public class ProductService {
         Product product = new Product(
                 request.sku(), request.name(), request.brand(), request.unit(),
                 request.unitsPerCase(), bottleType, request.salePrice());
+        product.setImage(request.image());
+        product.setLowStockThreshold(request.lowStockThreshold()!=null?request.lowStockThreshold():settings.defaultLowStock());
         return toResponse(productRepository.save(product));
     }
 
@@ -60,7 +65,7 @@ public class ProductService {
                 bottleType == null ? null : bottleType.getName(),
                 product.getSalePrice(),
                 product.isActive(),
-                product.getCreatedAt());
+                product.getCreatedAt(), product.getImage(), product.getLowStockThreshold());
     }
 
     @Transactional(readOnly = true)
@@ -82,6 +87,9 @@ public class ProductService {
         product.update(
                 request.name(), request.brand(), request.unit(),
                 request.unitsPerCase(), findBottleType(request.bottleTypeId()), request.salePrice());
+        // Older clients may omit image; preserve the existing photo in that case.
+        if (request.image() != null) product.setImage(request.image().isBlank() ? null : request.image());
+        if (request.lowStockThreshold() != null) product.setLowStockThreshold(request.lowStockThreshold());
         return toResponse(product);
     }
 

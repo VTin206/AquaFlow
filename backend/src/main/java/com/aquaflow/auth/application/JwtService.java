@@ -29,7 +29,8 @@ public class JwtService {
                 .subject(user.getEmail())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusSeconds(properties.getExpirationMinutes() * 60)))
-                .claim("role", user.getRole().getCode());
+                .claim("role", user.getRole().getCode())
+                .claim("credentialsVersion", user.getCredentialsVersion());
         if (user.getId() != null) {
             builder.claim("userId", user.getId());
         }
@@ -51,6 +52,11 @@ public class JwtService {
                 .verifyWith(signingKey)
                 .build()
                 .parseSignedClaims(token);
+    }
+
+    public boolean hasCurrentCredentials(String token, User user) {
+        Integer version = parseClaims(token).getPayload().get("credentialsVersion", Integer.class);
+        return (version == null ? 0 : version) == user.getCredentialsVersion();
     }
 
     public long expirationSeconds() {

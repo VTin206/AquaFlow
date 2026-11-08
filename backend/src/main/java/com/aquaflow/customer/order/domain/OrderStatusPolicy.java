@@ -49,11 +49,21 @@ public final class OrderStatusPolicy {
             return false;
         }
 
-        // Delivery, dispatch and completion are intentionally blocked in Sprint 2.
-        // Sprint 3 must introduce the inventory movement and delivery workflow before
-        // these states can be enabled again.
+        // Dispatch advances through Order.markDispatched() inside its stock transaction.
+        // The generic status endpoint must never bypass inventory movement;
+        // delivery results and completion still require their own workflows.
         return ALLOWED_TRANSITIONS
                 .getOrDefault(currentStatus, Set.of())
                 .contains(nextStatus);
+    }
+
+    /** Redelivery is a dedicated inventory-backed workflow, never a generic status update. */
+    public static boolean canPrepareForRedelivery(
+            OrderStatus currentStatus,
+            FulfillmentType fulfillmentType,
+            boolean deliveryFailed) {
+        return currentStatus == OrderStatus.CANCELLED
+                && fulfillmentType == FulfillmentType.DELIVERY
+                && deliveryFailed;
     }
 }

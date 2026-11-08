@@ -7,7 +7,18 @@ import { useAdvanceOrderStatus } from '../useOrders'
 import { ReceiveOrderModal } from './ReceiveOrderModal'
 
 /** Nút ghi rõ bước tiếp theo của đơn (Xác nhận → Bắt đầu giao → Hoàn tất). */
-export function AdvanceStatusButton({ order, menu = false, size = 'small' }: { order: Order; menu?: boolean; size?: ButtonProps['size'] }) {
+export function AdvanceStatusButton({
+  order,
+  menu = false,
+  size = 'small',
+  primary = false,
+}: {
+  order: Order
+  menu?: boolean
+  size?: ButtonProps['size']
+  /** Là hành động chính của màn hình (mặc định chỉ nổi bật khi đơn chờ xác nhận). */
+  primary?: boolean
+}) {
   const { message } = App.useApp()
   const advance = useAdvanceOrderStatus()
   const [receiving, setReceiving] = useState(false)
@@ -32,14 +43,16 @@ export function AdvanceStatusButton({ order, menu = false, size = 'small' }: { o
         <Dropdown trigger={['click']} menu={{ items: [{ key: 'advance', label, disabled: pendingThisOrder, onClick: handleAdvance }] }}>
           <Button size="small" icon={<Ellipsis size={16} />} loading={pendingThisOrder} aria-label={`Thao tác đơn ${order.id}`} />
         </Dropdown>
-      ) : <Button
-        size={size}
-        type={order.status === 'Chờ xác nhận' ? 'primary' : 'default'}
-        loading={pendingThisOrder}
-        onClick={handleAdvance}
-      >
-        {label}
-      </Button>}
+      ) : (
+        <Button
+          size={size}
+          type={primary || order.status === 'Chờ xác nhận' ? 'primary' : 'default'}
+          loading={pendingThisOrder}
+          onClick={handleAdvance}
+        >
+          {label}
+        </Button>
+      )}
       <ReceiveOrderModal order={order} open={receiving} onClose={() => setReceiving(false)} />
     </>
   )

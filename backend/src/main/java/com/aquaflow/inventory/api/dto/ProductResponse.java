@@ -14,5 +14,13 @@ public record ProductResponse(
         String bottleTypeName,
         BigDecimal salePrice,
         boolean active,
-        Instant createdAt
-) {}
+        Instant createdAt,
+        String image,
+        int lowStockThreshold
+) {
+    public ProductResponse(Long id, String sku, String name, String brand, String unit, Integer unitsPerCase, Long bottleTypeId,
+            String bottleTypeName, BigDecimal salePrice, boolean active, Instant createdAt, String image) {
+        this(id, sku, name, brand, unit, unitsPerCase, bottleTypeId, bottleTypeName, salePrice, active, createdAt, image,
+                com.aquaflow.inventory.domain.Product.DEFAULT_LOW_STOCK_THRESHOLD);
+    }
+}

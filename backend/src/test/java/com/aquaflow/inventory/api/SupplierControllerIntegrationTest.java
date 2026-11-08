@@ -42,6 +42,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 @AutoConfigureMockMvc
 class SupplierControllerIntegrationTest {
+    @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.payment.PaymentRepository paymentRepository;
+    @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.bottle.BottleLedgerRepository bottleLedgerRepository;
+    @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.delivery.application.DeliveryBottleService deliveryBottleService;
+    @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.auth.repository.PasswordResetRepository passwordResetRepository;
+    @MockitoBean private com.aquaflow.auth.repository.RoleRepository roleRepository;
+
+    @MockitoBean private com.aquaflow.inventory.repository.InventoryMovementReadRepository inventoryMovementReadRepository;
+    @MockitoBean private com.aquaflow.inventory.repository.InventoryReturnRepository inventoryReturnRepository;
+    @MockitoBean private com.aquaflow.activity.ActivityRepository activityRepository;
+    @MockitoBean private com.aquaflow.report.ReportRepository reportRepository;
+    @MockitoBean private com.aquaflow.delivery.repository.DeliveryRepository deliveryRepository;
+    @MockitoBean private com.aquaflow.customer.order.repository.DispatchRepository dispatchRepository;
+    @MockitoBean private com.aquaflow.inventory.application.StockDispatchService stockDispatchService;
+    @MockitoBean private com.aquaflow.workspace.repository.StoreSettingsRepository storeSettingsRepository;
+    @MockitoBean private com.aquaflow.workspace.repository.NotificationRepository notificationRepository;
+
+
 
     @MockitoBean
     private ProductRepository productRepository;
@@ -54,6 +71,12 @@ class SupplierControllerIntegrationTest {
 
     @MockitoBean
     private com.aquaflow.inventory.application.StockReservationService stockReservationService;
+
+    @MockitoBean
+    private com.aquaflow.inventory.repository.RedeliveryEligibilityRepository redeliveryEligibilityRepository;
+
+    @MockitoBean
+    private com.aquaflow.inventory.application.RedeliveryReservationService redeliveryReservationService;
 
     private static final String VALID_BODY = """
             {"name":"Aqua Supplier","phone":"0987654321","address":"123 Main St"}
@@ -147,20 +170,21 @@ class SupplierControllerIntegrationTest {
 
     @Test
     @WithMockUser(roles = "SALES_STAFF")
-    void salesStaffCannotCreateSupplier() throws Exception {
+    void salesStaffCanCreateSupplier() throws Exception {
+        when(supplierService.create(any(SupplierRequest.class))).thenReturn(sampleSupplier());
         mockMvc.perform(post("/api/v1/suppliers")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_BODY))
-                .andExpect(status().isForbidden());
-        verify(supplierService, never()).create(any());
+                .andExpect(status().isCreated());
+        verify(supplierService).create(any());
     }
 
     @Test
     @WithMockUser(roles = "SALES_STAFF")
-    void salesStaffCannotDeleteSupplier() throws Exception {
+    void salesStaffCanDeleteSupplier() throws Exception {
         mockMvc.perform(delete("/api/v1/suppliers/1"))
-                .andExpect(status().isForbidden());
-        verify(supplierService, never()).delete(any());
+                .andExpect(status().isNoContent());
+        verify(supplierService).delete(1L);
     }
 
     @Test

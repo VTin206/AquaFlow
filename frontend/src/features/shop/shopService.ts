@@ -1,25 +1,68 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { db } from '../../mocks/db'
-import { mockError, mockRequest } from '../../mocks/mockRequest'
-import { useAuth } from '../auth/useAuth'
-import { catalogApi, type CatalogProduct } from '../live/catalogApi'
-import { guestOrderApi, type GuestOrderInput } from '../live/guestOrderApi'
-import { daysUntilExpiry } from '../inventory/expiry'
-import type { Product } from '../inventory/types'
-import { orderService } from '../orders/orderService'
-import type { PublicOrder } from '../orders/types'
+import { db } from '@/mocks/db'
+import { mockError, mockRequest } from '@/mocks/mockRequest'
+import { useAuth } from '@/features/auth/useAuth'
+import { isCustomer } from '@/features/auth/accountAccess'
+import { customerOrderApi } from './customerOrderApi'
+import { catalogApi, type CatalogProduct } from '@/features/live/catalogApi'
+import { guestOrderApi, type GuestOrderInput } from '@/features/live/guestOrderApi'
+import { daysUntilExpiry } from '@/features/inventory/expiry'
+import { inferCatalog } from '@/features/inventory/catalogGroups'
+import type { Product } from '@/features/inventory/types'
+import { resolveProductImage } from '@/features/inventory/productImages'
+import { orderService } from '@/features/orders/orderService'
+import type { PublicOrder } from '@/features/orders/types'
+import { useSettings } from '@/features/settings/settingsService'
+import { settingsApi } from '@/features/settings/settingsApi'
+import type { StoreSettings } from '@/features/settings/types'
+import { backendFeatures, type BackendFeature } from '@/shared/features'
 
 // Kênh công khai cho khách; live checkout gửi đơn qua guest order API.
 
 /** Thông tin sản phẩm khách được xem: không lộ số tồn hay giá vốn. */
-export type ShopProduct = Pick<Product, 'id' | 'name' | 'brand' | 'unit' | 'price' | 'image' | 'catalog'> & { sku: string; available: boolean | null; unitsPerCase?: number | null; bottleTypeName?: string | null }
+export type ShopProduct = Pick<Product, 'id' | 'name' | 'brand' | 'unit' | 'price' | 'image' | 'catalog'> & {
+  sku: string
+  available: boolean | null
+  unitsPerCase?: number | null
+  bottleTypeName?: string | null
+  bottleTypeId?: number | null
+}
 
-export const useShopDemo = () => Boolean(useAuth().user?.isDemo)
+/** Dữ liệu mẫu khi đăng nhập bản dùng thử, hoặc khi dev chọn "xem như khách". */
+export const useShopDemo = () => {
+  const { user, demoGuest } = useAuth()
+  return Boolean(user?.isDemo || demoGuest)
+}
+
+/** Như `useFeature` nhưng cho trang khách, gồm cả chế độ dev "xem như khách". */
+export const useShopFeature = (feature: BackendFeature) => {
+  const demo = useShopDemo()
+  return demo || backendFeatures[feature]
+}
+
+export type ShopContact = Partial<Pick<StoreSettings, 'storeName' | 'phone' | 'address' | 'email' | 'openingHours'>>
+
+/** Thông tin liên hệ cửa hàng hiện trên trang khách. */
+export const useShopContact = (): ShopContact | undefined => {
+  const demo = useShopDemo()
+  const settings = useSettings(demo)
+  const profile = useQuery({ queryKey: ['live', 'store-profile'], queryFn: settingsApi.profile, enabled: !demo, staleTime: 60_000 })
+  return demo ? settings.data : profile.data
+}
 
 export const toShopProduct = (product: CatalogProduct): ShopProduct => ({
-  id: String(product.id), sku: product.sku, name: product.name, brand: product.brand ?? '',
-  unit: product.unit, price: product.salePrice, available: product.active ? null : false,
-  unitsPerCase: product.unitsPerCase, bottleTypeName: product.bottleTypeName,
+  id: String(product.id),
+  sku: product.sku,
+  name: product.name,
+  brand: product.brand ?? '',
+  unit: product.unit,
+  price: product.salePrice,
+  available: product.active ? null : false,
+  unitsPerCase: product.unitsPerCase,
+  bottleTypeName: product.bottleTypeName,
+  bottleTypeId: product.bottleTypeId,
+  image: resolveProductImage(product),
+  catalog: inferCatalog(product.name, product.unit),
 })
 
 export const shopService = {
@@ -47,7 +90,7 @@ export const useShopProducts = () => {
   const demo = useShopDemo()
   return useQuery<ShopProduct[]>({
     queryKey: [...shopKeys.products, demo ? 'demo' : 'live'],
-    queryFn: () => demo ? shopService.products() : catalogApi.products().then((products) => products.map(toShopProduct)),
+    queryFn: () => (demo ? shopService.products() : catalogApi.products().then((products) => products.map(toShopProduct))),
   })
 }
 
@@ -57,6 +100,7 @@ export type WebOrderDraft = {
   address: string
   area: string
   floor?: number
+  expectedTotal?: number
   appointment?: string
   note?: string
   lines: { productId: string; quantity: number }[]
@@ -67,7 +111,10 @@ export const toGuestOrderInput = (draft: WebOrderDraft): GuestOrderInput => ({
   recipientPhone: draft.phone,
   deliveryAddress: draft.address,
   deliveryArea: draft.area,
+  ...(draft.floor !== undefined ? { stairFloor: draft.floor } : {}),
+  ...(draft.expectedTotal !== undefined ? { expectedTotal: draft.expectedTotal } : {}),
   items: draft.lines.map((line) => ({ productId: Number(line.productId), quantity: line.quantity })),
+  ...(draft.appointment ? { requestedDeliveryAt: draft.appointment } : {}),
   ...(draft.note ? { note: draft.note } : {}),
 })
 
@@ -86,19 +133,23 @@ export function useShopProduct(id: string) {
 }
 
 export function usePlaceWebOrder() {
+  const { user } = useAuth()
   const demo = useShopDemo()
   const queryClient = useQueryClient()
   return useMutation<PublicOrder | Awaited<ReturnType<typeof guestOrderApi.create>>, Error, WebOrderDraft>({
     mutationFn: (draft) => {
       if (demo) return orderService.placeWebOrder(draft)
+      if (isCustomer(user)) return customerOrderApi.create(toGuestOrderInput(draft))
       return guestOrderApi.create(toGuestOrderInput(draft))
     },
     onSuccess: () => {
       if (demo) {
         // Làm mới các màn quản lý dùng chung dữ liệu mẫu.
-        for (const key of [['orders'], ['customers'], ['products'], ['activity'], shopKeys.products]) queryClient.invalidateQueries({ queryKey: key })
+        for (const key of [['orders'], ['customers'], ['products'], ['activity'], shopKeys.products])
+          queryClient.invalidateQueries({ queryKey: key })
       } else {
-        queryClient.invalidateQueries({ queryKey: ['live', 'orders'] })
+        queryClient.invalidateQueries({ queryKey: ['live', 'orders-view'] })
+        queryClient.invalidateQueries({ queryKey: ['live', 'customer-orders'] })
       }
     },
   })

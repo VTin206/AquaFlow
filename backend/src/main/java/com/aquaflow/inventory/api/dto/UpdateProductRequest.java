@@ -30,5 +30,15 @@ public record UpdateProductRequest(
         @NotNull(message = "Sale price is required")
         @PositiveOrZero(message = "Sale price must be greater than or equal to 0")
         @Digits(integer = 12, fraction = 2, message = "Sale price must have at most 12 integer digits and 2 decimals")
-        BigDecimal salePrice
-) {}
+        BigDecimal salePrice,
+
+        @Size(max = 7000000, message = "Image must not exceed 5 MB encoded as a data URL")
+        String image,
+
+        @PositiveOrZero(message = "Low stock threshold must be greater than or equal to 0")
+        Integer lowStockThreshold
+) {
+    public UpdateProductRequest(String name, String brand, String unit, Integer unitsPerCase, Long bottleTypeId, BigDecimal salePrice, String image) {
+        this(name, brand, unit, unitsPerCase, bottleTypeId, salePrice, image, null);
+    }
+}

@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { App } from 'antd'
+import { useQueryClient } from '@tanstack/react-query'
 import { authService, type LoginCredentials } from './authService'
-import { getStoredAuthToken, setUnauthorizedHandler, storeAuthToken } from '../../shared/api/client'
+import { getStoredAuthToken, setUnauthorizedHandler, storeAuthToken } from '@/shared/api/client'
 import { AuthContext, type AuthContextValue, type AuthUser } from './authContext'
 import { roleLabel, STAFF_ROLES } from './roles'
+import { clearShopData, forgetSavedProfile } from '@/features/shop/cartStore'
 const USER_KEY = 'aquaflow.auth.user'
 const EXPIRES_KEY = 'aquaflow.auth.expires-at'
+const DEMO_GUEST_KEY = 'aquaflow.auth.demo-guest'
 const EXPIRED_MESSAGE = 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.'
 
 const readExpiry = () => {
@@ -31,6 +34,8 @@ const readStoredToken = () => {
   if (expiresAt && expiresAt <= Date.now()) {
     storeAuthToken(null)
     writeExpiry(null)
+    saveUser(null)
+    forgetSavedProfile()
     return null
   }
   return getStoredAuthToken()
@@ -59,28 +64,63 @@ const saveUser = (user: AuthUser | null) => {
   }
 }
 
-const toAuthUser = (user: { fullName: string; email: string; role: string }): AuthUser => ({ name: user.fullName || user.email, role: roleLabel(user.role) })
+// Chế độ "khách dùng thử" chỉ có khi dev, bản build bỏ qua cờ này.
+const readDemoGuest = () => {
+  if (!import.meta.env.DEV) return false
+  try {
+    return localStorage.getItem(DEMO_GUEST_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+const writeDemoGuest = (on: boolean) => {
+  try {
+    if (on) localStorage.setItem(DEMO_GUEST_KEY, '1')
+    else localStorage.removeItem(DEMO_GUEST_KEY)
+  } catch {
+    // Bỏ qua.
+  }
+}
+
+const toAuthUser = (user: { fullName: string; email: string; phone?: string | null; role: string }): AuthUser => ({
+  name: user.fullName || user.email,
+  email: user.email,
+  phone: user.phone,
+  role: roleLabel(user.role),
+})
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient()
   const { message } = App.useApp()
   const [token, setToken] = useState(readStoredToken)
   const [user, setUser] = useState<AuthUser | null>(readStoredUser)
   const [expiresAt, setExpiresAt] = useState(readExpiry)
+  const [demoGuest, setDemoGuest] = useState(readDemoGuest)
 
   const clearSession = useCallback(() => {
+    queryClient.clear()
     storeAuthToken(null)
     writeExpiry(null)
     saveUser(null)
+    writeDemoGuest(false)
     setToken(null)
     setExpiresAt(null)
     setUser(null)
-  }, [])
+    setDemoGuest(false)
+  }, [queryClient])
 
   // Hết phiên thì xóa dữ liệu đăng nhập; RequireAuth tự đưa về trang đăng nhập.
   const expire = useCallback(() => {
     clearSession()
+    forgetSavedProfile()
     message.warning(EXPIRED_MESSAGE)
   }, [clearSession, message])
+
+  const logout = useCallback(() => {
+    clearSession()
+    clearShopData()
+  }, [clearSession])
 
   // Backend từ chối token (401).
   useEffect(() => {
@@ -98,9 +138,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Mở lại app với token cũ: lấy thông tin người dùng mới nhất (401 đã được xử lý ở trên).
   useEffect(() => {
     if (!token) return
+    let active = true
     authService
       .me()
       .then((current) => {
+        if (!active) return
         const next = toAuthUser(current)
         saveUser(next)
         setUser(next)
@@ -108,41 +150,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch(() => {
         // Lỗi mạng: giữ phiên để dùng tiếp khi máy chủ hoạt động lại.
       })
+    return () => {
+      active = false
+    }
     // Chỉ kiểm tra khi token thay đổi.
   }, [token])
 
-  const login = async (credentials: LoginCredentials) => {
-    const response = await authService.login(credentials)
-    if (!STAFF_ROLES.includes(response.user.role)) {
-      throw new Error(`Tài khoản ${roleLabel(response.user.role).toLowerCase()} không dùng được trang quản lý cửa hàng.`)
-    }
-    const nextUser = toAuthUser(response.user)
-    const nextExpiry = Date.now() + response.expiresIn * 1000
-    storeAuthToken(response.accessToken)
-    writeExpiry(nextExpiry)
-    saveUser(nextUser)
-    setToken(response.accessToken)
-    setExpiresAt(nextExpiry)
-    setUser(nextUser)
-  }
+  const login = useCallback(
+    async (credentials: LoginCredentials) => {
+      const response = await authService.login(credentials)
+      if (![...STAFF_ROLES, 'CUSTOMER'].includes(response.user.role)) {
+        throw new Error(`Tài khoản ${roleLabel(response.user.role).toLowerCase()} không dùng được trang quản lý cửa hàng.`)
+      }
+      const nextUser = toAuthUser(response.user)
+      queryClient.clear()
+      const nextExpiry = Date.now() + response.expiresIn * 1000
+      storeAuthToken(response.accessToken)
+      writeExpiry(nextExpiry)
+      saveUser(nextUser)
+      writeDemoGuest(false)
+      setDemoGuest(false)
+      setToken(response.accessToken)
+      setExpiresAt(nextExpiry)
+      setUser(nextUser)
+    },
+    [queryClient],
+  )
 
-  const enterDemo = () => {
+  const enterDemo = useCallback(() => {
+    queryClient.clear()
     storeAuthToken(null)
     writeExpiry(null)
     const demoUser = { name: 'Nguyễn An', role: 'Bản dùng thử', isDemo: true }
     saveUser(demoUser)
+    writeDemoGuest(false)
+    setDemoGuest(false)
     setToken(null)
     setExpiresAt(null)
     setUser(demoUser)
-  }
+  }, [queryClient])
 
-  const value = useMemo<AuthContextValue>(() => ({
-    user,
-    isAuthenticated: Boolean(user && (token || user.isDemo)),
-    login,
-    enterDemo,
-    logout: clearSession,
-  }), [token, user, clearSession])
+  const enterDemoGuest = useCallback(() => {
+    clearSession()
+    writeDemoGuest(true)
+    setDemoGuest(true)
+  }, [clearSession])
+
+  const updateProfile = useCallback((profile: { fullName: string; email: string; phone: string | null }) => {
+    setUser(current => {
+      if (!current || current.email !== profile.email) return current
+      const next = { ...current, name: profile.fullName, phone: profile.phone }
+      saveUser(next)
+      return next
+    })
+  }, [])
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      isAuthenticated: Boolean(user && (token || user.isDemo)),
+      login,
+      enterDemo,
+      demoGuest,
+      enterDemoGuest,
+      logout,
+      updateProfile,
+    }),
+    [token, user, demoGuest, logout, enterDemoGuest, login, enterDemo, updateProfile],
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

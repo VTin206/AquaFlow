@@ -51,7 +51,7 @@ Menu [iWater](https://iwater.vn/) vẫn liệt kê năm thương hiệu bên dư
 
 - `src/mocks/waterCatalog.ts`: danh sách 61 sản phẩm, ảnh và thông tin phân loại tương ứng.
 - `src/mocks/data.ts`: tập hợp danh mục nước với vỏ bình, cùng dữ liệu đơn mẫu.
-- `src/features/inventory/catalog.ts`: nhóm thương hiệu và bộ lọc; sản phẩm tự thêm chưa có metadata hiển thị "Chưa phân loại".
+- `src/features/inventory/catalogGroups.ts`: nhóm thương hiệu và bộ lọc; sản phẩm tự thêm chưa có metadata hiển thị "Chưa phân loại".
 - `public/images/reference/iwater/`: 8 ảnh ban đầu và trang xem trước bộ ảnh ban đầu.
 - `public/images/products/iwater/`: 53 ảnh bổ sung; `sources.json` ghi nguồn của cả 61 ảnh nước trong danh mục.
 - `public/images/brands/`: 9 logo nguồn iWater, kèm `sources.json`. Các nhóm chưa có logo dùng ảnh sản phẩm đại diện hoặc biểu tượng giữ chỗ, không tạo logo giả.

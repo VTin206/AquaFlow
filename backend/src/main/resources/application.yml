@@ -1,4 +1,17 @@
 spring:
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.starttls.required: true
+      mail.smtp.ssl.checkserveridentity: true
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
   application:
     name: aquaflow-backend
   profiles:
@@ -20,6 +33,10 @@ server:
     include-message: always
 
 app:
+  password-reset:
+    enabled: ${PASSWORD_RESET_ENABLED:false}
+    from: ${SMTP_FROM:}
+    frontend-url: ${FRONTEND_URL:}
   jwt:
     secret: ${APP_JWT_SECRET:}
     expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}

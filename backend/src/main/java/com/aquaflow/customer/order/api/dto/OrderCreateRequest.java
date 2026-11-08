@@ -44,9 +44,18 @@ public record OrderCreateRequest(
         @NotEmpty(message = "Order must contain at least one item")
         List<@NotNull @Valid OrderItemRequest> items,
 
-        String note
+        String note,
+        @jakarta.validation.constraints.Min(0) @jakarta.validation.constraints.Max(30) int stairFloor,
+        @jakarta.validation.constraints.PositiveOrZero java.math.BigDecimal expectedTotal
 
 ) {
+    public OrderCreateRequest(Long customerId, OrderChannel channel, FulfillmentType fulfillmentType,
+            String recipientName, String recipientPhone, String deliveryAddress, String deliveryArea,
+            OffsetDateTime requestedDeliveryAt, List<OrderItemRequest> items, String note) {
+        this(customerId, channel, fulfillmentType, recipientName, recipientPhone, deliveryAddress,
+                deliveryArea, requestedDeliveryAt, items, note, 0, null);
+    }
+
 
     @JsonIgnore
     @AssertTrue(message = "Recipient name, recipient phone, and delivery address are required for delivery orders")

@@ -36,6 +36,7 @@ const pageRoles: Record<string, RoleCode[]> = {
   '/reports': ['ADMIN'],
   '/activity': ['ADMIN'],
   '/settings': ['ADMIN'],
+  '/staff': ['ADMIN'],
 }
 
 export const canOpen = (role: RoleCode, path: string) => (pageRoles[path] ?? ['ADMIN']).includes(role)

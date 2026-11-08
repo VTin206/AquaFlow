@@ -35,7 +35,8 @@ public class ProductController {
         @ApiResponse(responseCode = "200", description = "List of products")
     })
     public ResponseEntity<List<ProductResponse>> getAllProducts(@RequestParam(required = false) Boolean active, Authentication authentication) {
-        return ResponseEntity.ok(productService.findAll(isAdmin(authentication) ? active : true));
+        // Boolean.TRUE keeps both branches boxed; a primitive `true` would unbox a null `active` and throw.
+        return ResponseEntity.ok(productService.findAll(canManage(authentication) ? active : Boolean.TRUE));
     }
 
     @GetMapping("/{id}")
@@ -46,7 +47,7 @@ public class ProductController {
     })
     public ResponseEntity<ProductResponse> getProductById(@PathVariable Long id, Authentication authentication) {
         ProductResponse product = productService.findById(id);
-        if (!product.active() && !isAdmin(authentication)) {
+        if (!product.active() && !canManage(authentication)) {
             throw new NotFoundException("Product not found: " + id);
         }
         return ResponseEntity.ok(product);
@@ -59,7 +60,7 @@ public class ProductController {
         @ApiResponse(responseCode = "201", description = "Success creation of new product"),
         @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
-        @ApiResponse(responseCode = "403", description = "Admin role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "403", description = "Store staff role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "404", description = "Bottle type not found or inactive", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "409", description = "SKU already exists", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
     })
@@ -74,7 +75,7 @@ public class ProductController {
         @ApiResponse(responseCode = "200", description = "Success updated product"),
         @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
-        @ApiResponse(responseCode = "403", description = "Admin role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "403", description = "Store staff role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
     })
     public ResponseEntity<ProductResponse> updateProduct(@PathVariable Long id, @Valid @RequestBody UpdateProductRequest request){
@@ -87,7 +88,7 @@ public class ProductController {
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Success deletion of product"),
         @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
-        @ApiResponse(responseCode = "403", description = "Admin role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+        @ApiResponse(responseCode = "403", description = "Store staff role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
     })
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
@@ -95,8 +96,8 @@ public class ProductController {
         return ResponseEntity.noContent().build();
     }
 
-    private boolean isAdmin(Authentication authentication) {
+    private boolean canManage(Authentication authentication) {
         return authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+                .anyMatch(authority -> ("ROLE_ADMIN".equals(authority.getAuthority()) || "ROLE_SALES_STAFF".equals(authority.getAuthority())));
     }
 }
