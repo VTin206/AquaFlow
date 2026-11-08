@@ -1,15 +1,17 @@
 import { useState } from 'react'
-import { Button, Grid, Space, Table, Tooltip, type TableColumnsType } from 'antd'
-import { Eye } from 'lucide-react'
-import { Money } from '../../../shared/components/Money'
-import { tablePagination, tableScrollHeight } from '../../../shared/utils/table'
-import { useColumnSort } from '../../../shared/components/sortableColumn'
-import { amountDue, paidAmount, paymentLabel, type Order } from '../types'
-import { AdvanceStatusButton } from './AdvanceStatusButton'
+import { Button, Grid, Space, Table, type TableColumnsType } from 'antd'
+import { ViewButton } from '@/shared/components/ViewButton'
+import { Money } from '@/shared/components/Money'
+import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
+import { useColumnSort } from '@/shared/components/sortableColumn'
+import { useFeature } from '@/shared/features'
+import { amountDue, compareDeliveryDue, deliveryTimingOf, paymentLabel, type Order } from '../types'
 import { LateTag } from './LateTag'
 import { OrderStatusTag } from './OrderStatusTag'
-import { OrderDetailsModal } from './OrderDetailsModal'
 import { OrderCards } from './OrderCards'
+import { OrderBulkActions } from './OrderBulkActions'
+import { OrderDetails } from './OrderDetails'
+import { OrderNextAction } from './OrderNextAction'
 
 type OrdersTableProps = {
   orders: Order[]
@@ -23,18 +25,29 @@ type OrdersTableProps = {
 
 export function OrdersTable({ orders, loading, compact = false, emptyText = 'Chưa có đơn hàng nào.', filterKey }: OrdersTableProps) {
   const screens = Grid.useBreakpoint()
+  // Chưa có phiếu thu thì không tính "còn phải thu", dùng trạng thái thanh toán của BE.
+  const showPayments = useFeature('orderPayments')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  // Tích chọn nhiều đơn (chỉ bảng đầy đủ); chỉ tính các đơn còn hiện theo bộ lọc.
+  const [checkedIds, setCheckedIds] = useState<string[]>([])
+  const checked = compact ? [] : orders.filter((order) => checkedIds.includes(order.id))
   const [pageSize, setPageSize] = useState(tablePagination.defaultPageSize ?? 10)
-  const sort = useColumnSort<Order>()
+  // Mặc định đưa đơn cần giao sớm nhất lên đầu.
+  const sort = useColumnSort<Order>(compact ? null : { key: 'due', order: 'ascend' })
+  // Mã của BE (AF- + 20 ký tự) dài hơn mã mẫu nhiều, nên cột rộng theo mã dài nhất để không bị cắt.
+  const longestCode = Math.max(0, ...orders.map((order) => (order.code ?? order.id).length))
+  const codeWidth = Math.max(compact ? 110 : 150, longestCode * 9 + (compact ? 24 : 64))
+  // Độ rộng tối thiểu của bảng = tổng các cột, để không tự giãn rồi che cột cố định bên phải.
+  const tableMinWidth = codeWidth + (compact ? 180 + 150 + 170 + 80 : 44 + 220 + 170 + 160 + 170 + 112)
   const columns: TableColumnsType<Order> = [
     {
       title: 'Mã đơn',
       dataIndex: 'id',
-      width: compact ? 110 : 150,
+      width: codeWidth,
       render: (id: string, order) => (
         <span className="af-order-id">
-          <Button type="link" size="small" onClick={() => setSelectedId(id)} aria-label={`Xem đơn ${id}`}>
-            {id}
+          <Button type="link" size="small" onClick={() => setSelectedId(id)} aria-label={`Xem đơn ${order.code ?? id}`}>
+            {order.code ?? id}
           </Button>
           {!compact && order.status === 'Chờ xác nhận' && <span className="af-new-tag">Mới</span>}
         </span>
@@ -43,29 +56,63 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
     {
       title: 'Khách hàng',
       dataIndex: 'customer',
-      width: compact ? 180 : 220,
+      // Không đặt độ rộng: cột tên nhận phần dư khi màn hình rộng, các cột số giữ vừa nội dung.
+      minWidth: compact ? 180 : 220,
       render: (_, order) => (
         <div className="af-cell-stack">
-          <span className="af-cell-truncate" title={order.customer}>{order.customer}</span>
+          <span className="af-cell-truncate" title={order.customer}>
+            {order.customer}
+          </span>
           <small className="af-cell-truncate" title={`${order.phone || 'Khách tại quầy'} · ${order.method}`}>
             {order.phone || 'Khách tại quầy'} · {order.method}
           </small>
         </div>
       ),
     },
-    ...(compact ? [] : [{ ...sort.column('Giờ đặt', 'time', 'time'), dataIndex: 'time', width: 130, sorter: (a: Order, b: Order) => a.time.localeCompare(b.time) }]),
+    ...(compact
+      ? []
+      : [
+          {
+            ...sort.column('Hẹn giao', 'due', 'time'),
+            dataIndex: 'appointment',
+            width: 170,
+            sorter: compareDeliveryDue,
+            render: (_: string, order: Order) => {
+              const { main, sub } = deliveryTimingOf(order)
+              return (
+                <div className="af-cell-stack af-timing-cell">
+                  <span className={`af-timing is-${main.tone}`} title={main.title}>
+                    {main.label}
+                  </span>
+                  <small title={sub.title}>{sub.label}</small>
+                </div>
+              )
+            },
+          },
+        ]),
     {
       title: 'Tổng tiền',
       ...(!compact && sort.column('Tổng tiền', 'total', 'number')),
       dataIndex: 'total',
       align: 'right',
-      width: 140,
+      width: compact ? 150 : 160,
       sorter: compact ? undefined : (a, b) => a.total - b.total,
+      // Gộp thanh toán vào đây: dòng dưới là số còn phải thu, hoặc trạng thái thanh toán của BE khi chưa có phiếu thu.
       render: (total: number, order) => (
         <div className="af-cell-stack af-money-stack">
           <Money value={total} />
           {!compact && order.status !== 'Đã hủy' && (
-            <small>{amountDue(order) > 0 ? <Money value={amountDue(order)} tone="due" prefix="Còn " /> : <span className="af-money is-paid">Đã thu đủ</span>}</small>
+            <small>
+              {!showPayments ? (
+                <span className={paymentLabel(order) === 'Đã thanh toán' ? 'af-money is-paid' : 'af-money is-due'}>
+                  {paymentLabel(order)}
+                </span>
+              ) : amountDue(order) > 0 ? (
+                <Money value={amountDue(order)} tone="due" prefix="Còn " />
+              ) : (
+                <span className="af-money is-paid">Đã thu đủ</span>
+              )}
+            </small>
           )}
         </div>
       ),
@@ -81,32 +128,15 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
         </Space>
       ),
     },
-    ...(compact
-      ? []
-      : [
-          {
-            title: 'Thanh toán',
-            key: 'payment',
-            width: 185,
-            render: (_: unknown, order: Order) => (
-              <div className="af-cell-stack">
-                <span>{paymentLabel(order)}</span>
-                {order.payments.length > 0 && <small>Đã thu <Money value={paidAmount(order)} tone="paid" /></small>}
-              </div>
-            ),
-          },
-        ]),
     {
       title: 'Thao tác',
       key: 'action',
-      width: compact ? 80 : 100,
+      width: compact ? 80 : 112,
       fixed: 'right',
       render: (_, order) => (
         <Space size={6}>
-          <Tooltip title="Xem chi tiết">
-            <Button size="small" icon={<Eye size={15} />} onClick={() => setSelectedId(order.id)} aria-label={`Chi tiết đơn ${order.id}`} />
-          </Tooltip>
-          {!compact && <AdvanceStatusButton order={order} menu />}
+          <ViewButton subject={`đơn ${order.code ?? order.id}`} onClick={() => setSelectedId(order.id)} />
+          {!compact && <OrderNextAction order={order} dense />}
         </Space>
       ),
     },
@@ -115,20 +145,42 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
   return (
     <>
       {screens.md === false ? (
-        <OrderCards orders={orders} loading={loading} compact={compact} emptyText={emptyText} onDetails={setSelectedId} filterKey={filterKey} />
-      ) : <Table<Order>
-        key={filterKey}
-        className="af-data-table"
-        rowKey="id"
-        columns={columns}
-        dataSource={orders}
-        loading={loading}
-        size="middle"
-        pagination={compact ? false : { ...tablePagination, pageSize, onShowSizeChange: (_, size) => setPageSize(size) }}
-        locale={{ emptyText }}
-        scroll={{ x: compact ? 720 : 1220, ...(!compact && { y: tableScrollHeight }) }}
-      />}
-      {selectedId && <OrderDetailsModal key={selectedId} orderId={selectedId} onClose={() => setSelectedId(null)} />}
+        <OrderCards
+          orders={orders}
+          loading={loading}
+          compact={compact}
+          emptyText={emptyText}
+          onDetails={setSelectedId}
+          filterKey={filterKey}
+        />
+      ) : (
+        <>
+          {!compact && <OrderBulkActions orders={checked} onSelect={setCheckedIds} />}
+          <Table<Order>
+            key={filterKey}
+            className="af-data-table af-table-flush"
+            rowKey="id"
+            columns={columns}
+            dataSource={orders}
+            loading={loading}
+            size="middle"
+            pagination={compact ? false : { ...tablePagination, pageSize, onShowSizeChange: (_, size) => setPageSize(size) }}
+            locale={{ emptyText }}
+            scroll={{ x: tableMinWidth, ...(!compact && { y: tableScrollHeight }) }}
+            rowSelection={
+              compact
+                ? undefined
+                : {
+                    selectedRowKeys: checked.map((order) => order.id),
+                    onChange: (keys) => setCheckedIds(keys.map(String)),
+                    fixed: 'left',
+                    columnWidth: 44,
+                  }
+            }
+          />
+        </>
+      )}
+      {selectedId && <OrderDetails id={selectedId} onClose={() => setSelectedId(null)} />}
     </>
   )
 }

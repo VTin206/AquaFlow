@@ -1,13 +1,14 @@
 import { Tag } from 'antd'
-import type { TripStatus } from '../types'
+import type { TripViewStatus } from '../tripFocus'
 
-const color: Record<TripStatus, string> = {
+const color: Record<TripViewStatus, string> = {
   'Chờ xuất phát': 'gold',
   'Đang giao': 'cyan',
   'Chờ đối soát': 'orange',
   'Đã đối soát': 'green',
+  'Đã hủy': 'default',
 }
 
-export function TripStatusTag({ status }: { status: TripStatus }) {
+export function TripStatusTag({ status }: { status: TripViewStatus }) {
   return <Tag color={color[status]}>{status}</Tag>
 }

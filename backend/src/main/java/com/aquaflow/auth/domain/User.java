@@ -45,6 +45,28 @@ public class User {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @Column(name = "credentials_version", nullable = false)
+    private int credentialsVersion;
+
+    public int getCredentialsVersion() { return credentialsVersion; }
+
+    public void updateStaffProfile(String fullName, String phone, UserStatus status) {
+        this.fullName = fullName;
+        this.phone = phone;
+        if (this.status != status) credentialsVersion++;
+        this.status = status;
+    }
+
+    public void changePassword(String encodedPassword) {
+        this.passwordHash = encodedPassword;
+        credentialsVersion++;
+    }
+
+    public void updateCustomerProfile(String fullName, String phone) {
+        this.fullName = fullName;
+        this.phone = phone;
+    }
+
     protected User() {
     }
 

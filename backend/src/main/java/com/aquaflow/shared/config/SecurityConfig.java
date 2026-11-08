@@ -60,23 +60,85 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/health", "/error").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/register").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/password-reset-requests", "/api/v1/auth/password-resets").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/store-profile").permitAll()
                         // Public catalog is intentionally limited to the existing collection/detail endpoints.
                         // Do not use /** here: future administrative sub-resources must not become public by accident.
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/products", "/api/v1/products/*",
                                 "/api/v1/bottle-types", "/api/v1/bottle-types/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/suppliers/**").hasAnyRole("ADMIN", "SALES_STAFF")
-                        // Nhân viên lập/sửa phiếu nhập/xác nhận (cộng tồn)/hủy phiếu
+                        // NhÃ¢n viÃªn láº­p/sá»­a phiáº¿u nháº­p/xÃ¡c nháº­n (cá»™ng tá»“n)/há»§y phiáº¿u
                         .requestMatchers("/api/v1/purchase-receipts/**").hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers("/api/v1/inventory/**").hasAnyRole("ADMIN", "SALES_STAFF")
-                        .requestMatchers("/api/v1/products/**", "/api/v1/bottle-types/**", "/api/v1/suppliers/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/products/**", "/api/v1/bottle-types/**", "/api/v1/suppliers/**").hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/store-settings").hasAnyRole("ADMIN", "SALES_STAFF", "DELIVERY_STAFF")
+                        .requestMatchers("/api/v1/store-settings/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/sales/**").hasAnyRole("ADMIN", "SALES_STAFF")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/delivery-quotes").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/customer/orders/guest").permitAll()
-                        .requestMatchers("/api/v1/delivery/**").hasAnyRole("ADMIN", "DELIVERY_STAFF")
+
+                        // Delivery option lists expose store-wide data and are restricted to store staff.
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/delivery/drivers",
+                                "/api/v1/delivery/available-orders")
+                                .hasAnyRole("ADMIN", "SALES_STAFF")
+
+                        // Read endpoints are available to store staff and drivers. DeliveryService applies
+                        // trip/driver ownership checks before returning data to DELIVERY_STAFF.
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/delivery/trips",
+                                "/api/v1/delivery/trips/*",
+                                "/api/v1/delivery/trips/*/orders/*",
+                                "/api/v1/delivery/trips/*/orders/*/attempts",
+                                "/api/v1/delivery/trips/*/orders/*/attempts/*",
+                                "/api/v1/delivery/trips/*/settlement",
+                                "/api/v1/delivery/trips/*/collections",
+                                "/api/v1/delivery/assignments/*/attempts",
+                                "/api/v1/delivery/assignments/*/attempts/*")
+                                .hasAnyRole("ADMIN", "SALES_STAFF", "DELIVERY_STAFF")
+
+                        // Dispatch, trip/assignment management and return inspection are store-staff operations.
+                        // Redelivery is performed by POST /trips/{id}/orders with redelivery=true;
+                        // there is no /attempts/{id}/redelivery endpoint.
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/delivery/assignments/*/dispatch",
+                                "/api/v1/delivery/attempts/*/return-inspection",
+                                "/api/v1/delivery/trips",
+                                "/api/v1/delivery/trips/*/orders",
+                                "/api/v1/delivery/trips/*/dispatch",
+                                "/api/v1/delivery/trips/*/orders/*/dispatch")
+                                .hasAnyRole("ADMIN", "SALES_STAFF")
+
+                        // Drivers may record attempts and collections only for their own assigned trips;
+                        // the controller passes the actor identity to DeliveryService for ownership checks.
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/delivery/assignments/*/attempts",
+                                "/api/v1/delivery/trips/*/orders/*/attempts",
+                                "/api/v1/delivery/trips/*/orders/*/collections")
+                                .hasAnyRole("ADMIN", "SALES_STAFF", "DELIVERY_STAFF")
+
+                        .requestMatchers(HttpMethod.PUT,
+                                "/api/v1/delivery/trips/*/driver",
+                                "/api/v1/delivery/trips/*/settlement")
+                                .hasAnyRole("ADMIN", "SALES_STAFF")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/delivery/trips/*/departure")
+                                .hasAnyRole("ADMIN", "SALES_STAFF", "DELIVERY_STAFF")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/delivery/trips/*")
+                                .hasAnyRole("ADMIN", "SALES_STAFF")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/delivery/trips/*/orders/*")
+                                .hasAnyRole("ADMIN", "SALES_STAFF")
+
+                        // Fail closed for future/unlisted Delivery routes instead of granting access by default.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/delivery/assignments/*/bottles").hasAnyRole("ADMIN", "SALES_STAFF", "DELIVERY_STAFF")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/delivery/assignments/*/bottle-returns/*").hasAnyRole("ADMIN", "SALES_STAFF", "DELIVERY_STAFF")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/delivery/assignments/*/bottle-returns").hasAnyRole("ADMIN", "SALES_STAFF", "DELIVERY_STAFF")
+                        .requestMatchers("/api/v1/delivery/**").denyAll()
+                        .requestMatchers("/api/v1/customer/account/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/v1/customer/**").hasAnyRole("ADMIN", "CUSTOMER")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

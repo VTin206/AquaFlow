@@ -24,11 +24,22 @@ public class Customer {
     @Column(length = 20)
     private String phone;
 
+    @Column(name = "customer_type", nullable = false, length = 20)
+    private String customerType = DEFAULT_TYPE;
+
+    @Column(length = 150)
+    private String area;
+
+    @Column(columnDefinition = "TEXT")
+    private String note;
+
     @Column(nullable = false)
     private boolean active = true;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+
+    public static final String DEFAULT_TYPE = "Cá nhân";
 
     protected Customer() {
     }
@@ -49,6 +60,13 @@ public class Customer {
         this.phone = phone;
     }
 
+    /** Null keeps the current value so older clients that omit these fields do not erase them; blank clears area/note. */
+    public void updateProfile(String customerType, String area, String note) {
+        if (customerType != null && !customerType.isBlank()) this.customerType = customerType.trim();
+        if (area != null) this.area = area.isBlank() ? null : area.trim();
+        if (note != null) this.note = note.isBlank() ? null : note.trim();
+    }
+
     public void deactivate() {
         this.active = false;
     }
@@ -67,6 +85,18 @@ public class Customer {
 
     public String getPhone() {
         return phone;
+    }
+
+    public String getCustomerType() {
+        return customerType;
+    }
+
+    public String getArea() {
+        return area;
+    }
+
+    public String getNote() {
+        return note;
     }
 
     public Instant getCreatedAt() {

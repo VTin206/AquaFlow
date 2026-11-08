@@ -20,6 +20,23 @@ import static org.assertj.core.api.Assertions.assertThat;
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.flywaydb.autoconfigure.FlywayAutoConfiguration"
 })
 class HealthControllerTest {
+    @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.payment.PaymentRepository paymentRepository;
+    @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.bottle.BottleLedgerRepository bottleLedgerRepository;
+    @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.delivery.application.DeliveryBottleService deliveryBottleService;
+    @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.auth.repository.PasswordResetRepository passwordResetRepository;
+    @MockBean private com.aquaflow.auth.repository.RoleRepository roleRepository;
+
+    @MockBean private com.aquaflow.inventory.repository.InventoryMovementReadRepository inventoryMovementReadRepository;
+    @MockBean private com.aquaflow.inventory.repository.InventoryReturnRepository inventoryReturnRepository;
+    @MockBean private com.aquaflow.activity.ActivityRepository activityRepository;
+    @MockBean private com.aquaflow.report.ReportRepository reportRepository;
+    @MockBean private com.aquaflow.delivery.repository.DeliveryRepository deliveryRepository;
+    @MockBean private com.aquaflow.customer.order.repository.DispatchRepository dispatchRepository;
+    @MockBean private com.aquaflow.inventory.application.StockDispatchService stockDispatchService;
+    @MockBean private com.aquaflow.workspace.repository.StoreSettingsRepository storeSettingsRepository;
+    @MockBean private com.aquaflow.workspace.repository.NotificationRepository notificationRepository;
+
+
 
     @MockBean
     private com.aquaflow.inventory.application.PurchaseReceiptService purchaseReceiptService;
@@ -29,6 +46,12 @@ class HealthControllerTest {
 
     @MockBean
     private com.aquaflow.inventory.application.StockReservationService stockReservationService;
+
+    @MockBean
+    private com.aquaflow.inventory.repository.RedeliveryEligibilityRepository redeliveryEligibilityRepository;
+
+    @MockBean
+    private com.aquaflow.inventory.application.RedeliveryReservationService redeliveryReservationService;
 
     @MockBean
     private UserRepository userRepository;

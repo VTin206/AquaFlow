@@ -1,14 +1,23 @@
-import { App, Form, Input, InputNumber, Modal, Radio } from 'antd'
-import { PICKUP_FEE, PICKUP_FEE_BELOW } from '../../../shared/policy'
-import { currency } from '../../../shared/utils/format'
+import { App, Form, Input, InputNumber, Modal, Segmented } from 'antd'
+import { PICKUP_FEE, PICKUP_FEE_BELOW } from '@/shared/policy'
+import { currency } from '@/shared/utils/format'
 import { DEPOSIT_PER_BOTTLE, type BottleAction, type Customer } from '../types'
 import { useRecordBottles } from '../useCustomers'
+import { modalWidth } from '@/shared/utils/modal'
 
 export type BottleActionKind = BottleAction['kind']
 
 const copy: Record<BottleActionKind, { title: string; ok: string; hint: string }> = {
-  'Thu vỏ': { title: 'Thu vỏ rỗng', ok: 'Ghi nhận thu vỏ', hint: 'Dùng khi khách trả vỏ ngoài đơn giao (ví dụ ngừng dùng nước bình). Vỏ đổi kèm đơn được ghi ở bước nhận hàng.' },
-  'Báo mất/vỡ': { title: 'Báo vỏ mất hoặc vỡ', ok: 'Ghi nhận mất/vỡ', hint: `Tiền cọc tương ứng (${currency(DEPOSIT_PER_BOTTLE)}/vỏ) được cấn trừ làm tiền bồi thường, không hoàn lại.` },
+  'Thu vỏ': {
+    title: 'Thu vỏ rỗng',
+    ok: 'Ghi nhận thu vỏ',
+    hint: 'Dùng khi khách trả vỏ ngoài đơn giao (ví dụ ngừng dùng nước bình). Vỏ đổi kèm đơn được ghi ở bước nhận hàng.',
+  },
+  'Báo mất/vỡ': {
+    title: 'Báo vỏ mất hoặc vỡ',
+    ok: 'Ghi nhận mất/vỡ',
+    hint: `Tiền cọc tương ứng (${currency(DEPOSIT_PER_BOTTLE)}/vỏ) được cấn trừ làm tiền bồi thường, không hoàn lại.`,
+  },
   'Thu cọc': { title: 'Thu tiền cọc vỏ', ok: 'Xác nhận đã nhận cọc', hint: 'Tiền cọc là khoản giữ hộ, không tính vào doanh thu bán nước.' },
   'Hoàn cọc': { title: 'Hoàn tiền cọc', ok: 'Xác nhận đã hoàn', hint: 'Chỉ hoàn phần cọc của những vỏ khách đã trả.' },
 }
@@ -32,7 +41,8 @@ export function BottleActionModal({ customer, kind, refundable, onClose }: Bottl
       title={`${text.title} · ${customer.name}`}
       okText={text.ok}
       okButtonProps={{ danger: kind === 'Báo mất/vỡ', disabled: kind === 'Hoàn cọc' && refundable === 0 }}
-      cancelText="Đóng"
+      cancelText="Hủy"
+      width={modalWidth.small}
       confirmLoading={record.isPending}
       onOk={() => form.submit()}
       onCancel={onClose}
@@ -57,11 +67,18 @@ export function BottleActionModal({ customer, kind, refundable, onClose }: Bottl
         }
       >
         {kind === 'Thu vỏ' && (
-          <Form.Item name="pickup" label="Hình thức thu">
-            <Radio.Group
+          <Form.Item
+            name="pickup"
+            label="Hình thức thu"
+            // Thanh gạt chỉ nhận chuỗi, còn sổ vỏ lưu đúng/sai.
+            getValueProps={(value: boolean) => ({ value: value ? 'pickup' : 'store' })}
+            normalize={(value: string) => value === 'pickup'}
+          >
+            <Segmented
+              block
               options={[
-                { value: false, label: 'Khách mang vỏ đến cửa hàng' },
-                { value: true, label: 'Thu hồi tận nơi' },
+                { value: 'store', label: 'Khách mang đến cửa hàng' },
+                { value: 'pickup', label: 'Thu hồi tận nơi' },
               ]}
             />
           </Form.Item>
@@ -70,7 +87,10 @@ export function BottleActionModal({ customer, kind, refundable, onClose }: Bottl
           <Form.Item
             name="bottles"
             label={`Số vỏ (khách đang giữ ${customer.bottlesHeld})`}
-            rules={[{ required: true, message: 'Nhập số vỏ.' }, { type: 'integer', min: 1, max: customer.bottlesHeld, message: `Từ 1 đến ${customer.bottlesHeld} vỏ.` }]}
+            rules={[
+              { required: true, message: 'Nhập số vỏ.' },
+              { type: 'integer', min: 1, max: customer.bottlesHeld, message: `Từ 1 đến ${customer.bottlesHeld} vỏ.` },
+            ]}
           >
             <InputNumber min={1} max={customer.bottlesHeld} precision={0} style={{ width: 160 }} autoFocus />
           </Form.Item>
@@ -78,12 +98,19 @@ export function BottleActionModal({ customer, kind, refundable, onClose }: Bottl
           <Form.Item
             name="deposit"
             label={kind === 'Hoàn cọc' ? `Số tiền hoàn (tối đa ${currency(refundable)})` : 'Số tiền cọc (₫)'}
-            rules={[{ required: true, message: 'Nhập số tiền.' }, { type: 'integer', min: 1, max: maxDeposit, message: 'Số tiền không hợp lệ.' }]}
+            rules={[
+              { required: true, message: 'Nhập số tiền.' },
+              { type: 'integer', min: 1, max: maxDeposit, message: 'Số tiền không hợp lệ.' },
+            ]}
           >
             <InputNumber min={1} max={maxDeposit} step={DEPOSIT_PER_BOTTLE} precision={0} style={{ width: 200 }} autoFocus />
           </Form.Item>
         )}
-        <Form.Item name="note" label="Ghi chú" rules={[{ required: kind === 'Báo mất/vỡ', whitespace: true, message: 'Ghi rõ tình huống mất/vỡ.' }, { max: 300 }]}>
+        <Form.Item
+          name="note"
+          label="Ghi chú"
+          rules={[{ required: kind === 'Báo mất/vỡ', whitespace: true, message: 'Ghi rõ tình huống mất/vỡ.' }, { max: 300 }]}
+        >
           <Input.TextArea rows={2} placeholder={kind === 'Báo mất/vỡ' ? 'Vỏ nứt khi vận chuyển, khách làm mất...' : 'Không bắt buộc'} />
         </Form.Item>
         {kind === 'Thu vỏ' && pickup && (
@@ -93,7 +120,11 @@ export function BottleActionModal({ customer, kind, refundable, onClose }: Bottl
               : `Từ ${PICKUP_FEE_BELOW} vỏ trở lên: không tính phí cố định, thỏa thuận với khách và ghi vào ghi chú.`}
           </p>
         )}
-        <p className="af-form-hint">{kind === 'Hoàn cọc' && refundable === 0 ? `Khách còn giữ ${customer.bottlesHeld} vỏ nên chưa có khoản cọc nào được hoàn. Thu vỏ trước.` : text.hint}</p>
+        <p className="af-form-hint">
+          {kind === 'Hoàn cọc' && refundable === 0
+            ? `Khách còn giữ ${customer.bottlesHeld} vỏ nên chưa có khoản cọc nào được hoàn. Thu vỏ trước.`
+            : text.hint}
+        </p>
       </Form>
     </Modal>
   )

@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Alert, App, Button, Card, Form, Input, Result, Skeleton, Steps, Typography } from 'antd'
-import { Copy, Phone, RefreshCw } from 'lucide-react'
+import { Copy, Hash, LogIn, Phone, RefreshCw, Search, ShoppingBag } from 'lucide-react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
-import { Money } from '../../shared/components/Money'
-import { TransferQr } from '../../shared/payment/TransferQr'
-import { dueTone } from '../../shared/utils/money'
-import { currency } from '../../shared/utils/format'
-import type { PublicOrder } from '../orders/types'
-import { useSettings } from '../settings/settingsService'
-import { lookupOrder, useShopDemo, useTrackedOrder } from './shopService'
+import { Money } from '@/shared/components/Money'
+import { focusNextOnEnter } from '@/shared/utils/forms'
+import { TransferQr } from '@/shared/payment/TransferQr'
+import { dueTone } from '@/shared/utils/money'
+import { currency } from '@/shared/utils/format'
+import type { PublicOrder } from '@/features/orders/types'
+import { useSettings } from '@/features/settings/settingsService'
+import { lookupOrder, useShopContact, useShopFeature, useTrackedOrder } from './shopService'
 
 const stepOf: Record<PublicOrder['status'], number> = {
   'Chờ xác nhận': 0,
+  'Đã xác nhận': 1,
   'Đang chuẩn bị': 1,
   'Đang giao': 2,
   'Giao thất bại': 2,
@@ -20,40 +22,106 @@ const stepOf: Record<PublicOrder['status'], number> = {
   'Đã hủy': 0,
 }
 
-/** Tra cứu bằng mã đơn và số điện thoại khi khách không còn giữ liên kết. */
+/** Chưa tra cứu trực tuyến được: chỉ cho khách cách làm được ngay, không hiện form không dùng được. */
+function LookupHelp() {
+  const phone = useShopContact()?.phone?.trim()
+  return (
+    <div className="af-shop-page af-shop-account-page">
+      <header>
+        <h1>Hỏi về đơn hàng của bạn</h1>
+        <p>Đọc mã đơn cho cửa hàng để được báo tình trạng đơn. Mã đơn có trong màn hình đặt hàng thành công.</p>
+      </header>
+      <div className="af-shop-account-grid">
+        <section aria-label="Liên hệ cửa hàng">
+          <p>{phone ? 'Gọi cửa hàng trong giờ mở cửa:' : 'Vui lòng liên hệ cửa hàng để hỏi tình trạng đơn.'}</p>
+          {phone && (
+            <a href={`tel:${phone.replace(/\s/g, '')}`}>
+              <Button type="primary" size="large" block icon={<Phone size={18} />}>
+                {phone}
+              </Button>
+            </a>
+          )}
+        </section>
+        <section className="af-shop-account-side" aria-label="Lựa chọn khác">
+          <p>Có tài khoản? Đăng nhập để xem mọi đơn đã đặt.</p>
+          <Link to="/shop/account">
+            <Button size="large" block icon={<LogIn size={18} />}>
+              Đăng nhập
+            </Button>
+          </Link>
+        </section>
+      </div>
+    </div>
+  )
+}
+
+/** Tra cứu đơn không cần tài khoản (bố cục như trang tài khoản): mã đơn + số điện thoại đặt hàng. */
 function LookupForm() {
   const navigate = useNavigate()
   const [error, setError] = useState<string>()
   const [loading, setLoading] = useState(false)
   return (
-    <Card className="af-shop-track-card" title="Tra cứu đơn hàng">
-      <Form
-        layout="vertical"
-        onFinish={async ({ id, phone }: { id: string; phone: string }) => {
-          setLoading(true)
-          setError(undefined)
-          try {
-            const order = await lookupOrder(id, phone)
-            navigate(`/track/${order.trackingToken}`)
-          } catch (caught) {
-            setError(caught instanceof Error ? caught.message : 'Không tra cứu được đơn.')
-          } finally {
-            setLoading(false)
-          }
-        }}
-      >
-        <Form.Item name="id" label="Mã đơn" rules={[{ required: true, whitespace: true, message: 'Nhập mã đơn, ví dụ AF-1070.' }]}>
-          <Input placeholder="AF-1070" autoCapitalize="characters" />
-        </Form.Item>
-        <Form.Item name="phone" label="Số điện thoại đặt hàng" rules={[{ required: true, message: 'Nhập số điện thoại đã dùng khi đặt.' }]}>
-          <Input inputMode="tel" />
-        </Form.Item>
-        {error && <Alert type="error" showIcon title={error} style={{ marginBottom: 16 }} />}
-        <Button type="primary" htmlType="submit" loading={loading} block>
-          Tra cứu
-        </Button>
-      </Form>
-    </Card>
+    <div className="af-shop-page af-shop-account-page">
+      <header>
+        <h1>Tra cứu đơn không cần tài khoản</h1>
+        <p>Nhập mã đơn và số điện thoại bạn đã dùng khi đặt hàng để xem trạng thái đơn.</p>
+      </header>
+      <div className="af-shop-account-grid">
+        <section aria-label="Tra cứu đơn">
+          <Form
+            layout="vertical"
+            requiredMark={false}
+            onKeyDown={focusNextOnEnter}
+            onFinish={async ({ id, phone }: { id: string; phone: string }) => {
+              setLoading(true)
+              setError(undefined)
+              try {
+                const order = await lookupOrder(id, phone)
+                navigate(`/track/${order.trackingToken}`)
+              } catch (caught) {
+                setError(caught instanceof Error ? caught.message : 'Không tra cứu được đơn.')
+              } finally {
+                setLoading(false)
+              }
+            }}
+          >
+            <Form.Item
+              name="id"
+              label="Mã đơn"
+              extra="Mã đơn có trong màn hình đặt hàng thành công, ví dụ AF-1070."
+              rules={[{ required: true, whitespace: true, message: 'Nhập mã đơn, ví dụ AF-1070.' }]}
+            >
+              <Input size="large" prefix={<Hash size={17} aria-hidden />} placeholder="AF-1070" autoCapitalize="characters" />
+            </Form.Item>
+            <Form.Item
+              name="phone"
+              label="Số điện thoại đặt hàng"
+              rules={[{ required: true, message: 'Nhập số điện thoại đã dùng khi đặt.' }]}
+            >
+              <Input size="large" prefix={<Phone size={17} aria-hidden />} inputMode="tel" placeholder="0901 234 567" />
+            </Form.Item>
+            {error && <Alert type="error" showIcon title={error} style={{ marginBottom: 16 }} />}
+            <Button type="primary" size="large" htmlType="submit" loading={loading} icon={<Search size={18} />} className="af-shop-account-submit">
+              Tra cứu
+            </Button>
+          </Form>
+        </section>
+        <section className="af-shop-account-side" aria-label="Lựa chọn khác">
+          <p>Có tài khoản? Đăng nhập để xem mọi đơn đã đặt.</p>
+          <Link to="/shop/account">
+            <Button size="large" block icon={<LogIn size={18} />}>
+              Đăng nhập
+            </Button>
+          </Link>
+          <p>Chưa đặt đơn nào?</p>
+          <Link to="/shop">
+            <Button size="large" block icon={<ShoppingBag size={18} />}>
+              Mua hàng không cần tài khoản
+            </Button>
+          </Link>
+        </section>
+      </div>
+    </div>
   )
 }
 
@@ -91,7 +159,14 @@ function TrackedOrder({ token }: { token: string }) {
 
   return (
     <div className="af-shop-track">
-      {placed && <Alert type="success" showIcon title={`Đã gửi đơn ${order.id}`} description="Lưu lại trang này (hoặc chụp màn hình mã đơn) để theo dõi. Cửa hàng sẽ gọi xác nhận trong giờ làm việc." />}
+      {placed && (
+        <Alert
+          type="success"
+          showIcon
+          title={`Đã gửi đơn ${order.id}`}
+          description="Lưu lại trang này (hoặc chụp màn hình mã đơn) để theo dõi. Cửa hàng sẽ gọi xác nhận trong giờ làm việc."
+        />
+      )}
       <Card
         className="af-shop-track-card"
         title={`Đơn ${order.id}`}
@@ -106,17 +181,42 @@ function TrackedOrder({ token }: { token: string }) {
         }
       >
         {cancelled ? (
-          <Alert type="warning" showIcon title="Đơn đã hủy" description="Liên hệ cửa hàng nếu cần đặt lại hoặc hỏi về khoản đã thanh toán." />
+          <Alert
+            type="warning"
+            showIcon
+            title="Đơn đã hủy"
+            description="Liên hệ cửa hàng nếu cần đặt lại hoặc hỏi về khoản đã thanh toán."
+          />
         ) : (
           <Steps
             size="small"
             current={stepOf[order.status]}
             status={failed ? 'error' : stepOf[order.status] === 3 ? 'finish' : 'process'}
             items={[
-              { title: 'Đã đặt', content: order.createdAt ? new Date(order.createdAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : undefined },
+              {
+                title: 'Đã đặt',
+                content: order.createdAt
+                  ? new Date(order.createdAt).toLocaleString('vi-VN', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      day: '2-digit',
+                      month: '2-digit',
+                    })
+                  : undefined,
+              },
               { title: 'Đã xác nhận' },
               { title: failed ? 'Giao chưa thành công' : 'Đang giao', content: failed ? 'Cửa hàng sẽ liên hệ hẹn lại' : undefined },
-              { title: 'Đã nhận hàng', content: order.deliveredAt ? new Date(order.deliveredAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : undefined },
+              {
+                title: 'Đã nhận hàng',
+                content: order.deliveredAt
+                  ? new Date(order.deliveredAt).toLocaleString('vi-VN', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      day: '2-digit',
+                      month: '2-digit',
+                    })
+                  : undefined,
+              },
             ]}
           />
         )}
@@ -128,7 +228,14 @@ function TrackedOrder({ token }: { token: string }) {
           {order.appointment && (
             <>
               <dt>Giờ hẹn</dt>
-              <dd>{new Date(order.appointment).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</dd>
+              <dd>
+                {new Date(order.appointment).toLocaleString('vi-VN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  day: '2-digit',
+                  month: '2-digit',
+                })}
+              </dd>
             </>
           )}
         </dl>
@@ -170,11 +277,18 @@ function TrackedOrder({ token }: { token: string }) {
       {canTransfer && (
         <Card className="af-shop-track-card" title="Chuyển khoản">
           <TransferQr settings={settings} amount={order.due} note={order.id} />
-          <p className="af-form-hint">Quét mã bằng ứng dụng ngân hàng, giữ nguyên nội dung để cửa hàng đối chiếu. Hoặc trả tiền mặt khi nhận hàng.</p>
+          <p className="af-form-hint">
+            Quét mã bằng ứng dụng ngân hàng, giữ nguyên nội dung để cửa hàng đối chiếu. Hoặc trả tiền mặt khi nhận hàng.
+          </p>
         </Card>
       )}
       {order.status === 'Chờ xác nhận' && (
-        <Alert type="info" showIcon title="Chờ cửa hàng xác nhận" description="Giá được chốt khi xác nhận. Sau đó trang này sẽ hiện mã QR nếu bạn muốn chuyển khoản trước." />
+        <Alert
+          type="info"
+          showIcon
+          title="Chờ cửa hàng xác nhận"
+          description="Giá được chốt khi xác nhận. Sau đó trang này sẽ hiện mã QR nếu bạn muốn chuyển khoản trước."
+        />
       )}
 
       <div className="af-shop-track-actions">
@@ -206,10 +320,16 @@ function TrackedOrder({ token }: { token: string }) {
 }
 
 export function TrackPage() {
-  const demo = useShopDemo()
+  const supported = useShopFeature('orderTracking')
   const { token } = useParams()
   useEffect(() => {
     if (!token) document.title = 'Tra cứu đơn hàng'
   }, [token])
-  return <div className="af-shop-page af-shop-narrow">{!demo ? <Result status="info" title="Tra cứu đơn trực tuyến chưa khả dụng" subTitle="Chức năng này đang được hoàn thiện." extra={<Link to="/shop">Về cửa hàng</Link>} /> : token ? <TrackedOrder token={token} /> : <LookupForm />}</div>
+  if (!supported) return <LookupHelp />
+  if (!token) return <LookupForm />
+  return (
+    <div className="af-shop-page af-shop-narrow">
+      <TrackedOrder token={token} />
+    </div>
+  )
 }

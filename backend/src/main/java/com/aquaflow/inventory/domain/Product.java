@@ -29,6 +29,15 @@ public class Product {
     @Column(length = 150)
     private String brand;
 
+    @Column(columnDefinition = "text")
+    private String image;
+
+    /** Available quantity at or below this is shown as low stock. */
+    @Column(name = "low_stock_threshold", nullable = false)
+    private int lowStockThreshold = DEFAULT_LOW_STOCK_THRESHOLD;
+
+    public static final int DEFAULT_LOW_STOCK_THRESHOLD = 10;
+
     @Column(nullable = false, length = 40)
     private String unit;
 
@@ -80,6 +89,10 @@ public class Product {
     public String getSku() { return sku; }
     public String getName() { return name; }
     public String getBrand() { return brand; }
+    public String getImage() { return image; }
+    public void setImage(String image) { this.image = image; }
+    public int getLowStockThreshold() { return lowStockThreshold; }
+    public void setLowStockThreshold(int lowStockThreshold) { this.lowStockThreshold = lowStockThreshold; }
     public String getUnit() { return unit; }
     public Integer getUnitsPerCase() { return unitsPerCase; }
     public BottleType getBottleType() { return bottleType; }

@@ -82,6 +82,7 @@ public class CustomerService {
         Customer customer = new Customer(
                 request.fullName(),
                 phone);
+        customer.updateProfile(request.customerType(), request.area(), request.note());
 
         Customer savedCustomer =
                 customerRepository.save(customer);
@@ -122,6 +123,7 @@ public class CustomerService {
                     customer.updateDetails(
                             request.fullName(),
                             phone);
+                    customer.updateProfile(request.customerType(), request.area(), request.note());
 
                     Customer savedCustomer =
                             customerRepository.save(customer);
@@ -174,6 +176,9 @@ public class CustomerService {
                 customer.getId(),
                 customer.getFullName(),
                 customer.getPhone(),
-                customer.getCreatedAt());
+                customer.getCreatedAt(),
+                customer.getCustomerType(),
+                customer.getArea(),
+                customer.getNote());
     }
 }

@@ -1,24 +1,140 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { api } from '@/shared/api/client'
+import { useIsDemo } from '@/shared/features'
+import { useStaff } from '@/features/auth/useStaff'
+import { invalidateLiveData } from '@/features/live/invalidateLiveData'
+import { orderApi } from '@/features/live/orderApi'
+import { paymentApi } from '@/features/live/paymentApi'
+import { bottleLedgerApi } from '@/features/live/bottleLedgerApi'
 import { customerService } from './customerService'
-import type { BottleAction, CustomerDraft } from './types'
+import { initialsOf, type BottleAction, type Customer, type CustomerDraft } from './types'
+import { latest } from './lastOrder'
 
 export const customerKeys = {
   all: ['customers'] as const,
   ledger: (customerId: string) => ['customers', customerId, 'ledger'] as const,
 }
 
-export const useCustomers = () => useQuery({ queryKey: customerKeys.all, queryFn: customerService.list })
+// Tài khoản thật: CustomerController; địa chỉ giao quản lý riêng theo từng khách.
+type CustomerResponse = {
+  id: number
+  fullName: string
+  phone: string | null
+  createdAt: string
+  customerType?: Customer['type'] | null
+  area?: string | null
+  note?: string | null
+}
 
-export const useBottleLedger = (customerId: string) =>
-  useQuery({ queryKey: customerKeys.ledger(customerId), queryFn: () => customerService.ledger(customerId) })
+/** Các số dư được bổ sung từ API sổ thanh toán và sổ vỏ. */
+const fromResponse = (customer: CustomerResponse, orders: number, debt = 0): Customer => ({
+  id: String(customer.id),
+  name: customer.fullName,
+  phone: customer.phone ?? '',
+  type: customer.customerType ?? 'Cá nhân',
+  area: customer.area ?? '',
+  note: customer.note ?? undefined,
+  addresses: [],
+  legacyOrders: 0,
+  initials: initialsOf(customer.fullName),
+  orders,
+  bottlesHeld: 0,
+  depositHeld: 0,
+  debt,
+})
+
+/**
+ * Số đơn, lần mua gần nhất và địa chỉ tính từ đơn thật (không tính đơn đã hủy).
+ * BE chưa trả địa chỉ mặc định trong danh sách khách nên tạm lấy địa chỉ giao của đơn gần nhất.
+ */
+async function liveCustomers() {
+  const [customers, orders, balances, bottles] = await Promise.all([api.get<CustomerResponse[]>('/sales/customers'), orderApi.list(), paymentApi.customers(), bottleLedgerApi.balances()])
+  const bottleBalances = new Map(bottles.map(balance => [balance.customerId, balance]))
+  const due = new Map(balances.map(balance => [balance.customerId, Number(balance.due)]))
+  const byCustomer = new Map<number, typeof orders>()
+  for (const order of orders)
+    if (order.customerId !== null && order.status !== 'CANCELLED') byCustomer.set(order.customerId, [...(byCustomer.get(order.customerId) ?? []), order])
+  return customers.map((customer) => {
+    const own = byCustomer.get(customer.id) ?? []
+    const lastOrderAt = latest(own.map((order) => order.createdAt))
+    const lastOrder = own.find((order) => order.createdAt === lastOrderAt)
+    return {
+      ...fromResponse(customer, own.length, due.get(customer.id) ?? 0),
+      lastOrderAt,
+      mainAddress: lastOrder?.deliveryAddress ?? undefined,
+      bottlesHeld: bottleBalances.get(customer.id)?.bottlesHeld ?? 0,
+      depositHeld: Number(bottleBalances.get(customer.id)?.depositHeld ?? 0),
+    }
+  })
+}
+
+const useLiveKey = () => {
+  const staff = useStaff()
+  return [staff?.name, staff?.role] as const
+}
+
+export function useCustomers() {
+  const demo = useIsDemo()
+  const who = useLiveKey()
+  return useQuery({
+    queryKey: demo ? customerKeys.all : ['live', 'customers', ...who],
+    queryFn: demo ? customerService.list : liveCustomers,
+  })
+}
+
+/** Sổ vỏ chỉ có ở bản dùng thử. */
+export const useBottleLedger = (customerId: string) => {
+  const demo = useIsDemo()
+  return useQuery({ queryKey: customerKeys.ledger(customerId), queryFn: () => customerService.ledger(customerId), enabled: demo })
+}
+
+const useInvalidateCustomers = () => {
+  const queryClient = useQueryClient()
+  return () => Promise.all([invalidateLiveData(queryClient), queryClient.invalidateQueries({ queryKey: customerKeys.all })])
+}
+
+// Chuỗi rỗng để BE xóa khu vực/ghi chú cũ; null là giữ nguyên.
+const toRequest = (draft: CustomerDraft) => ({
+  fullName: draft.name.trim(),
+  phone: draft.phone?.replace(/[\s().-]/g, '') || null,
+  customerType: draft.type,
+  area: draft.area?.trim() ?? '',
+  note: draft.note?.trim() ?? '',
+})
 
 /** Thêm mới khi không có `id`, cập nhật khi có. */
 export function useSaveCustomer() {
-  const queryClient = useQueryClient()
+  const demo = useIsDemo()
+  const invalidate = useInvalidateCustomers()
   return useMutation({
-    mutationFn: ({ id, draft }: { id?: string; draft: CustomerDraft }) => (id ? customerService.update(id, draft) : customerService.create(draft)),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: customerKeys.all }),
+    mutationFn: async ({ id, draft }: { id?: string; draft: CustomerDraft }): Promise<Customer> => {
+      if (demo) return id ? customerService.update(id, draft) : customerService.create(draft)
+      const saved = id
+        ? await api.put<CustomerResponse>(`/sales/customers/${id}`, toRequest(draft))
+        : await api.post<CustomerResponse>('/sales/customers', toRequest(draft))
+      return fromResponse(saved, 0)
+    },
+    onSuccess: () => void invalidate(),
   })
+}
+
+export function useDeactivateCustomer() {
+  const demo = useIsDemo()
+  const invalidate = useInvalidateCustomers()
+  return useMutation({
+    mutationFn: (id: string) => (demo ? customerService.deactivate(id) : api.delete<void>(`/sales/customers/${id}`)),
+    onSuccess: () => void invalidate(),
+  })
+}
+
+/** Khách đã lưu trữ; BE chưa có API nên chỉ bản dùng thử (cờ `reactivate`). */
+export function useArchivedCustomers(enabled: boolean) {
+  return useQuery({ queryKey: [...customerKeys.all, 'archived'], queryFn: customerService.archived, enabled })
+}
+
+export function useActivateCustomer() {
+  const invalidate = useInvalidateCustomers()
+  return useMutation({ mutationFn: customerService.activate, onSuccess: () => void invalidate() })
 }
 
 export function useRecordBottles() {

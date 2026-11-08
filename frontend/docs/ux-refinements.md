@@ -36,9 +36,9 @@
 ## Đã xác minh
 
 - `npm run lint`, `npm run build`.
-- `npm run test:ux`: 4 nhóm kịch bản cho tìm kiếm, điện thoại, ranh giới hạn
+- `npx vitest run tests/ux.test.mjs`: 4 nhóm kịch bản cho tìm kiếm, điện thoại, ranh giới hạn
   dùng và dữ liệu bộ lọc đã lưu.
-- `npm run test:operations`: 8 nhóm nghiệp vụ hiện có.
+- `npx vitest run tests/operations.test.mjs`: 8 nhóm nghiệp vụ hiện có.
 - Chrome với profile tạm và dữ liệu demo riêng: tìm kiếm, giữ/xóa bộ lọc,
   khôi phục sau reload, hai nhóm hạn dùng, scroll/focus trong hai form.
 - Xem bố cục kho trên desktop 1440px và mobile 390px.

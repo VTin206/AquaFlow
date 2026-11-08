@@ -1,4 +1,4 @@
-import { api } from '../../shared/api/client'
+import { api } from '@/shared/api/client'
 import type { LiveOrder } from './orderApi'
 
 /** Payload công khai cho checkout; giá và customerId do backend quyết định. */
@@ -8,7 +8,10 @@ export type GuestOrderInput = {
   deliveryAddress: string
   deliveryArea: string
   items: { productId: number; quantity: number }[]
+  requestedDeliveryAt?: string
   note?: string
+  stairFloor?: number
+  expectedTotal?: number
 }
 
 export const guestOrderApi = {

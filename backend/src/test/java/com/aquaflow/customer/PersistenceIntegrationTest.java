@@ -37,6 +37,8 @@ class PersistenceIntegrationTest {
     @Autowired
     private ProductRepository products;
 
+
+
     @Test
     void migrationsAndActivePhoneConstraintWorkOnPostgres() {
         Integer applied = jdbcTemplate.queryForObject(

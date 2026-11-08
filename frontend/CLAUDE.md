@@ -39,13 +39,15 @@ Không gộp nhiều việc không liên quan vào một commit. Không commit c
 
 - React + TypeScript + Vite + **Ant Design 6** (UI) + **React Query** (dữ liệu). Chạy dev: `npm run dev` (http://localhost:5173, `/api` proxy sang `http://localhost:8080`).
 - Cấu trúc `src/` theo tính năng:
-  - `app/`: `App.tsx` (routes), `providers.tsx`, `theme.ts` (màu, font, token Ant Design), `navigation.ts` (menu).
-  - `layouts/`: khung app (sidebar, drawer trên điện thoại).
+  - `app/`: `App.tsx` (routes), `providers.tsx`, `palette.ts` (bảng màu duy nhất, sinh cả biến CSS `--af-*`), `theme.ts` (font, token Ant Design), `navigation.ts` (menu), `layouts/` (khung app: sidebar, thanh trên, drawer trên điện thoại).
   - `features/<tên>/`: mỗi tính năng tự chứa trang, `components/`, `types.ts`, service (`*Service.ts`) và hook React Query (`use*.ts`). Hiện có `orders`, `inventory` (kho + sản phẩm), `customers`, `delivery`, `dashboard`, `reports`.
   - `shared/`: dùng chung giữa các tính năng — `api/client.ts` (gọi API), `components/` (`Page`, `QueryError`, `BarChart`), `utils/format.ts`.
   - `mocks/`: dữ liệu mẫu trong bộ nhớ; service gọi `mockRequest()` cho tới khi backend có API.
-  - `styles/global.css`: chỉ bố cục mà Ant Design không có; class tự đặt dùng tiền tố `af-`.
-- Dùng component Ant Design trước khi tự viết. Đổi màu/font ở `app/theme.ts`, không ghi đè style component bằng CSS.
+  - `styles/global.css`: chỉ bố cục dùng chung mà Ant Design không có; CSS riêng của một khu nằm cạnh feature đó (`shop/shop.css`, `delivery/driver.css`, `reports/reports.css`). Class tự đặt dùng tiền tố `af-`.
+  - Import chéo giữa các feature hoặc tới `shared/`, `app/`, `mocks/` dùng alias `@/…`; trong cùng một feature dùng đường dẫn tương đối.
+  - `tests/*.test.mjs`: kịch bản nghiệp vụ chạy bằng Vitest (`npm test`, `npm run test:watch`).
+- Dùng component Ant Design trước khi tự viết. Đổi màu ở `app/palette.ts`, font/kích thước ở `app/theme.ts`, không ghi đè style component bằng CSS.
+- Định dạng code bằng Prettier (`npm run format`) trước khi commit.
 - Mọi lệnh gọi backend nằm trong `features/*/…Service.ts` qua `shared/api/client.ts`; component chỉ dùng hook. Không gọi `fetch` trực tiếp.
 - Thông báo dùng `App.useApp().message`; form dùng `Form` với `rules` để kiểm tra ngay khi nhập.
 - Component `PascalCase`, biến/hàm `camelCase`. Không hardcode địa chỉ API. UI có trạng thái Loading/Error/Empty khi phù hợp.

@@ -1,8 +1,10 @@
 import { App, Form, Input, Modal, Select } from 'antd'
-import { currency } from '../../../shared/utils/format'
-import { amountDue, jugCount, type Order } from '../../orders/types'
+import { currency } from '@/shared/utils/format'
+import { amountDue, jugCount, type Order } from '@/features/orders/types'
 import { drivers, type TripDraft } from '../types'
 import { useTripAction } from '../useTrips'
+import { ModalTotalFooter } from '@/shared/components/ModalTotalFooter'
+import { modalWidth } from '@/shared/utils/modal'
 
 type CreateTripModalProps = { orders: Order[]; open: boolean; onClose: () => void; onCreated: (tripId: string) => void }
 
@@ -19,6 +21,13 @@ export function CreateTripModal({ orders, open, onClose, onCreated }: CreateTrip
       title={`Tạo chuyến giao · ${orders.length} đơn`}
       okText="Tạo chuyến"
       cancelText="Hủy"
+      width={modalWidth.small}
+      footer={(_, { OkBtn, CancelBtn }) => (
+        <ModalTotalFooter label="Bình cần giao · tiền cần thu" value={`${jugs} bình · ${currency(due)}`}>
+          <CancelBtn />
+          <OkBtn />
+        </ModalTotalFooter>
+      )}
       confirmLoading={action.isPending}
       onOk={() => form.submit()}
       onCancel={onClose}
@@ -62,12 +71,6 @@ export function CreateTripModal({ orders, open, onClose, onCreated }: CreateTrip
           </li>
         ))}
       </ul>
-      <div className="af-order-summary">
-        <span>Bình cần giao · tiền cần thu</span>
-        <strong>
-          {jugs} bình · {currency(due)}
-        </strong>
-      </div>
     </Modal>
   )
 }

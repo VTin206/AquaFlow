@@ -1,31 +1,57 @@
 import { useState } from 'react'
-import { Button, Card, Input, Select } from 'antd'
-import { Plus, RotateCcw, Search } from 'lucide-react'
-import { CountLabel } from '../../shared/components/CountLabel'
-import { Page } from '../../shared/components/Page'
-import { QueryError } from '../../shared/components/QueryError'
-import { CreateOrderModal } from './components/CreateOrderModal'
+import { Button, Card, Grid, Input, Segmented, Select, Tabs, Tooltip } from 'antd'
+import { FunnelX, Plus, Search, SlidersHorizontal } from 'lucide-react'
+import { CountLabel } from '@/shared/components/CountLabel'
+import { Page } from '@/shared/components/Page'
+import { QueryError } from '@/shared/components/QueryError'
+import { useFeature } from '@/shared/features'
+import { OrderDetails } from './components/OrderDetails'
+import { OrderIntakeModal } from './components/OrderIntakeModal'
 import { OrdersTable } from './components/OrdersTable'
-import { orderStatuses } from './orderStatus'
-import { useOrders } from './useOrders'
+import { useOrderList, useOrderStatuses } from './orderData'
+import { inOrderGroup, orderGroups, statusesInGroup, type OrderGroupKey } from './orderGroups'
 import { amountDue } from './types'
 import { ALL_ORDERS as ALL, useOrderFilters } from './useOrderFilters'
-import { matchesSearch } from '../../shared/utils/search'
+import { matchesSearch } from '@/shared/utils/search'
 
 export function OrdersPage() {
-  const ordersQuery = useOrders()
-  const { filters: { query, status, method, payment }, updateFilters, resetFilters } = useOrderFilters()
+  const showPayments = useFeature('orderPayments')
+  const ordersQuery = useOrderList()
+  const {
+    filters: { query, group, status, method, payment },
+    updateFilters,
+  } = useOrderFilters()
   const [creating, setCreating] = useState(false)
+  // Điện thoại: chỉ hiện lọc trạng thái và tìm kiếm, hai bộ lọc còn lại gom vào nút "Lọc thêm" để đơn hiện sớm hơn.
+  const narrow = Grid.useBreakpoint().md === false
+  const [moreFilters, setMoreFilters] = useState(false)
+  const extraActive = Number(status !== ALL) + Number(method !== ALL) + Number(payment !== ALL)
+  const [created, setCreated] = useState<string | null>(null)
 
   const orders = ordersQuery.data ?? []
-  const countOf = (value: string) => (value === ALL ? orders.length : orders.filter((order) => order.status === value).length)
-  const hasFilters = Boolean(query.trim() || status !== ALL || method !== ALL || payment !== ALL)
+  const statuses = useOrderStatuses()
+  const countGroup = (key: OrderGroupKey) => orders.filter((order) => inOrderGroup(key, order.status)).length
+  // Chưa chọn nhóm: mở thẳng việc cần làm; hết việc thì xem tất cả.
+  const activeGroup: OrderGroupKey = group || (countGroup('need') > 0 ? 'need' : 'all')
+  const groupStatuses = statusesInGroup(activeGroup, statuses)
+  const statusValue = groupStatuses.includes(status as never) ? status : ALL
+  const statusOptions = [
+    { value: ALL, label: 'Mọi trạng thái' },
+    ...groupStatuses.map((value) => ({ value, label: `${value} (${orders.filter((order) => order.status === value).length})` })),
+  ]
+  // Bộ lọc thanh toán đã lưu từ bản dùng thử bị bỏ qua khi BE chưa có phiếu thu.
+  const paymentFilter = showPayments ? payment : ALL
+  const hasFilters = Boolean(query.trim() || statusValue !== ALL || method !== ALL || paymentFilter !== ALL)
+  // Xóa bộ lọc giữ nguyên nhóm đang xem.
+  const resetFilters = () => updateFilters({ query: '', status: ALL, method: ALL, payment: ALL })
   const visible = orders.filter(
     (order) =>
-      (status === ALL || order.status === status) &&
+      inOrderGroup(activeGroup, order.status) &&
+      (statusValue === ALL || order.status === statusValue) &&
       (method === ALL || order.method === method) &&
-      (payment === ALL || (order.status !== 'Đã hủy' && (payment === 'Còn phải thu' ? amountDue(order) > 0 : amountDue(order) === 0))) &&
-      matchesSearch(query, `${order.id} ${order.customer} ${order.phone} ${order.items}`, order.phone),
+      (paymentFilter === ALL ||
+        (order.status !== 'Đã hủy' && (paymentFilter === 'Còn phải thu' ? amountDue(order) > 0 : amountDue(order) === 0))) &&
+      matchesSearch(query, `${order.code ?? order.id} ${order.customer} ${order.phone} ${order.items}`, order.phone),
   )
 
   return (
@@ -43,32 +69,88 @@ export function OrdersPage() {
           <QueryError error={ordersQuery.error} onRetry={ordersQuery.refetch} />
         ) : (
           <>
+            {/* 4 nhóm theo việc cần làm; trạng thái chi tiết lọc trong ô chọn. Điện thoại: 4 ô chia đều, số ở trên, tên ở dưới. */}
+            {narrow ? (
+              <div className="af-order-groups">
+                <Segmented<OrderGroupKey>
+                  block
+                  aria-label="Nhóm đơn hàng"
+                  value={activeGroup}
+                  onChange={(value) => updateFilters({ group: value, status: ALL })}
+                  options={orderGroups.map(({ key, label }) => {
+                    const count = countGroup(key)
+                    return {
+                      value: key,
+                      label: (
+                        <span className="af-order-group">
+                          <strong className={key === 'need' && count > 0 ? 'is-urgent' : undefined}>{count}</strong>
+                          <small>{label}</small>
+                        </span>
+                      ),
+                    }
+                  })}
+                />
+              </div>
+            ) : (
+              <Tabs
+                className="af-order-tabs"
+                size="small"
+                aria-label="Nhóm đơn hàng"
+                activeKey={activeGroup}
+                onChange={(value) => updateFilters({ group: value as OrderGroupKey, status: ALL })}
+                items={orderGroups.map(({ key, label }) => ({
+                  key,
+                  label: <CountLabel label={label} count={countGroup(key)} urgent={key === 'need'} />,
+                }))}
+              />
+            )}
             <div className="af-toolbar">
               <div className="af-order-filters">
-                <Select
-                  aria-label="Lọc trạng thái đơn"
-                  style={{ minWidth: 205 }}
-                  value={status}
-                  onChange={(value) => updateFilters({ status: String(value) })}
-                  options={[ALL, ...orderStatuses].map((value) => ({
-                    value,
-                    label: <CountLabel label={value} count={countOf(value)} urgent={value === 'Chờ xác nhận'} />,
-                  }))}
-                />
-                <Select
-                  aria-label="Lọc hình thức nhận"
-                  value={method}
-                  onChange={(value) => updateFilters({ method: value })}
-                  style={{ minWidth: 160 }}
-                  options={[{ value: ALL, label: 'Mọi hình thức nhận' }, ...['Tại quầy', 'Giao tận nơi'].map((value) => ({ value, label: value }))]}
-                />
-                <Select
-                  aria-label="Lọc thanh toán"
-                  value={payment}
-                  onChange={(value) => updateFilters({ payment: value })}
-                  style={{ minWidth: 165 }}
-                  options={[{ value: ALL, label: 'Mọi thanh toán' }, ...['Còn phải thu', 'Đã thanh toán'].map((value) => ({ value, label: value }))]}
-                />
+                {narrow && (
+                  <Button
+                    icon={<SlidersHorizontal size={16} />}
+                    aria-expanded={moreFilters}
+                    onClick={() => setMoreFilters((open) => !open)}
+                  >
+                    Lọc thêm{extraActive ? ` (${extraActive})` : ''}
+                  </Button>
+                )}
+                {(!narrow || moreFilters) && (
+                  <>
+                    {groupStatuses.length > 1 && (
+                      <Select
+                        aria-label="Lọc trạng thái trong nhóm"
+                        style={{ minWidth: 190 }}
+                        value={statusValue}
+                        onChange={(value) => updateFilters({ status: String(value) })}
+                        options={statusOptions}
+                      />
+                    )}
+                    <Select
+                      aria-label="Lọc hình thức nhận"
+                      value={method}
+                      onChange={(value) => updateFilters({ method: value })}
+                      style={{ minWidth: 160 }}
+                      options={[
+                        { value: ALL, label: 'Mọi hình thức nhận' },
+                        ...['Tại quầy', 'Giao tận nơi'].map((value) => ({ value, label: value })),
+                      ]}
+                    />
+                    <Tooltip title={showPayments ? undefined : 'Backend chưa hỗ trợ phiếu thu'}>
+                      <Select
+                        aria-label="Lọc thanh toán"
+                        value={paymentFilter}
+                        disabled={!showPayments}
+                        onChange={(value) => updateFilters({ payment: value })}
+                        style={{ minWidth: 165 }}
+                        options={[
+                          { value: ALL, label: showPayments ? 'Mọi thanh toán' : 'Thanh toán (chưa hỗ trợ)' },
+                          ...['Còn phải thu', 'Đã thanh toán'].map((value) => ({ value, label: value })),
+                        ]}
+                      />
+                    </Tooltip>
+                  </>
+                )}
               </div>
               <Input
                 allowClear
@@ -82,20 +164,31 @@ export function OrdersPage() {
             </div>
             <div className="af-filter-summary">
               <span role="status">{ordersQuery.isPending ? 'Đang tải đơn hàng…' : `${visible.length} / ${orders.length} đơn hàng`}</span>
-              {hasFilters && <Button type="link" size="small" icon={<RotateCcw size={14} />} onClick={resetFilters}>Xóa bộ lọc</Button>}
+              {hasFilters && (
+                <Button type="link" size="small" className="af-clear-filter" icon={<FunnelX size={14} />} onClick={resetFilters}>
+                  Xóa bộ lọc
+                </Button>
+              )}
             </div>
             <OrdersTable
-              filterKey={JSON.stringify([query, status, method, payment])}
+              filterKey={JSON.stringify([query, activeGroup, statusValue, method, paymentFilter])}
               orders={visible}
               loading={ordersQuery.isPending}
               emptyText={
-                hasFilters ? 'Không có đơn phù hợp. Thử đổi từ khóa hoặc xóa bộ lọc.' : 'Chưa có đơn hàng nào.'
+                hasFilters
+                  ? 'Không có đơn phù hợp. Thử đổi từ khóa hoặc xóa bộ lọc.'
+                  : activeGroup === 'need'
+                    ? 'Không còn đơn nào cần xử lý.'
+                    : activeGroup === 'all'
+                      ? 'Chưa có đơn hàng nào.'
+                      : 'Không có đơn nào trong nhóm này.'
               }
             />
           </>
         )}
       </Card>
-      <CreateOrderModal open={creating} onClose={() => setCreating(false)} />
+      {creating && <OrderIntakeModal onClose={() => setCreating(false)} onCreated={setCreated} />}
+      {created !== null && <OrderDetails id={created} onClose={() => setCreated(null)} />}
     </Page>
   )
 }
