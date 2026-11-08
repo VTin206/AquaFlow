@@ -48,6 +48,7 @@ class ReportPostgresIntegrationTest {
         jdbc.update("INSERT INTO roles(code,name) VALUES ('ADMIN','Owner') ON CONFLICT(code) DO NOTHING");
         actor=jdbc.queryForObject("INSERT INTO users(role_id,full_name,email,password_hash) VALUES ((SELECT id FROM roles WHERE code='ADMIN'),'Report driver',?,'unused') RETURNING id",Long.class,UUID.randomUUID()+"@report.test");
         customer=jdbc.queryForObject("INSERT INTO customers(full_name) VALUES ('Report customer') RETURNING id",Long.class);
+        jdbc.update("UPDATE customers SET created_at=? WHERE id=?",at(START),customer);
         product=product();second=product();
         order=order("PHONE","DELIVERY","DELIVERED",100,10,5,START,START);
         item(order,product,1,40);item(order,second,1,60);
@@ -77,10 +78,11 @@ class ReportPostgresIntegrationTest {
     @Test void summaryUsesVietnamBoundaryDiscountsCounterDispatchAndConfirmedPayments() throws Exception {
         mvc.perform(get(BASE+"/summary"+RANGE).with(user("owner").roles("ADMIN"))).andExpect(status().isOk())
             .andExpect(jsonPath("$.sales.ordersCreated").value(3)).andExpect(jsonPath("$.sales.ordersDelivered").value(2))
-            .andExpect(jsonPath("$.sales.ordersCancelled").value(1)).andExpect(jsonPath("$.sales.revenue").value(106))
+            .andExpect(jsonPath("$.sales.ordersCancelled").value(1)).andExpect(jsonPath("$.sales.revenue").value(101))
+            .andExpect(jsonPath("$.sales.averageOrderValue").value(50.5)).andExpect(jsonPath("$.sales.newCustomers").value(1))
             .andExpect(jsonPath("$.sales.returnsValue").value(9)).andExpect(jsonPath("$.sales.netPayments").value(130))
             .andExpect(jsonPath("$.days.length()").value(1)).andExpect(jsonPath("$.days[0].date").value("2026-01-02"))
-            .andExpect(jsonPath("$.days[0].revenue").value(106)).andExpect(jsonPath("$.days[0].collected").value(130));
+            .andExpect(jsonPath("$.days[0].revenue").value(101)).andExpect(jsonPath("$.days[0].collected").value(130));
         mvc.perform(get(BASE+"/summary"+RANGE+"&channel=COUNTER&method=COUNTER").with(user("owner").roles("ADMIN")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.sales.revenue").value(20)).andExpect(jsonPath("$.sales.netPayments").value(0));
     }
@@ -98,7 +100,7 @@ class ReportPostgresIntegrationTest {
         mvc.perform(get(BASE+"/products"+RANGE+"&size=1&page=1").with(user("owner").roles("ADMIN")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].revenue").value(47));
         mvc.perform(get(BASE+"/customers"+RANGE).with(user("owner").roles("ADMIN")))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].revenue").value(106)).andExpect(jsonPath("$.content[0].orders").value(2));
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].revenue").value(101)).andExpect(jsonPath("$.content[0].orders").value(2));
         mvc.perform(get(BASE+"/delivery"+RANGE).with(user("owner").roles("ADMIN")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].delivered").value(1))
             .andExpect(jsonPath("$.content[0].failed").value(1)).andExpect(jsonPath("$.content[0].late").value(1))
