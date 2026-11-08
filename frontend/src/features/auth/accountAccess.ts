@@ -11,7 +11,10 @@ export const isStaff = (user: AuthUser | null) =>
 
 /** Only accept a local destination that belongs to the signed-in workspace. */
 export function accountDestination(user: AuthUser | null, requested = '/') {
-  if (isCustomer(user)) return /^\/shop\/orders(?:\/\d+)?$/.test(requested) || requested === '/checkout' ? requested : '/shop/orders'
+  if (isCustomer(user)) {
+    if (requested === '/') return '/shop'
+    return /^\/shop\/orders(?:\/\d+)?$/.test(requested) || requested === '/checkout' ? requested : '/shop/orders'
+  }
   if (!user || !isStaff(user)) return '/shop/account'
   const staffPaths = [
     '/',

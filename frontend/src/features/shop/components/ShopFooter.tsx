@@ -30,7 +30,7 @@ export function ShopFooter({ demo, contact }: Props) {
           <h2 id="af-footer-info">Góc thông tin</h2>
           <ul>
             <li>
-              <Link to="/shop">Sản phẩm</Link>
+              <Link to="/shop">Nước uống</Link>
             </li>
             {latest && (
               <li>

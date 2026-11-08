@@ -33,10 +33,16 @@ export function ShopAccountPage() {
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string>()
+  const [redirectAfterLogin, setRedirectAfterLogin] = useState(false)
 
   useEffect(() => {
     document.title = 'Tài khoản | AquaFlow'
   }, [])
+
+  useEffect(() => {
+    if (!redirectAfterLogin || !isAuthenticated || !user) return
+    navigate(accountDestination(user, '/'), { replace: true })
+  }, [redirectAfterLogin, isAuthenticated, user, navigate])
 
   const submit = async (values: LoginCredentials) => {
     setSubmitting(true)
@@ -44,7 +50,7 @@ export function ShopAccountPage() {
     try {
       await login(values)
       message.success('Đăng nhập thành công.')
-      navigate('/')
+      setRedirectAfterLogin(true)
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Đăng nhập thất bại.')
     } finally {
@@ -84,12 +90,6 @@ export function ShopAccountPage() {
       <h1>Đăng nhập</h1>
       <div className="af-shop-account-grid">
         <section aria-label="Đăng nhập">
-          <Alert
-            type="info"
-            showIcon
-            style={{ marginBottom: 20 }}
-            title="Khách hàng đăng nhập để xem đơn của mình. Nhân viên đăng nhập để vào trang quản lý."
-          />
           {error && <Alert type="error" showIcon style={{ marginBottom: 20 }} title={error} />}
           <Form<LoginCredentials>
             name="shop-login"

@@ -121,6 +121,91 @@
   gap: 6px;
   margin-left: auto;
 }
+.af-shop-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 20px;
+}
+.af-shop-nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--af-text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+.af-shop-nav-link:hover,
+.af-shop-nav-link.is-active {
+  color: var(--af-primary);
+  background: var(--af-primary-soft);
+}
+.af-shop-nav-menu {
+  position: relative;
+}
+.af-shop-mega {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 30;
+  display: none;
+  grid-template-columns: repeat(3, minmax(190px, 1fr));
+  gap: 24px;
+  width: min(940px, calc(100vw - 32px));
+  padding: 24px;
+  border: 1px solid var(--af-border);
+  border-radius: 12px;
+  background: var(--af-chrome);
+  box-shadow: 0 16px 40px var(--af-shadow-chrome);
+  transform: translateX(-50%);
+}
+.af-shop-mega::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 0;
+  right: 0;
+  height: 8px;
+}
+.af-shop-nav-menu:hover .af-shop-mega,
+.af-shop-nav-menu:focus-within .af-shop-mega {
+  display: grid;
+}
+.af-shop-mega-column {
+  min-width: 0;
+}
+.af-shop-mega-column > strong {
+  display: block;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--af-border);
+  color: var(--af-text-strong);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+.af-shop-mega-column ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.af-shop-mega-column li {
+  border-bottom: 1px solid var(--af-border);
+}
+.af-shop-mega-column a {
+  display: block;
+  padding: 10px 0;
+  color: var(--af-text-secondary);
+  font-size: 14px;
+  text-decoration: none;
+}
+.af-shop-mega-column a:hover,
+.af-shop-mega-column a:focus-visible {
+  color: var(--af-primary);
+}
 .af-shop-icons .ant-btn.ant-btn-icon-only {
   width: 44px;
   height: 44px;
@@ -1392,8 +1477,33 @@
 }
 @media (max-width: 640px) {
   .af-shop-header-inner {
+    flex-wrap: wrap;
     gap: 8px;
     padding-block: 12px;
+  }
+  .af-shop-nav {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+    overflow-x: auto;
+    justify-content: flex-start;
+    border-top: 1px solid var(--af-border);
+    padding-top: 8px;
+  }
+  .af-shop-nav-link {
+    min-height: 36px;
+    padding-inline: 10px;
+  }
+  .af-shop-mega {
+    position: fixed;
+    top: 118px;
+    left: 16px;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    width: calc(100vw - 32px);
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
+    transform: none;
   }
   .af-shop-icons {
     gap: 0;

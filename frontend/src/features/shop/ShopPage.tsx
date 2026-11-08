@@ -68,13 +68,13 @@ export function ShopPage() {
         onShop={goToCatalog}
       />
 
-      <section ref={catalogRef} className="af-shop-catalog" aria-labelledby="af-shop-catalog-title">
+      <section id="products" ref={catalogRef} className="af-shop-catalog" aria-labelledby="af-shop-catalog-title">
         <div className="af-shop-hero">
           <div>
             <Typography.Title level={2} id="af-shop-catalog-title">
-              Sản phẩm
+              Nước uống
             </Typography.Title>
-            <p>Chọn sản phẩm và đặt hàng không cần tài khoản.</p>
+            <p>Chọn nước uống và đặt hàng không cần tài khoản.</p>
           </div>
         </div>
 

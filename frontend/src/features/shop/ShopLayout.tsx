@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { Alert, Badge, Button, Dropdown } from 'antd'
+import { Badge, Button, Dropdown } from 'antd'
 import { ArrowLeft, ChevronDown, Clock3, PackageSearch, Phone, Search, ShoppingCart, Waves } from 'lucide-react'
-import { Link, Outlet, useLocation, useNavigate } from 'react-router'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
-import { useAuth } from '@/features/auth/useAuth'
 import { useCart } from './cart'
 import { AccountMenu } from './components/AccountMenu'
 import { CartDrawer } from './components/CartDrawer'
@@ -12,6 +11,21 @@ import { ShopFooter } from './components/ShopFooter'
 import { shopKeys, useShopContact, useShopDemo, useShopFeature } from './shopService'
 import { useHomeLink, type FreshState } from '@/app/useHomeLink'
 import './shop.css'
+
+const drinkMenuColumns = [
+  {
+    title: 'THƯƠNG HIỆU',
+    items: ['Nước Vĩnh Hảo', 'Nước Lavie', 'Nước Bidrico', 'Nước Ion Life', 'Nước Aquafina', 'Nước Satori', 'Nước Viva', 'M-Water', 'AQUA Water'],
+  },
+  {
+    title: 'NƯỚC UỐNG ĐÓNG BÌNH',
+    items: ['Bình nước 19L – 20L vòi bấm', 'Bình nước 19L – 20L úp máy', 'Bình nước 4,5L – 5L', 'Nước uống bổ sung khoáng'],
+  },
+  {
+    title: 'NƯỚC SUỐI ĐÓNG CHAI',
+    items: ['Chai nhỏ 250ml – 350ml', 'Thùng chai suối 350ml', 'Thùng chai suối 500ml', 'Thùng chai suối Aquafina', 'Thùng chai suối Lavie', 'Thùng chai suối Viva'],
+  },
+] as const
 
 /**
  * Khung trang công khai cho khách, cũng là trang chủ khi chưa đăng nhập.
@@ -22,7 +36,6 @@ export function ShopLayout() {
   const demo = useShopDemo()
   const showTracking = useShopFeature('orderTracking')
   const settings = useShopContact()
-  const { demoGuest, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const goHome = useHomeLink('/shop', shopKeys.products)
@@ -83,6 +96,40 @@ export function ShopLayout() {
             </span>
             <strong>AquaFlow</strong>
           </Link>
+          <nav className="af-shop-nav" aria-label="Điều hướng cửa hàng">
+            <NavLink to="/shop" end className={({ isActive }) => `af-shop-nav-link${isActive ? ' is-active' : ''}`}>
+              Trang chủ
+            </NavLink>
+            <div className="af-shop-nav-menu">
+              <Link to="/shop#products" className="af-shop-nav-link" aria-haspopup="true">
+                Nước uống
+              </Link>
+              <div className="af-shop-mega" role="menu" aria-label="Danh mục nước uống">
+                {drinkMenuColumns.map((column) => (
+                  <section key={column.title} className="af-shop-mega-column">
+                    <strong>{column.title}</strong>
+                    <ul>
+                      {column.items.map((item) => (
+                        <li key={item}>
+                          <Link to="/shop#products" role="menuitem">
+                            {item}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+              </div>
+            </div>
+            {showTracking && (
+              <NavLink to="/track" className={({ isActive }) => `af-shop-nav-link${isActive ? ' is-active' : ''}`}>
+                Tra cứu đơn
+              </NavLink>
+            )}
+            <Link to="/shop/account" className="af-shop-nav-link">
+              Tài khoản
+            </Link>
+          </nav>
           <div className="af-shop-icons">
             <Button
               type="text"
@@ -118,25 +165,6 @@ export function ShopLayout() {
         </div>
       </header>
       <main className="af-shop-main">
-        {demo && (
-          <Alert
-            type="warning"
-            showIcon
-            title={
-              demoGuest
-                ? 'Đang xem như khách — dữ liệu mẫu, không gửi đơn tới cửa hàng'
-                : 'Bản dùng thử — dữ liệu mẫu, không gửi đơn tới cửa hàng'
-            }
-            action={
-              demoGuest ? (
-                <Button size="small" onClick={logout}>
-                  Thoát
-                </Button>
-              ) : undefined
-            }
-            style={{ marginBottom: 16 }}
-          />
-        )}
         {location.pathname !== '/shop' && (
           <Button type="link" className="af-shop-back" icon={<ArrowLeft size={16} />} onClick={goBack}>
             Quay lại
