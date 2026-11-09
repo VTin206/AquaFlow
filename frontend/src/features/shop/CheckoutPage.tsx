@@ -1,7 +1,7 @@
 import { Alert, App, Button, Card, Checkbox, DatePicker, Empty, Form, Input, InputNumber, Radio, Result, Skeleton, Typography } from 'antd'
 import { useQuery } from '@tanstack/react-query'
 import { deliveryQuoteApi } from './deliveryQuoteApi'
-import { currency } from '@/shared/utils/format'
+import { DeliveryFeeSummary } from './components/DeliveryFeeSummary'
 import dayjs, { type Dayjs } from 'dayjs'
 import { ChevronDown, Wallet } from 'lucide-react'
 import { useRef, useState, type KeyboardEvent } from 'react'
@@ -252,25 +252,25 @@ export function CheckoutPage() {
                 >
                   <Input.TextArea autoComplete="street-address" rows={2} placeholder="Số nhà, tên đường, tòa nhà, tầng" />
                 </Form.Item>
-                <Form.Item
-                  name="area"
-                  label="Phường/Xã"
-                  extra="Cửa hàng giao trong TP. Hồ Chí Minh."
-                  rules={[{ required: true, whitespace: true, message: 'Chọn phường/xã giao hàng.' }, { max: 150 }]}
-                >
-                  <WardSelect />
-                </Form.Item>
-                <Form.Item name="floor" label="Số tầng phải đi thang bộ" extra="Nhập 0 nếu giao tầng trệt hoặc có thang máy." rules={[{ required: true }, { type: 'integer', min: 0, max: 30 }]}>
-                  <InputNumber min={0} max={30} precision={0} />
-                </Form.Item>
-                <section aria-label="Phí giao hàng">
-                  <p>Dưới 3 sản phẩm: 15.000đ. Từ 3 sản phẩm: miễn phí cơ bản.</p>
-                  <p>Thang bộ: tầng 1–2 tính 2.000đ/bình/tầng; tầng 3 tính 8.000đ/bình; từ tầng 4 tính 12.000đ/bình.</p>
-                  {!demo && quote.isError ? <QueryError error={quote.error} onRetry={quote.refetch} />
-                    : !demo && quoteBlocked ? <p role="status">Đang tính phí giao…</p>
-                    : <p>Phí giao: <strong>{currency(fee ?? 0)}</strong>{!demo && quote.data &&
-                      <> (cơ bản {currency(quote.data.baseFee)}, thang bộ {currency(quote.data.stairsFee)})</>}</p>}
-                </section>
+                <div className="af-checkout-pair">
+                  <Form.Item
+                    name="area"
+                    label="Phường/Xã"
+                    extra="Cửa hàng giao trong TP. Hồ Chí Minh."
+                    rules={[{ required: true, whitespace: true, message: 'Chọn phường/xã giao hàng.' }, { max: 150 }]}
+                  >
+                    <WardSelect />
+                  </Form.Item>
+                  <Form.Item name="floor" label="Số tầng phải đi thang bộ" extra="Nhập 0 nếu giao tầng trệt hoặc có thang máy." rules={[{ required: true }, { type: 'integer', min: 0, max: 30 }]}>
+                    <InputNumber min={0} max={30} precision={0} />
+                  </Form.Item>
+                </div>
+                <DeliveryFeeSummary
+                  fee={fee}
+                  quote={!demo && !quoteBlocked ? quote.data : undefined}
+                  loading={!demo && quoteBlocked}
+                  error={!demo && quote.isError ? <QueryError error={quote.error} onRetry={quote.refetch} /> : undefined}
+                />
                 <Form.Item name="when" label="Giờ nhận hàng">
                   <Radio.Group
                     options={[
