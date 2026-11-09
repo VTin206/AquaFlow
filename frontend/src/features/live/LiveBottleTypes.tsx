@@ -8,17 +8,20 @@ import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { currency } from '@/shared/utils/format'
 import { matchesSearch } from '@/shared/utils/search'
 import { useStaff } from '@/features/auth/useStaff'
+import { useIsDemo } from '@/shared/features'
 import { bottleTypeApi, type BottleType, type BottleTypeDraft } from './bottleTypeApi'
+import { demoBottleTypeApi } from './demoBottleTypeApi'
 import { invalidateLiveData } from './invalidateLiveData'
 import { modalWidth } from '@/shared/utils/modal'
 
 function BottleTypeForm({ item, onClose }: { item: BottleType | null; onClose: () => void }) {
+  const source = useIsDemo() ? demoBottleTypeApi : bottleTypeApi
   const [form] = Form.useForm<BottleTypeDraft>()
   const cancel = useConfirmDiscard(form, onClose)
   const { message } = App.useApp()
   const client = useQueryClient()
   const save = useMutation({
-    mutationFn: (draft: BottleTypeDraft) => (item ? bottleTypeApi.update(item.id, draft.depositUnitAmount) : bottleTypeApi.create(draft)),
+    mutationFn: (draft: BottleTypeDraft) => (item ? source.update(item.id, draft.depositUnitAmount) : source.create(draft)),
     onSuccess: () => {
       void invalidateLiveData(client)
       message.success(item ? 'Đã cập nhật tiền cọc.' : 'Đã thêm loại vỏ.')
@@ -78,6 +81,8 @@ function BottleTypeForm({ item, onClose }: { item: BottleType | null; onClose: (
 }
 
 export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
+  const demo = useIsDemo()
+  const source = demo ? demoBottleTypeApi : bottleTypeApi
   const role = useStaff()?.role
   const admin = role === 'ADMIN' || role === 'SALES_STAFF'
   const { message, modal } = App.useApp()
@@ -86,11 +91,11 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<BottleType | null | undefined>()
   // Quản trị tải hết một lần rồi lọc tại chỗ để đếm được từng trạng thái; vai trò khác chỉ thấy loại đang lưu hành.
-  const types = useQuery({ queryKey: ['live', 'bottle-types', admin], queryFn: () => bottleTypeApi.list(admin ? undefined : true) })
+  const types = useQuery({ queryKey: ['live', 'bottle-types', admin, demo], queryFn: () => source.list(admin ? undefined : true) })
   const allTypes = types.data ?? []
   const activeCount = allTypes.filter((type) => type.active).length
   const deactivate = useMutation({
-    mutationFn: bottleTypeApi.deactivate,
+    mutationFn: source.deactivate,
     onSuccess: () => {
       void invalidateLiveData(client)
       message.success('Đã ngừng lưu hành loại vỏ.')

@@ -70,7 +70,7 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
         loading={receiptsQuery.isPending}
         dataSource={visible}
         pagination={tablePagination}
-        scroll={{ x: caps.drafts ? 1170 : 970 }}
+        scroll={{ x: 1170 }}
         locale={{ emptyText: receipts.length ? 'Không có phiếu phù hợp.' : 'Chưa có phiếu nhập.' }}
         expandable={{
           expandedRowRender: (receipt) => (
@@ -138,63 +138,59 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
             width: 105,
             render: (receiver?: string) => (caps.receiver ? receiver : <Unsupported />),
           },
-          ...(caps.drafts
-            ? [
-                {
-                  title: 'Thao tác',
-                  key: 'actions',
-                  width: 200,
-                  render: (_: unknown, receipt: ReceiptView) =>
-                    receipt.status === 'DRAFT' && (
-                      <Space size={4} wrap>
-                        <Popconfirm
-                          title={`Nhập kho phiếu ${receipt.code}?`}
-                          description="Hàng đạt được cộng vào tồn; sau đó không sửa hoặc hủy phiếu được."
-                          okText="Nhập kho"
-                          cancelText="Chưa"
-                          onConfirm={() => run(receipt, 'confirm')}
-                        >
-                          <Button
-                            size="small"
-                            type="primary"
-                            loading={action.isPending && action.variables?.id === receipt.id && action.variables.action === 'confirm'}
-                            disabled={action.isPending}
-                          >
-                            Nhập kho
-                          </Button>
-                        </Popconfirm>
-                        <Tooltip title="Sửa phiếu">
-                          <Button
-                            size="small"
-                            icon={<Pencil size={15} />}
-                            aria-label={`Sửa phiếu ${receipt.code}`}
-                            disabled={action.isPending}
-                            onClick={() => onEdit(receipt)}
-                          />
-                        </Tooltip>
-                        <Popconfirm
-                          title={`Hủy phiếu ${receipt.code}?`}
-                          description="Phiếu đã hủy không dùng lại được."
-                          okText="Hủy phiếu"
-                          okButtonProps={{ danger: true }}
-                          cancelText="Không"
-                          onConfirm={() => run(receipt, 'cancel')}
-                        >
-                          <Button
-                            size="small"
-                            danger
-                            type="text"
-                            loading={action.isPending && action.variables?.id === receipt.id && action.variables.action === 'cancel'}
-                            disabled={action.isPending}
-                          >
-                            Hủy
-                          </Button>
-                        </Popconfirm>
-                      </Space>
-                    ),
-                },
-              ]
-            : []),
+          {
+            title: 'Thao tác',
+            key: 'actions',
+            width: 200,
+            render: (_: unknown, receipt: ReceiptView) =>
+              receipt.status === 'DRAFT' && (
+                <Space size={4} wrap>
+                  <Popconfirm
+                    title={`Nhập kho phiếu ${receipt.code}?`}
+                    description="Hàng đạt được cộng vào tồn; sau đó không sửa hoặc hủy phiếu được."
+                    okText="Nhập kho"
+                    cancelText="Chưa"
+                    onConfirm={() => run(receipt, 'confirm')}
+                  >
+                    <Button
+                      size="small"
+                      type="primary"
+                      loading={action.isPending && action.variables?.id === receipt.id && action.variables.action === 'confirm'}
+                      disabled={action.isPending}
+                    >
+                      Nhập kho
+                    </Button>
+                  </Popconfirm>
+                  <Tooltip title="Sửa phiếu">
+                    <Button
+                      size="small"
+                      icon={<Pencil size={15} />}
+                      aria-label={`Sửa phiếu ${receipt.code}`}
+                      disabled={action.isPending}
+                      onClick={() => onEdit(receipt)}
+                    />
+                  </Tooltip>
+                  <Popconfirm
+                    title={`Hủy phiếu ${receipt.code}?`}
+                    description="Phiếu đã hủy không dùng lại được."
+                    okText="Hủy phiếu"
+                    okButtonProps={{ danger: true }}
+                    cancelText="Không"
+                    onConfirm={() => run(receipt, 'cancel')}
+                  >
+                    <Button
+                      size="small"
+                      danger
+                      type="text"
+                      loading={action.isPending && action.variables?.id === receipt.id && action.variables.action === 'cancel'}
+                      disabled={action.isPending}
+                    >
+                      Hủy
+                    </Button>
+                  </Popconfirm>
+                </Space>
+              ),
+          },
         ]}
       />
       <Modal

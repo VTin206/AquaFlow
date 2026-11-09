@@ -31,7 +31,7 @@ import { useColumnSort } from '@/shared/components/sortableColumn'
 import { downloadExcel, type ExcelColumn } from '@/shared/utils/excel'
 import { currency } from '@/shared/utils/format'
 import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
-import { useFeature, useLiveOnly } from '@/shared/features'
+import { useFeature } from '@/shared/features'
 import { LiveReceivables } from './LiveReceivables'
 import { LiveBottleOverview } from './LiveBottleOverview'
 import { Unsupported } from '@/shared/components/Unsupported'
@@ -46,7 +46,6 @@ import { CustomerDebt } from './components/CustomerDebt'
 import { idleOptions, lastOrderLabel, matchesIdle, type IdleFilter } from './lastOrder'
 
 export function CustomersPage() {
-  const live = useLiveOnly()
   const screens = Grid.useBreakpoint()
   const showArea = useFeature('customerProfileExtras')
   const showDebt = useFeature('customerDebt')
@@ -64,12 +63,16 @@ export function CustomersPage() {
   const [query, setQuery] = useLinkedQuery()
   const [searchParams, setSearchParams] = useSearchParams()
   const profileId = searchParams.get('customerId')
-  const setProfileId = (id: string | null) => setSearchParams(previous => {
-    const next = new URLSearchParams(previous)
-    if (id) next.set('customerId', id)
-    else next.delete('customerId')
-    return next
-  }, { replace: true })
+  const setProfileId = (id: string | null) =>
+    setSearchParams(
+      (previous) => {
+        const next = new URLSearchParams(previous)
+        if (id) next.set('customerId', id)
+        else next.delete('customerId')
+        return next
+      },
+      { replace: true },
+    )
   // undefined: đóng; null: thêm mới; Customer: sửa.
   const [editing, setEditing] = useState<Customer | null | undefined>(undefined)
   const [orderFor, setOrderFor] = useState<Customer | null>(null)
@@ -440,20 +443,8 @@ export function CustomersPage() {
         onSaved={(customer) => editing === null && setProfileId(customer.id)}
       />
       {orderFor && <OrderIntakeModal key={orderFor.id} defaultCustomer={orderFor} onClose={() => setOrderFor(null)} />}
-      {live ? (
-        <LiveReceivables />
-      ) : (
-        <Card size="small" title="Công nợ và tiền cần hoàn" style={{ marginBottom: 16 }}>
-          <span className="af-text-muted">Chưa hỗ trợ trong bản dùng thử</span>
-        </Card>
-      )}
-      {live ? (
-        <LiveBottleOverview />
-      ) : (
-        <Card size="small" title="Quản lý vỏ bình / tiền cọc">
-          <span className="af-text-muted">Chưa hỗ trợ trong bản dùng thử</span>
-        </Card>
-      )}
+      <LiveReceivables />
+      <LiveBottleOverview />
     </Page>
   )
 }

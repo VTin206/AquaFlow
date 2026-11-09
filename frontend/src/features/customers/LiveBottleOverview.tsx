@@ -9,14 +9,22 @@ import { LiveBottleTypes } from '@/features/live/LiveBottleTypes'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { matchesSearch } from '@/shared/utils/search'
+import { useIsDemo } from '@/shared/features'
+import { demoBottleApi } from './demoBottleLedger'
 import { LiveBottleLedger } from './LiveBottleLedger'
+
+type BalanceRow = Omit<BottleBalance, 'customerId'> & { customerId: number | string }
 
 export function LiveBottleOverview() {
   const staff = useStaff()
+  const demo = useIsDemo()
   const [search, setSearch] = useState('')
-  const [customer, setCustomer] = useState<BottleBalance>()
+  const [customer, setCustomer] = useState<BalanceRow>()
   const [types, setTypes] = useState(false)
-  const query = useQuery({ queryKey: ['live', 'bottle-balances', staff?.name, staff?.role], queryFn: bottleLedgerApi.balances })
+  const query = useQuery({
+    queryKey: ['live', 'bottle-balances', demo, staff?.name, staff?.role],
+    queryFn: (): Promise<BalanceRow[]> => (demo ? demoBottleApi.balances() : bottleLedgerApi.balances()),
+  })
   return (
     <Card title="Quản lý vỏ bình / tiền cọc" extra={<Button onClick={() => setTypes(true)}>Danh mục loại vỏ</Button>}>
       <p>Sổ theo khách hàng, bao gồm hồ sơ đã lưu trữ. Chọn khách để ghi nhận giao/thu vỏ, thu/hoàn cọc và xem lịch sử.</p>
@@ -64,7 +72,14 @@ export function LiveBottleOverview() {
         />
       )}
       {customer && (
-        <Modal open centered title={`Vỏ & cọc · ${customer.name}`} width={modalWidth.large} footer={null} onCancel={() => setCustomer(undefined)}>
+        <Modal
+          open
+          centered
+          title={`Vỏ & cọc · ${customer.name}`}
+          width={modalWidth.large}
+          footer={null}
+          onCancel={() => setCustomer(undefined)}
+        >
           <LiveBottleLedger customerId={customer.customerId} />
         </Modal>
       )}

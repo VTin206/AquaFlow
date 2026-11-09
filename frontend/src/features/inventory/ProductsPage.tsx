@@ -24,7 +24,7 @@ import { Droplets, Ellipsis, FunnelX, LayoutGrid, Plus, Search } from 'lucide-re
 import { Page } from '@/shared/components/Page'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
-import { useFeature, useLiveOnly } from '@/shared/features'
+import { useFeature } from '@/shared/features'
 import { currency } from '@/shared/utils/format'
 import { LiveBottleTypes } from '@/features/live/LiveBottleTypes'
 import { brandGroups, capacityGroups, catalogCategories, getBrandGroup, getCatalogDetails, normalizeSearch } from './catalogGroups'
@@ -61,7 +61,6 @@ function StockTag({ product }: { product: CatalogItem }) {
 
 export function ProductsPage() {
   const { message, modal } = App.useApp()
-  const canManageBottleTypes = useLiveOnly()
   const canManage = useCanManageProducts()
   const showDetails = useFeature('productCatalogDetails')
   const [status, setStatus] = useState<ProductStatus>('active')
@@ -308,9 +307,7 @@ export function ProductsPage() {
       description="Tra cứu theo thương hiệu, loại nước và quy cách đóng gói."
       actions={
         <Space wrap>
-          <Button disabled={!canManageBottleTypes} onClick={() => setBottlesOpen(true)}>
-            {canManageBottleTypes ? 'Loại vỏ bình' : 'Loại vỏ bình (chưa hỗ trợ)'}
-          </Button>
+          <Button onClick={() => setBottlesOpen(true)}>Loại vỏ bình</Button>
           {canManage && (
             <Button type="primary" icon={<Plus size={16} />} onClick={() => setEditing(null)}>
               Thêm sản phẩm
