@@ -977,6 +977,46 @@
 .af-checkout-remember.ant-form-item {
   margin-bottom: 0;
 }
+.af-checkout-pair .ant-input-number {
+  width: 100%;
+}
+.af-checkout-fee {
+  margin: 16px 0 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--af-border);
+  border-radius: 12px;
+  background: var(--af-surface-muted);
+}
+.af-checkout-fee-row,
+.af-checkout-fee-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.af-checkout-fee-row {
+  padding-bottom: 10px;
+  color: var(--af-text);
+  font-size: 14px;
+}
+.af-checkout-fee-row > span {
+  flex: none;
+}
+.af-checkout-fee-row small {
+  display: block;
+  margin-top: 1px;
+  color: var(--af-text-tertiary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.af-checkout-fee-total {
+  align-items: baseline;
+  padding-top: 10px;
+  border-top: 1px solid var(--af-border-strong);
+  color: var(--af-text-strong);
+}
+.af-checkout-fee-total strong {
+  font-weight: 600;
+}
 .af-checkout-payment {
   display: flex;
   align-items: flex-start;

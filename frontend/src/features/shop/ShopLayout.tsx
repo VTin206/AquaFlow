@@ -153,9 +153,6 @@ export function ShopLayout() {
             <NavLink to="/track" className={({ isActive }) => `af-shop-nav-link${isActive ? ' is-active' : ''}`}>
               Tra cứu đơn
             </NavLink>
-            <Link to="/shop/account" className="af-shop-nav-link">
-              Tài khoản
-            </Link>
           </nav>
           <div className="af-shop-icons">
             <Button
