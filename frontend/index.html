@@ -7,23 +7,184 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="description" content="AquaFlow — quản lý bán hàng, kho hàng và giao nhận cho đại lý nước tinh khiết." />
     <title>AquaFlow | Quản lý đại lý nước</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" />
     <script>
-      // Nền trang theo chế độ màu đã lưu (cùng khóa với app/colorMode.ts). Không dùng data-theme: thuộc tính đó do ThemedArea quản lý.
+      // Chọn sẵn khung hiện ngay theo đường dẫn. Trang công khai luôn sáng; khu quản lý theo chế độ màu đã lưu (cùng khóa với app/colorMode.ts).
       try {
-        var afMode = localStorage.getItem('aquaflow.color-mode')
-        if (afMode === 'dark' || (afMode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) {
-          document.documentElement.setAttribute('data-startup-theme', 'dark')
+        var afRoot = document.documentElement
+        var afPath = location.pathname
+        var afPublic = /^\/(shop|checkout|track|forgot-password|reset-password)(\/|$)/.test(afPath) || (afPath === '/' && !localStorage.getItem('aquaflow.auth.user'))
+        if (afPublic) {
+          afRoot.setAttribute('data-boot', afPath === '/' || /^\/shop\/?$/.test(afPath) ? 'home' : 'page')
+        } else {
+          var afMode = localStorage.getItem('aquaflow.color-mode')
+          if (afMode === 'dark' || (afMode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) {
+            afRoot.setAttribute('data-startup-theme', 'dark')
+          }
         }
       } catch (e) {}
     </script>
     <style>
-      /* Không có màn hình chờ: chỉ đặt nền để khỏi chớp trắng; thông báo dưới đây chỉ hiện khi không tải được app. */
+      /* Không có màn hình chờ. Trang công khai hiện ngay đầu trang tĩnh (khớp với ShopLayout); thông báo chỉ hiện khi không tải được app. */
       body {
         background: #f4f7fb;
         margin: 0;
       }
       html[data-startup-theme='dark'] body {
         background: #0a0f1a;
+      }
+      #af-boot {
+        color: #263e53;
+        display: none;
+        font-family: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        font-size: 14px;
+      }
+      html[data-boot] #af-boot {
+        display: block;
+      }
+      .af-boot-topbar {
+        background: #087fad;
+        height: 40px;
+      }
+      .af-boot-header {
+        background: #f5fbfe;
+        border-bottom: 1px solid #e7eef4;
+        box-shadow: 0 2px 8px rgba(8, 127, 173, 0.04);
+      }
+      .af-boot-inner {
+        align-items: center;
+        box-sizing: border-box;
+        display: flex;
+        gap: 16px;
+        height: 86px;
+        margin: 0 auto;
+        max-width: 1180px;
+        padding: 18px 16px;
+      }
+      .af-boot-brand {
+        align-items: center;
+        color: #16324f;
+        display: flex;
+        flex: none;
+        font-size: 18px;
+        font-weight: 700;
+        gap: 10px;
+      }
+      .af-boot-mark {
+        align-items: center;
+        background: #087fad;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(8, 127, 173, 0.15);
+        color: #fff;
+        display: flex;
+        height: 40px;
+        justify-content: center;
+        width: 40px;
+      }
+      .af-boot-nav {
+        display: flex;
+        gap: 2px;
+        margin-left: 20px;
+      }
+      .af-boot-nav span {
+        border-radius: 8px;
+        line-height: 24px;
+        padding: 8px 12px;
+      }
+      html[data-boot='home'] .af-boot-nav span:first-child {
+        background: #eaf5fb;
+        color: #087fad;
+        font-weight: 600;
+      }
+      .af-boot-icons {
+        align-items: center;
+        display: flex;
+        gap: 6px;
+        margin-left: auto;
+      }
+      .af-boot-icons i {
+        align-items: center;
+        display: flex;
+        height: 44px;
+        justify-content: center;
+        width: 44px;
+      }
+      .af-boot-cart {
+        align-items: center;
+        background: #087fad;
+        border-radius: 12px;
+        color: #fff;
+        display: flex;
+        flex: none;
+        font-size: 16px;
+        font-weight: 600;
+        gap: 8px;
+        height: 48px;
+        justify-content: center;
+        width: 131px;
+      }
+      .af-boot-home {
+        box-sizing: border-box;
+        display: none;
+        gap: 16px;
+        grid-template-columns: minmax(0, 1fr) 340px;
+        margin: 0 auto;
+        max-width: 1180px;
+        padding: 20px 16px 0;
+      }
+      html[data-boot='home'] .af-boot-home {
+        display: grid;
+      }
+      .af-boot-banner {
+        background: linear-gradient(120deg, #0a5f8f 0%, #087fad 45%, #36b3dc 100%);
+        border-radius: 20px;
+        height: 473px;
+      }
+      .af-boot-news {
+        background: #fff;
+        border: 1px solid #e7eef4;
+        border-radius: 20px;
+        box-sizing: border-box;
+        height: 473px;
+      }
+      @media (max-width: 900px) {
+        .af-boot-home {
+          grid-template-columns: 1fr;
+        }
+        .af-boot-news {
+          display: none;
+        }
+      }
+      @media (max-width: 640px) {
+        .af-boot-inner {
+          flex-wrap: wrap;
+          gap: 8px;
+          height: 129px;
+          padding: 12px 16px;
+        }
+        .af-boot-nav {
+          margin-left: 0;
+          order: 3;
+          padding-top: 8px;
+          width: 100%;
+        }
+        .af-boot-nav span {
+          line-height: 22px;
+          padding: 8px 10px;
+        }
+        .af-boot-icons {
+          gap: 0;
+        }
+        .af-boot-cart {
+          font-size: 0;
+          gap: 0;
+          width: 52px;
+        }
+        .af-boot-banner {
+          height: 612px;
+        }
       }
       .af-startup-message {
         animation: af-startup-reveal 0.2s ease 8s both;
@@ -75,6 +236,27 @@
     </noscript>
   </head>
   <body>
+    <div id="af-boot" aria-hidden="true">
+      <div class="af-boot-topbar"></div>
+      <div class="af-boot-header">
+        <div class="af-boot-inner">
+          <span class="af-boot-brand">
+            <span class="af-boot-mark">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12q2.5 2 5 0t5 0 5 0 5 0" /><path d="M2 19q2.5 2 5 0t5 0 5 0 5 0" /><path d="M2 5q2.5 2 5 0t5 0 5 0 5 0" /></svg>
+            </span>
+            AquaFlow
+          </span>
+          <div class="af-boot-nav"><span>Trang chủ</span><span>Nước uống</span><span>Tra cứu đơn</span></div>
+          <div class="af-boot-icons">
+            <i><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34" /><circle cx="11" cy="11" r="8" /></svg></i>
+            <i><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22V12" /><path d="M20.27 18.27 22 20" /><path d="M21 10.498V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.729l7 4a2 2 0 0 0 2 .001l.98-.559" /><path d="M3.29 7 12 12l8.71-5" /><path d="m7.5 4.27 8.997 5.148" /><circle cx="18.5" cy="16.5" r="2.5" /></svg></i>
+            <i><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5" /><path d="M20 21a8 8 0 0 0-16 0" /></svg></i>
+          </div>
+          <span class="af-boot-cart"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></svg>Giỏ hàng</span>
+        </div>
+      </div>
+      <div class="af-boot-home"><div class="af-boot-banner"></div><div class="af-boot-news"></div></div>
+    </div>
     <div id="root">
       <div class="af-startup-message" id="af-startup" role="status">
         <p id="af-startup-title">Vẫn đang tải…</p>

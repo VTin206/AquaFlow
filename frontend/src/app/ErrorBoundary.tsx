@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react'
+import { removeBootShell } from './bootShell'
 
 type Props = { children: ReactNode; homeHref?: string }
 type State = { failed: boolean; loadFailed: boolean }
@@ -10,6 +11,10 @@ export class ErrorBoundary extends Component<Props, State> {
   static getDerivedStateFromError(error: unknown): State {
     const message = error instanceof Error ? `${error.name} ${error.message}` : String(error)
     return { failed: true, loadFailed: /ChunkLoadError|Loading chunk|dynamically imported module|module script|Importing a module|CSS chunk/i.test(message) }
+  }
+
+  componentDidCatch() {
+    removeBootShell()
   }
 
   render() {

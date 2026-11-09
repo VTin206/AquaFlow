@@ -7,6 +7,7 @@ import { RequireAuth } from './RequireAuth'
 import { usePageSupported } from '@/shared/features'
 import { RequireCustomer } from './RequireCustomer'
 import { ScrollToTop } from './ScrollToTop'
+import { bootShellPage } from './bootShell'
 
 // Mỗi trang được tải khi người dùng mở tới, giúp lần tải đầu nhẹ hơn.
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })))
@@ -21,11 +22,13 @@ const DriverPage = lazy(() => import('@/features/delivery/DriverPage').then((m) 
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 const StaffAccountsPage = lazy(() => import('@/features/auth/StaffAccountsPage').then((m) => ({ default: m.StaffAccountsPage })))
 const ActivityPage = lazy(() => import('@/features/activity/ActivityPage').then((m) => ({ default: m.ActivityPage })))
-const ShopLayout = lazy(() => import('@/features/shop/ShopLayout').then((m) => ({ default: m.ShopLayout })))
+const loadShopLayout = () => import('@/features/shop/ShopLayout')
+const loadShopPage = () => import('@/features/shop/ShopPage')
+const ShopLayout = lazy(() => loadShopLayout().then((m) => ({ default: m.ShopLayout })))
 const ArticlePage = lazy(() => import('@/features/shop/ArticlePage').then((m) => ({ default: m.ArticlePage })))
 const ShopAccountPage = lazy(() => import('@/features/shop/ShopAccountPage').then((m) => ({ default: m.ShopAccountPage })))
 const ShopRegisterPage = lazy(() => import('@/features/shop/ShopAccountPage').then((m) => ({ default: m.ShopRegisterPage })))
-const ShopPage = lazy(() => import('@/features/shop/ShopPage').then((m) => ({ default: m.ShopPage })))
+const ShopPage = lazy(() => loadShopPage().then((m) => ({ default: m.ShopPage })))
 const CustomerOrdersPage = lazy(() => import('@/features/shop/CustomerOrdersPage').then((m) => ({ default: m.CustomerOrdersPage })))
 const CustomerOrderPage = lazy(() => import('@/features/shop/CustomerOrdersPage').then((m) => ({ default: m.CustomerOrderPage })))
 const ProductDetailPage = lazy(() => import('@/features/shop/ProductDetailPage').then((m) => ({ default: m.ProductDetailPage })))
@@ -34,6 +37,10 @@ const TrackPage = lazy(() => import('@/features/shop/TrackPage').then((m) => ({ 
 const ForgotPasswordPage = lazy(() => import('@/features/auth/PasswordRecoveryPages').then(m => ({ default: m.ForgotPasswordPage })))
 const ResetPasswordPage = lazy(() => import('@/features/auth/PasswordRecoveryPages').then(m => ({ default: m.ResetPasswordPage })))
 const UnavailablePage = lazy(() => import('@/features/live/UnavailablePage').then((m) => ({ default: m.UnavailablePage })))
+
+// Trang công khai: tải khung và nội dung song song để hiện cùng lúc, không lần lượt từng phần.
+if (bootShellPage()) void loadShopLayout()
+if (bootShellPage() === 'home') void loadShopPage()
 
 /** Trang chưa có API BE: tài khoản thật vẫn mở được nhưng thấy "Chưa hỗ trợ" thay cho dữ liệu mẫu. */
 function BackendPage({ path, title, children }: { path: string; title: string; children: ReactNode }) {

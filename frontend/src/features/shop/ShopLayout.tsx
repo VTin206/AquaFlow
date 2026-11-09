@@ -1,8 +1,9 @@
-import { Suspense, useState } from 'react'
-import { Badge, Button, Dropdown, Skeleton } from 'antd'
+import { Suspense, useLayoutEffect, useState } from 'react'
+import { Badge, Button, Dropdown } from 'antd'
 import { ArrowLeft, ChevronDown, Clock3, PackageSearch, Phone, Search, ShoppingCart, Waves } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
+import { removeBootShell } from '@/app/bootShell'
 import { useCart } from './cart'
 import { AccountMenu } from './components/AccountMenu'
 import { CartDrawer } from './components/CartDrawer'
@@ -75,6 +76,8 @@ export function ShopLayout() {
   const goBack = () => (location.key !== 'default' && !placed ? navigate(-1) : navigate('/shop'))
   const cart = useCart()
   const [cartOpen, setCartOpen] = useState(false)
+  // Header thật đã sẵn sàng: thay khung tĩnh trong cùng một lần vẽ.
+  useLayoutEffect(removeBootShell, [])
   const count = cart.reduce((sum, line) => sum + line.quantity, 0)
   const tel = settings?.phone?.replace(/\s/g, '')
   const hours = settings?.openingHours?.trim()
@@ -194,7 +197,7 @@ export function ShopLayout() {
         )}
         <ErrorBoundary key={location.pathname} homeHref="/shop">
           {/* Đầu trang và chân trang hiện ngay, chỉ phần giữa chờ tải. */}
-          <Suspense fallback={<div className="af-shop-page"><Skeleton active paragraph={{ rows: 8 }} /></div>}>
+          <Suspense fallback={null}>
             <Outlet key={fresh ?? 'page'} context={{ openCart: () => setCartOpen(true) }} />
           </Suspense>
         </ErrorBoundary>
