@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Badge, Button, Dropdown } from 'antd'
-import { ArrowLeft, ChevronDown, Clock3, PackageSearch, Phone, Search, ShoppingCart } from 'lucide-react'
+import { ArrowLeft, ChevronDown, Clock3, Phone, Search, ShoppingCart } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
 import { useCart } from './cart'
@@ -159,14 +159,6 @@ export function ShopLayout() {
               aria-label="Tìm sản phẩm"
               title="Tìm sản phẩm"
               onClick={() => navigate('/shop/drinks', { state: { focusSearch: Date.now() } })}
-            />
-            <Button
-              type="text"
-              shape="circle"
-              icon={<PackageSearch size={24} />}
-              aria-label="Tra cứu đơn"
-              title="Tra cứu đơn"
-              onClick={() => navigate('/track')}
             />
             <AccountMenu />
           </div>

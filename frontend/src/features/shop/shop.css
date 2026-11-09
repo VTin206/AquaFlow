@@ -902,7 +902,7 @@
 }
 .af-shop-detail-price .af-shop-price {
   font-size: 28px;
-  font-weight: 700;
+  font-weight: 800;
 }
 /* Trang tài khoản trong cửa hàng: đăng nhập bên trái, tạo tài khoản / mua không cần tài khoản bên phải. */
 .af-shop-account-page {
@@ -1430,9 +1430,9 @@
 
 /* ---------- Giao diện cửa hàng theo design system Claude-Kit ---------- */
 .af-shop {
-  --shop-primary: #2563eb;
-  --shop-primary-strong: #1d4ed8;
-  --shop-cyan: #0ea5e9;
+  --shop-primary: #087fad;
+  --shop-primary-strong: #0a5f8f;
+  --shop-cyan: #36b3dc;
   --shop-cta: #f97316;
   --shop-cta-strong: #ea580c;
   --shop-ink: #1e293b;
@@ -1487,7 +1487,7 @@
 }
 .af-shop-mega-column a:hover,
 .af-shop-mega-column a:focus-visible {
-  background: #eff6ff;
+  background: #eaf5fb;
   padding-left: 14px;
 }
 .af-shop-catalog {
@@ -1502,8 +1502,8 @@
   padding: 32px 36px;
   border: 0;
   border-radius: 24px;
-  background: linear-gradient(115deg, #1d4ed8 0%, #2563eb 52%, #0ea5e9 100%);
-  box-shadow: 0 18px 40px rgba(37, 99, 235, 0.2);
+  background: linear-gradient(115deg, #0a5f8f 0%, #087fad 52%, #36b3dc 100%);
+  box-shadow: 0 18px 40px rgba(8, 127, 173, 0.2);
   color: #fff;
 }
 .af-drinks-hero::after {
@@ -1578,7 +1578,7 @@
 .af-shop-card.ant-card {
   overflow: hidden;
   border-color: transparent;
-  border-radius: 20px;
+  border-radius: 12px;
   background: var(--shop-surface);
   box-shadow: 0 8px 24px rgba(30, 41, 59, 0.07);
   transition: transform 200ms ease, box-shadow 200ms ease;
@@ -1589,7 +1589,7 @@
 }
 .af-shop-card .ant-card-cover {
   overflow: hidden;
-  background: linear-gradient(145deg, #f8fafc, #eff6ff);
+  background: linear-gradient(145deg, #f8fafc, #eaf5fb);
 }
 .af-shop-card .af-product-image,
 .af-shop-card .af-product-placeholder {
@@ -1623,6 +1623,7 @@
   color: var(--shop-primary);
 }
 .af-shop-card .af-shop-price {
+  font-weight: 800;
   color: var(--shop-cta-strong);
   font-family: 'Nunito Sans', 'Be Vietnam Pro', system-ui, sans-serif;
 }
@@ -1635,9 +1636,9 @@
 .af-shop-add-button.ant-btn-primary:hover,
 .af-shop-add-button.ant-btn-primary:focus-visible {
   border-color: var(--shop-primary);
-  background: #eff6ff;
+  background: #eaf5fb;
   color: var(--shop-primary-strong);
-  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.14);
+  box-shadow: 0 8px 18px rgba(8, 127, 173, 0.14);
 }
 @media (prefers-reduced-motion: reduce) {
   .af-shop-nav-link,
@@ -1978,7 +1979,7 @@
 /* Homepage visual direction: editorial sections instead of a stack of square cards. */
 .af-shop-page {
   background:
-    radial-gradient(circle at 8% 4%, rgba(14, 165, 233, 0.08), transparent 28%),
+    radial-gradient(circle at 8% 4%, rgba(54, 179, 220, 0.08), transparent 28%),
     var(--af-bg);
 }
 .af-shop-intro {
@@ -2156,7 +2157,7 @@
   width: min(78%, 268px);
   height: 90%;
   padding: 12px;
-  border-radius: 22px;
+  border-radius: 12px;
   object-fit: contain;
   background: var(--af-image-bg);
   filter: drop-shadow(0 18px 24px rgba(3, 40, 64, 0.32));
@@ -2332,7 +2333,7 @@
   .af-shop-product-item {
     width: min(68%, 190px);
     padding: 8px;
-    border-radius: 18px;
+    border-radius: 12px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -3,8 +3,8 @@
  * Tên khóa camelCase thành biến CSS kebab-case: `textStrong` → `--af-text-strong`.
  */
 const light = {
-  primary: '#2563eb',
-  primarySoft: '#eff6ff',
+  primary: '#087fad',
+  primarySoft: '#eaf5fb',
   text: '#334155',
   textStrong: '#1e293b',
   textSecondary: '#64748b',
@@ -18,7 +18,7 @@ const light = {
   moneyDue: '#b45309',
   moneyPaid: '#15803d',
   moneyRefund: '#dc2626',
-  moneyDeposit: '#2563eb',
+  moneyDeposit: '#087fad',
   // Màu nhấn cho những thứ cần chú ý: đơn mới, số đếm khẩn.
   accent: '#f97316',
   accentSoft: '#fff7ed',
@@ -34,12 +34,12 @@ const light = {
   onPrimary: '#fff',
   // Khung ảnh sản phẩm, logo, QR: ảnh có nền trắng nên khung luôn trắng.
   imageBg: '#fff',
-  brandDeep: '#1d4ed8',
-  brandLight: '#0ea5e9',
-  chartBar: '#93c5fd',
-  chartBarHover: '#60a5fa',
+  brandDeep: '#0a5f8f',
+  brandLight: '#36b3dc',
+  chartBar: '#b9deee',
+  chartBarHover: '#81c2df',
   shadowChrome: '#1e293b12',
-  shadowPrimary: '#2563eb2b',
+  shadowPrimary: '#087fad26',
   shadowCard: '#1e293b12',
   // Chỉ dùng cho component Ant Design.
   successSolid: '#16a34a',
@@ -57,8 +57,8 @@ export type Palette = typeof light
 // Chế độ tối (khu quản lý, màn hình tài xế): ảnh, QR và màu thương hiệu giữ nguyên.
 const dark: Palette = {
   ...light,
-  primary: '#60a5fa',
-  primarySoft: '#172554',
+  primary: '#3aa6d6',
+  primarySoft: '#13213a',
   text: '#cbd5e1',
   textStrong: '#f1f5f9',
   textSecondary: '#94a3b8',
@@ -71,7 +71,7 @@ const dark: Palette = {
   moneyDue: '#fbbf24',
   moneyPaid: '#4ade80',
   moneyRefund: '#f87171',
-  moneyDeposit: '#60a5fa',
+  moneyDeposit: '#5bb8e3',
   accent: '#fb923c',
   accentSoft: '#431407',
   surface: '#111c31',
@@ -80,8 +80,8 @@ const dark: Palette = {
   surfaceSunken: '#0b1220',
   borderStrong: '#334155',
   chrome: '#0b1220',
-  chartBar: '#2563eb',
-  chartBarHover: '#60a5fa',
+  chartBar: '#24597a',
+  chartBarHover: '#3a7fa8',
   shadowChrome: '#0008',
   shadowPrimary: '#0008',
   shadowCard: '#0006',
@@ -92,7 +92,7 @@ const dark: Palette = {
   rowHover: '#16243b',
   segmentTrack: '#0b1220',
   segmentSelected: '#1e2d46',
-  selectedText: '#93c5fd',
+  selectedText: '#5bb8e3',
 }
 
 export const palettes = { light, dark }

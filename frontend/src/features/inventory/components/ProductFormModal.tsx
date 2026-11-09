@@ -7,8 +7,9 @@ import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 import { useBottleTypeOptions, useSaveProduct, type CatalogItem, type ProductForm } from '../useProductCatalog'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { FormSection } from '@/shared/components/FormSection'
-import { modalWidth } from '@/shared/utils/modal'
 
+// Vừa đủ để ô tên hiện trọn tên sản phẩm dài nhất.
+const MODAL_WIDTH = 680
 const MAX_IMAGE_MB = 5
 const UNITS = ['Bình', 'Thùng', 'Chai', 'Vỏ']
 
@@ -70,7 +71,7 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
       title={product ? `Sửa sản phẩm ${product.sku}` : 'Thêm sản phẩm'}
       okText="Lưu sản phẩm"
       cancelText="Hủy"
-      width={modalWidth.large}
+      width={MODAL_WIDTH}
       confirmLoading={save.isPending}
       onOk={() => form.submit()}
       onCancel={cancel}
@@ -99,122 +100,118 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
       >
         {/* Ảnh bên trái, thông tin bên phải; màn hình hẹp thì xếp chồng. */}
         <div className="af-product-form">
-          <div className="af-product-form-image">
-            <Upload
-              accept="image/*"
-              listType="picture-card"
-              maxCount={1}
-              showUploadList={false}
-              beforeUpload={readImage}
-              disabled={!showImage}
-            >
-              {image ? (
-                <img src={image} alt="Ảnh xem trước" className="af-upload-preview" />
-              ) : (
-                <span className="af-upload-empty">
-                  <ImagePlus size={24} />
-                  Chọn ảnh
-                </span>
-              )}
-            </Upload>
-            <p className="af-form-hint">
-              {showImage ? `PNG, JPG hoặc WEBP, tối đa ${MAX_IMAGE_MB} MB. Bấm vào ảnh để đổi.` : UNSUPPORTED_HINT}
-            </p>
-          </div>
-
-          <div className="af-product-form-fields">
-            <FormSection title="Thông tin chung">
-              <Form.Item
-                name="name"
-                label="Tên sản phẩm"
-                rules={[
-                  { required: true, whitespace: true, message: 'Nhập tên sản phẩm.' },
-                  { max: 200, message: 'Tên tối đa 200 ký tự.' },
-                ]}
+          <div className="af-product-form-top">
+            <div className="af-product-form-image">
+              <Upload
+                accept="image/*"
+                listType="picture-card"
+                maxCount={1}
+                showUploadList={false}
+                beforeUpload={readImage}
+                disabled={!showImage}
               >
-                <Input autoFocus placeholder="Ví dụ: Nước tinh khiết bình 20L" />
-              </Form.Item>
-              <Row gutter={12}>
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    name="sku"
-                    label="Mã sản phẩm"
-                    extra={product ? 'Không đổi sau khi tạo.' : undefined}
-                    rules={[
-                      { required: true, whitespace: true, message: 'Nhập mã sản phẩm.' },
-                      { pattern: /^[A-Za-z0-9-]+$/, message: 'Chỉ dùng chữ, số và dấu gạch ngang.' },
-                      { max: 64, message: 'Mã tối đa 64 ký tự.' },
-                    ]}
-                  >
-                    <Input placeholder="Ví dụ: LAVIE-19L" disabled={Boolean(product)} />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <Form.Item name="brand" label="Thương hiệu" rules={[{ max: 150, message: 'Tối đa 150 ký tự.' }]}>
-                    <Input placeholder="Ví dụ: LaVie, Aquafina..." />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </FormSection>
+                {image ? (
+                  <img src={image} alt="Ảnh xem trước" className="af-upload-preview" />
+                ) : (
+                  <span className="af-upload-empty">
+                    <ImagePlus size={24} />
+                    Chọn ảnh
+                  </span>
+                )}
+              </Upload>
+            </div>
 
-            <FormSection title="Bán hàng">
-              <Row gutter={12}>
-                <Col xs={12} sm={8}>
-                  <Form.Item name="unit" label="Đơn vị" rules={[{ required: true }]}>
-                    <Select options={units.map((unit) => ({ value: unit, label: unit }))} />
-                  </Form.Item>
-                </Col>
-                <Col xs={12} sm={8}>
-                  <Form.Item name="price" label="Giá bán (₫)" rules={[{ required: true, message: 'Nhập giá bán.' }]}>
-                    <InputNumber<number>
-                      min={0}
-                      step={1000}
-                      style={{ width: '100%' }}
-                      formatter={(value) => `${value ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
-                      parser={(value) => Number((value ?? '').replace(/\./g, ''))}
-                    />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} sm={8}>
-                  <Form.Item name="unitsPerCase" label="Số đơn vị / thùng">
-                    <InputNumber min={1} precision={0} style={{ width: '100%' }} placeholder="Không bắt buộc" />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </FormSection>
-
-            <FormSection title="Kho">
-              <Row gutter={12}>
-                <Col xs={24} sm={8}>
-                  <Form.Item
-                    name="threshold"
-                    label="Tồn tối thiểu"
-                    tooltip="Khả dụng từ mức này trở xuống được cảnh báo sắp hết."
-                    rules={[{ required: true, message: 'Nhập tồn tối thiểu.' }]}
-                  >
-                    <InputNumber min={0} precision={0} style={{ width: '100%' }} />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} sm={16}>
-                  <Form.Item name="bottleTypeId" label="Loại vỏ" tooltip="Chọn khi sản phẩm bán kèm vỏ bình có cọc.">
-                    <Select
-                      allowClear
-                      loading={bottleTypes.isPending}
-                      placeholder="Không dùng vỏ"
-                      options={bottleTypes.types
-                        .filter((type) => type.active || type.id === product?.bottleTypeId)
-                        .map((type) => ({
-                          value: type.id,
-                          label: `${type.name}${type.active ? '' : ' (ngừng lưu hành)'}`,
-                          disabled: !type.active,
-                        }))}
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-              {!product && <p className="af-form-hint">Tồn kho tăng khi xác nhận phiếu nhập ở trang Kho.</p>}
-            </FormSection>
+            <div className="af-product-form-fields">
+              <FormSection title="Thông tin chung">
+                <Form.Item
+                  name="name"
+                  label="Tên sản phẩm"
+                  rules={[
+                    { required: true, whitespace: true, message: 'Nhập tên sản phẩm.' },
+                    { max: 200, message: 'Tên tối đa 200 ký tự.' },
+                  ]}
+                >
+                  <Input autoFocus placeholder="Ví dụ: Nước tinh khiết bình 20L" />
+                </Form.Item>
+                <Form.Item
+                  name="sku"
+                  label="Mã sản phẩm"
+                  extra={product ? 'Không đổi sau khi tạo.' : undefined}
+                  rules={[
+                    { required: true, whitespace: true, message: 'Nhập mã sản phẩm.' },
+                    { pattern: /^[A-Za-z0-9-]+$/, message: 'Chỉ dùng chữ, số và dấu gạch ngang.' },
+                    { max: 64, message: 'Mã tối đa 64 ký tự.' },
+                  ]}
+                >
+                  <Input placeholder="Ví dụ: LAVIE-19L" disabled={Boolean(product)} />
+                </Form.Item>
+                <Form.Item name="brand" label="Thương hiệu" rules={[{ max: 150, message: 'Tối đa 150 ký tự.' }]}>
+                  <Input placeholder="Ví dụ: LaVie, Aquafina..." />
+                </Form.Item>
+              </FormSection>
+            </div>
           </div>
+          <p className="af-form-hint af-product-form-hint">
+            {showImage ? `PNG, JPG hoặc WEBP, tối đa ${MAX_IMAGE_MB} MB. Bấm vào ảnh để đổi.` : UNSUPPORTED_HINT}
+          </p>
+
+          <FormSection title="Bán hàng">
+            <Row gutter={12}>
+              <Col xs={12} sm={8}>
+                <Form.Item name="unit" label="Đơn vị" rules={[{ required: true }]}>
+                  <Select options={units.map((unit) => ({ value: unit, label: unit }))} />
+                </Form.Item>
+              </Col>
+              <Col xs={12} sm={8}>
+                <Form.Item name="price" label="Giá bán (₫)" rules={[{ required: true, message: 'Nhập giá bán.' }]}>
+                  <InputNumber<number>
+                    min={0}
+                    step={1000}
+                    style={{ width: '100%' }}
+                    formatter={(value) => `${value ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
+                    parser={(value) => Number((value ?? '').replace(/\./g, ''))}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Form.Item name="unitsPerCase" label="Số đơn vị / thùng">
+                  <InputNumber min={1} precision={0} style={{ width: '100%' }} placeholder="Không bắt buộc" />
+                </Form.Item>
+              </Col>
+            </Row>
+          </FormSection>
+
+          <FormSection title="Kho">
+            <Row gutter={12}>
+              <Col xs={24} sm={8}>
+                <Form.Item
+                  name="threshold"
+                  label="Tồn tối thiểu"
+                  tooltip="Khả dụng từ mức này trở xuống được cảnh báo sắp hết."
+                  rules={[{ required: true, message: 'Nhập tồn tối thiểu.' }]}
+                >
+                  <InputNumber min={0} precision={0} style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={16}>
+                <Form.Item name="bottleTypeId" label="Loại vỏ" tooltip="Chọn khi sản phẩm bán kèm vỏ bình có cọc.">
+                  <Select
+                    allowClear
+                    loading={bottleTypes.isPending}
+                    placeholder="Không dùng vỏ"
+                    options={bottleTypes.types
+                      .filter((type) => type.active || type.id === product?.bottleTypeId)
+                      .map((type) => ({
+                        value: type.id,
+                        label: `${type.name}${type.active ? '' : ' (ngừng lưu hành)'}`,
+                        disabled: !type.active,
+                      }))}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+            {!product && <p className="af-form-hint">Tồn kho tăng khi xác nhận phiếu nhập ở trang Kho.</p>}
+          </FormSection>
         </div>
       </Form>
     </Modal>
