@@ -79,23 +79,7 @@ export function DrinksPage() {
 
   return (
     <div className="af-shop-page">
-      <section id="products" ref={catalogRef} className="af-shop-catalog" aria-labelledby="af-shop-catalog-title">
-        <div className="af-shop-hero af-drinks-hero">
-          <div className="af-drinks-hero-copy">
-            <span className="af-drinks-kicker">
-              <Droplets size={16} aria-hidden /> Danh mục nước uống
-            </span>
-            <Typography.Title level={1} id="af-shop-catalog-title">
-              Chọn nước uống cho cả nhà
-            </Typography.Title>
-            <p>Chọn thương hiệu, quy cách hoặc nhóm nước. Giao tận nhà, đặt nhanh trong vài bước.</p>
-          </div>
-          <div className="af-drinks-hero-meta" aria-label="Tổng quan danh mục">
-            <strong>{productsQuery.isPending ? '—' : products.length}</strong>
-            <span>sản phẩm đang bán</span>
-          </div>
-        </div>
-
+      <section id="products" ref={catalogRef} className="af-shop-catalog" aria-label="Danh sách nước uống">
         <ShopFilters products={products} filters={filters} visibleCount={visible.length} onChange={updateFilters} searchRef={searchRef} />
 
         {productsQuery.isError ? (
