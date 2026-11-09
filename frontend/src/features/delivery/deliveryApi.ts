@@ -42,6 +42,18 @@ export type DeliveryStop = {
   note?: string | null
   latestAttempt: DeliveryAttempt | null
   items: { productId: number; productName: string; unit: string; lotCode: string; quantity: number }[]
+  /** Chỉ dữ liệu mẫu: mã đơn dạng chữ, vì `orderId` của API là số. */
+  orderRef?: string
+}
+export type AvailableOrder = {
+  id: number
+  orderCode: string
+  recipientName: string | null
+  deliveryAddress: string | null
+  deliveryFailed: boolean
+  redeliveryEligible: boolean
+  /** Chỉ dữ liệu mẫu: mã đơn dạng chữ. */
+  orderRef?: string
 }
 export type SettlementInput = {
   cashReported: number
@@ -62,6 +74,8 @@ export type DeliveryTrip = {
   createdBy: number
   orders: DeliveryStop[]
   settlement: (SettlementInput & { id: number; receivedBy: number; handedOverAt: string }) | null
+  /** Chỉ dữ liệu mẫu: mã chuyến dạng chữ. */
+  tripRef?: string
 }
 export type ResultInput = { outcome: 'SUCCESS' | 'FAILED'; recipientName?: string; failureReason?: string; note?: string }
 export const tripLabels = { CREATED: 'Chờ khởi hành', IN_PROGRESS: 'Đang giao', COMPLETED: 'Đã đối soát', CANCELLED: 'Đã hủy' }
@@ -74,17 +88,7 @@ export const deliveryApi = {
   list: () => api.get<DeliveryTrip[]>(base),
   detail: (id: number) => api.get<DeliveryTrip>(`${base}/${id}`),
   drivers: () => api.get<{ id: number; name: string }[]>('/delivery/drivers'),
-  available: () =>
-    api.get<
-      {
-        id: number
-        orderCode: string
-        recipientName: string | null
-        deliveryAddress: string | null
-        deliveryFailed: boolean
-        redeliveryEligible: boolean
-      }[]
-    >('/delivery/available-orders'),
+  available: () => api.get<AvailableOrder[]>('/delivery/available-orders'),
   create: (input: { driverId?: number; vehicle?: string }) => api.post<DeliveryTrip>(base, input),
   assign: (id: number, driverId: number) => api.put<DeliveryTrip>(`${base}/${id}/driver`, { driverId }),
   add: (id: number, orderId: number, redelivery = false) => api.post<DeliveryStop>(`${base}/${id}/orders`, { orderId, redelivery }),

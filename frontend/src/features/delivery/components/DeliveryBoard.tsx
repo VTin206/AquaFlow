@@ -7,7 +7,6 @@ import { Money } from '@/shared/components/Money'
 import { QueryError } from '@/shared/components/QueryError'
 import { useIsDemo } from '@/shared/features'
 import { dueTone } from '@/shared/utils/money'
-import { AdvanceStatusButton } from '@/features/orders/components/AdvanceStatusButton'
 import { OrderDetails } from '@/features/orders/components/OrderDetails'
 import { useOrderList } from '@/features/orders/orderData'
 import { knownAmountDue, type Order, type OrderStatus } from '@/features/orders/types'
@@ -22,9 +21,9 @@ const columns: { status: OrderStatus; title: string; hint: string; color: string
   { status: 'Giao thất bại', title: 'Giao thất bại', hint: 'Kiểm hàng hoàn ở Kho hàng rồi giao lại', color: '#c34444' },
 ]
 
-type CardProps = { order: Order; failureReason?: string; orphan: boolean; action?: React.ReactNode; onDetails: () => void }
+type CardProps = { order: Order; failureReason?: string; orphan: boolean; onDetails: () => void }
 
-function DeliveryCard({ order, failureReason, orphan, action, onDetails }: CardProps) {
+function DeliveryCard({ order, failureReason, orphan, onDetails }: CardProps) {
   const code = order.code ?? order.id
   const due = knownAmountDue(order)
   return (
@@ -70,7 +69,6 @@ function DeliveryCard({ order, failureReason, orphan, action, onDetails }: CardP
       )}
       <div className="af-delivery-footer">
         <ViewButton subject={`đơn ${code}`} onClick={onDetails} />
-        {action}
       </div>
     </Card>
   )
@@ -132,7 +130,6 @@ export function DeliveryBoard() {
                         order={order}
                         failureReason={failureOf(order)}
                         orphan={!demo && trips.isSuccess && order.status === 'Đang giao' && !inTrip.has(order.id)}
-                        action={demo ? <AdvanceStatusButton order={order} /> : undefined}
                         onDetails={() => setSelectedId(order.id)}
                       />
                     ))

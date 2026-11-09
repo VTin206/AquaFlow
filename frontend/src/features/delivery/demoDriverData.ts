@@ -5,7 +5,7 @@ import { drivers, type Trip } from './types'
 
 // Chuyển dữ liệu mẫu sang đúng kiểu của API để bản dùng thử và tài khoản thật dùng chung một màn hình tài xế.
 
-const numericId = (id: string, fallback: number) => Number(id.replace(/\D/g, '')) || fallback
+export const numericId = (id: string, fallback: number) => Number(id.replace(/\D/g, '')) || fallback
 
 export const demoDrivers = drivers.map((name, index) => ({ id: index + 1, name }))
 
@@ -35,6 +35,7 @@ function toStop(trip: Trip, order: Order, index: number): DeliveryStop {
   return {
     id,
     orderId: id,
+    orderRef: order.id,
     orderCode: order.code ?? order.id,
     orderStatus: dispatchedIn(trip, order) ? 'OUT_FOR_DELIVERY' : 'PREPARING',
     recipientName: order.customer,
@@ -56,6 +57,7 @@ function toStop(trip: Trip, order: Order, index: number): DeliveryStop {
 export function toDriverTrip(trip: Trip, stops: Order[], index = 0): DeliveryTrip {
   return {
     id: numericId(trip.id, index + 1),
+    tripRef: trip.id,
     driverId: demoDrivers.find((driver) => driver.name === trip.driver)?.id ?? null,
     driverName: trip.driver,
     vehicle: trip.vehicle ?? null,
@@ -65,7 +67,18 @@ export function toDriverTrip(trip: Trip, stops: Order[], index = 0): DeliveryTri
     endedAt: trip.settlement?.settledAt ?? null,
     createdBy: 0,
     orders: stops.map((order, stopIndex) => toStop(trip, order, stopIndex)),
-    settlement: null,
+    settlement: trip.settlement
+      ? {
+          id: 0,
+          receivedBy: 0,
+          cashReported: trip.settlement.cashExpected,
+          cashConfirmed: trip.settlement.cashHandedOver,
+          bottlesExpected: trip.settlement.bottlesExpected,
+          bottlesConfirmed: trip.settlement.bottlesHandedOver,
+          note: trip.settlement.note,
+          handedOverAt: trip.settlement.settledAt,
+        }
+      : null,
   }
 }
 
