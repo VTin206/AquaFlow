@@ -54,8 +54,7 @@ export function CreateTripModal({
         <Form.Item
           name="driverId"
           label="Tài xế"
-          extra={backend.demo ? undefined : 'Có thể phân sau, nhưng phải có tài xế mới xuất kho được.'}
-          rules={backend.demo ? [{ required: true, message: 'Chọn tài xế.' }] : []}
+          extra="Có thể phân sau, nhưng phải có tài xế mới xuất kho được."
         >
           <Select
             allowClear

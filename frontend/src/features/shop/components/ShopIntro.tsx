@@ -13,14 +13,10 @@ import {
   UserRoundCheck,
 } from 'lucide-react'
 import { Link } from 'react-router'
-import { DEPOSIT_PER_BOTTLE, FREE_DELIVERY_MIN_UNITS } from '@/shared/policy'
-import { currency } from '@/shared/utils/format'
 import { articleDate, shopArticles } from '../shopNews'
 import type { ShopProduct } from '../shopService'
 
 type Props = {
-  /** Có cấu hình cửa hàng thì hiện con số chính sách (miễn phí giao, cọc vỏ). */
-  showPolicy: boolean
   phone?: string
   products: ShopProduct[]
   onShop: () => void
@@ -29,26 +25,16 @@ type Props = {
 /**
  * Phần giới thiệu trước danh mục: banner kèm tin mới, ưu đãi, lý do chọn và cách đặt hàng.
  */
-export function ShopIntro({ showPolicy, phone, products, onShop }: Props) {
+export function ShopIntro({ phone, products, onShop }: Props) {
   const showcase = products.filter((product) => product.image && product.available !== false).slice(0, 9)
   const productSlides = showcase
   const tel = phone?.replace(/\s/g, '')
 
-  const promos = showPolicy
-    ? [
-        {
-          icon: <Truck size={20} />,
-          title: `Miễn phí giao từ ${FREE_DELIVERY_MIN_UNITS} bình/thùng`,
-          text: 'Áp dụng cho mọi khu vực cửa hàng giao.',
-        },
-        { icon: <Recycle size={20} />, title: `Cọc vỏ ${currency(DEPOSIT_PER_BOTTLE)}`, text: 'Hoàn lại đầy đủ khi bạn trả vỏ bình.' },
-        { icon: <PackageSearch size={20} />, title: 'Theo dõi đơn trực tuyến', text: 'Xem trạng thái đơn bằng mã tra cứu.' },
-      ]
-    : [
-        { icon: <Truck size={20} />, title: 'Giao tận nơi', text: 'Bình 19L, thùng chai giao tới nhà, văn phòng.' },
-        { icon: <UserRoundCheck size={20} />, title: 'Không cần tài khoản', text: 'Chỉ cần tên, số điện thoại và địa chỉ.' },
-        { icon: <Phone size={20} />, title: 'Cửa hàng gọi xác nhận', text: 'Nhân viên liên hệ để chốt giờ giao.' },
-      ]
+  const promos = [
+    { icon: <Truck size={20} />, title: 'Giao tận nơi', text: 'Bình 19L, thùng chai giao tới nhà, văn phòng.' },
+    { icon: <UserRoundCheck size={20} />, title: 'Không cần tài khoản', text: 'Chỉ cần tên, số điện thoại và địa chỉ.' },
+    { icon: <Phone size={20} />, title: 'Cửa hàng gọi xác nhận', text: 'Nhân viên liên hệ để chốt giờ giao.' },
+  ]
 
   return (
     <div className="af-shop-intro">

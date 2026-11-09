@@ -68,7 +68,7 @@ export const tripService = {
   create: (draft: TripDraft) =>
     mockRequest(() => {
       requireRole([...STAFF], 'tạo chuyến giao')
-      if (!draft.driver?.trim() || !drivers.includes(draft.driver)) throw mockError(400, 'Chọn tài xế giao hàng.')
+      if (draft.driver && !drivers.includes(draft.driver)) throw mockError(400, 'Chọn tài xế hợp lệ.')
       const orderIds = [...new Set(draft.orderIds ?? [])]
       if (!orderIds.length) throw mockError(400, 'Chọn ít nhất một đơn cho chuyến.')
       checkAssignable(orderIds)
@@ -81,13 +81,25 @@ export const tripService = {
         createdAt: new Date().toISOString(),
       }
       db.trips.push(trip)
-      logActivity('Giao hàng', trip.id, `Tạo chuyến cho ${trip.driver}: ${orderIds.join(', ')}`)
+      logActivity('Giao hàng', trip.id, `Tạo chuyến${trip.driver ? ` cho ${trip.driver}` : ''}: ${orderIds.join(', ')}`)
       return toView(trip)
     }),
 
   /** Xuất kho (Dispatch) một đơn hoặc mọi đơn chưa xuất của chuyến. Chỉ nhân viên cửa hàng; tài xế không xuất kho. */
+  assignDriver: (id: string, driver: string) =>
+    mockRequest(() => {
+      requireRole([...STAFF], 'phân tài xế')
+      if (!drivers.includes(driver)) throw mockError(400, 'Chọn tài xế hợp lệ.')
+      const trip = findTrip(id)
+      if (trip.departedAt || trip.settlement) throw mockError(400, 'Chuyến đã xuất phát, không đổi được tài xế.')
+      trip.driver = driver
+      logActivity('Giao hàng', trip.id, `Phân tài xế ${driver}`)
+      return toView(trip)
+    }),
+
   dispatch: (id: string, orderId?: string) =>
     mockRequest(() => {
+      if (!findTrip(id).driver) throw mockError(400, 'Phải có tài xế mới xuất kho được.')
       const trip = findTrip(id)
       requireRole([...STAFF], 'xuất kho')
       if (trip.settlement) throw mockError(400, 'Chuyến đã đối soát.')

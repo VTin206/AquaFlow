@@ -166,6 +166,7 @@ const demoTripBackend: TripBackend = {
       const trip = await tripService.create({ driver, vehicle: values.vehicle, orderIds: orders.map((order) => order.id) })
       return { tripId: numericId(trip.id, 0), failed: [] }
     },
+    assignDriver: (trip, driverId) => tripService.assignDriver(tripRef(trip), demoDrivers.find((item) => item.id === driverId)?.name ?? ''),
     dispatchAll: (trip) => tripService.dispatch(tripRef(trip)),
     dispatchStop: (trip, stop) => tripService.dispatch(tripRef(trip), stopOrderId(stop)),
     // Dữ liệu mẫu chuyển sang đang giao ngay khi xuất kho nên không có bước khởi hành riêng.

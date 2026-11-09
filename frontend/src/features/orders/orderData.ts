@@ -4,7 +4,6 @@ import { useStaff } from '@/features/auth/useStaff'
 import { catalogApi, type CatalogProduct } from '@/features/live/catalogApi'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { channelLabels, orderApi, paymentStatusLabels, type LiveOrder } from '@/features/live/orderApi'
-import { orderStatuses } from './orderStatus'
 import { walkInName, type Order, type OrderStatus } from './types'
 import { useAdvanceOrderStatus, useOrders } from './useOrders'
 import { paymentApi, type OrderBalance } from '@/features/live/paymentApi'
@@ -71,12 +70,6 @@ async function liveOrders() {
   return orders
     .map((order) => fromLiveOrder(order, products, byOrder.get(order.id)))
     .sort((a, b) => (b.history[0]?.at ?? '').localeCompare(a.history[0]?.at ?? ''))
-}
-
-/** Trạng thái theo nguồn dữ liệu: mẫu xác nhận là chuyển thẳng sang chuẩn bị; BE có bước "Đã xác nhận" và chưa có "Giao thất bại". */
-export function useOrderStatuses() {
-  const demo = useIsDemo()
-  return orderStatuses.filter((status) => (demo ? status !== 'Đã xác nhận' : status !== 'Giao thất bại'))
 }
 
 /** Xác nhận đơn theo nguồn dữ liệu; `refresh` làm mới danh sách sau khi xác nhận xong một loạt. */

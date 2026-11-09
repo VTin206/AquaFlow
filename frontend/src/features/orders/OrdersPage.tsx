@@ -10,7 +10,8 @@ import { useFeature } from '@/shared/features'
 import { OrderDetails } from './components/OrderDetails'
 import { OrderIntakeModal } from './components/OrderIntakeModal'
 import { OrdersTable } from './components/OrdersTable'
-import { useOrderList, useOrderStatuses } from './orderData'
+import { useOrderList } from './orderData'
+import { orderStatuses as statuses } from './orderStatus'
 import { inOrderGroup, orderGroups, statusesInGroup, type OrderGroupKey } from './orderGroups'
 import { amountDue } from './types'
 import { ALL_ORDERS as ALL, useOrderFilters } from './useOrderFilters'
@@ -31,7 +32,6 @@ export function OrdersPage() {
   const [created, setCreated] = useState<string | null>(null)
 
   const orders = ordersQuery.data ?? []
-  const statuses = useOrderStatuses()
   const countGroup = (key: OrderGroupKey) => orders.filter((order) => inOrderGroup(key, order.status)).length
   // Chưa chọn nhóm: mở thẳng việc cần làm; hết việc thì xem tất cả.
   const activeGroup: OrderGroupKey = group || (countGroup('need') > 0 ? 'need' : 'all')
