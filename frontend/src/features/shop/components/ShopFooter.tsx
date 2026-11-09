@@ -48,9 +48,6 @@ export function ShopFooter({ demo, contact }: Props) {
                 <Link to="/shop/register">Tạo tài khoản</Link>
               </li>
             )}
-            <li>
-              <Link to="/login">Đăng nhập cho nhân viên</Link>
-            </li>
           </ul>
         </nav>
         <nav aria-labelledby="af-footer-policy">

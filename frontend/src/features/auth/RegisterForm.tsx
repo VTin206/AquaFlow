@@ -8,7 +8,7 @@ import { focusNextOnEnter } from '@/shared/utils/forms'
 type RegisterValues = { fullName: string; phone: string; email: string; password: string; confirm: string; agree: boolean }
 
 /**
- * Form đăng ký tài khoản khách hàng, dùng ở trang /register và khung đăng nhập trên trang khách.
+ * Form đăng ký tài khoản khách hàng, dùng ở trang /shop/register.
  * Tạo tài khoản CUSTOMER qua API; sau đó khách đăng nhập bằng email và mật khẩu vừa chọn.
  */
 export function RegisterForm({ size = 'large' }: { size?: 'middle' | 'large' }) {

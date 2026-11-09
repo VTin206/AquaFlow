@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Alert, App, Avatar, Button, Divider, Form, Input } from 'antd'
+import { Alert, App, Avatar, Button, Checkbox, Divider, Form, Input, Modal } from 'antd'
 import {
   ArrowRight,
   FlaskConical,
+  Headphones,
   LayoutDashboard,
   LockKeyhole,
   LogOut,
@@ -11,7 +12,7 @@ import {
   UserRound,
   UserRoundPlus,
 } from 'lucide-react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { backendFeatures } from '@/shared/features'
 import { focusNextOnEnter } from '@/shared/utils/forms'
 import type { LoginCredentials } from '@/features/auth/authService'
@@ -22,18 +23,25 @@ import { useStaff } from '@/features/auth/useStaff'
 import { accountDestination, isCustomer } from '@/features/auth/accountAccess'
 import { CustomerAccountPanel } from './CustomerAccountPanel'
 
+const REMEMBERED_EMAIL_KEY = 'aquaflow.auth.remembered-email'
+type LoginFormValues = LoginCredentials & { rememberMe?: boolean }
+
 /**
- * Trang tài khoản trong cửa hàng (bố cục kiểu Uniqlo): đăng nhập bên trái, tạo tài khoản hoặc mua không cần tài khoản bên phải.
- * Dùng cùng API đăng nhập; khách vào đơn của mình, nhân viên vào không gian quản lý.
+ * Trang đăng nhập duy nhất của hệ thống, kiêm trang tài khoản khi đã đăng nhập (bố cục kiểu Uniqlo).
+ * Khách vào đơn của mình, nhân viên vào không gian quản lý; bị chặn ở trang nào thì đăng nhập xong quay lại trang đó.
  */
 export function ShopAccountPage() {
   const { login, logout, enterDemo, isAuthenticated, user } = useAuth()
   const staff = useStaff()
   const { message } = App.useApp()
   const navigate = useNavigate()
+  const location = useLocation()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string>()
   const [redirectAfterLogin, setRedirectAfterLogin] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
+  const rememberedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? ''
+  const returnTo = (location.state as { from?: string } | null)?.from ?? '/'
 
   useEffect(() => {
     document.title = 'Tài khoản | AquaFlow'
@@ -41,14 +49,16 @@ export function ShopAccountPage() {
 
   useEffect(() => {
     if (!redirectAfterLogin || !isAuthenticated || !user) return
-    navigate(accountDestination(user, '/'), { replace: true })
-  }, [redirectAfterLogin, isAuthenticated, user, navigate])
+    navigate(accountDestination(user, returnTo), { replace: true })
+  }, [redirectAfterLogin, isAuthenticated, user, navigate, returnTo])
 
-  const submit = async (values: LoginCredentials) => {
+  const submit = async ({ email, password, rememberMe }: LoginFormValues) => {
     setSubmitting(true)
     setError(undefined)
     try {
-      await login(values)
+      await login({ email, password })
+      if (rememberMe) localStorage.setItem(REMEMBERED_EMAIL_KEY, email.trim())
+      else localStorage.removeItem(REMEMBERED_EMAIL_KEY)
       message.success('Đăng nhập thành công.')
       setRedirectAfterLogin(true)
     } catch (failure) {
@@ -91,8 +101,9 @@ export function ShopAccountPage() {
       <div className="af-shop-account-grid">
         <section aria-label="Đăng nhập">
           {error && <Alert type="error" showIcon style={{ marginBottom: 20 }} title={error} />}
-          <Form<LoginCredentials>
+          <Form<LoginFormValues>
             name="shop-login"
+            initialValues={{ email: rememberedEmail, rememberMe: Boolean(rememberedEmail) }}
             layout="vertical"
             requiredMark={false}
             autoComplete="on"
@@ -131,9 +142,12 @@ export function ShopAccountPage() {
                 autoComplete="current-password"
               />
             </Form.Item>
-            <Link to="/forgot-password" className="af-shop-account-forgot">
-              Quên mật khẩu?
-            </Link>
+            <div className="af-shop-account-options">
+              <Form.Item name="rememberMe" valuePropName="checked" noStyle>
+                <Checkbox>Ghi nhớ tôi</Checkbox>
+              </Form.Item>
+              <Link to="/forgot-password">Quên mật khẩu?</Link>
+            </div>
             <Button
               type="primary"
               size="large"
@@ -191,20 +205,38 @@ export function ShopAccountPage() {
                 icon={<FlaskConical size={16} />}
                 onClick={() => {
                   enterDemo()
-                  navigate('/')
+                  navigate(returnTo, { replace: true })
                 }}
               >
                 Xem bản dùng thử
               </Button>
             </li>
+            <li>
+              <Button type="link" icon={<Headphones size={16} />} onClick={() => setHelpOpen(true)}>
+                Hỗ trợ đăng nhập
+              </Button>
+            </li>
           </ul>
         </section>
       </div>
+      <Modal
+        title="Hỗ trợ đăng nhập"
+        open={helpOpen}
+        centered
+        onCancel={() => setHelpOpen(false)}
+        footer={
+          <Button type="primary" onClick={() => setHelpOpen(false)}>
+            Đã hiểu
+          </Button>
+        }
+      >
+        <p>Nếu bạn quên mật khẩu, hãy chọn "Quên mật khẩu?" hoặc liên hệ cửa hàng để được hỗ trợ.</p>
+      </Modal>
     </div>
   )
 }
 
-/** Trang đăng ký trong cửa hàng; form dùng chung với /register. */
+/** Trang đăng ký duy nhất của hệ thống. */
 export function ShopRegisterPage() {
   useEffect(() => {
     document.title = 'Tạo tài khoản | AquaFlow'

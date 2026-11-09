@@ -32,8 +32,6 @@ const CustomerOrderPage = lazy(() => import('@/features/shop/CustomerOrdersPage'
 const ProductDetailPage = lazy(() => import('@/features/shop/ProductDetailPage').then((m) => ({ default: m.ProductDetailPage })))
 const CheckoutPage = lazy(() => import('@/features/shop/CheckoutPage').then((m) => ({ default: m.CheckoutPage })))
 const TrackPage = lazy(() => import('@/features/shop/TrackPage').then((m) => ({ default: m.TrackPage })))
-const LoginPage = lazy(() => import('@/features/auth/LoginPage').then((m) => ({ default: m.LoginPage })))
-const RegisterPage = lazy(() => import('@/features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })))
 const ForgotPasswordPage = lazy(() => import('@/features/auth/PasswordRecoveryPages').then(m => ({ default: m.ForgotPasswordPage })))
 const ResetPasswordPage = lazy(() => import('@/features/auth/PasswordRecoveryPages').then(m => ({ default: m.ResetPasswordPage })))
 const UnavailablePage = lazy(() => import('@/features/live/UnavailablePage').then((m) => ({ default: m.UnavailablePage })))
@@ -54,8 +52,8 @@ export function App() {
     <Suspense fallback={pageFallback}>
       <ScrollToTop />
       <Routes>
-        <Route path="login" element={<LoginPage />} />
-        <Route path="register" element={<RegisterPage />} />
+        <Route path="login" element={<Navigate to="/shop/account" replace />} />
+        <Route path="register" element={<Navigate to="/shop/register" replace />} />
         {/* Trang công khai cho khách đặt hàng và tra cứu đơn, không cần đăng nhập. */}
         <Route element={<ShopLayout />}>
           <Route path="forgot-password" element={<ForgotPasswordPage />} />

@@ -222,7 +222,7 @@ describe('FE1 customer screens and role separation', () => {
           <Route element={<RequireCustomer />}>
             <Route path="/shop/orders" element={<CustomerOrdersPage />} />
           </Route>
-          <Route path="/login" element={<div>Sign in first</div>} />
+          <Route path="/shop/account" element={<div>Sign in first</div>} />
         </Routes>
       </Providers>,
     )
