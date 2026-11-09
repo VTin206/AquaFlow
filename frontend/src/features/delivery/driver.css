@@ -61,17 +61,6 @@
   color: var(--af-text-secondary);
   font-size: 13px;
 }
-.af-driver-picker {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 600;
-  color: var(--af-text-strong);
-}
-.af-driver-picker .ant-select {
-  flex: 1;
-  max-width: 280px;
-}
 .af-driver-trip {
   margin-top: 16px;
 }

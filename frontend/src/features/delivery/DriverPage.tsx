@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Card, Empty, Form, InputNumber, Modal, Popconfirm, Progress, Segmented, Select, Skeleton, Tag } from 'antd'
+import { App, Button, Card, Empty, Form, InputNumber, Modal, Popconfirm, Progress, Segmented, Skeleton, Tag } from 'antd'
 import { Clock3, History, Map, Package, Phone, Recycle, RefreshCw, Wallet } from 'lucide-react'
 import { TransferQr } from '@/shared/payment/TransferQr'
 import { useSettings } from '@/features/settings/settingsService'
@@ -34,7 +34,7 @@ import { DeliveryActionModal } from './components/DeliveryActionModal'
 import { TripRouteButton } from './components/TripRouteButton'
 import { TripStatusTag } from './components/TripStatusTag'
 import { DriverDue, driverToday } from './driverParts'
-import { demoAttempts, demoCollections, demoDrivers, toDriverTrip } from './demoDriverData'
+import { demoAttempts, demoCollections, toDriverTrip } from './demoDriverData'
 import { driverTripFocus, liveTripStatus } from './tripFocus'
 import { useTrips } from './useTrips'
 
@@ -53,13 +53,8 @@ export function DriverPage() {
 
 function LiveDriver() {
   const { user } = useAuth()
-  const staff = useStaff()
+  // BE chỉ trả chuyến của tài xế đang đăng nhập.
   const trips = useQuery({ queryKey: ['live', 'driver-trips', user?.email], queryFn: deliveryApi.list, refetchInterval: 15000 })
-  const drivers = useQuery({
-    queryKey: ['live', 'driver-options', user?.email],
-    queryFn: deliveryApi.drivers,
-    enabled: staff?.role === 'ADMIN',
-  })
   return (
     <DriverScreen
       trips={trips.data}
@@ -67,7 +62,6 @@ function LiveDriver() {
       fetching={trips.isFetching}
       error={trips.isError ? trips.error : null}
       onRetry={() => void trips.refetch()}
-      drivers={drivers.data}
     />
   )
 }
@@ -78,8 +72,7 @@ function DemoDriver() {
   const ordersQuery = useOrders()
   const [payingId, setPayingId] = useState<string | null>(null)
   const orders = ordersQuery.data ?? []
-  // Tài khoản giao hàng chỉ xem chuyến của chính mình; chủ cửa hàng chọn tài xế để xem thay.
-  const records = (tripsQuery.data ?? []).filter((trip) => staff?.role !== 'DELIVERY_STAFF' || trip.driver === staff.name)
+  const records = (tripsQuery.data ?? []).filter((trip) => trip.driver === staff?.name)
   const stopsOf = (ids: string[]) => ids.map((id) => orders.find((order) => order.id === id)).filter((order) => order !== undefined)
   const trips = records.map((trip, index) => toDriverTrip(trip, stopsOf(trip.orderIds), index))
   const orderOf = (stop: DeliveryStop) => orders.find((order) => (order.code ?? order.id) === stop.orderCode)
@@ -107,7 +100,6 @@ function DemoDriver() {
           void tripsQuery.refetch()
           void ordersQuery.refetch()
         }}
-        drivers={demoDrivers}
         demo={tools}
       />
       {payingId && <OrderDetailsModal key={payingId} orderId={payingId} payOnly onClose={() => setPayingId(null)} />}
@@ -122,7 +114,6 @@ function DriverScreen({
   fetching,
   error,
   onRetry,
-  drivers,
   demo,
 }: {
   trips?: DeliveryTrip[]
@@ -130,15 +121,12 @@ function DriverScreen({
   fetching: boolean
   error: Error | null
   onRetry: () => void
-  drivers?: { id: number; name: string }[]
   demo?: DemoTools
 }) {
   const staff = useStaff()
-  const [driver, setDriver] = useState<number | undefined>()
   const [showHistory, setShowHistory] = useState(false)
-  const viewingForOthers = staff?.role === 'ADMIN'
   const finished = (trip: DeliveryTrip) => ['COMPLETED', 'CANCELLED'].includes(trip.status)
-  const mine = (trips ?? []).filter((trip) => !driver || trip.driverId === driver)
+  const mine = trips ?? []
   const visible = mine.filter((trip) => showHistory || !finished(trip))
   const hiddenCount = mine.filter(finished).length
 
@@ -151,32 +139,15 @@ function DriverScreen({
       <header className="af-driver-head">
         <div>
           <h1>Chuyến của tôi</h1>
-          {!viewingForOthers && (
-            <p>
-              {staff?.name} · {driverToday()}
-            </p>
-          )}
+          <p>
+            {staff?.name} · {driverToday()}
+          </p>
         </div>
         {/* Trang tự làm mới 15 giây một lần; nút này để lấy ngay đơn cửa hàng vừa xếp thêm. */}
         <Button icon={<RefreshCw size={16} />} loading={fetching} onClick={onRetry}>
           Làm mới
         </Button>
       </header>
-      {viewingForOthers && (
-        <>
-          <label className="af-driver-picker">
-            <span>Tài xế</span>
-            <Select
-              allowClear
-              placeholder="Tất cả tài xế"
-              value={driver}
-              onChange={setDriver}
-              options={drivers?.map((d) => ({ value: d.id, label: d.name }))}
-            />
-          </label>
-          <p className="af-form-hint">Đang xem thay tài xế. Nhân viên giao hàng đăng nhập sẽ chỉ thấy chuyến của mình.</p>
-        </>
-      )}
       {error ? (
         <QueryError error={error} onRetry={onRetry} />
       ) : loading ? (
@@ -186,7 +157,7 @@ function DriverScreen({
           <Empty description="Chưa có chuyến nào được giao cho bạn." />
         </Card>
       ) : (
-        visible.map((trip) => <DriverTrip key={trip.id} trip={trip} showDriver={viewingForOthers} demo={demo} />)
+        visible.map((trip) => <DriverTrip key={trip.id} trip={trip} demo={demo} />)
       )}
       {hiddenCount > 0 && (
         <Button type="link" block onClick={() => setShowHistory(!showHistory)}>
@@ -197,7 +168,7 @@ function DriverScreen({
   )
 }
 
-function DriverTrip({ trip, showDriver, demo }: { trip: DeliveryTrip; showDriver: boolean; demo?: DemoTools }) {
+function DriverTrip({ trip, demo }: { trip: DeliveryTrip; demo?: DemoTools }) {
   const { user } = useAuth()
   const { message } = App.useApp()
   const client = useQueryClient()
@@ -361,10 +332,7 @@ function DriverTrip({ trip, showDriver, demo }: { trip: DeliveryTrip; showDriver
     <section className="af-driver-trip" aria-label={`Chuyến ${trip.id}`}>
       <Card size="small" className="af-driver-summary">
         <div className="af-trip-card-head">
-          <strong>
-            Chuyến #{trip.id}
-            {showDriver && trip.driverName ? ` · ${trip.driverName}` : ''}
-          </strong>
+          <strong>Chuyến #{trip.id}</strong>
           <TripStatusTag status={liveTripStatus(trip)} />
         </div>
         <Progress percent={Math.round((done / Math.max(1, trip.orders.length)) * 100)} format={() => `${done}/${trip.orders.length} điểm`} />
