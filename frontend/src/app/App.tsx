@@ -1,5 +1,4 @@
 import { lazy, Suspense, type ReactNode } from 'react'
-import { Spin } from 'antd'
 import { Navigate, Route, Routes } from 'react-router'
 import { AppLayout } from '@/app/layouts/AppLayout'
 import { DriverLayout } from '@/app/layouts/DriverLayout'
@@ -8,6 +7,7 @@ import { RequireAuth } from './RequireAuth'
 import { usePageSupported } from '@/shared/features'
 import { RequireCustomer } from './RequireCustomer'
 import { ScrollToTop } from './ScrollToTop'
+import { StartupSplash } from './StartupSplash'
 
 // Mỗi trang được tải khi người dùng mở tới, giúp lần tải đầu nhẹ hơn.
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })))
@@ -43,15 +43,9 @@ function BackendPage({ path, title, children }: { path: string; title: string; c
   return usePageSupported()(path) ? children : <UnavailablePage title={title} />
 }
 
-const pageFallback = (
-  <div className="af-page-loading">
-    <Spin size="large" />
-  </div>
-)
-
 export function App() {
   return (
-    <Suspense fallback={pageFallback}>
+    <Suspense fallback={<StartupSplash />}>
       <ScrollToTop />
       <Routes>
         <Route path="login" element={<LoginPage />} />
