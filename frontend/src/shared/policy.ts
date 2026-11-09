@@ -26,5 +26,8 @@ export function stairsSurcharge(floor: number, jugs: number) {
 
 /** Phí giao gợi ý; người bán vẫn quyết định số thực thu. */
 export function suggestedDeliveryFee({ units, jugs, floor }: { units: number; jugs: number; floor: number }) {
-  return (units >= FREE_DELIVERY_MIN_UNITS ? 0 : SMALL_ORDER_FEE.min) + stairsSurcharge(floor, jugs)
+  return smallOrderFee(units) + stairsSurcharge(floor, jugs)
 }
+
+/** Phí cơ bản: đơn đủ số lượng được miễn. */
+export const smallOrderFee = (units: number) => (units >= FREE_DELIVERY_MIN_UNITS ? 0 : SMALL_ORDER_FEE.min)

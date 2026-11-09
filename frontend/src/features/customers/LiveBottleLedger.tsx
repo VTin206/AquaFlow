@@ -1,11 +1,13 @@
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, App, Button, Form, Input, InputNumber, Modal, Select, Skeleton, Space, Table, Tag } from 'antd'
+import { Alert, App, Button, Checkbox, Form, Input, InputNumber, Modal, Select, Skeleton, Space, Table, Tag } from 'antd'
 import { useStaff } from '@/features/auth/useStaff'
 import { bottleLedgerApi, type BottleInput, type BottleLedger } from '@/features/live/bottleLedgerApi'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
+import { demoBottleApi } from './demoBottleLedger'
+import { customerKeys } from './useCustomers'
 
 const labels: Record<string, string> = {
   GIVE: 'Giao vỏ',
@@ -21,14 +23,14 @@ const labels: Record<string, string> = {
 type Draft = Omit<BottleInput, 'requestId' | 'kind'>
 
 function BottleForm({
-  customerId,
   kind,
   ledger,
+  record,
   onClose,
 }: {
-  customerId: number
   kind: BottleInput['kind']
   ledger: BottleLedger
+  record: (input: BottleInput) => Promise<unknown>
   onClose: () => void
 }) {
   const [form] = Form.useForm<Draft>()
@@ -41,10 +43,10 @@ function BottleForm({
   const counts = ['GIVE', 'RECEIVE', 'LOSS'].includes(kind)
   const types = ledger.types.filter((t) => (kind === 'GIVE' ? t.active : t.held > 0))
   const save = useMutation({
-    mutationFn: (input: BottleInput) => bottleLedgerApi.create(customerId, input),
+    mutationFn: record,
     onSuccess: async () => {
       message.success('Đã ghi vào sổ vỏ và tiền cọc.')
-      await invalidateLiveData(client)
+      await Promise.all([invalidateLiveData(client), client.invalidateQueries({ queryKey: customerKeys.all })])
       onClose()
     },
     onError: (error: Error) => {
@@ -91,6 +93,11 @@ function BottleForm({
           save.mutate({ ...draft, requestId: retry.current.id })
         }}
       >
+        {kind === 'RECEIVE' && (
+          <Form.Item>
+            <Checkbox disabled>Thu hồi tận nơi (chưa hỗ trợ)</Checkbox>
+          </Form.Item>
+        )}
         {counts ? (
           <>
             <Form.Item name="bottleTypeId" label="Loại vỏ" rules={[{ required: true, message: 'Chọn loại vỏ.' }]}>
@@ -149,12 +156,14 @@ function BottleForm({
   )
 }
 
-export function LiveBottleLedger({ customerId }: { customerId: number }) {
+/** Sổ vỏ và tiền cọc của một khách; dùng chung cho bản dùng thử và tài khoản thật. */
+export function LiveBottleLedger({ customerId }: { customerId: number | string }) {
   const staff = useStaff()
+  const demo = staff?.isDemo ?? false
   const [kind, setKind] = useState<BottleInput['kind']>()
   const query = useQuery({
-    queryKey: ['live', 'bottle-ledger', staff?.name, staff?.role, customerId],
-    queryFn: () => bottleLedgerApi.ledger(customerId),
+    queryKey: ['live', 'bottle-ledger', demo, staff?.name, staff?.role, customerId],
+    queryFn: () => (demo ? demoBottleApi.ledger(String(customerId)) : bottleLedgerApi.ledger(Number(customerId))),
     refetchInterval: 15000,
   })
   const data = query.data
@@ -177,8 +186,8 @@ export function LiveBottleLedger({ customerId }: { customerId: number }) {
         <Tag color="green">Có thể hoàn {currency(data.balance.refundable)}</Tag>
       </p>
       <Space wrap style={{ marginBottom: 16 }}>
-        <Button onClick={() => setKind('GIVE')} disabled={!data.balance.active || !data.types.some((t) => t.active)}>
-          Giao vỏ
+        <Button onClick={() => setKind('GIVE')} disabled={demo || !data.balance.active || !data.types.some((t) => t.active)}>
+          {demo ? 'Giao vỏ (chưa hỗ trợ)' : 'Giao vỏ'}
         </Button>
         <Button onClick={() => setKind('RECEIVE')} disabled={data.balance.bottlesHeld <= 0}>
           Thu vỏ
@@ -242,7 +251,15 @@ export function LiveBottleLedger({ customerId }: { customerId: number }) {
         Số dư cộng dồn từ lịch sử. Đổi giá cọc của loại vỏ không làm thay đổi nghĩa vụ đã ghi nhận. Sổ này ghi nhận vỏ thực tế, không tự
         tăng hoặc giảm tồn kho nước.
       </p>
-      {kind && <BottleForm key={kind} customerId={customerId} kind={kind} ledger={data} onClose={() => setKind(undefined)} />}
+      {kind && (
+        <BottleForm
+          key={kind}
+          kind={kind}
+          ledger={data}
+          record={(input) => (demo ? demoBottleApi.create(String(customerId), input) : bottleLedgerApi.create(Number(customerId), input))}
+          onClose={() => setKind(undefined)}
+        />
+      )}
     </>
   )
 }

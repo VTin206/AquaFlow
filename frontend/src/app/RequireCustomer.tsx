@@ -6,6 +6,6 @@ export function RequireCustomer() {
   const { isAuthenticated, user } = useAuth()
   const location = useLocation()
   if (!isAuthenticated) return <Navigate to="/shop/account" replace state={{ from: location.pathname }} />
-  if (!isCustomer(user)) return <Navigate to={accountDestination(user)} replace />
+  if (!isCustomer(user) && !user?.isDemo) return <Navigate to={accountDestination(user)} replace />
   return <Outlet />
 }

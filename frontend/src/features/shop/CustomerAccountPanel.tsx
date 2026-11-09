@@ -4,6 +4,7 @@ import { Alert, App, Button, Card, Checkbox, Empty, Form, Input, Modal, Popconfi
 import { useAuth } from '@/features/auth/useAuth'
 import { QueryError } from '@/shared/components/QueryError'
 import { accountKey, customerAccountApi, phoneRules, type AddressInput, type SavedAddress } from './customerAccountApi'
+import { demoCustomerAccountApi } from './demoCustomerData'
 import { WardSelect } from '@/shared/address/WardSelect'
 
 export function CustomerAccountPanel() {
@@ -11,8 +12,12 @@ export function CustomerAccountPanel() {
   const client = useQueryClient()
   const { message } = App.useApp()
   const key = accountKey(user?.email)
-  const profile = useQuery({ queryKey: [...key, 'profile'], queryFn: customerAccountApi.profile })
-  const addresses = useQuery({ queryKey: [...key, 'addresses'], queryFn: customerAccountApi.addresses })
+  // Bản dùng thử xem được hồ sơ và sổ địa chỉ của khách mẫu nhưng chưa lưu thay đổi.
+  const demo = Boolean(user?.isDemo)
+  const source = demo ? demoCustomerAccountApi : customerAccountApi
+  const label = (text: string) => (demo ? `${text} (chưa hỗ trợ)` : text)
+  const profile = useQuery({ queryKey: [...key, 'profile'], queryFn: source.profile })
+  const addresses = useQuery({ queryKey: [...key, 'addresses'], queryFn: source.addresses })
   const [editing, setEditing] = useState<SavedAddress | 'new' | null>(null)
   const [addressForm] = Form.useForm<AddressInput>()
   const saveProfile = useMutation({
@@ -56,16 +61,16 @@ export function CustomerAccountPanel() {
     <Space orientation="vertical" size="large" style={{ width: '100%', marginTop: 24 }}>
       <Card title="Hồ sơ của tôi">
         {profile.isPending ? <Skeleton active /> : profile.isError ? <QueryError error={profile.error} onRetry={profile.refetch} /> : (
-          <Form key={`${profile.data.fullName}-${profile.data.phone}`} layout="vertical" initialValues={profile.data} onFinish={values => saveProfile.mutate({ fullName: values.fullName.trim(), phone: values.phone.replace(/[\s().-]/g, '') })} disabled={saveProfile.isPending}>
+          <Form key={`${profile.data.fullName}-${profile.data.phone}`} layout="vertical" initialValues={profile.data} onFinish={values => saveProfile.mutate({ fullName: values.fullName.trim(), phone: values.phone.replace(/[\s().-]/g, '') })} disabled={demo || saveProfile.isPending}>
             <Form.Item label="Email đăng nhập"><Input value={profile.data.email} disabled /></Form.Item>
             <Form.Item name="fullName" label="Họ và tên" rules={[{ required: true, whitespace: true, message: 'Nhập họ và tên.' }, { max: 150 }]}><Input autoComplete="name" /></Form.Item>
             <Form.Item name="phone" label="Số điện thoại" rules={phoneRules}><Input autoComplete="tel" /></Form.Item>
             {saveProfile.isError && <Alert type="error" showIcon title={saveProfile.error.message} style={{ marginBottom: 16 }} />}
-            <Button type="primary" htmlType="submit" loading={saveProfile.isPending}>Lưu hồ sơ</Button>
+            <Button type="primary" htmlType="submit" loading={saveProfile.isPending}>{label('Lưu hồ sơ')}</Button>
           </Form>
         )}
       </Card>
-      <Card title="Sổ địa chỉ" extra={<Button onClick={() => edit('new')} disabled={busy || !addresses.isSuccess}>Thêm địa chỉ</Button>}>
+      <Card title="Sổ địa chỉ" extra={<Button onClick={() => edit('new')} disabled={demo || busy || !addresses.isSuccess}>{label('Thêm địa chỉ')}</Button>}>
         {addresses.isPending ? <Skeleton active /> : addresses.isError ? <QueryError error={addresses.error} onRetry={addresses.refetch} /> : (
           <Space orientation="vertical" style={{ width: '100%' }}>
             {!addresses.data.length && <Empty description="Bạn chưa lưu địa chỉ nào." />}
@@ -73,10 +78,10 @@ export function CustomerAccountPanel() {
               <Card key={address.id} size="small" title={<>{address.recipientName} {address.isDefault && <Tag color="blue">Mặc định</Tag>}</>}>
                 <p>{address.recipientPhone}</p><p>{address.addressLine}, {address.area}</p>
                 <Space wrap>
-                  <Button disabled={busy} onClick={() => edit(address)}>Sửa</Button>
-                  {!address.isDefault && <Button disabled={busy} onClick={() => makeDefault.mutate(address)}>Đặt mặc định</Button>}
-                  <Popconfirm title="Xóa địa chỉ này?" description="Đơn hàng đã đặt vẫn giữ nguyên địa chỉ giao." okText="Xóa" cancelText="Giữ lại" disabled={busy} onConfirm={() => remove.mutate(address.id)}>
-                    <Button danger disabled={busy}>Xóa</Button>
+                  <Button disabled={demo || busy} onClick={() => edit(address)}>{label('Sửa')}</Button>
+                  {!address.isDefault && <Button disabled={demo || busy} onClick={() => makeDefault.mutate(address)}>{label('Đặt mặc định')}</Button>}
+                  <Popconfirm title="Xóa địa chỉ này?" description="Đơn hàng đã đặt vẫn giữ nguyên địa chỉ giao." okText="Xóa" cancelText="Giữ lại" disabled={demo || busy} onConfirm={() => remove.mutate(address.id)}>
+                    <Button danger disabled={demo || busy}>{label('Xóa')}</Button>
                   </Popconfirm>
                 </Space>
               </Card>

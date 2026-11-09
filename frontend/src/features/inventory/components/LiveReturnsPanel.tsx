@@ -6,6 +6,7 @@ import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { OrderFocusBanner } from '@/features/orders/components/OrderSheet'
 import { QueryError } from '@/shared/components/QueryError'
 import { modalWidth } from '@/shared/utils/modal'
+import { isoToVnDate } from '../expiry'
 import { ReturnsView, type ReturnHistoryRow } from './ReturnsView'
 
 export function LiveReturnsPanel() {
@@ -31,7 +32,14 @@ export function LiveReturnsPanel() {
       historyError={history.isError ? <QueryError error={history.error} onRetry={history.refetch} /> : undefined}
       paging={{ page, hasNext: (history.data?.length ?? 0) >= 20, onChange: setPage }}
     >
-      {selected && <InspectionModal key={selected.orderId} order={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <InspectionModal
+          key={selected.orderId}
+          order={selected}
+          onSave={(input) => returnApi.inspectAttempt({ ...input, attemptId: selected.attemptId })}
+          onClose={() => setSelected(null)}
+        />
+      )}
     </ReturnsView>
   )
 }
@@ -50,7 +58,20 @@ const toHistoryRow = (row: ReturnInspection): ReturnHistoryRow => ({
   })),
 })
 
-function InspectionModal({ order, onClose }: { order: PendingReturn; onClose: () => void }) {
+export type InspectionInput = { requestId: string; note?: string; lines: { loadItemId: number; quantity: number; sellable: number }[] }
+
+/** Form kiểm hàng hoàn dùng chung; `partial={false}` khi nơi lưu chỉ nhận đủ toàn bộ hàng trong một đợt. */
+export function InspectionModal({
+  order,
+  onSave,
+  onClose,
+  partial = true,
+}: {
+  order: Pick<PendingReturn, 'orderCode' | 'lines'>
+  onSave: (input: InspectionInput) => Promise<unknown>
+  onClose: () => void
+  partial?: boolean
+}) {
   const { message } = App.useApp()
   const client = useQueryClient()
   const [requestId] = useState(() => crypto.randomUUID())
@@ -60,7 +81,7 @@ function InspectionModal({ order, onClose }: { order: PendingReturn; onClose: ()
   const outstanding = order.lines.reduce((sum, line) => sum + line.quantity, 0) - received
   const damaged = values.some((line) => (line?.sellable ?? 0) < (line?.quantity ?? 0))
   const mutation = useMutation({
-    mutationFn: returnApi.inspectAttempt,
+    mutationFn: onSave,
     onSuccess: async () => {
       await invalidateLiveData(client)
       message.success(
@@ -78,7 +99,7 @@ function InspectionModal({ order, onClose }: { order: PendingReturn; onClose: ()
     month: '2-digit',
     day: '2-digit',
   }).format(new Date())
-  const expired = (expiresOn: string) => expiresOn <= today
+  const expired = (expiresOn: string) => Boolean(expiresOn) && expiresOn <= today
   // Việc hay gặp nhất là hàng về đủ và còn tốt: bấm một lần rồi chỉ sửa lô khác đi. Lô đã hết hạn không tính bán lại được.
   const fillAll = () =>
     form.setFieldsValue({
@@ -100,14 +121,14 @@ function InspectionModal({ order, onClose }: { order: PendingReturn; onClose: ()
         focus={{
           tone: outstanding > 0 ? 'action' : 'done',
           title: `Còn chờ sau đợt này: ${Math.max(0, outstanding)}`,
-          description: 'Lô chưa mang về thì để 0, đợt sau kiểm tiếp. Phiếu đã lưu không sửa được.',
+          description: partial ? 'Lô chưa mang về thì để 0, đợt sau kiểm tiếp. Phiếu đã lưu không sửa được.' : 'Nhận từng đợt: chưa hỗ trợ ở bản dùng thử. Phiếu đã lưu không sửa được.',
         }}
       />
       <Form
         form={form}
         layout="vertical"
         disabled={mutation.isPending}
-        initialValues={{ lines: order.lines.map(() => ({ quantity: 0, sellable: 0 })) }}
+        initialValues={{ lines: order.lines.map((line) => (partial ? { quantity: 0, sellable: 0 } : { quantity: line.quantity, sellable: expired(line.expiresOn) ? 0 : line.quantity })) }}
         onFinish={(input) => {
           const lines = order.lines
             .map((line, i) => ({ loadItemId: line.loadItemId, quantity: input.lines[i].quantity, sellable: input.lines[i].sellable }))
@@ -116,7 +137,7 @@ function InspectionModal({ order, onClose }: { order: PendingReturn; onClose: ()
             message.error('Nhập ít nhất một lô có hàng thực nhận.')
             return
           }
-          mutation.mutate({ attemptId: order.attemptId, requestId, note: input.note, lines })
+          mutation.mutate({ requestId, note: input.note, lines })
         }}
       >
         <div className="af-return-fill">
@@ -138,7 +159,7 @@ function InspectionModal({ order, onClose }: { order: PendingReturn; onClose: ()
                 <div className="af-cell-stack">
                   <span>{row.productName}</span>
                   <small className={expired(row.expiresOn) ? 'af-text-danger' : undefined}>
-                    Lô {row.lotCode} · HSD {row.expiresOn}
+                    Lô {row.lotCode} · HSD {row.expiresOn ? isoToVnDate(row.expiresOn) : '—'}
                     {expired(row.expiresOn) ? ' (đã hết hạn)' : ''}
                   </small>
                 </div>
@@ -154,7 +175,7 @@ function InspectionModal({ order, onClose }: { order: PendingReturn; onClose: ()
                   noStyle
                   rules={[{ required: true }, { type: 'integer', min: 0, max: row.quantity }]}
                 >
-                  <InputNumber aria-label={`Thực nhận ${row.lotCode}`} min={0} max={row.quantity} precision={0} />
+                  <InputNumber aria-label={`Thực nhận ${row.lotCode}`} min={0} max={row.quantity} precision={0} disabled={!partial} />
                 </Form.Item>
               ),
             },

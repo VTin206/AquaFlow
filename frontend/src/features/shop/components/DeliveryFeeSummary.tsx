@@ -4,7 +4,7 @@ import type { DeliveryQuote } from '../deliveryQuoteApi'
 
 type Props = {
   fee: number | null
-  /** Chỉ có khi báo giá từ server đã sẵn sàng; bản dùng thử không có phần tách phí. */
+  /** Chỉ có khi báo giá đã sẵn sàng. */
   quote?: DeliveryQuote
   loading: boolean
   error?: ReactNode

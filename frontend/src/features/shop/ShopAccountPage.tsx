@@ -85,12 +85,17 @@ export function ShopAccountPage() {
             <Button type="primary" icon={<LayoutDashboard size={16} />} onClick={() => navigate(accountDestination(user))}>
               {isCustomer(user) ? 'Đơn hàng của tôi' : 'Trang quản lý'}
             </Button>
+            {user.isDemo && (
+              <Button icon={<ShoppingBag size={16} />} onClick={() => navigate('/shop/orders')}>
+                Đơn hàng của tôi
+              </Button>
+            )}
             <Button danger icon={<LogOut size={16} />} onClick={() => logout()}>
               Đăng xuất
             </Button>
           </div>
         </section>
-        {isCustomer(user) && !user.isDemo && <CustomerAccountPanel />}
+        {(isCustomer(user) || user.isDemo) && <CustomerAccountPanel />}
       </div>
     )
   }

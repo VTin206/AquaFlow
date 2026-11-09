@@ -10,7 +10,7 @@ import type { LiveOrder } from '@/features/live/orderApi'
 import { Money } from '@/shared/components/Money'
 import { QueryError } from '@/shared/components/QueryError'
 import { focusNextOnEnter } from '@/shared/utils/forms'
-import { suggestedDeliveryFee } from '@/shared/policy'
+import { smallOrderFee, stairsSurcharge, suggestedDeliveryFee } from '@/shared/policy'
 import { readProfile, saveProfile, useCart, useCartActions } from './cart'
 import { submitCheckoutOnce } from './checkoutSubmit'
 import { CheckoutReview } from './components/CheckoutReview'
@@ -244,7 +244,7 @@ export function CheckoutPage() {
                 </div>
               </Card>
               <Card title="Giao đến">
-                {isCustomer(user) && !user?.isDemo && <SavedAddressPicker onSelect={address => form.setFieldsValue({ customer: address.recipientName, phone: address.recipientPhone, address: address.addressLine, area: address.area })} />}
+                {(isCustomer(user) || user?.isDemo) && <SavedAddressPicker onSelect={address => form.setFieldsValue({ customer: address.recipientName, phone: address.recipientPhone, address: address.addressLine, area: address.area })} />}
                 <Form.Item
                   name="address"
                   label="Địa chỉ giao"
@@ -267,7 +267,15 @@ export function CheckoutPage() {
                 </div>
                 <DeliveryFeeSummary
                   fee={fee}
-                  quote={!demo && !quoteBlocked ? quote.data : undefined}
+                  quote={
+                    demo
+                      ? validFloor
+                        ? { subtotal, baseFee: smallOrderFee(units), stairsFee: stairsSurcharge(floor, jugs), deliveryFee: fee ?? 0, total }
+                        : undefined
+                      : !quoteBlocked
+                        ? quote.data
+                        : undefined
+                  }
                   loading={!demo && quoteBlocked}
                   error={!demo && quote.isError ? <QueryError error={quote.error} onRetry={quote.refetch} /> : undefined}
                 />

@@ -3,6 +3,7 @@ import { db } from '@/mocks/db'
 import { mockError, mockRequest } from '@/mocks/mockRequest'
 import { useAuth } from '@/features/auth/useAuth'
 import { isCustomer } from '@/features/auth/accountAccess'
+import { rememberDemoOrder } from './demoCustomerData'
 import { customerOrderApi } from './customerOrderApi'
 import { catalogApi, type CatalogProduct } from '@/features/live/catalogApi'
 import { guestOrderApi, type GuestOrderInput } from '@/features/live/guestOrderApi'
@@ -142,8 +143,9 @@ export function usePlaceWebOrder() {
       if (isCustomer(user)) return customerOrderApi.create(toGuestOrderInput(draft))
       return guestOrderApi.create(toGuestOrderInput(draft))
     },
-    onSuccess: () => {
+    onSuccess: (order) => {
       if (demo) {
+        if (user?.isDemo) rememberDemoOrder(String(order.id))
         // Làm mới các màn quản lý dùng chung dữ liệu mẫu.
         for (const key of [['orders'], ['customers'], ['products'], ['activity'], shopKeys.products])
           queryClient.invalidateQueries({ queryKey: key })

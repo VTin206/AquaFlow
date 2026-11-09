@@ -2,8 +2,10 @@ import { numericId } from '@/features/delivery/demoDriverData'
 import type { InventoryMovement, MovementFilter, MovementPage } from '@/features/live/movementApi'
 import { orderService } from '@/features/orders/orderService'
 import type { Order } from '@/features/orders/types'
+import { productService } from './productService'
+import type { Receipt } from './types'
 
-// Suy biến động kho từ các lần xuất giao và kiểm hàng hoàn của đơn mẫu, trả về đúng kiểu của API.
+// Suy biến động kho từ phiếu nhập, các lần xuất giao và kiểm hàng hoàn của dữ liệu mẫu, trả về đúng kiểu của API.
 
 const base = (order: Order) => ({
   productId: 0,
@@ -16,9 +18,55 @@ const base = (order: Order) => ({
   performedBy: 0,
 })
 
-const movementsOf = (orders: Order[]): InventoryMovement[] =>
-  orders
-    .flatMap((order) => [
+const SHIPPED = ['Đang giao', 'Đã giao', 'Giao thất bại', 'Đã hoàn tất']
+
+/** Đơn mẫu có sẵn đã rời kho nhưng không kèm phiếu xuất: suy từ dòng hàng của đơn. */
+const impliedOutflow = (order: Order) =>
+  order.dispatches?.length || !SHIPPED.includes(order.status)
+    ? []
+    : order.lines.map((line) => ({
+        ...base(order),
+        id: 0,
+        type: order.method === 'Tại quầy' ? ('COUNTER_SALE' as const) : ('DISPATCH' as const),
+        quantity: line.quantity,
+        signedQuantity: -line.quantity,
+        occurredAt: order.deliveredAt ?? order.history.at(-1)?.at ?? '',
+        productName: line.name,
+        unit: line.unit,
+        lotCode: '—',
+        expiresOn: '',
+        performedByName: order.history.at(-1)?.by ?? '—',
+        reason: null,
+      }))
+
+const receiptMovements = (receipt: Receipt, index: number): Omit<InventoryMovement, 'id'>[] =>
+  receipt.lines
+    .filter((line) => line.received > line.damaged)
+    .map((line) => ({
+      productId: 0,
+      sku: '',
+      batchId: 0,
+      referenceType: 'PURCHASE_RECEIPT',
+      referenceId: numericId(receipt.id, index + 1),
+      referenceCode: receipt.id,
+      performedBy: 0,
+      type: 'RECEIVE',
+      quantity: line.received - line.damaged,
+      signedQuantity: line.received - line.damaged,
+      occurredAt: receipt.receivedAt,
+      productName: line.productName,
+      unit: line.unit,
+      lotCode: line.lotCode ?? '—',
+      expiresOn: line.expiryDate ?? '',
+      performedByName: receipt.receiver,
+      reason: receipt.note ?? null,
+    }))
+
+const movementsOf = (orders: Order[], receipts: Receipt[]): InventoryMovement[] =>
+  [
+    ...receipts.flatMap(receiptMovements),
+    ...orders.flatMap((order) => [
+      ...impliedOutflow(order),
       ...(order.dispatches ?? []).flatMap((dispatch) =>
         dispatch.lines.map((line) => ({
           ...base(order),
@@ -51,11 +99,15 @@ const movementsOf = (orders: Order[]): InventoryMovement[] =>
           reason: line.damaged ? `Hỏng ${line.damaged}${inspection.note ? ` · ${inspection.note}` : ''}` : (inspection.note ?? null),
         })),
       ),
-    ])
+    ]),
+  ]
     .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
     .map((movement, index) => ({ ...movement, id: index + 1 }))
 
-const load = async () => movementsOf(await orderService.list())
+const load = async () => {
+  const [orders, receipts] = await Promise.all([orderService.list(), productService.receipts()])
+  return movementsOf(orders, receipts)
+}
 
 const matches = (row: InventoryMovement, { type, from, to, q }: MovementFilter) => {
   const text = q?.toLowerCase()
