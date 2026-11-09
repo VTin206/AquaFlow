@@ -31,9 +31,7 @@ type Props = {
  */
 export function ShopIntro({ showPolicy, phone, products, onShop }: Props) {
   const showcase = products.filter((product) => product.image && product.available !== false).slice(0, 9)
-  const productSlides = Array.from({ length: Math.max(1, Math.ceil(showcase.length / 3)) }, (_, slideIndex) =>
-    showcase.slice(slideIndex * 3, slideIndex * 3 + 3),
-  )
+  const productSlides = showcase
   const tel = phone?.replace(/\s/g, '')
 
   const promos = showPolicy
@@ -85,19 +83,18 @@ export function ShopIntro({ showPolicy, phone, products, onShop }: Props) {
                 <Carousel
                   className="af-shop-product-carousel"
                   autoplay={{ dotDuration: true }}
-                  autoplaySpeed={4200}
-                  speed={500}
+                  autoplaySpeed={3800}
+                  speed={900}
+                  effect="fade"
                   arrows
                   pauseOnHover={false}
                   pauseOnFocus={false}
                   pauseOnDotsHover={false}
                   infinite={productSlides.length > 1}
                 >
-                  {productSlides.map((slide, slideIndex) => (
-                    <div key={slideIndex} className="af-shop-product-slide">
-                      {slide.map((product, index) => (
-                        <img key={product.id} src={product.image} alt={product.name} className={`af-shop-banner-item is-${index}`} loading="lazy" />
-                      ))}
+                {productSlides.map((product) => (
+                  <div key={product.id} className="af-shop-product-slide">
+                    <img src={product.image} alt={product.name} className="af-shop-product-item" loading="lazy" />
                     </div>
                   ))}
                 </Carousel>
