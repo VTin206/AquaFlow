@@ -21,7 +21,6 @@ import type { ShopProduct } from '../shopService'
 type Props = {
   /** Có cấu hình cửa hàng thì hiện con số chính sách (miễn phí giao, cọc vỏ). */
   showPolicy: boolean
-  storeName?: string
   phone?: string
   products: ShopProduct[]
   onShop: () => void
@@ -30,7 +29,7 @@ type Props = {
 /**
  * Phần giới thiệu trước danh mục: banner kèm tin mới, ưu đãi, lý do chọn và cách đặt hàng.
  */
-export function ShopIntro({ showPolicy, storeName, phone, products, onShop }: Props) {
+export function ShopIntro({ showPolicy, phone, products, onShop }: Props) {
   const showcase = products.filter((product) => product.image && product.available !== false).slice(0, 9)
   const productSlides = Array.from({ length: Math.max(1, Math.ceil(showcase.length / 3)) }, (_, slideIndex) =>
     showcase.slice(slideIndex * 3, slideIndex * 3 + 3),
@@ -59,9 +58,6 @@ export function ShopIntro({ showPolicy, storeName, phone, products, onShop }: Pr
         <div className="af-shop-banner-slider" role="region" aria-label="Banner giới thiệu cửa hàng">
           <section className="af-shop-banner" aria-label="Giới thiệu cửa hàng">
             <div className="af-shop-banner-copy">
-              <span className="af-shop-eyebrow">
-                <Droplets size={14} aria-hidden /> {storeName ?? 'Cửa hàng nước uống'}
-              </span>
               <h1>Nước uống sạch<br />giao tận nhà</h1>
               <p>Bình 19L, nước suối đóng chai, nước khoáng từ các thương hiệu quen thuộc. Đặt vài bước, cửa hàng giao tới tận cửa.</p>
               <div className="af-shop-banner-actions">

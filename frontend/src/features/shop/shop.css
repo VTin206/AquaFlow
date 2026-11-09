@@ -1997,15 +1997,17 @@
 .af-shop-product-carousel .slick-track,
 .af-shop-product-carousel .slick-slide,
 .af-shop-product-carousel .slick-slide > div {
-  height: 100%;
+  height: 260px;
 }
 .af-shop-product-carousel {
   position: relative;
   z-index: 1;
+  min-height: 260px;
 }
 .af-shop-product-slide {
   position: relative;
-  height: 100%;
+  width: 100%;
+  height: 260px;
 }
 .af-shop-product-carousel .slick-arrow {
   z-index: 4;
@@ -2097,6 +2099,17 @@
   .af-shop-steps li:not(:first-child) {
     padding: 0;
   }
+  .af-shop-product-carousel,
+  .af-shop-product-carousel .slick-list,
+  .af-shop-product-carousel .slick-track,
+  .af-shop-product-carousel .slick-slide,
+  .af-shop-product-carousel .slick-slide > div,
+  .af-shop-product-slide {
+    height: 200px;
+  }
+  .af-shop-product-carousel {
+    min-height: 200px;
+  }
 }
 @media (max-width: 480px) {
   .af-shop-news ul {
@@ -2124,5 +2137,16 @@
   .af-shop-why-grid > div:last-child {
     padding-bottom: 0;
     border-bottom: 0;
+  }
+  .af-shop-product-carousel,
+  .af-shop-product-carousel .slick-list,
+  .af-shop-product-carousel .slick-track,
+  .af-shop-product-carousel .slick-slide,
+  .af-shop-product-carousel .slick-slide > div,
+  .af-shop-product-slide {
+    height: 180px;
+  }
+  .af-shop-product-carousel {
+    min-height: 180px;
   }
 }

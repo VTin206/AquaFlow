@@ -19,7 +19,6 @@ export function ShopPage() {
     <div className="af-shop-page">
       <ShopIntro
         showPolicy={showPolicy}
-        storeName={contact?.storeName}
         phone={contact?.phone}
         products={products}
         onShop={() => navigate('/shop/drinks')}
