@@ -11,7 +11,7 @@ export function RequireAuth() {
     return location.pathname === '/' ? (
       <Navigate to="/shop" replace />
     ) : (
-      <Navigate to="/login" replace state={{ from: location.pathname }} />
+      <Navigate to="/shop/account" replace state={{ from: location.pathname }} />
     )
   if (!isStaff(user)) return <Navigate to={accountDestination(user)} replace />
   return <Outlet />
