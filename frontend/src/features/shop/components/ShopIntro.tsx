@@ -32,11 +32,9 @@ type Props = {
  */
 export function ShopIntro({ showPolicy, storeName, phone, products, onShop }: Props) {
   const showcase = products.filter((product) => product.image && product.available !== false).slice(0, 9)
-  const slides = [
-    { title: <>Nước uống sạch<br />giao tận nhà</>, text: 'Bình 19L, nước suối đóng chai, nước khoáng từ các thương hiệu quen thuộc. Đặt vài bước, cửa hàng giao tới tận cửa.' },
-    { title: <>Chọn nước yêu thích<br />cho mỗi ngày</>, text: 'Khám phá các sản phẩm trong danh mục và chọn loại nước phù hợp cho gia đình, văn phòng của bạn.' },
-    { title: <>Đặt hàng tiện lợi<br />nhận ngay tại nhà</>, text: 'Chọn sản phẩm, nhập địa chỉ và giờ nhận mong muốn. Cửa hàng sẽ liên hệ xác nhận trước khi giao.' },
-  ]
+  const productSlides = Array.from({ length: Math.max(1, Math.ceil(showcase.length / 3)) }, (_, slideIndex) =>
+    showcase.slice(slideIndex * 3, slideIndex * 3 + 3),
+  )
   const tel = phone?.replace(/\s/g, '')
 
   const promos = showPolicy
@@ -59,47 +57,59 @@ export function ShopIntro({ showPolicy, storeName, phone, products, onShop }: Pr
     <div className="af-shop-intro">
       <div className="af-shop-top">
         <div className="af-shop-banner-slider" role="region" aria-label="Banner giới thiệu cửa hàng">
-          <Carousel autoplay={{ dotDuration: true }} autoplaySpeed={5000} speed={600} arrows pauseOnHover={false} pauseOnFocus={false} pauseOnDotsHover={false} infinite>
-            {slides.map((slide, slideIndex) => <div key={slideIndex}>
-        <section className="af-shop-banner" aria-label={'Banner ' + (slideIndex + 1)}>
-          <div className="af-shop-banner-copy">
-            <span className="af-shop-eyebrow">
-              <Droplets size={14} aria-hidden /> {storeName ?? 'Cửa hàng nước uống'}
-            </span>
-            <h1>{slide.title}</h1>
-            <p>{slide.text}</p>
-            <div className="af-shop-banner-actions">
-              <Button type="primary" size="large" icon={<ShoppingCart size={18} />} onClick={onShop}>
-                Đặt nước ngay
-              </Button>
-              {tel ? (
-                <Button size="large" ghost icon={<Phone size={18} />} href={`tel:${tel}`}>
-                  {phone}
+          <section className="af-shop-banner" aria-label="Giới thiệu cửa hàng">
+            <div className="af-shop-banner-copy">
+              <span className="af-shop-eyebrow">
+                <Droplets size={14} aria-hidden /> {storeName ?? 'Cửa hàng nước uống'}
+              </span>
+              <h1>Nước uống sạch<br />giao tận nhà</h1>
+              <p>Bình 19L, nước suối đóng chai, nước khoáng từ các thương hiệu quen thuộc. Đặt vài bước, cửa hàng giao tới tận cửa.</p>
+              <div className="af-shop-banner-actions">
+                <Button type="primary" size="large" icon={<ShoppingCart size={18} />} onClick={onShop}>
+                  Đặt nước ngay
                 </Button>
-              ) : (
-                <Link to="/track">
-                  <Button size="large" ghost icon={<PackageSearch size={18} />}>
-                    Tra cứu đơn
+                {tel ? (
+                  <Button size="large" ghost icon={<Phone size={18} />} href={`tel:${tel}`}>
+                    {phone}
                   </Button>
-                </Link>
+                ) : (
+                  <Link to="/track">
+                    <Button size="large" ghost icon={<PackageSearch size={18} />}>
+                      Tra cứu đơn
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            </div>
+            <div className={`af-shop-banner-art ${showcase.length ? '' : 'is-empty'}`} aria-hidden>
+              <span className="af-shop-bubble is-a" />
+              <span className="af-shop-bubble is-b" />
+              <span className="af-shop-bubble is-c" />
+              {showcase.length ? (
+                <Carousel
+                  className="af-shop-product-carousel"
+                  autoplay={{ dotDuration: true }}
+                  autoplaySpeed={4200}
+                  speed={500}
+                  arrows
+                  pauseOnHover={false}
+                  pauseOnFocus={false}
+                  pauseOnDotsHover={false}
+                  infinite={productSlides.length > 1}
+                >
+                  {productSlides.map((slide, slideIndex) => (
+                    <div key={slideIndex} className="af-shop-product-slide">
+                      {slide.map((product, index) => (
+                        <img key={product.id} src={product.image} alt={product.name} className={`af-shop-banner-item is-${index}`} loading="lazy" />
+                      ))}
+                    </div>
+                  ))}
+                </Carousel>
+              ) : (
+                <Droplets size={120} strokeWidth={1.2} className="af-shop-banner-drop" />
               )}
             </div>
-          </div>
-          <div className={`af-shop-banner-art ${showcase.length ? '' : 'is-empty'}`} aria-hidden>
-            <span className="af-shop-bubble is-a" />
-            <span className="af-shop-bubble is-b" />
-            <span className="af-shop-bubble is-c" />
-            {showcase.length ? (
-              Array.from({ length: Math.min(3, showcase.length) }, (_, index) => showcase[(slideIndex * 3 + (showcase.length <= 3 ? slideIndex : 0) + index) % showcase.length]).map((product, index) => (
-                <img key={product.id} src={product.image} alt="" className={`af-shop-banner-item is-${index}`} loading="lazy" />
-              ))
-            ) : (
-              <Droplets size={120} strokeWidth={1.2} className="af-shop-banner-drop" />
-            )}
-          </div>
-        </section>
-            </div>)}
-          </Carousel>
+          </section>
         </div>
         <aside className="af-shop-news" aria-labelledby="af-shop-news-title">
           <h2 id="af-shop-news-title">Tin mới cập nhật</h2>

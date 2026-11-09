@@ -1992,6 +1992,46 @@
 .af-shop-steps .ant-btn-link {
   margin-top: 18px;
 }
+.af-shop-product-carousel,
+.af-shop-product-carousel .slick-list,
+.af-shop-product-carousel .slick-track,
+.af-shop-product-carousel .slick-slide,
+.af-shop-product-carousel .slick-slide > div {
+  height: 100%;
+}
+.af-shop-product-carousel {
+  position: relative;
+  z-index: 1;
+}
+.af-shop-product-slide {
+  position: relative;
+  height: 100%;
+}
+.af-shop-product-carousel .slick-arrow {
+  z-index: 4;
+  width: 28px;
+  height: 28px;
+  color: rgba(255, 255, 255, 0.82);
+}
+.af-shop-product-carousel .slick-arrow:hover,
+.af-shop-product-carousel .slick-arrow:focus-visible {
+  color: #fff;
+}
+.af-shop-product-carousel .slick-prev {
+  left: 0;
+}
+.af-shop-product-carousel .slick-next {
+  right: 0;
+}
+.af-shop-product-carousel .slick-dots {
+  bottom: -8px;
+}
+.af-shop-product-carousel .slick-dots li button::before {
+  color: rgba(255, 255, 255, 0.62);
+}
+.af-shop-product-carousel .slick-dots li.slick-active button::before {
+  color: #fff;
+}
 @media (max-width: 900px) {
   .af-shop-top {
     grid-template-columns: 1fr;
