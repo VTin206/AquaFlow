@@ -3,7 +3,7 @@
  * Màu nằm ở src/app/palette.ts; font, bo góc của component Ant Design ở src/app/theme.ts.
  * Mọi class tự đặt dùng tiền tố "af-" để không đụng class của Ant Design.
  */
-@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&family=Rubik:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700;800&display=swap');
 
 :root {
   /* Màu --af-* được gắn từ src/app/palette.ts (cùng nguồn với theme Ant Design); ở đây chỉ giữ biến không phải màu. */
@@ -2467,7 +2467,7 @@ body {
 .af-section-heading h2,
 .af-panel-heading-title,
 .af-toolbar-title {
-  font-family: 'Rubik', 'Nunito Sans', system-ui, sans-serif;
+  font-family: 'Nunito Sans', 'Be Vietnam Pro', system-ui, sans-serif;
 }
 .af-topbar-brand strong {
   letter-spacing: -0.03em;
@@ -2541,7 +2541,7 @@ body {
 .af-card,
 .af-shell .ant-card {
   border-color: var(--af-border);
-  border-radius: 18px;
+  border-radius: 14px;
   box-shadow: 0 8px 26px var(--af-shadow-card);
 }
 .af-shell .ant-card-head {
@@ -2584,7 +2584,7 @@ body {
 .af-shell .ant-table-wrapper {
   overflow: hidden;
   border: 1px solid var(--af-border);
-  border-radius: 16px;
+  border-radius: 14px;
 }
 .af-shell .ant-table-thead > tr > th {
   background: var(--af-surface-muted);
@@ -2613,7 +2613,7 @@ body {
   font-weight: 600;
 }
 .af-stat-row .ant-statistic-content {
-  font-family: 'Rubik', 'Nunito Sans', system-ui, sans-serif;
+  font-family: 'Nunito Sans', 'Be Vietnam Pro', system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 .af-toolbar {
@@ -2843,7 +2843,7 @@ body {
 }
 .af-theme-menu .ant-dropdown-menu-item {
   padding: 5px 10px !important;
-  border-radius: 8px !important;
+  border-radius: 10px !important;
 }
 .af-theme-menu .ant-dropdown-menu-item .ant-dropdown-menu-item-icon {
   margin-inline-end: 10px;
