@@ -1,5 +1,5 @@
 import { Suspense, useState } from 'react'
-import { Drawer, Layout, Spin } from 'antd'
+import { Drawer, Layout, Skeleton } from 'antd'
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { canOpen, homeOf } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/useStaff'
@@ -59,13 +59,7 @@ export function AppLayout() {
         </Drawer>
         <Layout.Content className="af-content">
           {/* Giữ khung app hiển thị trong lúc tải code của trang mới. */}
-          <Suspense
-            fallback={
-              <div className="af-page-loading">
-                <Spin size="large" />
-              </div>
-            }
-          >
+          <Suspense fallback={<Skeleton active paragraph={{ rows: 8 }} />}>
             <ErrorBoundary key={pathname} homeHref={staff ? homeOf(staff.role) : '/'}><Outlet /></ErrorBoundary>
           </Suspense>
         </Layout.Content>

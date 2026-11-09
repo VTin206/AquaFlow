@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Badge, Button, Dropdown } from 'antd'
+import { Suspense, useState } from 'react'
+import { Badge, Button, Dropdown, Skeleton } from 'antd'
 import { ArrowLeft, ChevronDown, Clock3, PackageSearch, Phone, Search, ShoppingCart, Waves } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
@@ -193,7 +193,10 @@ export function ShopLayout() {
           </Button>
         )}
         <ErrorBoundary key={location.pathname} homeHref="/shop">
-          <Outlet key={fresh ?? 'page'} context={{ openCart: () => setCartOpen(true) }} />
+          {/* Đầu trang và chân trang hiện ngay, chỉ phần giữa chờ tải. */}
+          <Suspense fallback={<div className="af-shop-page"><Skeleton active paragraph={{ rows: 8 }} /></div>}>
+            <Outlet key={fresh ?? 'page'} context={{ openCart: () => setCartOpen(true) }} />
+          </Suspense>
         </ErrorBoundary>
       </main>
       <ShopFooter demo={demo} contact={settings} />

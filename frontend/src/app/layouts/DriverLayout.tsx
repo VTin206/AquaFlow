@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { Avatar, Dropdown, Spin } from 'antd'
+import { Avatar, Dropdown, Skeleton } from 'antd'
 import { ChevronDown, Waves } from 'lucide-react'
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { canOpen, homeOf } from '@/features/auth/permissions'
@@ -45,13 +45,7 @@ export function DriverLayout() {
         </div>
       </header>
       <main className="af-driver-main">
-        <Suspense
-          fallback={
-            <div className="af-page-loading">
-              <Spin size="large" />
-            </div>
-          }
-        >
+        <Suspense fallback={<Skeleton active paragraph={{ rows: 8 }} />}>
           <ErrorBoundary key={pathname} homeHref="/driver"><Outlet /></ErrorBoundary>
         </Suspense>
       </main>

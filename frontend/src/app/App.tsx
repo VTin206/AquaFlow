@@ -7,7 +7,6 @@ import { RequireAuth } from './RequireAuth'
 import { usePageSupported } from '@/shared/features'
 import { RequireCustomer } from './RequireCustomer'
 import { ScrollToTop } from './ScrollToTop'
-import { StartupSplash } from './StartupSplash'
 
 // Mỗi trang được tải khi người dùng mở tới, giúp lần tải đầu nhẹ hơn.
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })))
@@ -43,7 +42,7 @@ function BackendPage({ path, title, children }: { path: string; title: string; c
 
 export function App() {
   return (
-    <Suspense fallback={<StartupSplash />}>
+    <Suspense fallback={null}>
       <ScrollToTop />
       <Routes>
         <Route path="login" element={<Navigate to="/shop/account" replace />} />
