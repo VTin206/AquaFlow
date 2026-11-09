@@ -17,6 +17,7 @@ import {
 import { currency } from '@/shared/utils/format'
 import { useSettings, useUpdateSettings } from './settingsService'
 import { useIsDemo } from '@/shared/features'
+import { Unsupported } from '@/shared/components/Unsupported'
 import { ApiError } from '@/shared/api/client'
 import { type SettingsSnapshot } from './settingsApi'
 import type { StoreSettings } from './types'
@@ -270,32 +271,30 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
             </p>
           </Card>
 
-          {demo && (
-            <Card className="af-card af-settings-card" title="Chính sách vỏ & giao hàng">
-              <Descriptions
-                size="small"
-                column={1}
-                items={[
-                  { key: 'deposit', label: 'Cọc vỏ (khách chưa có vỏ)', children: `${currency(DEPOSIT_PER_BOTTLE)}/vỏ` },
-                  { key: 'brands', label: 'Đổi bù vỏ', children: EXCHANGEABLE_BRANDS.join(', ') },
-                  { key: 'pickup', label: 'Thu hồi tận nơi', children: `${currency(PICKUP_FEE)}/lần khi dưới ${PICKUP_FEE_BELOW} vỏ` },
-                  {
-                    key: 'delivery',
-                    label: 'Phí giao',
-                    children: `Miễn phí từ ${FREE_DELIVERY_MIN_UNITS} bình/thùng; ít hơn ${currency(SMALL_ORDER_FEE.min)}–${currency(SMALL_ORDER_FEE.max)}`,
-                  },
-                  {
-                    key: 'stairs',
-                    label: 'Thang bộ / bình',
-                    children: [1, 2, 3, 4].map((floor) => `L${floor}: ${currency(stairsSurcharge(floor, 1))}`).join(' · '),
-                  },
-                ]}
-              />
-              <Typography.Paragraph type="secondary" className="af-form-hint">
-                Mức mẫu tham khảo chính sách công khai của iWater. Nhóm cần chốt chính sách thật trước khi cho chỉnh ở đây.
-              </Typography.Paragraph>
-            </Card>
-          )}
+          <Card className="af-card af-settings-card" title="Chính sách vỏ & giao hàng">
+            <Descriptions
+              size="small"
+              column={1}
+              items={[
+                { key: 'deposit', label: 'Cọc vỏ (khách chưa có vỏ)', children: demo ? `${currency(DEPOSIT_PER_BOTTLE)}/vỏ` : <Unsupported /> },
+                { key: 'brands', label: 'Đổi bù vỏ', children: demo ? EXCHANGEABLE_BRANDS.join(', ') : <Unsupported /> },
+                { key: 'pickup', label: 'Thu hồi tận nơi', children: demo ? `${currency(PICKUP_FEE)}/lần khi dưới ${PICKUP_FEE_BELOW} vỏ` : <Unsupported /> },
+                {
+                  key: 'delivery',
+                  label: 'Phí giao',
+                  children: demo ? `Miễn phí từ ${FREE_DELIVERY_MIN_UNITS} bình/thùng; ít hơn ${currency(SMALL_ORDER_FEE.min)}–${currency(SMALL_ORDER_FEE.max)}` : <Unsupported />,
+                },
+                {
+                  key: 'stairs',
+                  label: 'Thang bộ / bình',
+                  children: demo ? [1, 2, 3, 4].map((floor) => `L${floor}: ${currency(stairsSurcharge(floor, 1))}`).join(' · ') : <Unsupported />,
+                },
+              ]}
+            />
+            <Typography.Paragraph type="secondary" className="af-form-hint">
+              {demo ? 'Mức mẫu tham khảo chính sách công khai của iWater. Nhóm cần chốt chính sách thật trước khi cho chỉnh ở đây.' : 'Backend chưa trả về các mức này. Nhóm cần chốt chính sách thật trước khi cho xem và chỉnh ở đây.'}
+            </Typography.Paragraph>
+          </Card>
         </Col>
       </Row>
 

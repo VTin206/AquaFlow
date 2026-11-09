@@ -3,7 +3,7 @@ import { filterOn } from '@/shared/utils/filterOn'
 import { useQuery } from '@tanstack/react-query'
 import { Alert, App, Button, Card, Col, DatePicker, Descriptions, Row, Segmented, Select, Space, Statistic, Table, Tabs, Typography } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
@@ -33,6 +33,13 @@ const sections: Record<ReportSection, { title: string; key: string; columns: Rep
 }
 const dailyColumns: ReportColumn[] = [{ key: 'date', title: 'Ngày' }, { key: 'revenue', title: 'Doanh thu', money: true }, { key: 'collected', title: 'Thanh toán ròng', money: true }, { key: 'orders', title: 'Đơn tạo' }]
 const columnsOf = (columns: ReportColumn[]) => columns.map(column => ({ title: column.title, dataIndex: column.key, key: column.key, render: (value: string | number | null) => column.money ? value == null ? 'Chưa có giá nhập' : currency(Number(value)) : value ?? '—', width: column.money ? 180 : 140 }))
+/** Tên khách có hồ sơ mở được hồ sơ; khách vãng lai và khách chỉ có số điện thoại thì không. */
+const customerColumns = columnsOf(sections.customers.columns).map((column) => column.key !== 'name' ? column : {
+  ...column,
+  render: (name: string | number | null, row: ReportRow) => row.key === 'guest' || String(row.key).startsWith('SĐT ') || !row.key
+    ? name
+    : <Link to={`/customers?customerId=${encodeURIComponent(String(row.key))}`}>{name}</Link>,
+})
 
 type ReportSource = Pick<typeof reportApi, 'summary' | 'section'>
 const kpis = [
@@ -147,7 +154,7 @@ function LiveReportContent({ source, scope }: { source: ReportSource; scope: str
           {key === 'customers' && <p>Khách chưa gắn hồ sơ được gộp vào Khách vãng lai. Danh sách khách lâu chưa đặt lại: <Unsupported />.</p>}
           {key === 'products' && detailRows.some((row) => num(row.revenue) > 0) && <TopProductsChart rows={detailRows.map((row) => ({ name: String(row.name), unit: String(row.unit), sold: num(row.sold), revenue: num(row.revenue) }))} />}
           {key === 'delivery' && detailRows.length > 0 && <DriverDeliveryChart rows={detailRows.map((row) => ({ driver: String(row.driver), delivered: num(row.delivered), late: num(row.late), failed: num(row.failed) }))} />}
-          <Table<ReportRow> rowKey={section.key} loading={details.isPending} columns={columnsOf(section.columns)} dataSource={details.data?.content ?? []} scroll={{ x: key === 'inventory' || key === 'delivery' ? 1500 : 900 }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : 'Chưa có dữ liệu trong kỳ.' }}
+          <Table<ReportRow> rowKey={section.key} loading={details.isPending} columns={key === 'customers' ? customerColumns : columnsOf(section.columns)} dataSource={details.data?.content ?? []} scroll={{ x: key === 'inventory' || key === 'delivery' ? 1500 : 900 }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : 'Chưa có dữ liệu trong kỳ.' }}
             pagination={{ current: page + 1, pageSize: size, total: details.data?.totalElements ?? 0, showSizeChanger: true, pageSizeOptions: [20, 50, 100], onChange: (next, nextSize) => { setPage(nextSize === size ? next - 1 : 0); setSize(nextSize) } }} />
         </Card> })),
       ]} />

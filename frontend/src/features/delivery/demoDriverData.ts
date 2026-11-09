@@ -59,7 +59,7 @@ export function toDriverTrip(trip: Trip, stops: Order[], index = 0): DeliveryTri
     id: numericId(trip.id, index + 1),
     tripRef: trip.id,
     driverId: demoDrivers.find((driver) => driver.name === trip.driver)?.id ?? null,
-    driverName: trip.driver,
+    driverName: trip.driver || null,
     vehicle: trip.vehicle ?? null,
     status: trip.settlement ? 'COMPLETED' : trip.departedAt ? 'IN_PROGRESS' : 'CREATED',
     createdAt: trip.createdAt,

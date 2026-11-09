@@ -7,6 +7,7 @@ import { Page } from '@/shared/components/Page'
 import { PanelHeading } from '@/shared/components/PanelHeading'
 import { QueryError } from '@/shared/components/QueryError'
 import { useFeature } from '@/shared/features'
+import { canOpen } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/useStaff'
 import { currency, shortDate } from '@/shared/utils/format'
 import { ReceiveStockModal } from '@/features/inventory/components/ReceiveStockModal'
@@ -18,7 +19,7 @@ import { OrdersTable } from '@/features/orders/components/OrdersTable'
 import { useOrderList } from '@/features/orders/orderData'
 import { ordersLink } from '@/features/orders/useOrderFilters'
 import { amountDue, createdAtOf, orderedAtOf, type Order } from '@/features/orders/types'
-import { dayFromToday, localDay } from '@/features/reports/reportService'
+import { dayFromToday, localDay, useDailyRevenue } from '@/features/reports/reportService'
 
 type LowStockRow = { id: string; name: string; unit: string; stock: number; threshold?: number }
 
@@ -64,6 +65,11 @@ export function DashboardPage() {
   const staff = useStaff()
   const ordersQuery = useOrderList()
   const productsQuery = useLowStock()
+  // API báo cáo chỉ cho chủ cửa hàng, cùng quyền với trang Báo cáo.
+  const showRevenue = useFeature('revenueReports') && staff !== null && canOpen(staff.role, '/reports')
+  const revenueQuery = useDailyRevenue(showRevenue)
+  const revenueToday = revenueQuery.data?.at(-1)
+  const revenueYesterday = revenueQuery.data?.at(-2)
   const [creatingOrder, setCreatingOrder] = useState(false)
   const [receiving, setReceiving] = useState<{ productId?: string } | null>(null)
   const [openedOrder, setOpenedOrder] = useState<string | null>(null)
@@ -177,7 +183,6 @@ export function DashboardPage() {
         </>
       }
     >
-      <DashboardMetrics />
       {!loadingTasks && !ordersQuery.isError && !productsQuery.isError && (
         <p className="af-dash-summary">
           {summary.length === 0
@@ -277,16 +282,36 @@ export function DashboardPage() {
         </Col>
       </Row>
 
-      {/* Số đơn vận hành hôm nay, độc lập với kỳ báo cáo kinh doanh phía trên. */}
+      {/* Số trong ngày, độc lập với kỳ báo cáo kinh doanh bên dưới. */}
       <dl className="af-dash-today">
         <div>
           <dt>Đơn tạo hôm nay</dt>
           <dd>{ordersQuery.isPending ? 'Đang tải…' : ordersQuery.isError ? '—' : todayOrders}</dd>
         </div>
-        {hasPayments && staff?.role === 'ADMIN' && <div>
-          <dt>Còn phải thu hiện tại</dt>
-          <dd>{ordersQuery.isPending ? 'Đang tải…' : ordersQuery.isError ? '—' : currency(unpaid.reduce((sum, order) => sum + amountDue(order), 0))}</dd>
-        </div>}
+        {showRevenue && (
+          <>
+            <div>
+              <dt>Doanh thu hôm nay</dt>
+              <dd>
+                {revenueQuery.isPending ? 'Đang tải…' : revenueToday ? currency(revenueToday.revenue) : '—'}
+                {revenueYesterday && <small>Hôm qua {currency(revenueYesterday.revenue)}</small>}
+              </dd>
+            </div>
+            <div>
+              <dt>Thu ròng hôm nay</dt>
+              <dd>{revenueQuery.isPending ? 'Đang tải…' : revenueToday ? currency(revenueToday.collected) : '—'}</dd>
+            </div>
+          </>
+        )}
+        {hasPayments && staff?.role === 'ADMIN' && (
+          <div>
+            <dt>Còn phải thu</dt>
+            <dd>
+              {ordersQuery.isPending ? 'Đang tải…' : ordersQuery.isError ? '—' : currency(unpaid.reduce((sum, order) => sum + amountDue(order), 0))}
+              {!ordersQuery.isPending && !ordersQuery.isError && <small>{unpaid.length} đơn</small>}
+            </dd>
+          </div>
+        )}
       </dl>
 
       <Row gutter={[16, 16]}>
@@ -309,6 +334,8 @@ export function DashboardPage() {
           </Card>
         </Col>
       </Row>
+
+      <DashboardMetrics />
 
       {creatingOrder && <OrderIntakeModal onClose={() => setCreatingOrder(false)} onCreated={setOpenedOrder} />}
       {openedOrder !== null && <OrderDetails id={openedOrder} onClose={() => setOpenedOrder(null)} />}

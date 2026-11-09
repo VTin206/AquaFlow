@@ -15,7 +15,7 @@ export function TripManifest({ trip, stops, settings }: { trip: Trip; stops: Ord
       <PrintHeader settings={settings} title="PHIẾU CHUYẾN GIAO HÀNG" code={trip.id} date={printDate()} />
       <section className="af-doc-meta af-doc-meta-grid">
         <span>
-          Tài xế: <strong>{trip.driver}</strong>
+          Tài xế: <strong>{trip.driver || 'Chưa phân tài xế'}</strong>
         </span>
         <span>Biển số: {trip.vehicle ?? '—'}</span>
         <span>
