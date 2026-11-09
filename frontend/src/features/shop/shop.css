@@ -1447,7 +1447,7 @@
 .af-shop h2,
 .af-shop h3,
 .af-shop .af-shop-brand strong {
-  font-family: 'Rubik', 'Nunito Sans', system-ui, sans-serif;
+  font-family: 'Nunito Sans', 'Be Vietnam Pro', system-ui, sans-serif;
 }
 .af-shop-topbar {
   background: linear-gradient(100deg, var(--shop-primary-strong), var(--shop-cyan));
@@ -1560,7 +1560,7 @@
   backdrop-filter: blur(10px);
 }
 .af-drinks-hero-meta strong {
-  font-family: 'Rubik', sans-serif;
+  font-family: 'Nunito Sans', 'Be Vietnam Pro', system-ui, sans-serif;
   font-size: 34px;
   line-height: 1;
 }
@@ -1612,7 +1612,7 @@
 }
 .af-shop-card .af-product-name.ant-typography {
   color: var(--shop-ink);
-  font-family: 'Rubik', 'Nunito Sans', sans-serif;
+  font-family: 'Nunito Sans', 'Be Vietnam Pro', system-ui, sans-serif;
   font-size: 15px;
 }
 .af-shop-card .af-product-name a {
@@ -1624,7 +1624,7 @@
 }
 .af-shop-card .af-shop-price {
   color: var(--shop-cta-strong);
-  font-family: 'Rubik', sans-serif;
+  font-family: 'Nunito Sans', 'Be Vietnam Pro', system-ui, sans-serif;
 }
 .af-shop-add-button.ant-btn-primary {
   border-color: var(--shop-line);
