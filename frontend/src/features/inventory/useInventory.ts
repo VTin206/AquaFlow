@@ -5,6 +5,7 @@ import { catalogApi } from '@/features/live/catalogApi'
 import { inventoryApi, receiptCode, type ProductStock, type PurchaseReceipt, type ReceiptInput } from '@/features/live/inventoryApi'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { supplierService } from '@/features/suppliers/supplierService'
+import { demoReceiptDrafts } from './demoReceiptDrafts'
 import { localToday, vnToIsoDate } from './expiry'
 import { productService } from './productService'
 import type { Lot, Receipt, ReceiptDraft } from './types'
@@ -74,8 +75,6 @@ export type ReceiptForm = Omit<ReceiptDraft, 'receiver'> & { receiver?: string }
 export type ReceiptOption = { id: string; name: string; sku: string; unit?: string; onHand: number }
 
 export type InventoryCaps = {
-  /** Lưu nháp, sửa, hủy rồi mới xác nhận nhập kho (BE); bản dùng thử nhập kho ngay. */
-  drafts: boolean
   /** Ghi tên người kiểm nhận trên phiếu (BE lấy theo tài khoản đăng nhập). */
   receiver: boolean
   /** BE bắt buộc mã lô và hạn dùng cho mọi dòng, kể cả vỏ bình. */
@@ -86,7 +85,7 @@ const useDemo = () => useAuth().user?.isDemo ?? false
 
 export const useInventoryCaps = (): InventoryCaps => {
   const demo = useDemo()
-  return { drafts: !demo, receiver: demo, lotAlwaysRequired: !demo }
+  return { receiver: demo, lotAlwaysRequired: !demo }
 }
 
 // ---- Bản dùng thử: chuyển dữ liệu mock sang kiểu chung ----
@@ -299,7 +298,7 @@ export function useReceiptViews() {
     queryKey: demo ? [...productKeys.receipts, 'view'] : ['live', 'receipts', ...who],
     queryFn: async () =>
       demo
-        ? (await productService.receipts()).map(demoReceipt)
+        ? [...(await demoReceiptDrafts.list()), ...(await productService.receipts()).map(demoReceipt)]
         : (await inventoryApi.receipts())
             .map(liveReceipt)
             .sort((a, b) => b.receivedAt.localeCompare(a.receivedAt) || Number(b.id) - Number(a.id)),
@@ -344,7 +343,7 @@ const useInvalidateInventory = () => {
   return () => Promise.all([invalidateLiveData(queryClient), queryClient.invalidateQueries({ queryKey: productKeys.all })])
 }
 
-/** Lưu phiếu: bản dùng thử luôn nhập kho ngay; tài khoản thật lưu nháp và nhập kho nếu `confirm`. */
+/** Lưu nháp, và nhập kho luôn nếu `confirm`. */
 export function useSaveReceipt() {
   const demo = useDemo()
   const invalidate = useInvalidateInventory()
@@ -360,7 +359,16 @@ export function useSaveReceipt() {
       confirm: boolean
       onSaved?: (id: string) => void
     }): Promise<ReceiptView> => {
-      if (demo) return demoReceipt(await productService.createReceipt({ ...form, receiver: form.receiver ?? '' }))
+      if (demo) {
+        if (!confirm) {
+          const draft = await demoReceiptDrafts.save(form, id)
+          onSaved?.(draft.id)
+          return draft
+        }
+        const confirmed = demoReceipt(await productService.createReceipt({ ...form, receiver: form.receiver ?? '' }))
+        if (id !== undefined) demoReceiptDrafts.remove(id)
+        return confirmed
+      }
       const input = liveInput(form)
       const saved = id === undefined ? await inventoryApi.createReceipt(input) : await inventoryApi.updateReceipt(Number(id), input)
       onSaved?.(String(saved.id))
@@ -370,12 +378,24 @@ export function useSaveReceipt() {
   })
 }
 
-/** Xác nhận nhập kho hoặc hủy một phiếu nháp (chỉ tài khoản thật). */
+/** Xác nhận nhập kho hoặc hủy một phiếu nháp. */
 export function useReceiptAction() {
+  const demo = useDemo()
   const invalidate = useInvalidateInventory()
   return useMutation({
-    mutationFn: async ({ id, action }: { id: string; action: 'confirm' | 'cancel' }) =>
-      liveReceipt(action === 'confirm' ? await inventoryApi.confirmReceipt(Number(id)) : await inventoryApi.cancelReceipt(Number(id))),
+    mutationFn: async ({ id, action }: { id: string; action: 'confirm' | 'cancel' }) => {
+      if (demo) {
+        if (action === 'cancel') return demoReceiptDrafts.cancel(id)
+        const draft = demoReceiptDrafts.get(id)
+        if (!draft) throw new Error('Không tìm thấy phiếu nháp.')
+        const confirmed = demoReceipt(await productService.createReceipt({ ...receiptToForm(draft), receiver: draft.receiver ?? '' }))
+        demoReceiptDrafts.remove(id)
+        return confirmed
+      }
+      return liveReceipt(
+        action === 'confirm' ? await inventoryApi.confirmReceipt(Number(id)) : await inventoryApi.cancelReceipt(Number(id)),
+      )
+    },
     onSettled: () => void invalidate(),
   })
 }

@@ -119,9 +119,7 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
               onClose()
             },
             onError: (error) =>
-              message.error(
-                savedId === undefined || !caps.drafts ? error.message : `Phiếu đã lưu nháp nhưng chưa nhập kho: ${error.message}`,
-              ),
+              message.error(savedId === undefined ? error.message : `Phiếu đã lưu nháp nhưng chưa nhập kho: ${error.message}`),
           },
         ),
       () => undefined,
@@ -133,12 +131,8 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
       <Button onClick={discard} disabled={save.isPending}>
         Hủy
       </Button>
-      <Button
-        loading={save.isPending && !save.variables?.confirm}
-        disabled={save.isPending || !caps.drafts}
-        onClick={() => void submit(false)}
-      >
-        {caps.drafts ? 'Lưu nháp' : 'Lưu nháp (chưa hỗ trợ)'}
+      <Button loading={save.isPending && !save.variables?.confirm} disabled={save.isPending} onClick={() => void submit(false)}>
+        Lưu nháp
       </Button>
       <Button
         type="primary"
@@ -388,7 +382,7 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                           <small className="af-receipt-line-hint">
                             Đạt {Math.max(0, (line?.received ?? 0) - (line?.damaged ?? 0))} {product.unit?.toLowerCase() ?? 'đơn vị'} → tồn{' '}
                             {product.onHand} → <strong>{product.onHand + Math.max(0, (line?.received ?? 0) - (line?.damaged ?? 0))}</strong>
-                            {caps.drafts && ' sau khi nhập kho'}
+                            {' sau khi nhập kho'}
                           </small>
                         )}
                       </div>
@@ -408,7 +402,7 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
             </Form.Item>
             <Typography.Paragraph type="secondary" className="af-form-hint">
               Chỉ hàng đạt mới cộng vào tồn bán được. Hàng hỏng, thiếu hoặc lô đã hết hạn được ghi trên phiếu để đối soát với nhà cung cấp.
-              {caps.drafts && ' Lưu nháp chưa cộng tồn; sau khi xác nhận nhập kho, phiếu không sửa hoặc hủy được nữa.'}
+              {' Lưu nháp chưa cộng tồn; sau khi xác nhận nhập kho, phiếu không sửa hoặc hủy được nữa.'}
             </Typography.Paragraph>
           </FormSection>
         </Form>

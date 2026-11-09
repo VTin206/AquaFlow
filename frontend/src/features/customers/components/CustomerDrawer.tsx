@@ -4,7 +4,7 @@ import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
 import { Ellipsis, Pencil, Phone, ShoppingBag } from 'lucide-react'
 import { MapLink } from '@/shared/address/MapLink'
 import { Money } from '@/shared/components/Money'
-import { useFeature, useLiveOnly } from '@/shared/features'
+import { useFeature } from '@/shared/features'
 import { Unsupported } from '@/shared/components/Unsupported'
 import { currency } from '@/shared/utils/format'
 import { OrderDetails } from '@/features/orders/components/OrderDetails'
@@ -27,7 +27,6 @@ type CustomerDrawerProps = {
 /** Hồ sơ khách: liên hệ, đơn hàng, công nợ và sổ vỏ/cọc trong một ngăn kéo. */
 export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: CustomerDrawerProps) {
   const { message, modal } = App.useApp()
-  const canManageAddresses = useLiveOnly()
   const showPayments = useFeature('orderPayments')
   const showType = useFeature('customerType')
   const showExtras = useFeature('customerProfileExtras')
@@ -110,13 +109,8 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
       ) : (
         'Chưa có địa chỉ giao'
       )}
-      <Button
-        size="small"
-        style={{ alignSelf: 'flex-start', marginTop: 4 }}
-        disabled={!canManageAddresses}
-        onClick={() => setManagingAddresses(true)}
-      >
-        {canManageAddresses ? 'Quản lý địa chỉ' : 'Quản lý địa chỉ (chưa hỗ trợ)'}
+      <Button size="small" style={{ alignSelf: 'flex-start', marginTop: 4 }} onClick={() => setManagingAddresses(true)}>
+        Quản lý địa chỉ
       </Button>
     </div>
   )
@@ -150,7 +144,9 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
               {/* Lưu trữ ít khi dùng nên nằm trong menu Thao tác khác, không tô đỏ vì lịch sử vẫn giữ. */}
               <Dropdown
                 trigger={['click']}
-                menu={{ items: [{ key: 'archive', label: 'Lưu trữ hồ sơ', danger: true, disabled: deactivate.isPending, onClick: archive }] }}
+                menu={{
+                  items: [{ key: 'archive', label: 'Lưu trữ hồ sơ', danger: true, disabled: deactivate.isPending, onClick: archive }],
+                }}
               >
                 <Button icon={<Ellipsis size={16} />}>Thao tác khác</Button>
               </Dropdown>
@@ -268,7 +264,7 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
         />
       </Modal>
       {managingAddresses && (
-        <LiveCustomerAddresses customerId={Number(customer.id)} customerName={customer.name} onClose={() => setManagingAddresses(false)} />
+        <LiveCustomerAddresses customerId={customer.id} customerName={customer.name} onClose={() => setManagingAddresses(false)} />
       )}
       {orderId && <OrderDetails id={orderId} onClose={() => setOrderId(null)} />}
     </>

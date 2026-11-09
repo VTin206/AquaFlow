@@ -2,10 +2,14 @@ import { useRef, useState } from 'react'
 import { Alert, App, Button, Form, InputNumber, Modal, Skeleton, Table } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/features/auth/useAuth'
+import { customerKeys } from '@/features/customers/useCustomers'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
+import { useOrders } from '@/features/orders/useOrders'
+import { useIsDemo } from '@/shared/features'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { deliveryBottleApi, type BottleReturnInput } from '../deliveryBottleApi'
+import { demoDeliveryBottles } from '../demoDeliveryBottles'
 
 export function DeliveryBottlesButton({ assignmentId, orderCode }: { assignmentId: number; orderCode: string }) {
   const [open, setOpen] = useState(false)
@@ -27,22 +31,27 @@ export function DeliveryBottlesModal({
   onClose: () => void
 }) {
   const { user } = useAuth()
+  const demo = useIsDemo()
+  const orders = useOrders(demo)
+  const demoOrder = demo ? orders.data?.find((order) => (order.code ?? order.id) === orderCode) : undefined
   const client = useQueryClient()
   const { message } = App.useApp()
   const [form] = Form.useForm<Record<string, number>>()
   const lock = useRef(false)
   const retry = useRef<{ payload: string; id: string } | null>(null)
   const query = useQuery({
-    queryKey: ['live', 'delivery-bottles', user?.email, assignmentId],
-    queryFn: () => deliveryBottleApi.get(assignmentId),
+    queryKey: ['live', 'delivery-bottles', demo, user?.email, assignmentId],
+    queryFn: () => (demoOrder ? demoDeliveryBottles.get(demoOrder) : deliveryBottleApi.get(assignmentId)),
+    enabled: !demo || Boolean(demoOrder),
   })
   const save = useMutation({
-    mutationFn: (input: BottleReturnInput) => deliveryBottleApi.receive(assignmentId, input),
+    mutationFn: (input: BottleReturnInput) =>
+      demoOrder ? demoDeliveryBottles.receive(demoOrder, input) : deliveryBottleApi.receive(assignmentId, input),
     onSuccess: async () => {
       message.success('Đã thu vỏ và cập nhật sổ khách hàng.')
       form.resetFields()
       retry.current = null
-      await invalidateLiveData(client)
+      await Promise.all([invalidateLiveData(client), client.invalidateQueries({ queryKey: customerKeys.all })])
     },
     onError: (error: Error) => {
       message.error(error.message)

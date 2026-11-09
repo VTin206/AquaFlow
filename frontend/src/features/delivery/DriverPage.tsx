@@ -284,13 +284,7 @@ function DriverTrip({ trip, demo }: { trip: DeliveryTrip; demo?: DemoTools }) {
             </Button>
           )}
           {order.deliveryAddress && (
-            <Button
-              size="large"
-              icon={<Map size={18} />}
-              href={mapsSearchUrl(order.deliveryAddress)}
-              target="_blank"
-              rel="noreferrer"
-            >
+            <Button size="large" icon={<Map size={18} />} href={mapsSearchUrl(order.deliveryAddress)} target="_blank" rel="noreferrer">
               Chỉ đường
             </Button>
           )}
@@ -309,7 +303,7 @@ function DriverTrip({ trip, demo }: { trip: DeliveryTrip; demo?: DemoTools }) {
               Lịch sử
             </Button>
           )}
-          {demo ? <Button disabled>Vỏ của đơn (chưa hỗ trợ)</Button> : <DeliveryBottlesButton assignmentId={order.id} orderCode={order.orderCode} />}
+          <DeliveryBottlesButton assignmentId={order.id} orderCode={order.orderCode} />
           {active &&
             !order.latestAttempt &&
             (demoOrder ? (
@@ -319,7 +313,13 @@ function DriverTrip({ trip, demo }: { trip: DeliveryTrip; demo?: DemoTools }) {
                 </span>
               )
             ) : (
-              <Button size="large" type="primary" className="af-driver-primary" disabled={change.isPending} onClick={() => setResult(order)}>
+              <Button
+                size="large"
+                type="primary"
+                className="af-driver-primary"
+                disabled={change.isPending}
+                onClick={() => setResult(order)}
+              >
                 Kết quả giao
               </Button>
             ))}
@@ -335,7 +335,10 @@ function DriverTrip({ trip, demo }: { trip: DeliveryTrip; demo?: DemoTools }) {
           <strong>Chuyến #{trip.id}</strong>
           <TripStatusTag status={liveTripStatus(trip)} />
         </div>
-        <Progress percent={Math.round((done / Math.max(1, trip.orders.length)) * 100)} format={() => `${done}/${trip.orders.length} điểm`} />
+        <Progress
+          percent={Math.round((done / Math.max(1, trip.orders.length)) * 100)}
+          format={() => `${done}/${trip.orders.length} điểm`}
+        />
         {receipts && (
           <div className="af-driver-totals">
             <span>
@@ -374,7 +377,12 @@ function DriverTrip({ trip, demo }: { trip: DeliveryTrip; demo?: DemoTools }) {
           </Popconfirm>
         )}
         {active && pending.length > 0 && (
-          <TripRouteButton size="large" block label="Xem lộ trình các điểm còn lại" addresses={pending.map((order) => order.deliveryAddress)} />
+          <TripRouteButton
+            size="large"
+            block
+            label="Xem lộ trình các điểm còn lại"
+            addresses={pending.map((order) => order.deliveryAddress)}
+          />
         )}
       </Card>
       {pending.length > 0 && <ol className="af-driver-stops">{pending.map(stop)}</ol>}

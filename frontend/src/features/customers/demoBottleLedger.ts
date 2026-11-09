@@ -17,6 +17,7 @@ const entryKinds: Record<BottleEntryKind, string> = {
 }
 
 const actions: Partial<Record<BottleInput['kind'], BottleAction['kind']>> = {
+  GIVE: 'Giao vỏ',
   RECEIVE: 'Thu vỏ',
   LOSS: 'Báo mất/vỡ',
   COLLECT: 'Thu cọc',
@@ -76,7 +77,7 @@ export const demoBottleApi = {
   },
   create: async (customerId: string, input: BottleInput) => {
     const kind = actions[input.kind]
-    if (!kind) throw new Error('Giao vỏ chưa hỗ trợ ở bản dùng thử.')
+    if (!kind) throw new Error('Nghiệp vụ này chưa hỗ trợ ở bản dùng thử.')
     await customerService.recordBottles(customerId, { kind, bottles: input.quantity, deposit: input.amount, note: input.note })
   },
 }
