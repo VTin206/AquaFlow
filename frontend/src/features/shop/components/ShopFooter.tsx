@@ -1,4 +1,4 @@
-import { Mail, MapPin, Phone, Waves } from 'lucide-react'
+import { Mail, MapPin, Phone } from 'lucide-react'
 import { Link } from 'react-router'
 import { backendFeatures } from '@/shared/features'
 import { shopArticles, shopPolicies } from '../shopNews'
@@ -18,11 +18,8 @@ export function ShopFooter({ demo, contact }: Props) {
     <footer className="af-shop-footer">
       <div className={`af-shop-footer-grid ${hasContact ? 'has-contact' : ''}`}>
         <section className="af-shop-footer-about">
-          <Link to="/shop" className="af-shop-brand">
-            <span className="af-brand-mark">
-              <Waves size={20} strokeWidth={2.2} />
-            </span>
-            <strong>AquaFlow</strong>
+          <Link to="/shop" className="af-shop-brand" aria-label="AquaFlow - Trang chủ cửa hàng">
+            <img className="af-brand-logo" src="/images/aquaflow-logo.png" alt="AquaFlow" />
           </Link>
           <p>Nước uống đóng bình, đóng chai từ các thương hiệu quen thuộc, nhập theo lô rõ hạn dùng và giao tận nơi trong khu vực.</p>
         </section>
@@ -30,7 +27,7 @@ export function ShopFooter({ demo, contact }: Props) {
           <h2 id="af-footer-info">Góc thông tin</h2>
           <ul>
             <li>
-              <Link to="/shop">Nước uống</Link>
+              <Link to="/shop/drinks">Nước uống</Link>
             </li>
             {latest && (
               <li>

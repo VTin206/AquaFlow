@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { Avatar, Dropdown, Spin } from 'antd'
-import { ChevronDown, Waves } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { canOpen, homeOf } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/useStaff'
@@ -24,11 +24,8 @@ export function DriverLayout() {
   return (
     <div className="af-driver-shell">
       <header className="af-driver-bar">
-        <span className="af-topbar-brand">
-          <span className="af-brand-mark">
-            <Waves size={20} strokeWidth={2.2} />
-          </span>
-          <strong>AquaFlow</strong>
+        <span className="af-topbar-brand" aria-label="AquaFlow - Giao hàng">
+          <img className="af-brand-logo" src="/images/aquaflow-logo.png" alt="AquaFlow" />
           <small>Giao hàng</small>
         </span>
         <div className="af-driver-bar-right">

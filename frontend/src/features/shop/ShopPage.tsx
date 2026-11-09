@@ -1,82 +1,19 @@
-import { useEffect, useRef, useState } from 'react'
-import { Button, Card, Col, Empty, Pagination, Row, Skeleton, Tag, Typography, type InputRef } from 'antd'
-import { Droplets, ShoppingCart } from 'lucide-react'
-import { Link, useLocation, useOutletContext, useSearchParams } from 'react-router'
-import { QueryError } from '@/shared/components/QueryError'
-import { currency } from '@/shared/utils/format'
-import { useCartActions, useCart } from './cart'
-import { ShopFilters } from './components/ShopFilters'
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router'
 import { ShopIntro } from './components/ShopIntro'
-import { ALL, filterProducts, type ShopFilterState } from './shopGroups'
-import { useShopDemo, useShopContact, useShopProducts, type ShopProduct } from './shopService'
-
-function ShopImage({ product }: { product: ShopProduct }) {
-  const [failed, setFailed] = useState(false)
-  return product.image && !failed ? (
-    <img src={product.image} alt={product.name} className="af-product-image" loading="lazy" onError={() => setFailed(true)} />
-  ) : (
-    <div className="af-product-placeholder">
-      <Droplets size={32} strokeWidth={1.5} aria-hidden />
-    </div>
-  )
-}
-
-function filtersFromParams(params: URLSearchParams): ShopFilterState {
-  return {
-    brand: params.get('brand') || ALL,
-    group: params.get('group') || ALL,
-    category: params.get('category') || ALL,
-    query: params.get('q') || '',
-  }
-}
+import { useShopDemo, useShopContact, useShopProducts } from './shopService'
 
 export function ShopPage() {
-  const { openCart } = useOutletContext<{ openCart: () => void }>()
-  const location = useLocation()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const productsQuery = useShopProducts()
   const contact = useShopContact()
   const showPolicy = useShopDemo()
-  const cartActions = useCartActions()
-  const cart = useCart()
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(12)
-  const filters = filtersFromParams(searchParams)
-  // Đổi bộ lọc thì về trang 1 để không rơi vào trang trống.
-  const updateFilters = (next: Partial<ShopFilterState>) => {
-    const merged = { ...filters, ...next }
-    const params = new URLSearchParams()
-    if (merged.brand !== ALL) params.set('brand', merged.brand)
-    if (merged.group !== ALL) params.set('group', merged.group)
-    if (merged.category !== ALL) params.set('category', merged.category)
-    if (merged.query.trim()) params.set('q', merged.query.trim())
-    setSearchParams(params, { replace: true })
-    setPage(1)
-  }
-  const catalogRef = useRef<HTMLElement>(null)
-  const searchRef = useRef<InputRef>(null)
-  const goToCatalog = () => catalogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  // Nút kính lúp trên đầu trang: cuộn tới danh mục và đặt con trỏ vào ô tìm kiếm.
-  const focusSearch = (location.state as { focusSearch?: number } | null)?.focusSearch
-  useEffect(() => {
-    if (!focusSearch) return
-    catalogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    searchRef.current?.focus({ preventScroll: true })
-  }, [focusSearch])
 
   useEffect(() => {
-    if (location.hash !== '#products' || focusSearch) return
-    requestAnimationFrame(() => catalogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
-  }, [location.hash, location.search, focusSearch])
-
-  useEffect(() => {
-    document.title = `Đặt nước | ${contact?.storeName ?? 'AquaFlow'}`
+    document.title = `Trang chủ | ${contact?.storeName ?? 'AquaFlow'}`
   }, [contact?.storeName])
 
   const products = productsQuery.data ?? []
-  const visible = filterProducts(products, filters)
-  const currentPage = Math.min(page, Math.max(1, Math.ceil(visible.length / pageSize)))
-  const pageItems = visible.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   return (
     <div className="af-shop-page">
@@ -85,84 +22,8 @@ export function ShopPage() {
         storeName={contact?.storeName}
         phone={contact?.phone}
         products={products}
-        onShop={goToCatalog}
+        onShop={() => navigate('/shop/drinks')}
       />
-
-      <section id="products" ref={catalogRef} className="af-shop-catalog" aria-labelledby="af-shop-catalog-title">
-        <div className="af-shop-hero">
-          <div>
-            <Typography.Title level={2} id="af-shop-catalog-title">
-              Nước uống
-            </Typography.Title>
-            <p>Chọn nước uống và đặt hàng không cần tài khoản.</p>
-          </div>
-        </div>
-
-        <ShopFilters products={products} filters={filters} visibleCount={visible.length} onChange={updateFilters} searchRef={searchRef} />
-
-        {productsQuery.isError ? (
-          <Card>
-            <QueryError error={productsQuery.error} onRetry={productsQuery.refetch} />
-          </Card>
-        ) : productsQuery.isPending ? (
-          <Skeleton active paragraph={{ rows: 8 }} />
-        ) : visible.length === 0 ? (
-          <Empty description="Không có sản phẩm phù hợp." />
-        ) : (
-          <Row gutter={[16, 16]}>
-            {pageItems.map((product) => {
-              const inCart = cart.find((line) => line.productId === product.id)?.quantity ?? 0
-              return (
-                <Col key={product.id} xs={12} md={8} xl={6}>
-                  <Card className="af-product-card af-shop-card" cover={<ShopImage product={product} />}>
-                    <div className="af-product-brand-line">
-                      <span>{product.brand}</span>
-                      {product.available === false && <Tag>Tạm hết hàng</Tag>}
-                    </div>
-                    <Typography.Title level={5} className="af-product-name" ellipsis={{ rows: 2, tooltip: product.name }}>
-                      <Link to={`/shop/products/${encodeURIComponent(product.id)}`}>{product.name}</Link>
-                    </Typography.Title>
-                    <div className="af-shop-card-footer">
-                      <span>
-                        <strong className="af-money af-shop-price">{currency(product.price)}</strong>
-                        <small> / {product.unit.toLowerCase()}</small>
-                      </span>
-                      <Button
-                        type={inCart ? 'default' : 'primary'}
-                        icon={<ShoppingCart size={15} />}
-                        disabled={product.available === false}
-                        onClick={() => {
-                          // Thêm xong mở giỏ để khách thấy ngay và chỉnh số lượng.
-                          cartActions.add(product.id)
-                          openCart()
-                        }}
-                      >
-                        {inCart ? `Thêm (${inCart})` : 'Thêm'}
-                      </Button>
-                    </div>
-                  </Card>
-                </Col>
-              )
-            })}
-          </Row>
-        )}
-        {visible.length > pageSize && (
-          <Pagination
-            className="af-catalog-pagination"
-            current={currentPage}
-            pageSize={pageSize}
-            total={visible.length}
-            pageSizeOptions={[12, 24, 48]}
-            showSizeChanger
-            responsive
-            onChange={(next, size) => {
-              setPage(size !== pageSize ? 1 : next)
-              setPageSize(size)
-              goToCatalog()
-            }}
-          />
-        )}
-      </section>
     </div>
   )
 }

@@ -243,6 +243,14 @@
   white-space: nowrap;
   font-size: 18px;
 }
+.af-shop-brand .af-brand-logo {
+  display: block;
+  flex: none;
+  height: auto;
+  max-height: 48px;
+  object-fit: contain;
+  width: 172px;
+}
 .af-shop-brand .af-brand-mark {
   flex: none;
   width: 40px;
@@ -1286,6 +1294,240 @@
 }
 .af-shop-catalog {
   scroll-margin-top: 72px;
+}
+
+/* ---------- Giao diện cửa hàng theo design system Claude-Kit ---------- */
+.af-shop {
+  --shop-primary: #2563eb;
+  --shop-primary-strong: #1d4ed8;
+  --shop-cyan: #0ea5e9;
+  --shop-cta: #f97316;
+  --shop-cta-strong: #ea580c;
+  --shop-ink: #1e293b;
+  --shop-muted: #64748b;
+  --shop-line: #e2e8f0;
+  --shop-surface: #ffffff;
+  --shop-surface-muted: #f8fafc;
+  font-family: 'Nunito Sans', 'Be Vietnam Pro', system-ui, sans-serif;
+  background: var(--shop-surface-muted);
+}
+.af-shop h1,
+.af-shop h2,
+.af-shop h3,
+.af-shop .af-shop-brand strong {
+  font-family: 'Rubik', 'Nunito Sans', system-ui, sans-serif;
+}
+.af-shop-topbar {
+  background: linear-gradient(100deg, var(--shop-primary-strong), var(--shop-cyan));
+}
+.af-shop-header {
+  background: color-mix(in srgb, var(--shop-surface) 92%, transparent);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 24px rgba(30, 41, 59, 0.08);
+}
+.af-shop-header-inner {
+  padding-block: 14px;
+}
+.af-shop-brand strong {
+  letter-spacing: -0.02em;
+}
+.af-shop-nav-link {
+  min-height: 44px;
+  border-radius: 12px;
+  transition: color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+.af-shop-nav-link:hover,
+.af-shop-nav-link:focus-visible {
+  transform: translateY(-1px);
+}
+.af-shop-mega {
+  border-color: color-mix(in srgb, var(--shop-primary) 22%, var(--shop-line));
+  border-radius: 18px;
+  box-shadow: 0 22px 52px rgba(30, 41, 59, 0.16);
+}
+.af-shop-mega-column > strong {
+  color: var(--shop-primary-strong);
+}
+.af-shop-mega-column a {
+  border-radius: 8px;
+  padding-inline: 10px;
+  transition: color 180ms ease, background 180ms ease, padding 180ms ease;
+}
+.af-shop-mega-column a:hover,
+.af-shop-mega-column a:focus-visible {
+  background: #eff6ff;
+  padding-left: 14px;
+}
+.af-shop-catalog {
+  margin-bottom: 28px;
+}
+.af-drinks-hero {
+  position: relative;
+  overflow: hidden;
+  align-items: center;
+  min-height: 214px;
+  margin-bottom: 24px;
+  padding: 32px 36px;
+  border: 0;
+  border-radius: 24px;
+  background: linear-gradient(115deg, #1d4ed8 0%, #2563eb 52%, #0ea5e9 100%);
+  box-shadow: 0 18px 40px rgba(37, 99, 235, 0.2);
+  color: #fff;
+}
+.af-drinks-hero::after {
+  content: '';
+  position: absolute;
+  right: -72px;
+  bottom: -100px;
+  width: 280px;
+  height: 280px;
+  border: 42px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.af-drinks-hero-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 660px;
+}
+.af-drinks-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.af-drinks-hero h1.ant-typography {
+  margin: 0 0 8px;
+  color: #fff;
+  font-size: clamp(28px, 4vw, 42px);
+  letter-spacing: -0.03em;
+}
+.af-drinks-hero p {
+  max-width: 560px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 16px;
+  line-height: 1.6;
+}
+.af-drinks-hero-meta {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 156px;
+  padding: 18px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.14);
+  text-align: center;
+  backdrop-filter: blur(10px);
+}
+.af-drinks-hero-meta strong {
+  font-family: 'Rubik', sans-serif;
+  font-size: 34px;
+  line-height: 1;
+}
+.af-drinks-hero-meta span {
+  margin-top: 7px;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 13px;
+}
+.af-shop-filters {
+  border-color: var(--shop-line);
+  border-radius: 20px;
+  background: var(--shop-surface);
+  box-shadow: 0 10px 30px rgba(30, 41, 59, 0.06);
+}
+.af-shop-card.ant-card {
+  overflow: hidden;
+  border-color: transparent;
+  border-radius: 20px;
+  background: var(--shop-surface);
+  box-shadow: 0 8px 24px rgba(30, 41, 59, 0.07);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.af-shop-card.ant-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 34px rgba(30, 41, 59, 0.13);
+}
+.af-shop-card .ant-card-cover {
+  overflow: hidden;
+  background: linear-gradient(145deg, #f8fafc, #eff6ff);
+}
+.af-shop-card .af-product-image,
+.af-shop-card .af-product-placeholder {
+  aspect-ratio: 4 / 3;
+  padding: 24px;
+  transition: transform 220ms ease;
+}
+.af-shop-card:hover .af-product-image {
+  transform: scale(1.035);
+}
+.af-shop-card .ant-card-body {
+  padding: 16px;
+}
+.af-shop-card .af-product-brand-line {
+  color: var(--shop-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.af-shop-card .af-product-name.ant-typography {
+  color: var(--shop-ink);
+  font-family: 'Rubik', 'Nunito Sans', sans-serif;
+  font-size: 15px;
+}
+.af-shop-card .af-product-name a {
+  color: inherit;
+}
+.af-shop-card .af-product-name a:hover,
+.af-shop-card .af-product-name a:focus-visible {
+  color: var(--shop-primary);
+}
+.af-shop-card .af-shop-price {
+  color: var(--shop-cta-strong);
+  font-family: 'Rubik', sans-serif;
+}
+.af-shop-card .ant-btn-primary {
+  border-color: var(--shop-cta);
+  background: var(--shop-cta);
+  box-shadow: 0 6px 14px rgba(249, 115, 22, 0.22);
+}
+.af-shop-card .ant-btn-primary:hover,
+.af-shop-card .ant-btn-primary:focus-visible {
+  border-color: var(--shop-cta-strong);
+  background: var(--shop-cta-strong);
+}
+@media (prefers-reduced-motion: reduce) {
+  .af-shop-nav-link,
+  .af-shop-mega-column a,
+  .af-shop-card.ant-card,
+  .af-shop-card .af-product-image {
+    transition: none;
+  }
+}
+@media (max-width: 640px) {
+  .af-drinks-hero {
+    align-items: flex-start;
+    min-height: 0;
+    padding: 26px 22px;
+  }
+  .af-drinks-hero-meta {
+    min-width: 124px;
+    padding: 14px;
+  }
+  .af-drinks-hero-meta strong {
+    font-size: 28px;
+  }
+  .af-drinks-hero p {
+    font-size: 14px;
+  }
 }
 @media (max-width: 900px) {
   .af-shop-top {

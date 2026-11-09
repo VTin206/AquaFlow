@@ -41,6 +41,9 @@ export function AppLayout() {
 
   return (
     <Layout className="af-shell">
+      <a className="af-skip-link" href="#main-content">
+        Bỏ qua điều hướng
+      </a>
       <Topbar onOpenNav={() => setNavOpen(true)} />
       <Layout>
         {/* Máy tính: menu cố định bên trái. Điện thoại/tablet (< 992px): ẩn, mở bằng nút ☰ trên thanh trên cùng. */}
@@ -57,7 +60,7 @@ export function AppLayout() {
         >
           <Sidebar onNavigate={() => setNavOpen(false)} />
         </Drawer>
-        <Layout.Content className="af-content">
+        <Layout.Content id="main-content" className="af-content">
           {/* Giữ khung app hiển thị trong lúc tải code của trang mới. */}
           <Suspense
             fallback={

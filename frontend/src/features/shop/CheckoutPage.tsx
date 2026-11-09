@@ -182,7 +182,7 @@ export function CheckoutPage() {
         <QueryError error={products.error} onRetry={products.refetch} />
       ) : !cart.length ? (
         <Empty description="Giỏ hàng đang trống.">
-          <Link to="/shop">Chọn sản phẩm</Link>
+          <Link to="/shop/drinks">Chọn sản phẩm</Link>
         </Empty>
       ) : (
         <>
