@@ -4,7 +4,7 @@ import { palettes, type Palette } from './palette'
 // Design token dùng chung cho Ant Design; màu lấy từ palette.ts (cùng nguồn với biến CSS --af-*). Đổi font, bo góc, kích thước tại đây.
 const buildTheme = (p: Palette): ThemeConfig => ({
   token: {
-    fontFamily: "'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif",
+    fontFamily: "'Nunito Sans', 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif",
     fontSize: 14,
     colorPrimary: p.primary,
     colorInfo: p.primary,
@@ -18,10 +18,10 @@ const buildTheme = (p: Palette): ThemeConfig => ({
     colorBorder: p.controlBorder,
     colorBorderSecondary: p.border,
     colorBgLayout: p.bg,
-    borderRadius: 10,
-    borderRadiusLG: 14,
-    controlHeight: 40,
-    controlHeightSM: 30,
+    borderRadius: 12,
+    borderRadiusLG: 18,
+    controlHeight: 42,
+    controlHeightSM: 32,
   },
   components: {
     Breadcrumb: {
@@ -43,9 +43,9 @@ const buildTheme = (p: Palette): ThemeConfig => ({
       iconSize: 18,
       iconMarginInlineEnd: 12,
     },
-    Card: { headerFontSize: 15, headerHeight: 50, bodyPadding: 18 },
+    Card: { headerFontSize: 15, headerHeight: 56, bodyPadding: 20, borderRadiusLG: 18 },
     Statistic: { titleFontSize: 13, contentFontSize: 'clamp(18px, 2vw, 28px)' },
-    Button: { fontWeight: 500, primaryShadow: '0 3px 8px rgba(8, 127, 173, 0.16)', defaultShadow: 'none' },
+    Button: { fontWeight: 600, primaryShadow: '0 5px 14px rgba(37, 99, 235, 0.18)', defaultShadow: 'none' },
     Table: {
       headerBg: p.surfaceMuted,
       headerColor: p.textSecondary,

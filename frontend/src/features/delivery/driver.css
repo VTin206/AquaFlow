@@ -216,8 +216,8 @@
 }
 /* Thanh tài xế không có nút menu nên đủ chỗ cho biểu tượng ở mọi cỡ màn hình. */
 @media (max-width: 360px) {
-  .af-driver-bar .af-topbar-brand .af-brand-mark {
-    display: inline-flex;
+  .af-driver-bar .af-topbar-brand .af-brand-logo {
+    width: 118px;
   }
 }
 .af-driver-head {

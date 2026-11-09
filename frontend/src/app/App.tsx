@@ -29,6 +29,7 @@ const ArticlePage = lazy(() => import('@/features/shop/ArticlePage').then((m) =>
 const ShopAccountPage = lazy(() => import('@/features/shop/ShopAccountPage').then((m) => ({ default: m.ShopAccountPage })))
 const ShopRegisterPage = lazy(() => import('@/features/shop/ShopAccountPage').then((m) => ({ default: m.ShopRegisterPage })))
 const ShopPage = lazy(() => loadShopPage().then((m) => ({ default: m.ShopPage })))
+const DrinksPage = lazy(() => import('@/features/shop/DrinksPage').then((m) => ({ default: m.DrinksPage })))
 const CustomerOrdersPage = lazy(() => import('@/features/shop/CustomerOrdersPage').then((m) => ({ default: m.CustomerOrdersPage })))
 const CustomerOrderPage = lazy(() => import('@/features/shop/CustomerOrdersPage').then((m) => ({ default: m.CustomerOrderPage })))
 const ProductDetailPage = lazy(() => import('@/features/shop/ProductDetailPage').then((m) => ({ default: m.ProductDetailPage })))
@@ -59,6 +60,7 @@ export function App() {
           <Route path="forgot-password" element={<ForgotPasswordPage />} />
           <Route path="reset-password" element={<ResetPasswordPage />} />
           <Route path="shop" element={<ShopPage />} />
+          <Route path="shop/drinks" element={<DrinksPage />} />
           <Route element={<RequireCustomer />}>
             <Route path="shop/orders" element={<CustomerOrdersPage />} />
             <Route path="shop/orders/:id" element={<CustomerOrderPage />} />

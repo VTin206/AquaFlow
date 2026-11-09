@@ -67,10 +67,10 @@ function BottleTypeForm({ item, onClose }: { item: BottleType | null; onClose: (
           label="Tiền cọc / vỏ (₫)"
           rules={[
             { required: true, message: 'Nhập tiền cọc.' },
-            { type: 'number', min: 0, max: 999999999999.99, message: 'Tiền cọc từ 0 đến 999.999.999.999,99 ₫.' },
+            { type: 'number', min: 0, max: 999999999999, message: 'Tiền cọc từ 0 đến 999.999.999.999 ₫.' },
           ]}
         >
-          <InputNumber min={0} max={999999999999.99} precision={2} style={{ width: '100%' }} />
+          <InputNumber min={0} max={999999999999} precision={0} style={{ width: '100%' }} />
         </Form.Item>
       </Form>
     </Modal>

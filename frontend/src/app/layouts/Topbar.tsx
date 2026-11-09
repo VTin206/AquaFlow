@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Avatar, Button, Dropdown, Tooltip } from 'antd'
-import { Bell, ChevronDown, Clock3, Menu as MenuIcon, ShoppingCart, Waves } from 'lucide-react'
+import { Bell, ChevronDown, Clock3, Menu as MenuIcon, ShoppingCart } from 'lucide-react'
 import { Link } from 'react-router'
 import { useHomeLink } from '@/app/useHomeLink'
 import { useStaff } from '@/features/auth/useStaff'
@@ -57,11 +57,8 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
           icon={<MenuIcon size={20} />}
           onClick={onOpenNav}
         />
-        <Link to="/" className="af-topbar-brand" onClick={goHome}>
-          <span className="af-brand-mark">
-            <Waves size={22} strokeWidth={2.2} />
-          </span>
-          <strong>AquaFlow</strong>
+        <Link to="/" className="af-topbar-brand" onClick={goHome} aria-label="AquaFlow - Trang chủ quản trị">
+          <img className="af-brand-logo" src="/images/aquaflow-logo.png" alt="AquaFlow" />
         </Link>
         <span className="af-topbar-divider" aria-hidden />
         <TopbarClock />

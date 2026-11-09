@@ -1,6 +1,6 @@
 import { Suspense, useLayoutEffect, useState } from 'react'
 import { Badge, Button, Dropdown } from 'antd'
-import { ArrowLeft, ChevronDown, Clock3, PackageSearch, Phone, Search, ShoppingCart, Waves } from 'lucide-react'
+import { ArrowLeft, ChevronDown, Clock3, PackageSearch, Phone, Search, ShoppingCart } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
 import { removeBootShell } from '@/app/bootShell'
@@ -55,7 +55,7 @@ const drinkMenuColumns: { title: string; items: DrinkMenuItem[] }[] = [
 
 const drinkMenuHref = (filter: DrinkMenuFilter) => {
   const params = new URLSearchParams(filter)
-  return `/shop?${params.toString()}#products`
+  return `/shop/drinks?${params.toString()}#products`
 }
 
 /**
@@ -122,20 +122,17 @@ export function ShopLayout() {
       </div>
       <header className="af-shop-header">
         <div className="af-shop-header-inner">
-          <Link to="/shop" className="af-shop-brand" onClick={goHome}>
-            <span className="af-brand-mark">
-              <Waves size={22} strokeWidth={2.2} />
-            </span>
-            <strong>AquaFlow</strong>
+          <Link to="/shop" className="af-shop-brand" onClick={goHome} aria-label="AquaFlow - Trang chủ cửa hàng">
+            <img className="af-brand-logo" src="/images/aquaflow-logo.png" alt="AquaFlow" />
           </Link>
           <nav className="af-shop-nav" aria-label="Điều hướng cửa hàng">
             <NavLink to="/shop" end className={({ isActive }) => `af-shop-nav-link${isActive ? ' is-active' : ''}`}>
               Trang chủ
             </NavLink>
             <div className="af-shop-nav-menu">
-              <Link to="/shop#products" className="af-shop-nav-link" aria-haspopup="true">
+              <NavLink to="/shop/drinks" className={({ isActive }) => `af-shop-nav-link${isActive ? ' is-active' : ''}`} aria-haspopup="true">
                 Nước uống
-              </Link>
+              </NavLink>
               <div className="af-shop-mega" role="menu" aria-label="Danh mục nước uống">
                 {drinkMenuColumns.map((column) => (
                   <section key={column.title} className="af-shop-mega-column">
@@ -164,7 +161,7 @@ export function ShopLayout() {
               icon={<Search size={24} />}
               aria-label="Tìm sản phẩm"
               title="Tìm sản phẩm"
-              onClick={() => navigate('/shop', { state: { focusSearch: Date.now() } })}
+              onClick={() => navigate('/shop/drinks', { state: { focusSearch: Date.now() } })}
             />
             <Button
               type="text"
