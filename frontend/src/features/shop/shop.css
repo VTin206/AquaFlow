@@ -410,6 +410,34 @@
   background: linear-gradient(120deg, var(--af-brand-deep) 0%, var(--af-primary) 45%, var(--af-brand-light) 100%);
   color: var(--af-on-primary);
 }
+.af-shop-banner-slider {
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 20px;
+}
+.af-shop-banner-slider .af-shop-banner {
+  padding-bottom: 52px;
+}
+.af-shop-banner-slider .slick-track {
+  display: flex;
+}
+.af-shop-banner-slider .slick-slide {
+  height: auto;
+}
+.af-shop-banner-slider .slick-slide > div,
+.af-shop-banner-slider .slick-slide > div > div,
+.af-shop-banner-slider .af-shop-banner {
+  height: 100%;
+}
+.af-shop-banner-slider .slick-arrow {
+  z-index: 2;
+}
+@media (max-width: 480px) {
+  .af-shop-banner-slider .af-shop-banner-art {
+    display: block;
+    height: 180px;
+  }
+}
 .af-shop-banner-copy {
   position: relative;
   z-index: 1;
