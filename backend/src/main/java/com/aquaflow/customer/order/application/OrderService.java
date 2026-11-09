@@ -25,7 +25,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
@@ -186,11 +185,7 @@ public class OrderService {
     }
 
     private String generateOrderCode() {
-        return "AF-" + UUID.randomUUID()
-                .toString()
-                .replace("-", "")
-                .substring(0, 20)
-                .toUpperCase(Locale.ROOT);
+        return String.format(Locale.ROOT, "AF-%06d", orderRepository.nextOrderCodeNumber());
     }
 
     public List<OrderResponse> findAll() {
