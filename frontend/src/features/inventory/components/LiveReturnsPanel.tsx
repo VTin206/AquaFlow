@@ -1,125 +1,54 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Empty, Form, Input, InputNumber, Modal, Space, Table, Tabs } from 'antd'
+import { App, Button, Form, Input, InputNumber, Modal, Table } from 'antd'
 import { returnApi, usePendingReturns, type PendingReturn, type ReturnInspection } from '@/features/live/returnApi'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { OrderFocusBanner } from '@/features/orders/components/OrderSheet'
 import { QueryError } from '@/shared/components/QueryError'
-import { ViewButton } from '@/shared/components/ViewButton'
 import { modalWidth } from '@/shared/utils/modal'
+import { ReturnsView, type ReturnHistoryRow } from './ReturnsView'
 
 export function LiveReturnsPanel() {
   const pending = usePendingReturns()
   const [page, setPage] = useState(0)
   const history = useQuery({ queryKey: ['live', 'returns', 'history', page], queryFn: () => returnApi.list(page) })
   const [selected, setSelected] = useState<PendingReturn | null>(null)
-  const [detail, setDetail] = useState<ReturnInspection | null>(null)
-  const waiting = pending.data?.length ?? 0
+  const rows = pending.data ?? []
   return (
-    <>
-      <Tabs
-        items={[
-          {
-            key: 'pending',
-            label: `Chờ kiểm (${waiting})`,
-            children: pending.isError ? (
-              <QueryError error={pending.error} onRetry={pending.refetch} />
-            ) : (
-              <>
-                {waiting > 0 && (
-                  <OrderFocusBanner
-                    focus={{
-                      tone: 'action',
-                      title: `Có ${waiting} đơn cần kiểm hàng hoàn`,
-                      description: 'Kiểm đủ hàng thì đơn mới giao lại hoặc hủy được. Phiếu hoàn không tự hoàn tiền.',
-                    }}
-                  />
-                )}
-                <Table
-                  rowKey="orderId"
-                  loading={pending.isPending}
-                  dataSource={pending.data}
-                  scroll={{ x: 650 }}
-                  locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có đơn chờ kiểm. Đơn giao thất bại sẽ hiện ở đây." /> }}
-                  columns={[
-                    { title: 'Đơn hàng', dataIndex: 'orderCode' },
-                    { title: 'Người nhận', dataIndex: 'recipientName' },
-                    { title: 'Lý do giao thất bại', dataIndex: 'failureReason' },
-                    {
-                      title: 'Thao tác',
-                      render: (_, row) => (
-                        <Button size="small" type="primary" onClick={() => setSelected(row)}>
-                          Kiểm hàng
-                        </Button>
-                      ),
-                    },
-                  ]}
-                />
-              </>
-            ),
-          },
-          {
-            key: 'history',
-            label: 'Đã kiểm',
-            children: history.isError ? (
-              <QueryError error={history.error} onRetry={history.refetch} />
-            ) : (
-              <>
-                <Table
-                  rowKey="id"
-                  loading={history.isPending}
-                  dataSource={history.data}
-                  pagination={false}
-                  locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có phiếu hoàn nào." /> }}
-                  columns={[
-                    { title: 'Phiếu', dataIndex: 'id' },
-                    { title: 'Đơn', dataIndex: 'orderCode' },
-                    { title: 'Ngày kiểm', dataIndex: 'createdAt', render: (v: string) => new Date(v).toLocaleString('vi-VN') },
-                    { title: 'Thao tác', width: 112, align: 'center' as const, render: (_, row) => <ViewButton subject={`phiếu hoàn #${row.id}`} onClick={() => setDetail(row)} /> },
-                  ]}
-                />
-                <Space style={{ padding: 12 }}>
-                  <Button disabled={page === 0} onClick={() => setPage(page - 1)}>
-                    Trước
-                  </Button>
-                  Trang {page + 1}
-                  <Button disabled={!history.data || history.data.length < 20} onClick={() => setPage(page + 1)}>
-                    Sau
-                  </Button>
-                </Space>
-              </>
-            ),
-          },
-        ]}
-      />
+    <ReturnsView
+      pending={rows.map((row) => ({
+        key: row.orderId,
+        orderCode: row.orderCode,
+        recipient: row.recipientName,
+        reason: row.failureReason,
+        goods: row.lines.map((line) => `${line.quantity} × ${line.productName}`).join(', '),
+      }))}
+      pendingLoading={pending.isPending}
+      pendingError={pending.isError ? <QueryError error={pending.error} onRetry={pending.refetch} /> : undefined}
+      onInspect={(row) => setSelected(rows.find((item) => item.orderId === row.key) ?? null)}
+      history={(history.data ?? []).map(toHistoryRow)}
+      historyLoading={history.isPending}
+      historyError={history.isError ? <QueryError error={history.error} onRetry={history.refetch} /> : undefined}
+      paging={{ page, hasNext: (history.data?.length ?? 0) >= 20, onChange: setPage }}
+    >
       {selected && <InspectionModal key={selected.orderId} order={selected} onClose={() => setSelected(null)} />}
-      <Modal
-        open={!!detail}
-        centered
-        onCancel={() => setDetail(null)}
-        footer={null}
-        title={`Phiếu hoàn #${detail?.id ?? ''} · ${detail?.orderCode ?? ''}`}
-        width={modalWidth.medium}
-      >
-        <Table
-          rowKey="loadItemId"
-          size="small"
-          dataSource={detail?.lines}
-          pagination={false}
-          scroll={{ x: 600 }}
-          columns={[
-            { title: 'Sản phẩm', dataIndex: 'productName' },
-            { title: 'Lô', dataIndex: 'lotCode' },
-            { title: 'Thực nhận đợt này', dataIndex: 'quantity', align: 'right' },
-            { title: 'Nhập kho', dataIndex: 'sellable', align: 'right' },
-            { title: 'Loại bỏ', align: 'right', render: (_, row) => row.quantity - (row.sellable ?? 0) },
-          ]}
-        />
-        {detail?.note && <p className="af-form-hint">Ghi chú: {detail.note}</p>}
-      </Modal>
-    </>
+    </ReturnsView>
   )
 }
+
+const toHistoryRow = (row: ReturnInspection): ReturnHistoryRow => ({
+  id: row.id,
+  orderCode: row.orderCode,
+  createdAt: row.createdAt,
+  note: row.note,
+  lines: row.lines.map((line) => ({
+    key: String(line.loadItemId),
+    productName: line.productName,
+    lotCode: line.lotCode,
+    quantity: line.quantity,
+    sellable: line.sellable ?? null,
+  })),
+})
 
 function InspectionModal({ order, onClose }: { order: PendingReturn; onClose: () => void }) {
   const { message } = App.useApp()
