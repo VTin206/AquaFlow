@@ -71,13 +71,14 @@ const progressStatus: Record<Order['status'], LiveOrder['status']> = {
   'Đã hủy': 'CANCELLED',
 }
 
-export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClose: () => void }) {
+/** `payOnly`: chỉ mở hộp ghi nhận thanh toán (màn hình tài xế), không hiện chi tiết và thao tác quản lý. */
+export function OrderDetailsModal({ orderId, onClose, payOnly = false }: { orderId: string; onClose: () => void; payOnly?: boolean }) {
   const { message } = App.useApp()
   const { token } = theme.useToken()
   const { data: orders = [] } = useOrders()
   const action = useOrderAction()
   const staff = useStaff()
-  const [mode, setMode] = useState<'pay' | 'cancel' | 'return' | null>(null)
+  const [mode, setMode] = useState<'pay' | 'cancel' | 'return' | null>(payOnly ? 'pay' : null)
   const [paymentForm] = Form.useForm<PaymentDraft>()
   const [cancelForm] = Form.useForm<{ reason: string } & Partial<RefundDraft>>()
   const [returnForm] = Form.useForm<ReturnForm>()
@@ -107,7 +108,8 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
   const callbacks = {
     onSuccess: () => {
       message.success('Đã cập nhật đơn hàng.')
-      setMode(null)
+      if (payOnly) onClose()
+      else setMode(null)
     },
     onError: (error: Error) => message.error(error.message),
   }
@@ -292,6 +294,7 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
 
   return (
     <>
+      {!payOnly && (
       <OrderDetailsFrame
         order={order}
         focus={demoOrderFocus(order)}
@@ -360,13 +363,15 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
           />
         }
       />
+      )}
       <Modal
         open={mode === 'pay'}
-        title="Ghi nhận thanh toán"
+        centered
+        title={payOnly ? `Thu tiền · ${order.code ?? order.id}` : 'Ghi nhận thanh toán'}
         okText="Xác nhận đã nhận tiền"
         cancelText="Hủy"
         width={modalWidth.small}
-        onCancel={() => setMode(null)}
+        onCancel={() => (payOnly ? onClose() : setMode(null))}
         onOk={() => paymentForm.submit()}
         confirmLoading={action.isPending}
         destroyOnHidden

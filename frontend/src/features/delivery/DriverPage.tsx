@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Card, Empty, Form, InputNumber, Modal, Popconfirm, Progress, Select, Skeleton, Tag } from 'antd'
-import { Clock3, Map, Package, Phone, Recycle, Wallet } from 'lucide-react'
+import { App, Button, Card, Empty, Form, InputNumber, Modal, Popconfirm, Progress, Segmented, Skeleton, Tag } from 'antd'
+import { Clock3, History, Map, Package, Phone, Recycle, RefreshCw, Wallet } from 'lucide-react'
+import { TransferQr } from '@/shared/payment/TransferQr'
+import { useSettings } from '@/features/settings/settingsService'
 import { mapsSearchUrl } from '@/shared/address/maps'
 import { useAuth } from '@/features/auth/useAuth'
 import { useStaff } from '@/features/auth/useStaff'
@@ -29,8 +31,10 @@ import {
 import { DeliveryBottlesButton } from './components/DeliveryBottlesButton'
 import { AttemptsTimeline } from './components/AttemptsTimeline'
 import { DeliveryActionModal } from './components/DeliveryActionModal'
+import { TripRouteButton } from './components/TripRouteButton'
 import { TripStatusTag } from './components/TripStatusTag'
-import { demoAttempts, demoCollections, demoDrivers, toDriverTrip } from './demoDriverData'
+import { DriverDue, driverToday } from './driverParts'
+import { demoAttempts, demoCollections, toDriverTrip } from './demoDriverData'
 import { driverTripFocus, liveTripStatus } from './tripFocus'
 import { useTrips } from './useTrips'
 
@@ -39,7 +43,7 @@ type DemoTools = {
   collections: (tripId: number) => TripCollections | undefined
   attempts: (stop: DeliveryStop) => DeliveryAttempt[]
   orderOf: (stop: DeliveryStop) => Order | undefined
-  openDetails: (stop: DeliveryStop) => void
+  collect: (stop: DeliveryStop) => void
 }
 
 /** Màn hình tài xế dùng chung: chỗ này chỉ chọn nguồn dữ liệu, giao diện nằm ở DriverScreen. */
@@ -49,20 +53,15 @@ export function DriverPage() {
 
 function LiveDriver() {
   const { user } = useAuth()
-  const staff = useStaff()
+  // BE chỉ trả chuyến của tài xế đang đăng nhập.
   const trips = useQuery({ queryKey: ['live', 'driver-trips', user?.email], queryFn: deliveryApi.list, refetchInterval: 15000 })
-  const drivers = useQuery({
-    queryKey: ['live', 'driver-options', user?.email],
-    queryFn: deliveryApi.drivers,
-    enabled: staff?.role === 'ADMIN',
-  })
   return (
     <DriverScreen
       trips={trips.data}
       loading={trips.isPending}
+      fetching={trips.isFetching}
       error={trips.isError ? trips.error : null}
       onRetry={() => void trips.refetch()}
-      drivers={drivers.data}
     />
   )
 }
@@ -71,10 +70,9 @@ function DemoDriver() {
   const staff = useStaff()
   const tripsQuery = useTrips()
   const ordersQuery = useOrders()
-  const [detailsId, setDetailsId] = useState<string | null>(null)
+  const [payingId, setPayingId] = useState<string | null>(null)
   const orders = ordersQuery.data ?? []
-  // Tài khoản giao hàng chỉ xem chuyến của chính mình; chủ cửa hàng chọn tài xế để xem thay.
-  const records = (tripsQuery.data ?? []).filter((trip) => staff?.role !== 'DELIVERY_STAFF' || trip.driver === staff.name)
+  const records = (tripsQuery.data ?? []).filter((trip) => trip.driver === staff?.name)
   const stopsOf = (ids: string[]) => ids.map((id) => orders.find((order) => order.id === id)).filter((order) => order !== undefined)
   const trips = records.map((trip, index) => toDriverTrip(trip, stopsOf(trip.orderIds), index))
   const orderOf = (stop: DeliveryStop) => orders.find((order) => (order.code ?? order.id) === stop.orderCode)
@@ -88,7 +86,7 @@ function DemoDriver() {
       return order ? demoAttempts(order) : []
     },
     orderOf,
-    openDetails: (stop) => setDetailsId(orderOf(stop)?.id ?? null),
+    collect: (stop) => setPayingId(orderOf(stop)?.id ?? null),
   }
   const error = tripsQuery.error ?? ordersQuery.error
   return (
@@ -96,15 +94,15 @@ function DemoDriver() {
       <DriverScreen
         trips={tripsQuery.data && ordersQuery.data ? trips : undefined}
         loading={tripsQuery.isPending || ordersQuery.isPending}
+        fetching={tripsQuery.isFetching || ordersQuery.isFetching}
         error={error}
         onRetry={() => {
           void tripsQuery.refetch()
           void ordersQuery.refetch()
         }}
-        drivers={demoDrivers}
         demo={tools}
       />
-      {detailsId && <OrderDetailsModal key={detailsId} orderId={detailsId} onClose={() => setDetailsId(null)} />}
+      {payingId && <OrderDetailsModal key={payingId} orderId={payingId} payOnly onClose={() => setPayingId(null)} />}
     </>
   )
 }
@@ -113,24 +111,22 @@ function DemoDriver() {
 function DriverScreen({
   trips,
   loading,
+  fetching,
   error,
   onRetry,
-  drivers,
   demo,
 }: {
   trips?: DeliveryTrip[]
   loading: boolean
+  fetching: boolean
   error: Error | null
   onRetry: () => void
-  drivers?: { id: number; name: string }[]
   demo?: DemoTools
 }) {
   const staff = useStaff()
-  const [driver, setDriver] = useState<number | undefined>()
   const [showHistory, setShowHistory] = useState(false)
-  const viewingForOthers = staff?.role === 'ADMIN'
   const finished = (trip: DeliveryTrip) => ['COMPLETED', 'CANCELLED'].includes(trip.status)
-  const mine = (trips ?? []).filter((trip) => !driver || trip.driverId === driver)
+  const mine = trips ?? []
   const visible = mine.filter((trip) => showHistory || !finished(trip))
   const hiddenCount = mine.filter(finished).length
 
@@ -141,28 +137,17 @@ function DriverScreen({
   return (
     <div className="af-driver">
       <header className="af-driver-head">
-        <h1>Chuyến của tôi</h1>
-        {!viewingForOthers && (
+        <div>
+          <h1>Chuyến của tôi</h1>
           <p>
-            {staff?.name} · {new Date().toLocaleDateString('vi-VN')}
+            {staff?.name} · {driverToday()}
           </p>
-        )}
+        </div>
+        {/* Trang tự làm mới 15 giây một lần; nút này để lấy ngay đơn cửa hàng vừa xếp thêm. */}
+        <Button icon={<RefreshCw size={16} />} loading={fetching} onClick={onRetry}>
+          Làm mới
+        </Button>
       </header>
-      {viewingForOthers && (
-        <>
-          <label className="af-driver-picker">
-            <span>Tài xế</span>
-            <Select
-              allowClear
-              placeholder="Tất cả tài xế"
-              value={driver}
-              onChange={setDriver}
-              options={drivers?.map((d) => ({ value: d.id, label: d.name }))}
-            />
-          </label>
-          <p className="af-form-hint">Đang xem thay tài xế. Nhân viên giao hàng đăng nhập sẽ chỉ thấy chuyến của mình.</p>
-        </>
-      )}
       {error ? (
         <QueryError error={error} onRetry={onRetry} />
       ) : loading ? (
@@ -172,7 +157,7 @@ function DriverScreen({
           <Empty description="Chưa có chuyến nào được giao cho bạn." />
         </Card>
       ) : (
-        visible.map((trip) => <DriverTrip key={trip.id} trip={trip} showDriver={viewingForOthers} demo={demo} />)
+        visible.map((trip) => <DriverTrip key={trip.id} trip={trip} demo={demo} />)
       )}
       {hiddenCount > 0 && (
         <Button type="link" block onClick={() => setShowHistory(!showHistory)}>
@@ -183,7 +168,7 @@ function DriverScreen({
   )
 }
 
-function DriverTrip({ trip, showDriver, demo }: { trip: DeliveryTrip; showDriver: boolean; demo?: DemoTools }) {
+function DriverTrip({ trip, demo }: { trip: DeliveryTrip; demo?: DemoTools }) {
   const { user } = useAuth()
   const { message } = App.useApp()
   const client = useQueryClient()
@@ -236,35 +221,57 @@ function DriverTrip({ trip, showDriver, demo }: { trip: DeliveryTrip; showDriver
         <div className="af-trip-stop-top">
           {list === pending && <span className="af-trip-stop-index">{index + 1}</span>}
           <strong className="af-driver-customer">{order.recipientName || 'Khách hàng'}</strong>
-          <Tag color={order.latestAttempt?.outcome === 'SUCCESS' ? 'green' : order.latestAttempt ? 'red' : onTheWay ? 'cyan' : 'default'}>
-            {order.latestAttempt?.outcome === 'SUCCESS'
-              ? 'Đã giao'
-              : order.latestAttempt
-                ? 'Giao thất bại'
-                : onTheWay
-                  ? 'Đang giao'
+          {/* Cả chuyến đang giao thì không lặp lại thẻ "Đang giao" ở từng điểm. */}
+          {(order.latestAttempt || !onTheWay) && (
+            <Tag color={order.latestAttempt?.outcome === 'SUCCESS' ? 'green' : order.latestAttempt ? 'red' : 'default'}>
+              {order.latestAttempt?.outcome === 'SUCCESS'
+                ? 'Đã giao'
+                : order.latestAttempt
+                  ? 'Giao thất bại'
                   : order.orderStatus === 'PREPARING'
                     ? 'Chờ xuất kho'
                     : 'Chờ khởi hành'}
-          </Tag>
+            </Tag>
+          )}
         </div>
         <small className="af-text-muted">{order.orderCode}</small>
         {order.deliveryAddress && <p className="af-driver-address">{order.deliveryAddress}</p>}
         <ul className="af-driver-facts">
           {order.items.map((line, i) => (
             <li key={i}>
-              <Package size={15} /> {line.productName} × {line.quantity} {line.unit.toLowerCase()}
+              <Package size={15} />
+              <span>
+                {line.productName} × {line.quantity} {line.unit.toLowerCase()}
+              </span>
             </li>
           ))}
+          {order.recipientPhone && (
+            <li>
+              <Phone size={15} />
+              <a href={`tel:${order.recipientPhone}`}>{order.recipientPhone}</a>
+            </li>
+          )}
           {order.requestedDeliveryAt && (
             <li>
-              <Clock3 size={15} /> Hẹn {new Date(order.requestedDeliveryAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
+              <Clock3 size={15} />
+              <span>
+                Hẹn{' '}
+                {new Date(order.requestedDeliveryAt).toLocaleString('vi-VN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  day: '2-digit',
+                  month: '2-digit',
+                })}
+              </span>
             </li>
           )}
           {balance && (
             <li>
-              <Wallet size={15} /> Thu <Money value={balance.due} tone={dueTone(balance.due)} />
-              {balance.bottlesToExchange > 0 && ` · đổi ${balance.bottlesToExchange} vỏ, đã nhận ${returned}`}
+              <Wallet size={15} />
+              <span>
+                <DriverDue due={balance.due} />
+                {balance.bottlesToExchange > 0 && ` · đổi ${balance.bottlesToExchange} vỏ, đã nhận ${returned}`}
+              </span>
             </li>
           )}
           {order.note && <li className="af-driver-note">{order.note}</li>}
@@ -290,15 +297,16 @@ function DriverTrip({ trip, showDriver, demo }: { trip: DeliveryTrip; showDriver
           {active && (
             <Button
               size="large"
+              icon={<Wallet size={18} />}
               disabled={!balance || balance.due <= 0 || change.isPending}
-              onClick={() => (demo ? demo.openDetails(order) : setCollect(order))}
+              onClick={() => (demo ? demo.collect(order) : setCollect(order))}
             >
               Thu tiền
             </Button>
           )}
           {order.latestAttempt && (
-            <Button size="large" onClick={() => setHistory(order)}>
-              Lịch sử giao
+            <Button size="large" icon={<History size={18} />} onClick={() => setHistory(order)}>
+              Lịch sử
             </Button>
           )}
           {demo ? <Button disabled>Vỏ của đơn (chưa hỗ trợ)</Button> : <DeliveryBottlesButton assignmentId={order.id} orderCode={order.orderCode} />}
@@ -312,7 +320,7 @@ function DriverTrip({ trip, showDriver, demo }: { trip: DeliveryTrip; showDriver
               )
             ) : (
               <Button size="large" type="primary" className="af-driver-primary" disabled={change.isPending} onClick={() => setResult(order)}>
-                Ghi kết quả giao
+                Kết quả giao
               </Button>
             ))}
         </div>
@@ -324,10 +332,7 @@ function DriverTrip({ trip, showDriver, demo }: { trip: DeliveryTrip; showDriver
     <section className="af-driver-trip" aria-label={`Chuyến ${trip.id}`}>
       <Card size="small" className="af-driver-summary">
         <div className="af-trip-card-head">
-          <strong>
-            Chuyến #{trip.id}
-            {showDriver && trip.driverName ? ` · ${trip.driverName}` : ''}
-          </strong>
+          <strong>Chuyến #{trip.id}</strong>
           <TripStatusTag status={liveTripStatus(trip)} />
         </div>
         <Progress percent={Math.round((done / Math.max(1, trip.orders.length)) * 100)} format={() => `${done}/${trip.orders.length} điểm`} />
@@ -367,6 +372,9 @@ function DriverTrip({ trip, showDriver, demo }: { trip: DeliveryTrip; showDriver
               Bắt đầu chuyến
             </Button>
           </Popconfirm>
+        )}
+        {active && pending.length > 0 && (
+          <TripRouteButton size="large" block label="Xem lộ trình các điểm còn lại" addresses={pending.map((order) => order.deliveryAddress)} />
         )}
       </Card>
       {pending.length > 0 && <ol className="af-driver-stops">{pending.map(stop)}</ol>}
@@ -416,7 +424,7 @@ function DriverTrip({ trip, showDriver, demo }: { trip: DeliveryTrip; showDriver
           }}
         />
       )}
-      <Modal open={!!history} title={`Lịch sử ${history?.orderCode ?? ''}`} onCancel={() => setHistory(null)} footer={null}>
+      <Modal open={!!history} centered title={`Lịch sử ${history?.orderCode ?? ''}`} onCancel={() => setHistory(null)} footer={null}>
         {!demo && liveAttempts.isError ? (
           <QueryError error={liveAttempts.error} onRetry={liveAttempts.refetch} />
         ) : attempts ? (
@@ -445,9 +453,13 @@ function CollectionModal({
   const [form] = Form.useForm()
   const [requestId] = useState(() => crypto.randomUUID())
   const balance = data.balances.find((b) => b.orderId === order.orderId)!
+  const method = Form.useWatch('method', form)
+  const amount: number | undefined = Form.useWatch('amount', form)
+  const { data: settings } = useSettings()
   return (
     <Modal
       open
+      centered
       title={`Thu tiền · ${order.orderCode}`}
       width={modalWidth.small}
       onCancel={onClose}
@@ -467,17 +479,33 @@ function CollectionModal({
         initialValues={{ amount: balance.due, method: 'CASH', bottlesReturned: 0 }}
         onFinish={(values) => onSave({ ...values, bottlesReturned: 0, requestId })}
       >
-        <Form.Item name="amount" label="Số tiền nhận" rules={[{ required: true }, { type: 'number', min: 0.01, max: balance.due }]}>
-          <InputNumber min={0.01} max={balance.due} precision={2} style={{ width: '100%' }} />
+        <Form.Item name="amount" label="Số tiền nhận" rules={[{ required: true }, { type: 'number', min: 1, max: balance.due }]}>
+          <InputNumber
+            min={1}
+            max={balance.due}
+            precision={0}
+            inputMode="numeric"
+            formatter={(value) => `${value ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
+            parser={(value) => Number((value ?? '').replace(/\D/g, ''))}
+            suffix="₫"
+            style={{ width: '100%' }}
+          />
         </Form.Item>
         <Form.Item name="method" label="Phương thức" rules={[{ required: true }]}>
-          <Select
+          <Segmented
+            block
             options={[
               { value: 'CASH', label: 'Tiền mặt' },
-              { value: 'BANK_TRANSFER', label: 'Đã nhận chuyển khoản' },
+              { value: 'BANK_TRANSFER', label: 'Chuyển khoản' },
             ]}
           />
         </Form.Item>
+        {method === 'BANK_TRANSFER' && (
+          <div className="af-driver-qr">
+            <TransferQr settings={settings} amount={amount && amount > 0 ? amount : balance.due} note={order.orderCode} />
+            <p className="af-form-hint">Đưa mã cho khách quét. Chỉ bấm Ghi nhận sau khi thấy tiền vào tài khoản cửa hàng.</p>
+          </div>
+        )}
       </Form>
       {data.receipts
         .filter((r) => r.orderId === order.orderId)

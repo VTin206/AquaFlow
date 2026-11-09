@@ -1,10 +1,13 @@
-import { Alert, Form, Input, InputNumber, Modal, Select } from 'antd'
+import { Alert, Form, Input, InputNumber, Modal, Segmented, Select, Tag } from 'antd'
 import { QueryError } from '@/shared/components/QueryError'
 import { modalWidth } from '@/shared/utils/modal'
 import type { DeliveryStop, ResultInput, SettlementInput } from '../deliveryApi'
 
 export type DeliveryAction = { kind: 'driver' | 'add' | 'settle'; tripId: number } | { kind: 'result'; tripId: number; order: DeliveryStop }
 export type DeliveryFormValues = Partial<SettlementInput & ResultInput> & { driverId?: number; orderId?: number }
+
+/** Lý do giao thất bại hay gặp: tài xế chạm để chọn thay vì gõ ngoài đường. */
+export const FAILURE_REASONS = ['Khách vắng nhà', 'Không liên lạc được', 'Sai địa chỉ', 'Khách từ chối nhận', 'Khách hẹn ngày khác']
 
 /** Các thao tác có nhập liệu trên chuyến: phân tài xế, thêm đơn, ghi kết quả giao, đối soát. */
 export function DeliveryActionModal({
@@ -30,6 +33,7 @@ export function DeliveryActionModal({
 }) {
   const [form] = Form.useForm<DeliveryFormValues>()
   const outcome = Form.useWatch('outcome', form) ?? 'SUCCESS'
+  const reason: string = Form.useWatch('failureReason', form) ?? ''
   const title = {
     driver: 'Phân tài xế',
     add: 'Thêm đơn vào chuyến',
@@ -39,6 +43,7 @@ export function DeliveryActionModal({
   return (
     <Modal
       open
+      centered
       title={title}
       width={modalWidth.small}
       onCancel={onClose}
@@ -92,7 +97,8 @@ export function DeliveryActionModal({
         {action.kind === 'result' && (
           <>
             <Form.Item name="outcome" label="Kết quả" rules={[{ required: true }]}>
-              <Select
+              <Segmented
+                block
                 options={[
                   { value: 'SUCCESS', label: 'Giao thành công' },
                   { value: 'FAILED', label: 'Giao thất bại' },
@@ -108,13 +114,23 @@ export function DeliveryActionModal({
                 <Input maxLength={150} />
               </Form.Item>
             ) : (
-              <Form.Item
-                name="failureReason"
-                label="Lý do thất bại"
-                rules={[{ required: true, whitespace: true, message: 'Nhập lý do giao thất bại.' }]}
-              >
-                <Input.TextArea maxLength={2000} />
-              </Form.Item>
+              <>
+                <div className="af-reason-picks" role="group" aria-label="Chọn nhanh lý do">
+                  {FAILURE_REASONS.map((pick) => (
+                    <Tag.CheckableTag key={pick} checked={reason === pick} onChange={() => form.setFieldValue('failureReason', pick)}>
+                      {pick}
+                    </Tag.CheckableTag>
+                  ))}
+                </div>
+                <Form.Item
+                  name="failureReason"
+                  label="Lý do thất bại"
+                  extra="Chạm một lý do ở trên hoặc tự ghi."
+                  rules={[{ required: true, whitespace: true, message: 'Chọn hoặc nhập lý do giao thất bại.' }]}
+                >
+                  <Input.TextArea maxLength={2000} autoSize={{ minRows: 2, maxRows: 4 }} />
+                </Form.Item>
+              </>
             )}
           </>
         )}

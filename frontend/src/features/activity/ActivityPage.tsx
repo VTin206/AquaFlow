@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { filterOn } from '@/shared/utils/filterOn'
 import { App, Avatar, Button, Card, DatePicker, Descriptions, Empty, Grid, Input, Modal, Segmented, Select, Skeleton, Switch, Tag } from 'antd'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
@@ -172,7 +173,7 @@ export function ActivityPage() {
               value={actor}
               onChange={setActor}
               options={feed.actorOptions}
-              className="af-activity-actor"
+              className={`af-activity-actor ${filterOn(Boolean(actor))}`}
             />
             <label className="af-activity-important">
               <Switch size="small" checked={importantOnly} onChange={setImportantOnly} />

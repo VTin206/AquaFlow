@@ -10,15 +10,16 @@ import { daysUntilExpiry, expiryStatus, isoToVnDate } from '../expiry'
 import { matchesSearch } from '@/shared/utils/search'
 import { useLotItems, type LotItem } from '../useInventory'
 
-type LotFilter = 'stock' | 'expiring' | 'expired' | 'all'
+export type LotFilter = 'stock' | 'expiring' | 'expired' | 'all'
 
 const daysLeft = (lot: LotItem) => (lot.expiryDate ? daysUntilExpiry(isoToVnDate(lot.expiryDate)) : null)
 
 /** Tồn theo lô, sắp theo hạn dùng; lô hết hạn sớm được xuất trước (FEFO). */
-export function LotsPanel() {
+/** `initialFilter`: mở sẵn một bộ lọc, ví dụ lô hết hạn khi bấm từ khung "Cần xử lý". */
+export function LotsPanel({ initialFilter = 'stock' }: { initialFilter?: LotFilter }) {
   const lotsQuery = useLotItems()
   const warningDays = useExpiryWarningDays()
-  const [filter, setFilter] = useState<LotFilter>('stock')
+  const [filter, setFilter] = useState<LotFilter>(initialFilter)
   const [query, setQuery] = useState('')
   const lots = [...(lotsQuery.data ?? [])].sort((a, b) => (a.expiryDate ?? '9999').localeCompare(b.expiryDate ?? '9999'))
   const inStock = lots.filter((lot) => lot.onHand > 0)

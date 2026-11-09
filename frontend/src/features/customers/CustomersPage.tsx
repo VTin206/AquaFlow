@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { filterOn } from '@/shared/utils/filterOn'
 import { useSearchParams } from 'react-router'
 import {
   App,
@@ -360,7 +361,7 @@ export function CustomersPage() {
               {view === 'active' && (
                 <Select<IdleFilter>
                   aria-label="Lọc theo lần mua gần nhất"
-                  className="af-customer-idle"
+                  className={`af-customer-idle ${filterOn(idle !== 'all')}`}
                   value={idle}
                   onChange={setIdle}
                   options={idleOptions}
