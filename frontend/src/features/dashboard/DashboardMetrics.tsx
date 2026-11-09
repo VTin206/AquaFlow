@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, Card, Col, DatePicker, Empty, Row, Space, Statistic, Table, Typography } from 'antd'
+import { Alert, Card, Col, DatePicker, Empty, Row, Space, Statistic, Tooltip, Typography } from 'antd'
+import { Info } from 'lucide-react'
 import dayjs, { type Dayjs } from 'dayjs'
 import { Link } from 'react-router'
-import { reportApi, type ReportRow } from '@/features/reports/reportApi'
+import { reportApi } from '@/features/reports/reportApi'
 import { reportService } from '@/features/reports/reportService'
 import { autoGranularity, groupRevenue, reportPresets } from '@/features/reports/periods'
 import { useStaff } from '@/features/auth/useStaff'
@@ -33,13 +34,6 @@ function Metrics({ demo }: { demo: boolean }) {
         newCustomers: report.customers.new, netPayments: report.cash.collected }, days: report.days }
     },
   })
-  const customers = useQuery({
-    queryKey: ['dashboard', demo ? 'demo' : 'live', 'customers', range],
-    queryFn: async (): Promise<ReportRow[]> => {
-      if (!demo) return (await reportApi.section('customers', range, 0, 10)).content
-      return (await reportService.summary(range)).customers.top.map(row => ({ key: row.key, name: row.name, orders: row.orders, revenue: row.revenue }))
-    },
-  })
   const sales = summary.data?.sales
   const metrics = [
     ['Tổng đơn', sales?.ordersCreated, false], ['Doanh thu', sales?.revenue, true],
@@ -49,9 +43,13 @@ function Metrics({ demo }: { demo: boolean }) {
   const empty = sales && [sales.ordersCreated, sales.ordersDelivered, sales.ordersCancelled, sales.revenue, sales.newCustomers].every(value => Number(value) === 0)
   const buckets = groupRevenue(summary.data?.days ?? [], autoGranularity(range))
 
-  return <section aria-label="Thống kê kinh doanh">
+  return <section aria-label="Thống kê kinh doanh" style={{ marginTop: 24 }}>
     <Space wrap style={{ marginBottom: 16 }}>
       <Typography.Title level={3} style={{ margin: 0 }}>Kết quả kinh doanh</Typography.Title>
+      <Tooltip title={<>Số liệu theo giờ Việt Nam. AOV = doanh thu / số đơn đã giao; không có đơn thì bằng 0.
+      {demo ? ' Dữ liệu Demo: khách mới tính theo lần mua đầu tiên.' : ' Doanh thu không gồm phí giao và tiền cọc. Khách mới tính theo ngày tạo hồ sơ, không gồm khách vãng lai.'} Tổng đơn tính theo ngày tạo; đơn đã giao và hủy tính theo ngày giao hoặc hủy trong kỳ.</>}>
+        <Info size={16} aria-label="Cách tính số liệu" tabIndex={0} />
+      </Tooltip>
       <DatePicker.RangePicker aria-label="Kỳ thống kê" value={dates} allowClear={false} format="DD/MM/YYYY"
         presets={reportPresets(today)} disabledDate={date => date.isAfter(today, 'day')}
         onChange={values => {
@@ -63,15 +61,13 @@ function Metrics({ demo }: { demo: boolean }) {
           setRangeError(undefined)
           setDates([values[0], values[1]])
         }} />
+      <Link to="/reports?tab=customers" className="af-text-link">Khách hàng mua nhiều</Link>
     </Space>
     {rangeError && <Alert type="warning" showIcon title={rangeError} />}
-    <p>Số liệu theo giờ Việt Nam. AOV = doanh thu / số đơn đã giao; không có đơn thì bằng 0.
-      {demo ? ' Dữ liệu Demo: khách mới tính theo lần mua đầu tiên.' : ' Doanh thu không gồm phí giao và tiền cọc. Khách mới tính theo ngày tạo hồ sơ, không gồm khách vãng lai.'}</p>
-    <p>Tổng đơn tính theo ngày tạo; đơn đã giao và hủy tính theo ngày giao hoặc hủy trong kỳ.</p>
     {summary.isError ? <QueryError error={summary.error} onRetry={summary.refetch} /> : <>
       <Row gutter={[16, 16]}>
-        {metrics.map(([title, value, money]) => <Col xs={24} sm={12} xl={8} key={title}>
-          <Card loading={summary.isPending}><Statistic title={title} value={value === undefined ? '—' : money ? currency(Number(value)) : Number(value)} /></Card>
+        {metrics.map(([title, value, money]) => <Col xs={12} sm={8} xl={4} key={title}>
+          <Card size="small" loading={summary.isPending}><Statistic title={title} styles={{ content: { fontSize: 18 } }} value={value === undefined ? '—' : money ? currency(Math.round(Number(value))) : Number(value)} /></Card>
         </Col>)}
       </Row>
       {sales?.netPayments !== undefined && <p>Thanh toán ròng đã xác nhận trong kỳ: <strong>{currency(Number(sales.netPayments))}</strong></p>}
@@ -81,16 +77,5 @@ function Metrics({ demo }: { demo: boolean }) {
           : <BarChart data={buckets.map(row => ({ label: row.label, value: row.revenue }))} formatValue={compactCurrency} height={210} />}
       </Card>
     </>}
-    <Card title="Khách hàng mua nhiều" style={{ marginTop: 16, marginBottom: 24 }}>
-      <p>10 khách/nhóm khách có doanh thu sau hàng trả cao nhất trong cùng kỳ. Khách vãng lai được gom thành nhóm riêng, không có hồ sơ để mở.</p>
-      {customers.isError ? <QueryError error={customers.error} onRetry={customers.refetch} />
-        : <Table<ReportRow> rowKey="key" loading={customers.isPending} dataSource={customers.data ?? []} pagination={false}
-          scroll={{ x: 550 }} locale={{ emptyText: customers.isPending ? 'Đang tải khách hàng…' : 'Chưa có khách hàng mua trong kỳ.' }} columns={[
-            { title: 'Khách hàng', dataIndex: 'name', render: (name: string, row) => row.key === 'guest' || String(row.key).startsWith('SĐT ') || !row.key ? name
-              : <Link to={`/customers?customerId=${encodeURIComponent(String(row.key))}`}>{name}</Link> },
-            { title: 'Đơn đã giao', dataIndex: 'orders' },
-            { title: 'Doanh thu', dataIndex: 'revenue', render: value => currency(Number(value)) },
-          ]} />}
-    </Card>
   </section>
 }

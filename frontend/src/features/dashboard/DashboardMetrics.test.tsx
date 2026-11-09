@@ -30,12 +30,11 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 
-test('hiển thị sáu KPI và mở đúng hồ sơ, không mở hồ sơ khách vãng lai', async () => {
+test('hiển thị sáu KPI, biểu đồ và dẫn sang bảng khách của Báo cáo', async () => {
   mount()
   expect(await screen.findByText('AOV')).toBeTruthy()
   for (const title of ['Tổng đơn', 'Doanh thu', 'Đơn đã giao', 'Đơn đã hủy', 'Khách hàng mới']) expect(screen.getAllByText(title).length).toBeGreaterThan(0)
-  expect((await screen.findByRole('link', { name: 'Khách A' })).getAttribute('href')).toBe('/customers?customerId=42')
-  expect(screen.queryByRole('link', { name: 'Khách vãng lai' })).toBeNull()
+  expect(screen.getByRole('link', { name: 'Khách hàng mua nhiều' }).getAttribute('href')).toBe('/reports?tab=customers')
   expect(screen.getByText('Biểu đồ doanh thu')).toBeTruthy()
 })
 test('nhân viên không gọi API báo cáo hoặc thấy dữ liệu ADMIN', () => {
@@ -51,14 +50,11 @@ test('đang tải không hiển thị 0 hoặc báo dữ liệu rỗng', () => {
   mount()
   expect(screen.queryByText('0')).toBeNull()
   expect(screen.queryByText('Chưa có dữ liệu kinh doanh trong kỳ.')).toBeNull()
-  expect(screen.queryByText('Chưa có khách hàng mua trong kỳ.')).toBeNull()
 })
 test('kỳ rỗng hiện thông báo dù API vẫn trả bucket ngày bằng 0', async () => {
   vi.mocked(reportApi.summary).mockResolvedValue({ ...report, sales: { ...report.sales, ordersCreated: 0, ordersDelivered: 0, ordersCancelled: 0, revenue: 0, averageOrderValue: 0, newCustomers: 0 }, days: [{ date: '2026-01-01', revenue: 0, collected: 0, orders: 0 }] })
-  vi.mocked(reportApi.section).mockResolvedValue({ content: [], page: 0, size: 10, totalElements: 0 })
   mount()
   expect(await screen.findByText('Chưa có dữ liệu kinh doanh trong kỳ.')).toBeTruthy()
-  expect(await screen.findByText('Chưa có khách hàng mua trong kỳ.')).toBeTruthy()
 })
 test('lỗi có thể thử lại và không hiển thị KPI bằng 0', async () => {
   vi.mocked(reportApi.summary).mockRejectedValueOnce(new Error('Không lấy được KPI'))
@@ -68,21 +64,12 @@ test('lỗi có thể thử lại và không hiển thị KPI bằng 0', async (
   fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }))
   expect(await screen.findByText('AOV')).toBeTruthy()
 })
-test('lỗi bảng khách hàng có thể tải lại, vẫn giữ KPI đã tải thành công', async () => {
-  vi.mocked(reportApi.section).mockRejectedValueOnce(new Error('Không lấy được khách hàng'))
-  mount()
-  expect(await screen.findByText('Không lấy được khách hàng')).toBeTruthy()
-  expect(await screen.findByText('AOV')).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }))
-  expect(await screen.findByRole('link', { name: 'Khách A' })).toBeTruthy()
-})
-test('đổi kỳ cập nhật cả hai API và không dùng lại KPI cũ khi đang tải', async () => {
+test('đổi kỳ cập nhật API và không dùng lại KPI cũ khi đang tải', async () => {
   mount()
   await screen.findByText('AOV')
   vi.mocked(reportApi.summary).mockReturnValue(new Promise(() => {}))
   fireEvent.click(screen.getByText('Đổi kỳ'))
   await waitFor(() => expect(reportApi.summary).toHaveBeenLastCalledWith({ from: '2026-01-01', to: '2026-01-07' }))
-  expect(reportApi.section).toHaveBeenLastCalledWith('customers', { from: '2026-01-01', to: '2026-01-07' }, 0, 10)
   expect(screen.queryByText('AOV')).toBeNull()
   const calls = vi.mocked(reportApi.summary).mock.calls.length
   fireEvent.click(screen.getByText('Kỳ quá dài'))
