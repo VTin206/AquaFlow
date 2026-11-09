@@ -59,13 +59,14 @@ class DeliveryServiceTest {
     @Mock private RedeliveryReservationService redeliveryReservations;
     @Mock private OrderRepository orderRepository;
     @Mock private OrderItemRepository orderItemRepository;
+    @Mock private DeliveryBottleService bottleLedger;
 
     private DeliveryService service;
 
     @BeforeEach
     void setUp() {
         service = new DeliveryService(repository, assignmentDispatch, redeliveryReservations,
-                orderRepository, orderItemRepository);
+                orderRepository, orderItemRepository, bottleLedger);
     }
 
     @Test
@@ -160,6 +161,7 @@ class DeliveryServiceTest {
 
         assertThat(result).isSameAs(expected);
         verify(repository).recordSuccess(ORDER_ID, ASSIGNMENT_ID);
+        verify(bottleLedger).give(ASSIGNMENT_ID, ORDER_ID, ACTOR_ID);
         verify(repository).addAttempt(ASSIGNMENT_ID, 1, request);
         verify(repository, never()).recordFailure(ORDER_ID);
         verifyNoInteractions(redeliveryReservations, orderRepository, orderItemRepository);
@@ -174,6 +176,7 @@ class DeliveryServiceTest {
         service.recordResult(TRIP_ID, ORDER_ID, request, ACTOR_ID, false);
 
         verify(repository).recordFailure(ORDER_ID);
+        verifyNoInteractions(bottleLedger);
         verify(repository).addAttempt(ASSIGNMENT_ID, 1, request);
         verify(repository, never()).recordSuccess(ORDER_ID, ASSIGNMENT_ID);
         verifyNoInteractions(redeliveryReservations, orderRepository, orderItemRepository);

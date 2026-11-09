@@ -1,4 +1,7 @@
-import { Alert, App, Button, Card, Checkbox, DatePicker, Empty, Form, Input, Radio, Result, Skeleton, Typography } from 'antd'
+import { Alert, App, Button, Card, Checkbox, DatePicker, Empty, Form, Input, InputNumber, Radio, Result, Skeleton, Typography } from 'antd'
+import { useQuery } from '@tanstack/react-query'
+import { deliveryQuoteApi } from './deliveryQuoteApi'
+import { DeliveryFeeSummary } from './components/DeliveryFeeSummary'
 import dayjs, { type Dayjs } from 'dayjs'
 import { ChevronDown, Wallet } from 'lucide-react'
 import { useRef, useState, type KeyboardEvent } from 'react'
@@ -6,14 +9,14 @@ import { Link, useNavigate, useOutletContext } from 'react-router'
 import type { LiveOrder } from '@/features/live/orderApi'
 import { Money } from '@/shared/components/Money'
 import { QueryError } from '@/shared/components/QueryError'
-import { currency } from '@/shared/utils/format'
 import { focusNextOnEnter } from '@/shared/utils/forms'
-import { DEPOSIT_PER_BOTTLE, suggestedDeliveryFee } from '@/shared/policy'
+import { smallOrderFee, stairsSurcharge, suggestedDeliveryFee } from '@/shared/policy'
 import { readProfile, saveProfile, useCart, useCartActions } from './cart'
 import { submitCheckoutOnce } from './checkoutSubmit'
 import { CheckoutReview } from './components/CheckoutReview'
+import { CheckoutDeposit } from './components/CheckoutDeposit'
 import { disabledOutsideHours, formatOpeningHours, isWithinOpeningHours, parseOpeningHours } from './openingHours'
-import { usePlaceWebOrder, useShopContact, useShopFeature, useShopProducts } from './shopService'
+import { usePlaceWebOrder, useShopContact, useShopDemo, useShopProducts } from './shopService'
 import { useAuth } from '@/features/auth/useAuth'
 import { isCustomer } from '@/features/auth/accountAccess'
 import { SavedAddressPicker } from './SavedAddressPicker'
@@ -28,6 +31,7 @@ type CheckoutForm = {
   appointment?: Dayjs
   note?: string
   remember: boolean
+  floor: number
 }
 
 const nextStepHint = 'Sau khi đặt, cửa hàng sẽ xác nhận đơn rồi giao hàng cho bạn.'
@@ -44,8 +48,7 @@ function handleFormKeys(event: KeyboardEvent<HTMLElement>) {
 
 export function CheckoutPage() {
   const { user } = useAuth()
-  const quoteFee = useShopFeature('deliveryQuote')
-  const showDeposit = useShopFeature('bottleLedger')
+  const demo = useShopDemo()
   const cart = useCart()
   const actions = useCartActions()
   const products = useShopProducts()
@@ -55,6 +58,7 @@ export function CheckoutPage() {
   const navigate = useNavigate()
   const { openCart } = useOutletContext<{ openCart: () => void }>()
   const [form] = Form.useForm<CheckoutForm>()
+  const floor: number = Form.useWatch('floor', form) ?? 0
   const [submitError, setSubmitError] = useState<string>()
   const [placedLiveOrder, setPlacedLiveOrder] = useState<LiveOrder>()
   const submitLock = useRef(false)
@@ -70,11 +74,23 @@ export function CheckoutPage() {
   const subtotal = lines.reduce((sum, line) => sum + (line.product?.price ?? 0) * line.quantity, 0)
   const units = lines.reduce((sum, line) => sum + line.quantity, 0)
   const jugs = lines.filter((line) => line.product?.unit === 'Bình').reduce((sum, line) => sum + line.quantity, 0)
-  const fee = quoteFee ? suggestedDeliveryFee({ units, jugs, floor: 0 }) : null
-  const total = subtotal + (fee ?? 0)
-  const depositHint = `Chưa gồm tiền cọc vỏ.${showDeposit && jugs > 0 ? ` Nếu thiếu vỏ để đổi, cọc ${currency(DEPOSIT_PER_BOTTLE)}/vỏ khi nhận hàng.` : ''}`
+
+  const validFloor = Number.isInteger(floor) && floor >= 0 && floor <= 30
+  const quote = useQuery({
+    queryKey: ['shop', 'delivery-quote', cart, floor],
+    queryFn: () => deliveryQuoteApi.quote(cart.map(line => ({ productId: Number(line.productId), quantity: line.quantity })), floor),
+    enabled: !demo && !invalid && cart.length > 0 && validFloor,
+    retry: false,
+    staleTime: 0,
+  })
+  const quoteBlocked = !validFloor || (!demo && (!quote.data || quote.isError || quote.isFetching))
+  const fee = demo ? suggestedDeliveryFee({ units, jugs, floor }) : quoteBlocked ? null : quote.data!.deliveryFee
+  const quotedSubtotal = !demo && !quoteBlocked ? quote.data!.subtotal : subtotal
+  const total = quotedSubtotal + (fee ?? 0)
+
+  const depositHint = <CheckoutDeposit lines={lines} />
   const submit = (values: CheckoutForm) => {
-    if (submitLock.current || mutation.isPending || invalid || !cart.length || products.isError || products.isPending) return
+    if (submitLock.current || mutation.isPending || invalid || quoteBlocked || !cart.length || products.isError || products.isPending) return
     setSubmitError(undefined)
     const draft = {
       customer: values.customer.trim(),
@@ -85,6 +101,8 @@ export function CheckoutPage() {
       appointment: values.when === 'scheduled' ? values.appointment?.toISOString() : undefined,
       note: values.note?.trim(),
       lines: cart,
+      floor: values.floor ?? 0,
+      ...(!demo ? { expectedTotal: quote.data!.total } : {}),
     }
     void submitCheckoutOnce(
       submitLock,
@@ -106,6 +124,7 @@ export function CheckoutPage() {
         else setPlacedLiveOrder(order as LiveOrder)
       },
       (error) => {
+        if (!demo) void quote.refetch()
         setSubmitError(error.message)
         message.error(error.message)
       },
@@ -183,7 +202,7 @@ export function CheckoutPage() {
               <span>{units} sản phẩm</span>
               <Money value={total} tone="due" />
             </summary>
-            <CheckoutReview lines={lines} subtotal={subtotal} fee={fee} depositHint={depositHint} />
+            <CheckoutReview lines={lines} subtotal={quotedSubtotal} fee={fee} depositHint={depositHint} />
             <Button block onClick={openCart}>
               Sửa giỏ hàng
             </Button>
@@ -194,7 +213,7 @@ export function CheckoutPage() {
             name="checkout"
             layout="vertical"
             scrollToFirstError={{ focus: true, block: 'center' }}
-            initialValues={{ ...accountDefaults, ...profile, when: 'asap', remember: Boolean(profile) }}
+            initialValues={{ ...accountDefaults, ...profile, when: 'asap', floor: 0, remember: Boolean(profile) }}
             onFinish={submit}
             onKeyDown={handleFormKeys}
           >
@@ -225,7 +244,7 @@ export function CheckoutPage() {
                 </div>
               </Card>
               <Card title="Giao đến">
-                {isCustomer(user) && !user?.isDemo && <SavedAddressPicker onSelect={address => form.setFieldsValue({ customer: address.recipientName, phone: address.recipientPhone, address: address.addressLine, area: address.area })} />}
+                {(isCustomer(user) || user?.isDemo) && <SavedAddressPicker onSelect={address => form.setFieldsValue({ customer: address.recipientName, phone: address.recipientPhone, address: address.addressLine, area: address.area })} />}
                 <Form.Item
                   name="address"
                   label="Địa chỉ giao"
@@ -233,14 +252,33 @@ export function CheckoutPage() {
                 >
                   <Input.TextArea autoComplete="street-address" rows={2} placeholder="Số nhà, tên đường, tòa nhà, tầng" />
                 </Form.Item>
-                <Form.Item
-                  name="area"
-                  label="Phường/Xã"
-                  extra="Cửa hàng giao trong TP. Hồ Chí Minh."
-                  rules={[{ required: true, whitespace: true, message: 'Chọn phường/xã giao hàng.' }, { max: 150 }]}
-                >
-                  <WardSelect />
-                </Form.Item>
+                <div className="af-checkout-pair">
+                  <Form.Item
+                    name="area"
+                    label="Phường/Xã"
+                    extra="Cửa hàng giao trong TP. Hồ Chí Minh."
+                    rules={[{ required: true, whitespace: true, message: 'Chọn phường/xã giao hàng.' }, { max: 150 }]}
+                  >
+                    <WardSelect />
+                  </Form.Item>
+                  <Form.Item name="floor" label="Số tầng phải đi thang bộ" extra="Nhập 0 nếu giao tầng trệt hoặc có thang máy." rules={[{ required: true }, { type: 'integer', min: 0, max: 30 }]}>
+                    <InputNumber min={0} max={30} precision={0} />
+                  </Form.Item>
+                </div>
+                <DeliveryFeeSummary
+                  fee={fee}
+                  quote={
+                    demo
+                      ? validFloor
+                        ? { subtotal, baseFee: smallOrderFee(units), stairsFee: stairsSurcharge(floor, jugs), deliveryFee: fee ?? 0, total }
+                        : undefined
+                      : !quoteBlocked
+                        ? quote.data
+                        : undefined
+                  }
+                  loading={!demo && quoteBlocked}
+                  error={!demo && quote.isError ? <QueryError error={quote.error} onRetry={quote.refetch} /> : undefined}
+                />
                 <Form.Item name="when" label="Giờ nhận hàng">
                   <Radio.Group
                     options={[
@@ -300,8 +338,8 @@ export function CheckoutPage() {
             </div>
             <aside className="af-checkout-aside">
               <Card title={`Đơn hàng (${units} sản phẩm)`} extra={<Button onClick={openCart}>Sửa</Button>}>
-                <CheckoutReview lines={lines} subtotal={subtotal} fee={fee} depositHint={depositHint} />
-                <Button type="primary" block size="large" htmlType="submit" disabled={invalid} loading={mutation.isPending}>
+                <CheckoutReview lines={lines} subtotal={quotedSubtotal} fee={fee} depositHint={depositHint} />
+                <Button type="primary" block size="large" htmlType="submit" disabled={invalid || quoteBlocked} loading={mutation.isPending}>
                   Đặt đơn
                 </Button>
                 <p className="af-form-hint">{nextStepHint}</p>
@@ -312,7 +350,7 @@ export function CheckoutPage() {
                 <small>{fee === null ? 'Tạm tính' : 'Tổng cộng'}</small>
                 <Money value={total} tone="due" />
               </div>
-              <Button type="primary" size="large" htmlType="submit" disabled={invalid} loading={mutation.isPending}>
+              <Button type="primary" size="large" htmlType="submit" disabled={invalid || quoteBlocked} loading={mutation.isPending}>
                 Đặt đơn
               </Button>
             </div>

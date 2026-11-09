@@ -1,23 +1,41 @@
-import { App, Form, Input, Modal, Select } from 'antd'
-import { currency } from '@/shared/utils/format'
-import { amountDue, jugCount, type Order } from '@/features/orders/types'
-import { drivers, type TripDraft } from '../types'
-import { useTripAction } from '../useTrips'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Alert, App, Form, Input, Modal, Select } from 'antd'
 import { ModalTotalFooter } from '@/shared/components/ModalTotalFooter'
+import { QueryError } from '@/shared/components/QueryError'
+import { currency } from '@/shared/utils/format'
 import { modalWidth } from '@/shared/utils/modal'
+import { useTripBackend, type CreateResult } from '../tripBackend'
+import type { WaitingOrder } from './WaitingOrdersCard'
 
-type CreateTripModalProps = { orders: Order[]; open: boolean; onClose: () => void; onCreated: (tripId: string) => void }
+type Values = { driverId?: number; vehicle?: string }
 
-export function CreateTripModal({ orders, open, onClose, onCreated }: CreateTripModalProps) {
+/** Tạo chuyến rồi thêm lần lượt từng đơn; đơn nào lỗi thì báo lại, các đơn khác vẫn ở trên chuyến. */
+export function CreateTripModal({
+  orders,
+  onClose,
+  onCreated,
+}: {
+  orders: WaitingOrder[]
+  onClose: () => void
+  onCreated: (tripId: number, failed: CreateResult['failed']) => void
+}) {
   const { message } = App.useApp()
-  const [form] = Form.useForm<Omit<TripDraft, 'orderIds'>>()
-  const action = useTripAction()
-  const jugs = orders.reduce((sum, order) => sum + jugCount(order), 0)
-  const due = orders.reduce((sum, order) => sum + amountDue(order), 0)
+  const client = useQueryClient()
+  const backend = useTripBackend()
+  const [form] = Form.useForm<Values>()
+  const drivers = backend.useDrivers()
+  const jugs = orders.reduce((sum, order) => sum + order.jugs, 0)
+  const due = orders.reduce((sum, order) => sum + (order.due ?? 0), 0)
+  const create = useMutation({
+    mutationFn: (values: Values) => backend.ops.create(values, orders),
+    onSuccess: ({ tripId, failed }) => onCreated(tripId, failed),
+    onError: (error: Error) => message.error(error.message),
+    onSettled: () => backend.ops.refresh(client),
+  })
 
   return (
     <Modal
-      open={open}
+      open
       title={`Tạo chuyến giao · ${orders.length} đơn`}
       okText="Tạo chuyến"
       cancelText="Hủy"
@@ -28,33 +46,29 @@ export function CreateTripModal({ orders, open, onClose, onCreated }: CreateTrip
           <OkBtn />
         </ModalTotalFooter>
       )}
-      confirmLoading={action.isPending}
+      confirmLoading={create.isPending}
       onOk={() => form.submit()}
       onCancel={onClose}
-      destroyOnHidden
     >
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={{ driver: drivers[0] }}
-        onFinish={(values) =>
-          action.mutate(
-            { kind: 'create', draft: { ...values, orderIds: orders.map((order) => order.id) } },
-            {
-              onSuccess: (trip) => {
-                message.success(`Đã tạo chuyến ${trip?.id}.`)
-                onClose()
-                if (trip) onCreated(trip.id)
-              },
-              onError: (error) => message.error(error.message),
-            },
-          )
-        }
-      >
-        <Form.Item name="driver" label="Tài xế" rules={[{ required: true, message: 'Chọn tài xế.' }]}>
-          <Select options={drivers.map((driver) => ({ value: driver, label: driver }))} />
+      <Form form={form} layout="vertical" onFinish={(values) => create.mutate(values)}>
+        <Form.Item
+          name="driverId"
+          label="Tài xế"
+          extra={backend.demo ? undefined : 'Có thể phân sau, nhưng phải có tài xế mới xuất kho được.'}
+          rules={backend.demo ? [{ required: true, message: 'Chọn tài xế.' }] : []}
+        >
+          <Select
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            loading={drivers.isPending}
+            placeholder="Chọn tài xế đang hoạt động"
+            options={drivers.data?.map((driver) => ({ value: driver.id, label: driver.name }))}
+          />
         </Form.Item>
-        <Form.Item name="vehicle" label="Biển số xe" rules={[{ max: 20 }]}>
+        {drivers.isError && drivers.error && <QueryError error={drivers.error} onRetry={drivers.refetch} />}
+        {drivers.data && !drivers.data.length && <Alert type="info" title="Chưa có tài xế đang hoạt động." style={{ marginBottom: 16 }} />}
+        <Form.Item name="vehicle" label="Biển số xe" rules={[{ max: 40 }]}>
           <Input placeholder="Không bắt buộc" />
         </Form.Item>
       </Form>
@@ -64,7 +78,7 @@ export function CreateTripModal({ orders, open, onClose, onCreated }: CreateTrip
             <span className="af-trip-stop-index">{index + 1}</span>
             <div className="af-cell-stack">
               <span>
-                {order.id} · {order.customer}
+                {order.code} · {order.customer}
               </span>
               <small>{order.address}</small>
             </div>

@@ -133,11 +133,13 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
       <Button onClick={discard} disabled={save.isPending}>
         Hủy
       </Button>
-      {caps.drafts && (
-        <Button loading={save.isPending && !save.variables?.confirm} disabled={save.isPending} onClick={() => void submit(false)}>
-          Lưu nháp
-        </Button>
-      )}
+      <Button
+        loading={save.isPending && !save.variables?.confirm}
+        disabled={save.isPending || !caps.drafts}
+        onClick={() => void submit(false)}
+      >
+        {caps.drafts ? 'Lưu nháp' : 'Lưu nháp (chưa hỗ trợ)'}
+      </Button>
       <Button
         type="primary"
         loading={save.isPending && save.variables?.confirm}
@@ -187,7 +189,7 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
         >
           <FormSection title="Thông tin kiểm nhận">
             <Row gutter={16}>
-              <Col xs={24} md={caps.receiver ? 10 : 16}>
+              <Col xs={24} md={10}>
                 <Form.Item name="supplierId" label="Nhà cung cấp" rules={[{ required: true, message: 'Chọn nhà cung cấp.' }]}>
                   <Select
                     loading={options.loadingSuppliers}
@@ -197,7 +199,7 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                   />
                 </Form.Item>
               </Col>
-              <Col xs={12} md={caps.receiver ? 6 : 8}>
+              <Col xs={12} md={6}>
                 <Form.Item
                   name="receivedAt"
                   label="Ngày nhận"
@@ -212,17 +214,15 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                   <Input type="date" max={today} />
                 </Form.Item>
               </Col>
-              {caps.receiver && (
-                <Col xs={12} md={8}>
-                  <Form.Item
-                    name="receiver"
-                    label="Người kiểm nhận"
-                    rules={[{ required: true, whitespace: true, message: 'Nhập người kiểm nhận.' }]}
-                  >
-                    <Input />
-                  </Form.Item>
-                </Col>
-              )}
+              <Col xs={12} md={8}>
+                <Form.Item
+                  name="receiver"
+                  label="Người kiểm nhận"
+                  rules={caps.receiver ? [{ required: true, whitespace: true, message: 'Nhập người kiểm nhận.' }] : []}
+                >
+                  <Input disabled={!caps.receiver} placeholder={caps.receiver ? undefined : 'Chưa hỗ trợ'} />
+                </Form.Item>
+              </Col>
             </Row>
           </FormSection>
           <FormSection title="Hàng nhận theo lô">

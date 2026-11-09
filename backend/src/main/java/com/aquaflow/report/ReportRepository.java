@@ -41,7 +41,10 @@ public class ReportRepository {
             COUNT(*) AS "ordersDelivered", COALESCE(SUM(subtotal),0) AS "goods",
             COALESCE(SUM(discount_amount),0) AS "discounts",COALESCE(SUM(delivery_fee),0) AS "deliveryFees",
             (SELECT COALESCE(SUM(amount),0) FROM returns) AS "returnsValue",
-            COALESCE(SUM(subtotal-discount_amount+delivery_fee),0)-(SELECT COALESCE(SUM(amount),0) FROM returns) AS "revenue",
+            COALESCE(SUM(subtotal-discount_amount),0)-(SELECT COALESCE(SUM(amount),0) FROM returns) AS "revenue",
+            ROUND(CASE WHEN COUNT(*)=0 THEN 0 ELSE
+              (COALESCE(SUM(subtotal-discount_amount),0)-(SELECT COALESCE(SUM(amount),0) FROM returns))/COUNT(*) END,2) AS "averageOrderValue",
+            (SELECT COUNT(*) FROM customers c WHERE c.created_at>=:start AND c.created_at<:end) AS "newCustomers",
             (SELECT COALESCE(SUM(amount) FILTER(WHERE direction='IN' AND method='CASH'),0) FROM cash) AS "cashIn",
             (SELECT COALESCE(SUM(amount) FILTER(WHERE direction='IN' AND method='BANK_TRANSFER'),0) FROM cash) AS "transferIn",
             (SELECT COALESCE(SUM(amount) FILTER(WHERE direction='OUT'),0) FROM cash) AS "refunds",
@@ -53,7 +56,7 @@ public class ReportRepository {
     public List<Map<String,Object>> daily(MapSqlParameterSource p) {
         return jdbc.queryForList(ORDERS+"""
           , events AS (
-            SELECT (sold_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AS day, subtotal-discount_amount+delivery_fee AS revenue,0::numeric AS collected,0 AS orders FROM sold
+            SELECT (sold_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AS day, subtotal-discount_amount AS revenue,0::numeric AS collected,0 AS orders FROM sold
             UNION ALL SELECT (created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date,-amount,0,0 FROM returns
             UNION ALL SELECT (confirmed_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date,0,CASE WHEN direction='IN' THEN amount ELSE -amount END,0 FROM cash
             UNION ALL SELECT (created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date,0,0,1 FROM filtered WHERE created_at>=:start AND created_at<:end
@@ -68,7 +71,7 @@ public class ReportRepository {
         return jdbc.queryForList(ORDERS+"""
           SELECT c.channel,
             (SELECT COUNT(*) FROM filtered f WHERE f.channel=c.channel AND f.created_at>=:start AND f.created_at<:end) AS orders,
-            (SELECT COALESCE(SUM(subtotal-discount_amount+delivery_fee),0) FROM sold s WHERE s.channel=c.channel)
+            (SELECT COALESCE(SUM(subtotal-discount_amount),0) FROM sold s WHERE s.channel=c.channel)
               -(SELECT COALESCE(SUM(r.amount),0) FROM returns r JOIN filtered f ON f.id=r.order_id WHERE f.channel=c.channel) AS revenue
           FROM (VALUES ('WEB'),('COUNTER'),('PHONE'),('MESSAGE')) c(channel)
           WHERE (:channel IS NULL OR c.channel=:channel) ORDER BY c.channel
@@ -138,28 +141,43 @@ public class ReportRepository {
             COALESCE(b.on_hand,0)-COALESCE(m.after_period,0)-COALESCE(m.during,0) AS opening,
             COALESCE(m.received,0) AS received,COALESCE(m.restocked,0) AS restocked,COALESCE(m.issued,0) AS issued,
             COALESCE(m.adjustments,0) AS adjustments,COALESCE(b.on_hand,0)-COALESCE(m.after_period,0) AS closing,
-            COALESCE(d.quantity,0) AS damaged,COALESCE(x.quantity,0) AS discarded
+            COALESCE(d.quantity,0) AS damaged,COALESCE(x.quantity,0) AS discarded,
+            cost.unit_cost AS "latestUnitCost",
+            CASE WHEN COALESCE(b.on_hand,0)-COALESCE(m.after_period,0)=0 THEN 0
+              ELSE ROUND((COALESCE(b.on_hand,0)-COALESCE(m.after_period,0))*cost.unit_cost,2) END AS "closingValue"
           FROM products p LEFT JOIN balances b ON b.product_id=p.id LEFT JOIN movement_totals m ON m.product_id=p.id
           LEFT JOIN damaged d ON d.product_id=p.id LEFT JOIN discarded x ON x.product_id=p.id
+          LEFT JOIN LATERAL (
+            SELECT pi.unit_cost FROM purchase_items pi JOIN purchase_receipts pr ON pr.id=pi.receipt_id
+            WHERE pi.product_id=p.id AND pi.quantity_accepted>0 AND pr.status='CONFIRMED' AND pr.confirmed_at<:end
+            ORDER BY pr.confirmed_at DESC,pr.id DESC,pi.id DESC LIMIT 1
+          ) cost ON TRUE
           WHERE b.product_id IS NOT NULL OR m.product_id IS NOT NULL OR d.product_id IS NOT NULL OR x.product_id IS NOT NULL
           """;
         return page(sql,"issued DESC, \"productId\"",p,page,size);
     }
     public Page delivery(MapSqlParameterSource p,int page,int size) {
         String sql=ORDERS+"""
-          , attempts AS (
-            SELECT t.driver_id,COUNT(*) FILTER(WHERE da.outcome='SUCCESS') AS delivered,
+          , ordered_attempts AS (
+            SELECT da.*,a.order_id,t.driver_id,
+              ROW_NUMBER() OVER(PARTITION BY a.order_id ORDER BY da.attempted_at,da.id) AS delivery_number
+            FROM delivery_attempts da JOIN delivery_assignments a ON a.id=da.assignment_id
+            JOIN delivery_trips t ON t.id=a.trip_id
+          ), attempts AS (
+            SELECT da.driver_id,COUNT(*) FILTER(WHERE da.outcome='SUCCESS') AS delivered,
               COUNT(*) FILTER(WHERE da.outcome='FAILED') AS failed,
+              COUNT(*) FILTER(WHERE da.delivery_number>1) AS redelivered,
               COUNT(*) FILTER(WHERE da.outcome='SUCCESS' AND o.requested_delivery_at IS NOT NULL) AS appointed,
               COUNT(*) FILTER(WHERE da.outcome='SUCCESS' AND da.attempted_at>o.requested_delivery_at) AS late
-            FROM delivery_attempts da JOIN delivery_assignments a ON a.id=da.assignment_id JOIN delivery_trips t ON t.id=a.trip_id
-            JOIN filtered o ON o.id=a.order_id WHERE da.attempted_at>=:start AND da.attempted_at<:end GROUP BY t.driver_id
+            FROM ordered_attempts da JOIN filtered o ON o.id=da.order_id
+            WHERE da.attempted_at>=:start AND da.attempted_at<:end GROUP BY da.driver_id
           ), handovers AS (
             SELECT driver_id,COUNT(*) AS trips,SUM(cash_reported) AS reported,SUM(cash_confirmed) AS confirmed
             FROM handover_records WHERE handed_over_at>=:start AND handed_over_at<:end GROUP BY driver_id
           ), ids AS (SELECT driver_id FROM attempts UNION SELECT driver_id FROM handovers)
           SELECT COALESCE(ids.driver_id,0) AS "driverId",COALESCE(u.full_name,'Chưa phân công') AS driver,
             COALESCE(a.delivered,0) AS delivered,COALESCE(a.failed,0) AS failed,COALESCE(a.appointed,0) AS appointed,COALESCE(a.late,0) AS late,
+            COALESCE(a.redelivered,0) AS redelivered,
             COALESCE(h.trips,0) AS "settledTrips",COALESCE(h.reported,0) AS "cashReported",COALESCE(h.confirmed,0) AS "cashConfirmed",
             COALESCE(h.reported-h.confirmed,0) AS "cashDifference"
           FROM ids LEFT JOIN users u ON u.id=ids.driver_id LEFT JOIN attempts a ON a.driver_id IS NOT DISTINCT FROM ids.driver_id
@@ -170,7 +188,7 @@ public class ReportRepository {
     public Page customers(MapSqlParameterSource p,int page,int size) {
         String sql=ORDERS+"""
           , events AS (
-            SELECT id,customer_id,subtotal-discount_amount+delivery_fee AS revenue,1 AS orders FROM sold
+            SELECT id,customer_id,subtotal-discount_amount AS revenue,1 AS orders FROM sold
             UNION ALL SELECT o.id,o.customer_id,-r.amount,0 FROM returns r JOIN filtered o ON o.id=r.order_id
           )
           SELECT CASE WHEN e.customer_id IS NULL THEN 'guest' ELSE e.customer_id::text END AS key,

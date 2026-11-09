@@ -308,7 +308,9 @@ export function ProductsPage() {
       description="Tra cứu theo thương hiệu, loại nước và quy cách đóng gói."
       actions={
         <Space wrap>
-          {canManageBottleTypes && <Button onClick={() => setBottlesOpen(true)}>Loại vỏ bình</Button>}
+          <Button disabled={!canManageBottleTypes} onClick={() => setBottlesOpen(true)}>
+            {canManageBottleTypes ? 'Loại vỏ bình' : 'Loại vỏ bình (chưa hỗ trợ)'}
+          </Button>
           {canManage && (
             <Button type="primary" icon={<Plus size={16} />} onClick={() => setEditing(null)}>
               Thêm sản phẩm

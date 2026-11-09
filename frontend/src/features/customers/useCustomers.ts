@@ -7,7 +7,7 @@ import { orderApi } from '@/features/live/orderApi'
 import { paymentApi } from '@/features/live/paymentApi'
 import { bottleLedgerApi } from '@/features/live/bottleLedgerApi'
 import { customerService } from './customerService'
-import { initialsOf, type BottleAction, type Customer, type CustomerDraft } from './types'
+import { initialsOf, type Customer, type CustomerDraft } from './types'
 import { latest } from './lastOrder'
 
 export const customerKeys = {
@@ -82,12 +82,6 @@ export function useCustomers() {
   })
 }
 
-/** Sổ vỏ chỉ có ở bản dùng thử. */
-export const useBottleLedger = (customerId: string) => {
-  const demo = useIsDemo()
-  return useQuery({ queryKey: customerKeys.ledger(customerId), queryFn: () => customerService.ledger(customerId), enabled: demo })
-}
-
 const useInvalidateCustomers = () => {
   const queryClient = useQueryClient()
   return () => Promise.all([invalidateLiveData(queryClient), queryClient.invalidateQueries({ queryKey: customerKeys.all })])
@@ -135,13 +129,4 @@ export function useArchivedCustomers(enabled: boolean) {
 export function useActivateCustomer() {
   const invalidate = useInvalidateCustomers()
   return useMutation({ mutationFn: customerService.activate, onSuccess: () => void invalidate() })
-}
-
-export function useRecordBottles() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ customerId, action }: { customerId: string; action: BottleAction }) => customerService.recordBottles(customerId, action),
-    // Khóa ['customers'] bao gồm cả sổ vỏ của từng khách.
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: customerKeys.all }),
-  })
 }

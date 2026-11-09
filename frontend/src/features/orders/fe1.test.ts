@@ -18,6 +18,7 @@ describe('FE1 access and API contracts', () => {
       const user = { name: 'Customer', role }
       expect(isStaff(user)).toBe(false)
       expect(isCustomer(user)).toBe(true)
+      expect(accountDestination(user)).toBe('/shop')
       expect(accountDestination(user, '/delivery')).toBe('/shop/orders')
       expect(accountDestination(user, '/shop/orders/12')).toBe('/shop/orders/12')
       expect(accountDestination(user, '//example.com')).toBe('/shop/orders')

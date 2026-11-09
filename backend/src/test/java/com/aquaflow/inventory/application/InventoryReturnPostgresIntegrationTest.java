@@ -79,6 +79,8 @@ class InventoryReturnPostgresIntegrationTest {
         jdbc.update("DELETE FROM inventory_returns WHERE order_id = ?", orderId);
         jdbc.update("DELETE FROM delivery_load_items WHERE order_item_id = ?", itemId);
         jdbc.update("DELETE FROM delivery_attempts WHERE assignment_id IN (SELECT id FROM delivery_assignments WHERE order_id = ?)", orderId);
+        jdbc.update("DELETE FROM delivery_bottle_lines WHERE assignment_id IN (SELECT id FROM delivery_assignments WHERE order_id=?)", orderId);
+        jdbc.update("DELETE FROM delivery_bottle_manifests WHERE assignment_id IN (SELECT id FROM delivery_assignments WHERE order_id=?)", orderId);
         jdbc.update("DELETE FROM delivery_assignments WHERE order_id = ?", orderId);
         if (tripId != null) {
             jdbc.update("DELETE FROM handover_records WHERE trip_id = ?", tripId);

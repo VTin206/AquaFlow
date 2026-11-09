@@ -6,6 +6,7 @@ import { useStaff } from '@/features/auth/useStaff'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 import { useMockSession } from './useAccountMenu'
+import { ErrorBoundary } from '../ErrorBoundary'
 
 // Ghi nhớ sidebar thu gọn giữa các lần mở app.
 const COLLAPSED_KEY = 'aquaflow.sider-collapsed'
@@ -65,7 +66,7 @@ export function AppLayout() {
               </div>
             }
           >
-            <Outlet />
+            <ErrorBoundary key={pathname} homeHref={staff ? homeOf(staff.role) : '/'}><Outlet /></ErrorBoundary>
           </Suspense>
         </Layout.Content>
       </Layout>

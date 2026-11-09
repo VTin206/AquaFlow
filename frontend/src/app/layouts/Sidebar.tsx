@@ -156,7 +156,7 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: Sid
             <strong>Giao hàng:</strong> xếp đơn vào chuyến, chọn tài xế, xuất kho.
           </li>
           <li>
-            <strong>Tài xế:</strong> đăng nhập tài khoản giao hàng trên điện thoại, khởi hành và ghi kết quả từng điểm giao.
+            <strong>Màn hình tài xế:</strong> tài xế khởi hành và ghi kết quả từng điểm giao.
           </li>
           <li>
             <strong>Giao hàng:</strong> đối soát tiền và vỏ khi tài xế về.

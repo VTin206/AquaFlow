@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { App } from 'antd'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { LiveDriverPage } from './LiveDriverPage'
+import { DriverPage } from './DriverPage'
 import type { DeliveryStop, DeliveryTrip, TripCollections } from './deliveryApi'
 
 vi.mock('@/features/auth/useAuth', () => ({ useAuth: () => ({ user: { email: 'driver@test', role: 'DELIVERY_STAFF' } }) }))
@@ -84,7 +84,7 @@ it('chỉ hiện chuyến của tài xế, không có ô chọn tài xế, mỗi
   render(
     <QueryClientProvider client={client}>
       <App>
-        <LiveDriverPage />
+        <DriverPage />
       </App>
     </QueryClientProvider>,
   )

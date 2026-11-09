@@ -54,10 +54,132 @@ class DeliveryPostgresIntegrationTest {
     @Autowired DeliveryService service;
     @Autowired MockMvc mvc;
     @Autowired com.aquaflow.delivery.application.DeliveryAssignmentService assignmentService;
+    @Autowired com.aquaflow.delivery.application.DeliveryBottleService deliveryBottles;
+    @Autowired com.aquaflow.bottle.BottleLedgerService bottleLedger;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
+
+    private long[] bottleCustomer() {
+        long customer=jdbc.queryForObject("INSERT INTO customers(full_name) VALUES ('Bottle delivery customer') RETURNING id",Long.class);
+        long type=jdbc.queryForObject("INSERT INTO bottle_types(name,deposit_unit_amount) VALUES (?,50000) RETURNING id",Long.class,"Delivery-"+UUID.randomUUID());
+        jdbc.update("UPDATE products SET bottle_type_id=? WHERE id=?",type,productId);
+        jdbc.update("UPDATE orders SET customer_id=? WHERE id=?",customer,orderId);
+        return new long[]{customer,type};
+    }
+
+    private com.aquaflow.delivery.application.DeliveryBottleService.ReturnRequest bottleReturn(long type,int quantity) {
+        return new com.aquaflow.delivery.application.DeliveryBottleService.ReturnRequest(UUID.randomUUID(),List.of(new com.aquaflow.delivery.application.DeliveryBottleService.ReturnLine(type,quantity)));
+    }
+
+    @Test void deliveredBottlesUseDepartureSnapshotAndReturnsUpdateLedgerAndSettlementExactlyOnce() throws Exception {
+        var ids=bottleCustomer();
+        long trip=service.create(new CreateTripRequest(driverId,null),ownerId,true).id();
+        long assignment=service.addOrder(trip,new AddOrderRequest(orderId),ownerId,true).orders().getFirst().id();
+        dispatch(trip); service.start(trip,driverId,false);
+        jdbc.update("UPDATE bottle_types SET deposit_unit_amount=99000 WHERE id=?",ids[1]);
+        assertThat(bottleLedger.ledger(ids[0]).balance().bottlesHeld()).isZero();
+        assertThatThrownBy(()->deliveryBottles.receive(assignment,driverId,false,bottleReturn(ids[1],1))).isInstanceOf(com.aquaflow.shared.api.ConflictException.class);
+        service.recordResult(trip,orderId,new DeliveryResultRequest(Outcome.SUCCESS,"Recipient",null,null),driverId,false);
+        assertThat(bottleLedger.ledger(ids[0]).balance().bottlesHeld()).isEqualTo(2);
+        assertThat(bottleLedger.ledger(ids[0]).balance().requiredDeposit()).isEqualByComparingTo("100000");
+        assertThatThrownBy(()->service.recordResult(trip,orderId,new DeliveryResultRequest(Outcome.SUCCESS,"Recipient",null,null),driverId,false)).isInstanceOf(com.aquaflow.shared.api.ConflictException.class);
+        var request=bottleReturn(ids[1],1);
+        deliveryBottles.receive(assignment,driverId,false,request);
+        deliveryBottles.receive(assignment,driverId,false,request);
+        assertThat(bottleLedger.ledger(ids[0]).balance().bottlesHeld()).isEqualTo(1);
+        assertThat(bottleLedger.ledger(ids[0]).balance().requiredDeposit()).isEqualByComparingTo("50000");
+        assertThat(service.collections(trip,driverId,false).bottlesExpected()).isEqualTo(1);
+        assertThat(service.collections(trip,driverId,false).cashExpected()).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM payments WHERE order_id=?",Long.class,orderId)).isZero();
+        assertThat(jdbc.queryForObject("SELECT payment_status FROM orders WHERE id=?",String.class,orderId)).isEqualTo("UNPAID");
+        assertThatThrownBy(()->deliveryBottles.receive(assignment,driverId,false,bottleReturn(ids[1],2))).isInstanceOf(com.aquaflow.shared.api.ConflictException.class);
+        String path="/api/v1/delivery/assignments/"+assignment;
+        mvc.perform(get(path+"/bottles").with(actor(otherDriverId,"DELIVERY_STAFF"))).andExpect(status().isForbidden());
+        mvc.perform(get(path+"/bottles").with(actor(driverId,"DELIVERY_STAFF"))).andExpect(status().isOk()).andExpect(jsonPath("$.lines[0].returned").value(1));
+        mvc.perform(post(path+"/bottle-returns").with(actor(ownerId,"CUSTOMER")).contentType("application/json").content("{}")).andExpect(status().isForbidden());
+        mvc.perform(post(path+"/bottle-returns").with(actor(driverId,"DELIVERY_STAFF")).contentType("application/json").content("{\"requestId\":\""+UUID.randomUUID()+"\",\"lines\":[{\"bottleTypeId\":"+ids[1]+",\"quantity\":-1}]}"))
+            .andExpect(status().isBadRequest());
+        mvc.perform(post(path+"/bottle-returns").with(actor(driverId,"DELIVERY_STAFF")).contentType("application/json").content("{\"requestId\":\""+UUID.randomUUID()+"\",\"lines\":[{\"bottleTypeId\":"+ids[1]+",\"quantity\":1}]}"))
+            .andExpect(status().isCreated()).andExpect(header().string("Location",org.hamcrest.Matchers.startsWith(path+"/bottle-returns/")));
+        mvc.perform(get(path+"/bottle-returns/"+request.requestId()).with(actor(driverId,"DELIVERY_STAFF"))).andExpect(status().isOk()).andExpect(jsonPath("$.lines[0].quantity").value(1));
+        service.settle(trip,new SettleTripRequest(BigDecimal.ZERO,BigDecimal.ZERO,2,2,null),ownerId,true);
+        deliveryBottles.receive(assignment,driverId,false,request); // retry remains safe after settlement
+        assertThat(bottleLedger.ledger(ids[0]).balance().bottlesHeld()).isZero();
+        assertThat(bottleLedger.ledger(ids[0]).balance().depositHeld()).isZero();
+    }
+
+    @Test void bottleReturnRollbackAndConcurrencyProtectCustomerAndTripTotals() throws Exception {
+        var ids=bottleCustomer();
+        long trip=service.create(new CreateTripRequest(driverId,null),ownerId,true).id();
+        long assignment=service.addOrder(trip,new AddOrderRequest(orderId),ownerId,true).orders().getFirst().id();
+        dispatch(trip); service.start(trip,driverId,false);
+        new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(tx->{
+            service.recordResult(trip,orderId,new DeliveryResultRequest(Outcome.SUCCESS,"Recipient",null,null),driverId,false); tx.setRollbackOnly();
+        });
+        assertThat(bottleLedger.ledger(ids[0]).balance().bottlesHeld()).isZero();
+        assertThat(assignmentService.attempts(assignment,driverId,false)).isEmpty();
+        service.recordResult(trip,orderId,new DeliveryResultRequest(Outcome.SUCCESS,"Recipient",null,null),driverId,false);
+        new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(tx->{ deliveryBottles.receive(assignment,driverId,false,bottleReturn(ids[1],1)); tx.setRollbackOnly(); });
+        assertThat(bottleLedger.ledger(ids[0]).balance().bottlesHeld()).isEqualTo(2);
+        assertThat(service.collections(trip,driverId,false).receipts()).isEmpty();
+        var barrier=new java.util.concurrent.CyclicBarrier(2);
+        try(var pool=java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            java.util.concurrent.Callable<Boolean> action=()->{ barrier.await(); try { deliveryBottles.receive(assignment,driverId,false,bottleReturn(ids[1],2)); return true; } catch(com.aquaflow.shared.api.ConflictException e) { return false; } };
+            var a=pool.submit(action); var b=pool.submit(action);
+            assertThat(List.of(a.get(10,java.util.concurrent.TimeUnit.SECONDS),b.get(10,java.util.concurrent.TimeUnit.SECONDS))).containsExactlyInAnyOrder(true,false);
+        }
+        assertThat(bottleLedger.ledger(ids[0]).balance().bottlesHeld()).isZero();
+        assertThat(service.collections(trip,driverId,false).bottlesExpected()).isEqualTo(2);
+    }
+
+    @Test void multipleBottleTypesRemainSeparateAndReplayIgnoresInputOrdering() {
+        var ids=bottleCustomer();
+        long secondType=jdbc.queryForObject("INSERT INTO bottle_types(name,deposit_unit_amount) VALUES (?,70000) RETURNING id",Long.class,"Second-"+UUID.randomUUID());
+        long secondProduct=jdbc.queryForObject("INSERT INTO products(sku,name,unit,sale_price,bottle_type_id) VALUES (?,'Second water','binh',15000,?) RETURNING id",Long.class,UUID.randomUUID().toString(),secondType);
+        long secondBatch=jdbc.queryForObject("INSERT INTO product_batches(product_id,lot_code,expires_on) VALUES (?,?,?) RETURNING id",Long.class,secondProduct,UUID.randomUUID().toString(),LocalDate.now().plusDays(60));
+        long secondItem=jdbc.queryForObject("INSERT INTO order_items(order_id,product_id,quantity,unit_price,line_total) VALUES (?,?,1,15000,15000) RETURNING id",Long.class,orderId,secondProduct);
+        jdbc.update("INSERT INTO inventory_balances(batch_id,on_hand,reserved) VALUES (?,1,1)",secondBatch);
+        jdbc.update("INSERT INTO stock_reservations(order_item_id,batch_id,quantity_reserved) VALUES (?,?,1)",secondItem,secondBatch);
+        long trip=service.create(new CreateTripRequest(driverId,null),ownerId,true).id();
+        long assignment=service.addOrder(trip,new AddOrderRequest(orderId),ownerId,true).orders().getFirst().id();
+        dispatch(trip); service.start(trip,driverId,false);
+        jdbc.update("UPDATE products SET bottle_type_id=? WHERE id=?",ids[1],secondProduct);
+        service.recordResult(trip,orderId,new DeliveryResultRequest(Outcome.SUCCESS,"Recipient",null,null),driverId,false);
+        assertThat(deliveryBottles.view(assignment,driverId,false).lines()).hasSize(2);
+        assertThat(bottleLedger.ledger(ids[0]).balance().requiredDeposit()).isEqualByComparingTo("170000");
+        assertThatThrownBy(()->deliveryBottles.receive(assignment,driverId,false,bottleReturn(secondType,2))).isInstanceOf(com.aquaflow.shared.api.ConflictException.class);
+        assertThatThrownBy(()->deliveryBottles.receive(assignment,driverId,false,bottleReturn(Long.MAX_VALUE,1))).isInstanceOf(com.aquaflow.shared.api.BadRequestException.class);
+        var first=new com.aquaflow.delivery.application.DeliveryBottleService.ReturnLine(ids[1],1);
+        var second=new com.aquaflow.delivery.application.DeliveryBottleService.ReturnLine(secondType,1);
+        var request=new com.aquaflow.delivery.application.DeliveryBottleService.ReturnRequest(UUID.randomUUID(),List.of(first,second));
+        assertThatThrownBy(()->deliveryBottles.receive(assignment,driverId,false,new com.aquaflow.delivery.application.DeliveryBottleService.ReturnRequest(UUID.randomUUID(),List.of(first,first))))
+            .isInstanceOf(com.aquaflow.shared.api.BadRequestException.class);
+        deliveryBottles.receive(assignment,driverId,false,request);
+        deliveryBottles.receive(assignment,driverId,false,new com.aquaflow.delivery.application.DeliveryBottleService.ReturnRequest(request.requestId(),List.of(second,first)));
+        assertThat(bottleLedger.ledger(ids[0]).balance().bottlesHeld()).isEqualTo(1);
+        assertThat(bottleLedger.ledger(ids[0]).balance().requiredDeposit()).isEqualByComparingTo("50000");
+        assertThat(service.collections(trip,driverId,false).bottlesExpected()).isEqualTo(2);
+        assertThat(deliveryBottles.view(assignment,driverId,false).receipts()).hasSize(2);
+        assertThatThrownBy(()->deliveryBottles.receive(assignment,driverId,false,new com.aquaflow.delivery.application.DeliveryBottleService.ReturnRequest(request.requestId(),List.of(first))))
+            .isInstanceOf(com.aquaflow.shared.api.ConflictException.class);
+    }
+
+    @Test void olderTripsAreNotBackfilledAndUntypedReturnsAreRejected() {
+        var ids=bottleCustomer();
+        long trip=service.create(new CreateTripRequest(driverId,null),ownerId,true).id();
+        long assignment=service.addOrder(trip,new AddOrderRequest(orderId),ownerId,true).orders().getFirst().id();
+        dispatch(trip); service.start(trip,driverId,false);
+        jdbc.update("DELETE FROM delivery_bottle_lines WHERE assignment_id=?",assignment);
+        jdbc.update("DELETE FROM delivery_bottle_manifests WHERE assignment_id=?",assignment);
+        service.recordResult(trip,orderId,new DeliveryResultRequest(Outcome.SUCCESS,"Recipient",null,null),driverId,false);
+        assertThat(deliveryBottles.view(assignment,driverId,false).tracked()).isFalse();
+        assertThat(bottleLedger.ledger(ids[0]).entries()).isEmpty();
+        assertThatThrownBy(()->service.collect(trip,orderId,new CollectionRequest(UUID.randomUUID(),BigDecimal.ZERO,"CASH",1),driverId,false)).isInstanceOf(com.aquaflow.shared.api.BadRequestException.class);
+    }
 
     @Test
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     void assignmentRestContractRejectsDuplicateDispatchAndRequiresReturnBeforeRedelivery() throws Exception {
+        var bottleIds=bottleCustomer();
         long trip = service.create(new CreateTripRequest(driverId, null), ownerId, true).id();
         long assignment = service.addOrder(trip, new AddOrderRequest(orderId), ownerId, true).orders().getFirst().id();
         String base = "/api/v1/delivery/assignments/" + assignment;
@@ -104,6 +226,9 @@ class DeliveryPostgresIntegrationTest {
         assertThat(assignmentService.attempts(assignment, driverId, false).getFirst().outcome()).isEqualTo(Outcome.FAILED);
         assertThat(assignmentService.attempts(next, driverId, false)).hasSize(1);
         assertThat(assignmentService.attempts(next, driverId, false).getFirst().outcome()).isEqualTo(Outcome.SUCCESS);
+        assertThat(bottleLedger.ledger(bottleIds[0]).balance().bottlesHeld()).isEqualTo(2);
+        assertThat(bottleLedger.ledger(bottleIds[0]).entries()).hasSize(1);
+        assertThat(deliveryBottles.view(assignment,driverId,false).given()).isFalse();
     }
 
     @Autowired com.aquaflow.inventory.application.InventoryReturnService returns;

@@ -207,11 +207,12 @@ describe('FE1 customer screens and role separation', () => {
           <Route element={<RequireAuth />}>
             <Route path="/orders" element={<div>Staff controls</div>} />
           </Route>
+          <Route path="/shop" element={<div>Shop home</div>} />
           <Route path="/shop/orders" element={<div>Own orders</div>} />
         </Routes>
       </Providers>,
     )
-    expect(await screen.findByText('Own orders')).toBeTruthy()
+    expect(await screen.findByText('Shop home')).toBeTruthy()
     expect(screen.queryByText('Staff controls')).toBeNull()
   })
   it('requires authentication for customer order pages', async () => {
@@ -221,7 +222,7 @@ describe('FE1 customer screens and role separation', () => {
           <Route element={<RequireCustomer />}>
             <Route path="/shop/orders" element={<CustomerOrdersPage />} />
           </Route>
-          <Route path="/login" element={<div>Sign in first</div>} />
+          <Route path="/shop/account" element={<div>Sign in first</div>} />
         </Routes>
       </Providers>,
     )

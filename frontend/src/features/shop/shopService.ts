@@ -3,6 +3,7 @@ import { db } from '@/mocks/db'
 import { mockError, mockRequest } from '@/mocks/mockRequest'
 import { useAuth } from '@/features/auth/useAuth'
 import { isCustomer } from '@/features/auth/accountAccess'
+import { rememberDemoOrder } from './demoCustomerData'
 import { customerOrderApi } from './customerOrderApi'
 import { catalogApi, type CatalogProduct } from '@/features/live/catalogApi'
 import { guestOrderApi, type GuestOrderInput } from '@/features/live/guestOrderApi'
@@ -25,6 +26,7 @@ export type ShopProduct = Pick<Product, 'id' | 'name' | 'brand' | 'unit' | 'pric
   available: boolean | null
   unitsPerCase?: number | null
   bottleTypeName?: string | null
+  bottleTypeId?: number | null
 }
 
 /** Dữ liệu mẫu khi đăng nhập bản dùng thử, hoặc khi dev chọn "xem như khách". */
@@ -59,6 +61,7 @@ export const toShopProduct = (product: CatalogProduct): ShopProduct => ({
   available: product.active ? null : false,
   unitsPerCase: product.unitsPerCase,
   bottleTypeName: product.bottleTypeName,
+  bottleTypeId: product.bottleTypeId,
   image: resolveProductImage(product),
   catalog: inferCatalog(product.name, product.unit),
 })
@@ -98,6 +101,7 @@ export type WebOrderDraft = {
   address: string
   area: string
   floor?: number
+  expectedTotal?: number
   appointment?: string
   note?: string
   lines: { productId: string; quantity: number }[]
@@ -108,6 +112,8 @@ export const toGuestOrderInput = (draft: WebOrderDraft): GuestOrderInput => ({
   recipientPhone: draft.phone,
   deliveryAddress: draft.address,
   deliveryArea: draft.area,
+  ...(draft.floor !== undefined ? { stairFloor: draft.floor } : {}),
+  ...(draft.expectedTotal !== undefined ? { expectedTotal: draft.expectedTotal } : {}),
   items: draft.lines.map((line) => ({ productId: Number(line.productId), quantity: line.quantity })),
   ...(draft.appointment ? { requestedDeliveryAt: draft.appointment } : {}),
   ...(draft.note ? { note: draft.note } : {}),
@@ -137,8 +143,9 @@ export function usePlaceWebOrder() {
       if (isCustomer(user)) return customerOrderApi.create(toGuestOrderInput(draft))
       return guestOrderApi.create(toGuestOrderInput(draft))
     },
-    onSuccess: () => {
+    onSuccess: (order) => {
       if (demo) {
+        if (user?.isDemo) rememberDemoOrder(String(order.id))
         // Làm mới các màn quản lý dùng chung dữ liệu mẫu.
         for (const key of [['orders'], ['customers'], ['products'], ['activity'], shopKeys.products])
           queryClient.invalidateQueries({ queryKey: key })

@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
-import { Alert, App, Button, Collapse, Descriptions, Dropdown, Modal, Popconfirm, Skeleton, Table, Tag, type CollapseProps } from 'antd'
-import { Ellipsis } from 'lucide-react'
+import { Alert, App, Button, Descriptions, Popconfirm, Skeleton, Table, Tag, Timeline, Typography, type CollapseProps, type MenuProps } from 'antd'
+import { Money } from '@/shared/components/Money'
 import { OrderTotals } from '@/shared/components/OrderTotals'
 import { QueryError } from '@/shared/components/QueryError'
+import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 import { currency } from '@/shared/utils/format'
+import { dueTone } from '@/shared/utils/money'
 import { useStaff } from '@/features/auth/useStaff'
 import { tripLabels } from '@/features/delivery/deliveryApi'
 import { catalogApi } from './catalogApi'
@@ -14,17 +16,13 @@ import {
   canPrepare,
   confirmOrderHint,
   orderApi,
-  orderStatusLabels,
   paymentStatusLabels,
   channelLabels,
-  type OrderStatus,
 } from './orderApi'
 import { invalidateLiveData } from './invalidateLiveData'
-import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
 import { canDispatch, canHandover, dispatchApi } from './dispatchApi'
-import { OrderProgress } from '@/features/orders/OrderProgress'
 import { OrderDeliveryHistory } from '@/features/orders/OrderDeliveryHistory'
-import { OrderFocusBanner, OrderLines, OrderParty } from '@/features/orders/components/OrderSheet'
+import { OrderDetailsFrame } from '@/features/orders/components/OrderDetailsFrame'
 import { fromLiveOrder } from '@/features/orders/orderData'
 import { liveOrderFocus } from '@/features/orders/orderFocus'
 import { DeliverySlipDocument, InvoiceDocument } from '@/features/orders/print/OrderDocuments'
@@ -36,16 +34,6 @@ import { LiveOrderPayments } from './LiveOrderPayments'
 import { useOrderPayments } from './paymentApi'
 
 const dateTime = (value: string | null) => (value ? new Date(value).toLocaleString('vi-VN') : '—')
-const statusColors: Record<OrderStatus, string> = {
-  PENDING: 'gold',
-  CONFIRMED: 'blue',
-  PREPARING: 'blue',
-  OUT_FOR_DELIVERY: 'cyan',
-  DELIVERED: 'green',
-  COMPLETED: 'green',
-  CANCELLED: 'default',
-}
-
 /** Màu trạng thái thanh toán theo quy ước tiền: cam còn phải thu, xanh đã thu, đỏ đang hoàn. */
 const paymentTagColors: Record<keyof typeof paymentStatusLabels, string> = {
   UNPAID: 'orange',
@@ -125,35 +113,29 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
   const lastAttempt = trips.data?.at(-1)?.assignment.latestAttempt
   const lastTrip = trips.data?.at(-1)?.trip
 
-  const moreMenu =
-    viewOrder && viewOrder.status !== 'Đã hủy' ? (
-      <Dropdown
-        trigger={['click']}
-        menu={{
-          items: [
-            { key: 'copy', label: 'Sao chép tin nhắn xác nhận', onClick: () => void copyMessage(viewOrder, settings?.storeName) },
-            {
-              key: 'invoice',
-              label: 'In hóa đơn bán lẻ',
-              disabled: !canPrint,
-              onClick: () => printer.print(<InvoiceDocument order={viewOrder} settings={settings} />),
-            },
-            ...(viewOrder.method === 'Giao tận nơi'
-              ? [
-                  {
-                    key: 'slip',
-                    label: 'In phiếu giao hàng',
-                    disabled: !canPrint,
-                    onClick: () => printer.print(<DeliverySlipDocument order={viewOrder} settings={settings} />),
-                  },
-                ]
-              : []),
-          ],
-        }}
-      >
-        <Button icon={<Ellipsis size={16} />}>Thao tác khác</Button>
-      </Dropdown>
-    ) : null
+  const moreItems: MenuProps['items'] =
+    viewOrder && viewOrder.status !== 'Đã hủy'
+      ? [
+          { key: 'copy', label: 'Sao chép tin nhắn xác nhận', onClick: () => void copyMessage(viewOrder, settings?.storeName) },
+          {
+            key: 'invoice',
+            label: 'In hóa đơn bán lẻ',
+            disabled: !canPrint,
+            onClick: () => printer.print(<InvoiceDocument order={viewOrder} settings={settings} />),
+          },
+          ...(viewOrder.method === 'Giao tận nơi'
+            ? [
+                {
+                  key: 'slip',
+                  label: 'In phiếu giao hàng',
+                  disabled: !canPrint,
+                  onClick: () => printer.print(<DeliverySlipDocument order={viewOrder} settings={settings} />),
+                },
+              ]
+            : []),
+          ...(['Đã giao', 'Đã hoàn tất'].includes(viewOrder.status) ? [{ key: 'return', label: 'Nhận trả hàng (chưa hỗ trợ)', disabled: true }] : []),
+        ]
+      : []
 
   const primaryAction =
     order && canManage ? (
@@ -226,6 +208,13 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
     ) : null
 
   const productName = (productId: number) => catalog.data?.find((product) => product.id === productId)?.name ?? `Sản phẩm #${productId}`
+  const historyEvents = order
+    ? [
+        { at: order.createdAt, message: 'Tạo đơn' },
+        ...(order.confirmedAt ? [{ at: order.confirmedAt, message: 'Xác nhận đơn' }] : []),
+        ...(order.cancelledAt ? [{ at: order.cancelledAt, message: 'Hủy đơn' }] : []),
+      ]
+    : []
   const moreSections: CollapseProps['items'] = order
     ? [
         { key: 'payments', label: 'Thanh toán', extra: payments.data ? `Còn phải thu ${currency(payments.data.balance.due)}` : undefined, children: <LiveOrderPayments orderId={id} /> },
@@ -279,6 +268,33 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
           ),
         },
         {
+          key: 'returns',
+          label: 'Hàng trả lại',
+          extra: 'Chưa hỗ trợ',
+          children: <p className="af-order-more-empty">{UNSUPPORTED_HINT}</p>,
+        },
+        {
+          key: 'history',
+          label: 'Lịch sử xử lý',
+          extra: `${historyEvents.length} mốc`,
+          children: (
+            <>
+              <Timeline
+                items={[...historyEvents].reverse().map((event) => ({
+                  key: event.message,
+                  content: (
+                    <>
+                      <div>{event.message}</div>
+                      <Typography.Text type="secondary">{dateTime(event.at)}</Typography.Text>
+                    </>
+                  ),
+                }))}
+              />
+              <p className="af-form-hint">Nhật ký chi tiết từng thao tác: chưa hỗ trợ.</p>
+            </>
+          ),
+        },
+        {
           key: 'info',
           label: 'Thông tin đơn',
           extra: channelLabels[order.channel] ?? order.channel,
@@ -298,81 +314,80 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
       ]
     : []
 
+  const balance = payments.data?.balance
   return (
-    <Modal
-      open
-      width={modalWidth.medium}
-      styles={modalScrollBody}
-      onCancel={onClose}
-      title={
-        <span className="af-order-title">
-          <span>{order ? `Đơn ${order.orderCode}` : 'Chi tiết đơn hàng'}</span>
-          {order && <Tag color={statusColors[order.status]}>{orderStatusLabels[order.status] ?? order.status}</Tag>}
-        </span>
-      }
-      footer={
-        order ? (
-          <div className="af-order-footer">
-            <div>{cancelAction}</div>
-            <div>
-              {moreMenu}
-              {primaryAction}
-            </div>
-          </div>
-        ) : null
-      }
-    >
-      {query.isError ? (
-        <QueryError error={query.error} onRetry={query.refetch} />
-      ) : !order || !viewOrder ? (
-        <Skeleton active />
-      ) : (
-        <>
-          <OrderFocusBanner
-            focus={liveOrderFocus(
+    <OrderDetailsFrame
+      order={order ? viewOrder : undefined}
+      placeholder={query.isError ? <QueryError error={query.error} onRetry={query.refetch} /> : <Skeleton active />}
+      focus={
+        order
+          ? liveOrderFocus(
               order,
               lastAttempt?.outcome === 'FAILED' ? (lastAttempt.failureReason ?? null) : undefined,
               order.fulfillmentType === 'DELIVERY' && trips.isSuccess && !trips.data.length,
-            )}
+            )
+          : undefined
+      }
+      progress={order}
+      notice={
+        catalog.isError && (
+          <Alert
+            type="warning"
+            title="Không tải được tên sản phẩm; đang hiển thị mã định danh."
+            action={<Button onClick={() => void catalog.refetch()}>Thử lại</Button>}
+            style={{ marginBottom: 16 }}
           />
-          {order.status !== 'CANCELLED' && <OrderProgress order={order} showStatus={false} />}
-          {catalog.isError && (
-            <Alert
-              type="warning"
-              title="Không tải được tên sản phẩm; đang hiển thị mã định danh."
-              action={<Button onClick={() => void catalog.refetch()}>Thử lại</Button>}
-              style={{ marginBottom: 16 }}
-            />
-          )}
-          <div className="af-order-sheet">
-            <OrderParty order={viewOrder} />
-            <OrderLines lines={viewOrder.lines}>
-              <OrderTotals
-                wide
-                rows={[
-                  { label: 'Tiền hàng', value: currency(order.subtotal) },
-                  ...(Number(order.discountAmount) > 0 ? [{ label: 'Giảm giá', value: `−${currency(order.discountAmount)}` }] : []),
-                  ...(order.fulfillmentType === 'DELIVERY'
-                    ? [{ label: 'Phí giao', value: Number(order.deliveryFee) > 0 ? currency(order.deliveryFee) : 'Miễn phí' }]
-                    : []),
-                ]}
-                total={{ label: 'Tổng cộng', value: currency(order.total) }}
-                after={
-                  order.status !== 'CANCELLED' && (
-                    <div className="is-status">
-                      <Tag color={paymentTagColors[order.paymentStatus]}>
-                        {paymentStatusLabels[order.paymentStatus] ?? order.paymentStatus}
-                      </Tag>
-                    </div>
-                  )
-                }
-              />
-            </OrderLines>
-          </div>
-          <Collapse ghost className="af-order-more" defaultActiveKey={['payments']} items={moreSections} />
-        </>
-      )}
+        )
+      }
+      sections={moreSections}
+      cancelAction={cancelAction}
+      moreItems={moreItems}
+      actions={primaryAction}
+      onClose={onClose}
+      totals={
+        order && (
+          <OrderTotals
+            wide
+            rows={[
+              { label: 'Tiền hàng', value: currency(order.subtotal) },
+              ...(Number(order.discountAmount) > 0 ? [{ label: 'Giảm giá', value: `−${currency(order.discountAmount)}` }] : []),
+              ...(order.fulfillmentType === 'DELIVERY'
+                ? [{ label: 'Phí giao', value: Number(order.deliveryFee) > 0 ? currency(order.deliveryFee) : 'Miễn phí' }]
+                : []),
+            ]}
+            total={{ label: 'Tổng cộng', value: currency(order.total) }}
+            after={
+              order.status !== 'CANCELLED' && (
+                <>
+                  {balance && (
+                    <>
+                      <div className="is-after-total">
+                        <dt>Đã thu</dt>
+                        <dd>
+                          <Money value={Number(balance.paid)} tone={Number(balance.paid) > 0 ? 'paid' : 'neutral'} />
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Còn phải thu</dt>
+                        <dd>
+                          <strong>
+                            <Money value={Number(balance.due)} tone={dueTone(Number(balance.due))} />
+                          </strong>
+                        </dd>
+                      </div>
+                    </>
+                  )}
+                  <div className="is-status">
+                    <Tag color={paymentTagColors[order.paymentStatus]}>{paymentStatusLabels[order.paymentStatus] ?? order.paymentStatus}</Tag>
+                  </div>
+                </>
+              )
+            }
+          />
+        )
+      }
+    >
       {printer.portal}
-    </Modal>
+    </OrderDetailsFrame>
   )
 }

@@ -29,8 +29,7 @@ const pageRoles: Record<string, RoleCode[]> = {
   '/orders': ['ADMIN', 'SALES_STAFF'],
   '/inventory': ['ADMIN', 'SALES_STAFF'],
   '/delivery': ['ADMIN', 'SALES_STAFF'],
-  // Màn hình tài xế chỉ dành cho tài khoản giao hàng; chủ cửa hàng theo dõi chuyến ở trang Giao hàng.
-  '/driver': ['DELIVERY_STAFF'],
+  '/driver': ['ADMIN', 'DELIVERY_STAFF'],
   '/products': ['ADMIN', 'SALES_STAFF'],
   '/suppliers': ['ADMIN', 'SALES_STAFF'],
   '/customers': ['ADMIN', 'SALES_STAFF'],

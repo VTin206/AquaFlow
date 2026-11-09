@@ -25,7 +25,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
@@ -95,7 +94,7 @@ public class OrderService {
                 null,
                 null,
                 OrderChannel.WEB,
-                FulfillmentType.DELIVERY);
+                FulfillmentType.DELIVERY, request.stairFloor(), request.expectedTotal());
     }
 
     private OrderResponse createOrder(
@@ -115,7 +114,7 @@ public class OrderService {
                 customerId,
                 createdBy,
                 channel,
-                request.fulfillmentType());
+                request.fulfillmentType(), request.stairFloor(), request.expectedTotal());
     }
 
     private OrderResponse createOrder(
@@ -129,7 +128,7 @@ public class OrderService {
             Long customerId,
             Long createdBy,
             OrderChannel channel,
-            FulfillmentType fulfillmentType) {
+            FulfillmentType fulfillmentType, int stairFloor, BigDecimal expectedTotal) {
 
         Order order = new Order(
                 generateOrderCode(),
@@ -143,9 +142,11 @@ public class OrderService {
                 deliveryArea,
                 requestedDeliveryAt,
                 BigDecimal.ZERO,
-                note);
+                channel == OrderChannel.WEB && fulfillmentType == FulfillmentType.DELIVERY
+                        ? (note == null ? "" : note + "\n") + "Số tầng đi thang bộ: " + stairFloor : note);
 
         BigDecimal subtotal = BigDecimal.ZERO;
+        long units = 0, jugs = 0;
         List<OrderItem> items = new java.util.ArrayList<>();
 
         for (OrderItemRequest itemRequest : itemRequests) {
@@ -162,14 +163,20 @@ public class OrderService {
                     itemRequest.quantity(),
                     product.getSalePrice());
 
+            units += itemRequest.quantity();
+            if (DeliveryPricing.isJug(product.getUnit())) jugs += itemRequest.quantity();
             items.add(item);
             subtotal = subtotal.add(item.getLineTotal());
         }
 
+        BigDecimal fee = channel == OrderChannel.WEB && fulfillmentType == FulfillmentType.DELIVERY
+                ? DeliveryPricing.calculate(subtotal, units, jugs, stairFloor).deliveryFee() : BigDecimal.ZERO;
+        if (expectedTotal != null && expectedTotal.compareTo(subtotal.add(fee)) != 0)
+            throw new ConflictException("Giá hoặc phí giao đã thay đổi. Vui lòng tải lại phí giao và kiểm tra tổng tiền.");
         order.updateAmounts(
                 subtotal,
                 BigDecimal.ZERO,
-                BigDecimal.ZERO);
+                fee);
 
         Order savedOrder = orderRepository.save(order);
         orderItemRepository.saveAll(items);
@@ -178,11 +185,7 @@ public class OrderService {
     }
 
     private String generateOrderCode() {
-        return "AF-" + UUID.randomUUID()
-                .toString()
-                .replace("-", "")
-                .substring(0, 20)
-                .toUpperCase(Locale.ROOT);
+        return String.format(Locale.ROOT, "AF-%06d", orderRepository.nextOrderCodeNumber());
     }
 
     public List<OrderResponse> findAll() {

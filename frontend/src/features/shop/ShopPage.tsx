@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button, Card, Col, Empty, Pagination, Row, Skeleton, Tag, Typography, type InputRef } from 'antd'
 import { Droplets, ShoppingCart } from 'lucide-react'
-import { Link, useLocation, useOutletContext } from 'react-router'
+import { Link, useLocation, useOutletContext, useSearchParams } from 'react-router'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { useCartActions, useCart } from './cart'
 import { ShopFilters } from './components/ShopFilters'
 import { ShopIntro } from './components/ShopIntro'
-import { emptyFilters, filterProducts, type ShopFilterState } from './shopGroups'
-import { useShopDemo, useShopContact, useShopFeature, useShopProducts, type ShopProduct } from './shopService'
+import { ALL, filterProducts, type ShopFilterState } from './shopGroups'
+import { useShopDemo, useShopContact, useShopProducts, type ShopProduct } from './shopService'
 
 function ShopImage({ product }: { product: ShopProduct }) {
   const [failed, setFailed] = useState(false)
@@ -21,32 +21,53 @@ function ShopImage({ product }: { product: ShopProduct }) {
   )
 }
 
+function filtersFromParams(params: URLSearchParams): ShopFilterState {
+  return {
+    brand: params.get('brand') || ALL,
+    group: params.get('group') || ALL,
+    category: params.get('category') || ALL,
+    query: params.get('q') || '',
+  }
+}
+
 export function ShopPage() {
   const { openCart } = useOutletContext<{ openCart: () => void }>()
+  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
   const productsQuery = useShopProducts()
   const contact = useShopContact()
   const showPolicy = useShopDemo()
-  const showTracking = useShopFeature('orderTracking')
   const cartActions = useCartActions()
   const cart = useCart()
-  const [filters, setFilters] = useState<ShopFilterState>(emptyFilters)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(12)
+  const filters = filtersFromParams(searchParams)
   // Đổi bộ lọc thì về trang 1 để không rơi vào trang trống.
   const updateFilters = (next: Partial<ShopFilterState>) => {
-    setFilters((current) => ({ ...current, ...next }))
+    const merged = { ...filters, ...next }
+    const params = new URLSearchParams()
+    if (merged.brand !== ALL) params.set('brand', merged.brand)
+    if (merged.group !== ALL) params.set('group', merged.group)
+    if (merged.category !== ALL) params.set('category', merged.category)
+    if (merged.query.trim()) params.set('q', merged.query.trim())
+    setSearchParams(params, { replace: true })
     setPage(1)
   }
   const catalogRef = useRef<HTMLElement>(null)
   const searchRef = useRef<InputRef>(null)
   const goToCatalog = () => catalogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   // Nút kính lúp trên đầu trang: cuộn tới danh mục và đặt con trỏ vào ô tìm kiếm.
-  const focusSearch = (useLocation().state as { focusSearch?: number } | null)?.focusSearch
+  const focusSearch = (location.state as { focusSearch?: number } | null)?.focusSearch
   useEffect(() => {
     if (!focusSearch) return
     catalogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     searchRef.current?.focus({ preventScroll: true })
   }, [focusSearch])
+
+  useEffect(() => {
+    if (location.hash !== '#products' || focusSearch) return
+    requestAnimationFrame(() => catalogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }, [location.hash, location.search, focusSearch])
 
   useEffect(() => {
     document.title = `Đặt nước | ${contact?.storeName ?? 'AquaFlow'}`
@@ -61,20 +82,19 @@ export function ShopPage() {
     <div className="af-shop-page">
       <ShopIntro
         showPolicy={showPolicy}
-        showTracking={showTracking}
         storeName={contact?.storeName}
         phone={contact?.phone}
         products={products}
         onShop={goToCatalog}
       />
 
-      <section ref={catalogRef} className="af-shop-catalog" aria-labelledby="af-shop-catalog-title">
+      <section id="products" ref={catalogRef} className="af-shop-catalog" aria-labelledby="af-shop-catalog-title">
         <div className="af-shop-hero">
           <div>
             <Typography.Title level={2} id="af-shop-catalog-title">
-              Sản phẩm
+              Nước uống
             </Typography.Title>
-            <p>Chọn sản phẩm và đặt hàng không cần tài khoản.</p>
+            <p>Chọn nước uống và đặt hàng không cần tài khoản.</p>
           </div>
         </div>
 

@@ -1,16 +1,61 @@
 import { useState } from 'react'
-import { Alert, Badge, Button, Dropdown } from 'antd'
+import { Badge, Button, Dropdown } from 'antd'
 import { ArrowLeft, ChevronDown, Clock3, PackageSearch, Phone, Search, ShoppingCart, Waves } from 'lucide-react'
-import { Link, Outlet, useLocation, useNavigate } from 'react-router'
-import { useAuth } from '@/features/auth/useAuth'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
+import { ErrorBoundary } from '@/app/ErrorBoundary'
 import { useCart } from './cart'
 import { AccountMenu } from './components/AccountMenu'
 import { CartDrawer } from './components/CartDrawer'
 import { UkFlag, VietnamFlag } from './components/Flags'
 import { ShopFooter } from './components/ShopFooter'
-import { shopKeys, useShopContact, useShopDemo, useShopFeature } from './shopService'
+import { shopKeys, useShopContact, useShopDemo } from './shopService'
 import { useHomeLink, type FreshState } from '@/app/useHomeLink'
 import './shop.css'
+
+type DrinkMenuFilter = { brand?: string; group?: string; category?: string }
+type DrinkMenuItem = { label: string; filter: DrinkMenuFilter }
+
+const drinkMenuColumns: { title: string; items: DrinkMenuItem[] }[] = [
+  {
+    title: 'THƯƠNG HIỆU',
+    items: [
+      { label: 'Nước Vĩnh Hảo', filter: { brand: 'Vĩnh Hảo' } },
+      { label: 'Nước Lavie', filter: { brand: 'LaVie' } },
+      { label: 'Nước Bidrico', filter: { brand: 'Bidrico' } },
+      { label: 'Nước Ion Life', filter: { brand: 'ion Life' } },
+      { label: 'Nước Aquafina', filter: { brand: 'Aquafina' } },
+      { label: 'Nước Satori', filter: { brand: 'Satori' } },
+      { label: 'Nước Viva', filter: { brand: 'LaVie' } },
+      { label: 'M-Water', filter: { brand: 'M-Water' } },
+      { label: 'AQUA Water', filter: { brand: 'AQUA Water' } },
+    ],
+  },
+  {
+    title: 'NƯỚC UỐNG ĐÓNG BÌNH',
+    items: [
+      { label: 'Bình nước 19L – 20L vòi bấm', filter: { group: 'jug-tap' } },
+      { label: 'Bình nước 19L – 20L úp máy', filter: { group: 'jug-dispenser' } },
+      { label: 'Bình nước 4,5L – 5L', filter: { group: 'can-5l' } },
+      { label: 'Nước uống bổ sung khoáng', filter: { category: 'Bù khoáng & điện giải' } },
+    ],
+  },
+  {
+    title: 'NƯỚC SUỐI ĐÓNG CHAI',
+    items: [
+      { label: 'Chai nhỏ 250ml – 350ml', filter: { group: 'small-350' } },
+      { label: 'Thùng chai suối 350ml', filter: { group: 'small-350' } },
+      { label: 'Thùng chai suối 500ml', filter: { group: 'small-500' } },
+      { label: 'Thùng chai suối Aquafina', filter: { brand: 'Aquafina' } },
+      { label: 'Thùng chai suối Lavie', filter: { brand: 'LaVie' } },
+      { label: 'Thùng chai suối Viva', filter: { brand: 'LaVie' } },
+    ],
+  },
+]
+
+const drinkMenuHref = (filter: DrinkMenuFilter) => {
+  const params = new URLSearchParams(filter)
+  return `/shop?${params.toString()}#products`
+}
 
 /**
  * Khung trang công khai cho khách, cũng là trang chủ khi chưa đăng nhập.
@@ -19,9 +64,7 @@ import './shop.css'
 export function ShopLayout() {
   // Chỉ dùng cho nhãn báo đang xem dữ liệu mẫu.
   const demo = useShopDemo()
-  const showTracking = useShopFeature('orderTracking')
   const settings = useShopContact()
-  const { demoGuest, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const goHome = useHomeLink('/shop', shopKeys.products)
@@ -82,6 +125,35 @@ export function ShopLayout() {
             </span>
             <strong>AquaFlow</strong>
           </Link>
+          <nav className="af-shop-nav" aria-label="Điều hướng cửa hàng">
+            <NavLink to="/shop" end className={({ isActive }) => `af-shop-nav-link${isActive ? ' is-active' : ''}`}>
+              Trang chủ
+            </NavLink>
+            <div className="af-shop-nav-menu">
+              <Link to="/shop#products" className="af-shop-nav-link" aria-haspopup="true">
+                Nước uống
+              </Link>
+              <div className="af-shop-mega" role="menu" aria-label="Danh mục nước uống">
+                {drinkMenuColumns.map((column) => (
+                  <section key={column.title} className="af-shop-mega-column">
+                    <strong>{column.title}</strong>
+                    <ul>
+                      {column.items.map((item) => (
+                        <li key={item.label}>
+                          <Link to={drinkMenuHref(item.filter)} role="menuitem">
+                            {item.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+              </div>
+            </div>
+            <NavLink to="/track" className={({ isActive }) => `af-shop-nav-link${isActive ? ' is-active' : ''}`}>
+              Tra cứu đơn
+            </NavLink>
+          </nav>
           <div className="af-shop-icons">
             <Button
               type="text"
@@ -91,16 +163,14 @@ export function ShopLayout() {
               title="Tìm sản phẩm"
               onClick={() => navigate('/shop', { state: { focusSearch: Date.now() } })}
             />
-            {showTracking && (
-              <Button
-                type="text"
-                shape="circle"
-                icon={<PackageSearch size={24} />}
-                aria-label="Tra cứu đơn"
-                title="Tra cứu đơn"
-                onClick={() => navigate('/track')}
-              />
-            )}
+            <Button
+              type="text"
+              shape="circle"
+              icon={<PackageSearch size={24} />}
+              aria-label="Tra cứu đơn"
+              title="Tra cứu đơn"
+              onClick={() => navigate('/track')}
+            />
             <AccountMenu />
           </div>
           <Badge count={count} size="small" offset={[-4, 4]}>
@@ -117,31 +187,14 @@ export function ShopLayout() {
         </div>
       </header>
       <main className="af-shop-main">
-        {demo && (
-          <Alert
-            type="warning"
-            showIcon
-            title={
-              demoGuest
-                ? 'Đang xem như khách — dữ liệu mẫu, không gửi đơn tới cửa hàng'
-                : 'Bản dùng thử — dữ liệu mẫu, không gửi đơn tới cửa hàng'
-            }
-            action={
-              demoGuest ? (
-                <Button size="small" onClick={logout}>
-                  Thoát
-                </Button>
-              ) : undefined
-            }
-            style={{ marginBottom: 16 }}
-          />
-        )}
         {location.pathname !== '/shop' && (
           <Button type="link" className="af-shop-back" icon={<ArrowLeft size={16} />} onClick={goBack}>
             Quay lại
           </Button>
         )}
-        <Outlet key={fresh ?? 'page'} context={{ openCart: () => setCartOpen(true) }} />
+        <ErrorBoundary key={location.pathname} homeHref="/shop">
+          <Outlet key={fresh ?? 'page'} context={{ openCart: () => setCartOpen(true) }} />
+        </ErrorBoundary>
       </main>
       <ShopFooter demo={demo} contact={settings} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
