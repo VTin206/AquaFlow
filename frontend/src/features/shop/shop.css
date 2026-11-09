@@ -504,6 +504,7 @@
 .af-shop-banner-art {
   position: relative;
   height: 260px;
+  overflow: visible;
 }
 .af-shop-bubble {
   position: absolute;
@@ -2004,6 +2005,11 @@
   z-index: 1;
   min-height: 260px;
 }
+.af-shop-product-carousel .slick-list {
+  overflow: visible;
+  margin: -12px -8px;
+  padding: 12px 8px;
+}
 .af-shop-product-slide {
   position: relative;
   display: grid;
@@ -2024,6 +2030,7 @@
   opacity: 0;
   transform: translateX(28px) scale(0.74);
   will-change: transform, opacity;
+  transform-origin: center;
 }
 .af-shop-product-carousel .slick-active .af-shop-product-item {
   animation: af-shop-product-focus 3.8s cubic-bezier(0.22, 0.8, 0.28, 1) both;
@@ -2031,11 +2038,11 @@
 @keyframes af-shop-product-focus {
   0% {
     opacity: 0;
-    transform: translateX(28px) scale(0.74);
+    transform: translateX(16px) scale(0.78);
   }
   16% {
     opacity: 1;
-    transform: translateX(0) scale(1.08);
+    transform: translateX(0) scale(1.04);
   }
   58% {
     opacity: 1;
@@ -2043,7 +2050,7 @@
   }
   100% {
     opacity: 0.42;
-    transform: translateX(-22px) scale(0.84);
+    transform: translateX(-16px) scale(0.88);
   }
 }
 .af-shop-product-carousel .slick-arrow {
