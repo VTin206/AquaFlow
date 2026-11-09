@@ -439,8 +439,20 @@ export function CustomersPage() {
         onSaved={(customer) => editing === null && setProfileId(customer.id)}
       />
       {orderFor && <OrderIntakeModal key={orderFor.id} defaultCustomer={orderFor} onClose={() => setOrderFor(null)} />}
-      {live && <LiveReceivables />}
-      {live && <LiveBottleOverview />}
+      {live ? (
+        <LiveReceivables />
+      ) : (
+        <Card size="small" title="Công nợ và tiền cần hoàn" style={{ marginBottom: 16 }}>
+          <span className="af-text-muted">Chưa hỗ trợ trong bản dùng thử</span>
+        </Card>
+      )}
+      {live ? (
+        <LiveBottleOverview />
+      ) : (
+        <Card size="small" title="Quản lý vỏ bình / tiền cọc">
+          <span className="af-text-muted">Chưa hỗ trợ trong bản dùng thử</span>
+        </Card>
+      )}
     </Page>
   )
 }

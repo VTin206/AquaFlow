@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Unsupported } from '@/shared/components/Unsupported'
 import { App, Button, Modal, Popconfirm, Segmented, Space, Table, Tag, Tooltip, Typography } from 'antd'
 import { Pencil } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
@@ -49,20 +50,18 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
 
   return (
     <>
-      {caps.drafts && (
-        <div className="af-toolbar">
-          <Segmented<ReceiptFilter>
-            value={filter}
-            onChange={setFilter}
-            options={[
-              { value: 'all', label: <CountLabel label="Tất cả" count={receipts.length} /> },
-              { value: 'DRAFT', label: <CountLabel label="Nháp" count={count('DRAFT')} urgent tone="warning" /> },
-              { value: 'CONFIRMED', label: <CountLabel label="Đã nhập kho" count={count('CONFIRMED')} tone="success" /> },
-              { value: 'CANCELLED', label: <CountLabel label="Đã hủy" count={count('CANCELLED')} tone="danger" /> },
-            ]}
-          />
-        </div>
-      )}
+      <div className="af-toolbar">
+        <Segmented<ReceiptFilter>
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { value: 'all', label: <CountLabel label="Tất cả" count={receipts.length} /> },
+            { value: 'DRAFT', label: <CountLabel label="Nháp" count={count('DRAFT')} urgent tone="warning" /> },
+            { value: 'CONFIRMED', label: <CountLabel label="Đã nhập kho" count={count('CONFIRMED')} tone="success" /> },
+            { value: 'CANCELLED', label: <CountLabel label="Đã hủy" count={count('CANCELLED')} tone="danger" /> },
+          ]}
+        />
+      </div>
       <Table<ReceiptView>
         key={filter}
         className="af-data-table af-table-flush"
@@ -71,7 +70,7 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
         loading={receiptsQuery.isPending}
         dataSource={visible}
         pagination={tablePagination}
-        scroll={{ x: 960, y: tableScrollHeight }}
+        scroll={{ x: 1090, y: tableScrollHeight }}
         locale={{ emptyText: receipts.length ? 'Không có phiếu phù hợp.' : 'Chưa có phiếu nhập.' }}
         expandable={{
           expandedRowRender: (receipt) => (
@@ -105,16 +104,12 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
           { title: 'Ngày nhận', dataIndex: 'receivedAt', width: 120, render: isoToVnDate },
           { title: 'Nhà cung cấp', dataIndex: 'supplierName', ellipsis: true },
           { title: 'Số dòng', key: 'lines', width: 90, align: 'right', render: (_, receipt) => receipt.lines.length },
-          ...(caps.drafts
-            ? [
-                {
-                  title: 'Trạng thái',
-                  dataIndex: 'status',
-                  width: 120,
-                  render: (status: ReceiptStatus) => <Tag color={statusTags[status].color}>{statusTags[status].label}</Tag>,
-                },
-              ]
-            : []),
+          {
+            title: 'Trạng thái',
+            dataIndex: 'status',
+            width: 120,
+            render: (status: ReceiptStatus) => <Tag color={statusTags[status].color}>{statusTags[status].label}</Tag>,
+          },
           {
             title: 'Kiểm nhận',
             key: 'check',
@@ -137,7 +132,12 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
             align: 'right',
             render: (total: number) => <span className="af-money">{currency(total)}</span>,
           },
-          ...(caps.receiver ? [{ title: 'Người nhận', dataIndex: 'receiver', width: 130 }] : []),
+          {
+            title: 'Người nhận',
+            dataIndex: 'receiver',
+            width: 130,
+            render: (receiver?: string) => (caps.receiver ? receiver : <Unsupported />),
+          },
           ...(caps.drafts
             ? [
                 {

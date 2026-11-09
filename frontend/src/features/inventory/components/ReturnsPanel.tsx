@@ -1,12 +1,12 @@
 import { useIsDemo } from '@/shared/features'
 import { LiveReturnsPanel } from './LiveReturnsPanel'
 import { useState } from 'react'
-import { App, Alert, Button, Empty, Form, Input, InputNumber, Modal, Table, Tag, Typography } from 'antd'
-import { PackageCheck } from 'lucide-react'
+import { App, Form, Input, InputNumber, Modal, Table, Tag, Typography } from 'antd'
 import { awaitingReturnInspection, deliveryAttempts, returnLinesOf, type Order, type ReturnInspectionDraft } from '@/features/orders/types'
 import { useOrderAction, useOrders } from '@/features/orders/useOrders'
 import { isoToVnDate } from '../expiry'
 import { modalWidth } from '@/shared/utils/modal'
+import { ReturnsView, type ReturnHistoryRow } from './ReturnsView'
 
 /** Đơn giao thất bại có hàng mang về: kiểm từng lô trước khi nhập lại kho. */
 export function ReturnsPanel() {
@@ -16,70 +16,46 @@ export function ReturnsPanel() {
 function DemoReturnsPanel() {
   const ordersQuery = useOrders()
   const [orderId, setOrderId] = useState<string | null>(null)
-  const pending = (ordersQuery.data ?? []).filter(awaitingReturnInspection)
+  const orders = ordersQuery.data ?? []
+  const pending = orders.filter(awaitingReturnInspection)
   const order = pending.find((item) => item.id === orderId)
+  const history = orders.flatMap((item) =>
+    (item.returnInspections ?? []).map((inspection, index): ReturnHistoryRow => ({
+      id: `${item.id}-${index + 1}`,
+      orderCode: item.code ?? item.id,
+      createdAt: inspection.at,
+      note: inspection.note,
+      lines: inspection.lines.map((line, lineIndex) => ({
+        key: `${line.productId}-${lineIndex}`,
+        productName: line.name,
+        lotCode: line.lotCode,
+        quantity: line.quantity,
+        sellable: line.sellable,
+      })),
+    })),
+  )
 
   return (
-    <>
-      <Alert
-        type="info"
-        showIcon
-        className="af-panel-alert"
-        title="Hàng giao thất bại không tự cộng lại vào kho."
-        description="Kiểm từng lô mang về: phần còn bán được nhập lại kho (RETURN), phần hỏng loại bỏ. Xong mới giao lại hoặc hủy đơn."
-      />
-      <Table<Order>
-        className="af-data-table af-table-flush"
-        size="middle"
-        rowKey="id"
-        loading={ordersQuery.isPending}
-        dataSource={pending}
-        pagination={false}
-        scroll={{ x: 760 }}
-        locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có hàng hoàn chờ kiểm." /> }}
-        columns={[
-          {
-            title: 'Đơn',
-            dataIndex: 'id',
-            width: 150,
-            render: (id: string, item) => (
-              <div className="af-cell-stack">
-                <span className="af-strong">{id}</span>
-                <small>{item.customer}</small>
-              </div>
-            ),
-          },
-          {
-            title: 'Lý do giao thất bại',
-            key: 'reason',
-            ellipsis: true,
-            render: (_, item) =>
-              deliveryAttempts(item)
-                .filter((attempt) => !attempt.success)
-                .at(-1)?.reason ?? '—',
-          },
-          {
-            title: 'Hàng mang về',
-            key: 'lines',
-            render: (_, item) =>
-              returnLinesOf(item)
-                .map((line) => `${line.quantity} ${line.unit.toLowerCase()} ${line.name}`)
-                .join(', '),
-          },
-          {
-            title: 'Thao tác',
-            key: 'action',
-            width: 130,
-            render: (_, item) => (
-              <Button size="small" type="primary" icon={<PackageCheck size={15} />} onClick={() => setOrderId(item.id)}>
-                Kiểm hàng
-              </Button>
-            ),
-          },
-        ]}
-      />
+    <ReturnsView
+      pending={pending.map((item) => ({
+        key: item.id,
+        orderCode: item.code ?? item.id,
+        recipient: item.customer,
+        reason:
+          deliveryAttempts(item)
+            .filter((attempt) => !attempt.success)
+            .at(-1)?.reason ?? null,
+        goods: returnLinesOf(item)
+          .map((line) => `${line.quantity} × ${line.name}`)
+          .join(', '),
+      }))}
+      pendingLoading={ordersQuery.isPending}
+      onInspect={(row) => setOrderId(String(row.key))}
+      history={history}
+      historyLoading={ordersQuery.isPending}
+    >
       {order && <ReturnInspectionModal key={order.id} order={order} onClose={() => setOrderId(null)} />}
-    </>
+    </ReturnsView>
   )
 }
 

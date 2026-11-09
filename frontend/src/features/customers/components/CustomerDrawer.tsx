@@ -122,11 +122,14 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
       ) : (
         'Chưa có địa chỉ giao'
       )}
-      {canManageAddresses && (
-        <Button size="small" style={{ alignSelf: 'flex-start', marginTop: 4 }} onClick={() => setManagingAddresses(true)}>
-          Quản lý địa chỉ
-        </Button>
-      )}
+      <Button
+        size="small"
+        style={{ alignSelf: 'flex-start', marginTop: 4 }}
+        disabled={!canManageAddresses}
+        onClick={() => setManagingAddresses(true)}
+      >
+        {canManageAddresses ? 'Quản lý địa chỉ' : 'Quản lý địa chỉ (chưa hỗ trợ)'}
+      </Button>
     </div>
   )
 

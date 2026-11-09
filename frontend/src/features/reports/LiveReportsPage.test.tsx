@@ -10,7 +10,7 @@ import { reportApi, type LiveReport } from './reportApi'
 const auth = vi.hoisted(() => ({ role: 'ADMIN' }))
 vi.mock('@/features/auth/useStaff', () => ({ useStaff: () => ({ role: auth.role }) }))
 vi.mock('./reportApi', async original => ({ ...(await original<typeof import('./reportApi')>()), reportApi: { summary: vi.fn(), section: vi.fn() } }))
-vi.mock('./charts', () => ({ RevenueChart: () => null }))
+vi.mock('./charts', () => ({ RevenueChart: () => null, TopProductsChart: () => null, DriverDeliveryChart: () => null }))
 vi.mock('antd', async original => {
   const actual = await original<typeof import('antd')>()
   return { ...actual, DatePicker: { RangePicker: ({ onChange }: { onChange: (dates: ReturnType<typeof dayjs>[]) => void }) => <>

@@ -121,7 +121,7 @@ export function RevenueChart({ data }: { data: RevenueBucket[] }) {
 const TOP_PRODUCTS = 8
 
 /** Top sản phẩm theo doanh thu, thanh ngang để tên dài vẫn đọc được. */
-export function TopProductsChart({ rows }: { rows: ProductReportRow[] }) {
+export function TopProductsChart({ rows }: { rows: Pick<ProductReportRow, 'name' | 'unit' | 'sold' | 'revenue'>[] }) {
   // Màn hẹp thu cột tên lại để thanh còn đủ dài mà so.
   const wide = Grid.useBreakpoint().md !== false
   const data = rows
@@ -184,7 +184,7 @@ const deliverySeries = [
 type DriverBar = { driver: string; onTime: number; late: number; failed: number }
 
 /** Lượt giao của từng tài xế: đúng hẹn + trễ hẹn = giao thành công, cộng thêm lần thất bại. */
-export function DriverDeliveryChart({ rows }: { rows: DriverReportRow[] }) {
+export function DriverDeliveryChart({ rows }: { rows: Pick<DriverReportRow, 'driver' | 'delivered' | 'late' | 'failed'>[] }) {
   const wide = Grid.useBreakpoint().md !== false
   const data: DriverBar[] = rows.map((row) => ({
     driver: row.driver,
