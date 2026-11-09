@@ -2581,6 +2581,13 @@ body {
   border-color: var(--af-primary);
   box-shadow: 0 0 0 3px var(--af-primary-soft);
 }
+/* Giữ sẵn chỗ cho thanh cuộn để mở rộng nội dung không làm cả trang hẹp lại; AntD tự thu body khi mở popup nên phải chặn lại. */
+html:has(.af-shell) {
+  scrollbar-gutter: stable;
+}
+html:has(.af-shell) body {
+  width: 100% !important;
+}
 .af-shell .ant-table-wrapper {
   overflow: hidden;
   border: 1px solid var(--af-border);

@@ -5,7 +5,7 @@ import { Pencil } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
-import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
+import { tablePagination } from '@/shared/utils/table'
 import { isoToVnDate } from '../expiry'
 import {
   useInventoryCaps,
@@ -70,7 +70,7 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
         loading={receiptsQuery.isPending}
         dataSource={visible}
         pagination={tablePagination}
-        scroll={{ x: 1090, y: tableScrollHeight }}
+        scroll={{ x: caps.drafts ? 1170 : 970 }}
         locale={{ emptyText: receipts.length ? 'Không có phiếu phù hợp.' : 'Chưa có phiếu nhập.' }}
         expandable={{
           expandedRowRender: (receipt) => (
@@ -100,20 +100,20 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
           ),
         }}
         columns={[
-          { title: 'Phiếu', dataIndex: 'code', width: 110, render: (code: string) => <strong>{code}</strong> },
-          { title: 'Ngày nhận', dataIndex: 'receivedAt', width: 120, render: isoToVnDate },
+          { title: 'Phiếu', dataIndex: 'code', width: 105, render: (code: string) => <strong>{code}</strong> },
+          { title: 'Ngày nhận', dataIndex: 'receivedAt', width: 115, render: isoToVnDate },
           { title: 'Nhà cung cấp', dataIndex: 'supplierName', ellipsis: true },
-          { title: 'Số dòng', key: 'lines', width: 90, align: 'right', render: (_, receipt) => receipt.lines.length },
+          { title: 'Số dòng', key: 'lines', width: 80, align: 'right', render: (_, receipt) => receipt.lines.length },
           {
             title: 'Trạng thái',
             dataIndex: 'status',
-            width: 120,
+            width: 125,
             render: (status: ReceiptStatus) => <Tag color={statusTags[status].color}>{statusTags[status].label}</Tag>,
           },
           {
             title: 'Kiểm nhận',
             key: 'check',
-            width: 130,
+            width: 115,
             render: (_, receipt) => {
               const damaged = receipt.lines.reduce((sum, line) => sum + line.damaged, 0)
               return damaged ? (
@@ -128,14 +128,14 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
           {
             title: 'Giá trị nhập',
             dataIndex: 'total',
-            width: 140,
+            width: 145,
             align: 'right',
             render: (total: number) => <span className="af-money">{currency(total)}</span>,
           },
           {
             title: 'Người nhận',
             dataIndex: 'receiver',
-            width: 130,
+            width: 105,
             render: (receiver?: string) => (caps.receiver ? receiver : <Unsupported />),
           },
           ...(caps.drafts
@@ -143,7 +143,7 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
                 {
                   title: 'Thao tác',
                   key: 'actions',
-                  width: 250,
+                  width: 200,
                   render: (_: unknown, receipt: ReceiptView) =>
                     receipt.status === 'DRAFT' && (
                       <Space size={4} wrap>
