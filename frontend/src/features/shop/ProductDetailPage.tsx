@@ -80,6 +80,7 @@ export function ProductDetailPage() {
                 />
               </Space.Compact>
               <Button
+                type="primary"
                 size="large"
                 icon={<ShoppingCart size={17} />}
                 disabled={product.available === false}

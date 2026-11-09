@@ -110,7 +110,7 @@ export function DrinksPage() {
                         <small> / {product.unit.toLowerCase()}</small>
                       </span>
                       <Button
-                        type={inCart ? 'default' : 'primary'}
+                        type="primary"
                         icon={<ShoppingCart size={15} />}
                         disabled={product.available === false}
                         onClick={() => {
