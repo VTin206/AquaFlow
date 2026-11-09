@@ -1626,15 +1626,18 @@
   color: var(--shop-cta-strong);
   font-family: 'Rubik', sans-serif;
 }
-.af-shop-card .ant-btn-primary {
-  border-color: var(--shop-cta);
-  background: var(--shop-cta);
-  box-shadow: 0 6px 14px rgba(249, 115, 22, 0.22);
+.af-shop-add-button.ant-btn-primary {
+  border-color: var(--shop-line);
+  background: #fff;
+  color: var(--shop-primary-strong);
+  box-shadow: 0 6px 14px rgba(30, 41, 59, 0.08);
 }
-.af-shop-card .ant-btn-primary:hover,
-.af-shop-card .ant-btn-primary:focus-visible {
-  border-color: var(--shop-cta-strong);
-  background: var(--shop-cta-strong);
+.af-shop-add-button.ant-btn-primary:hover,
+.af-shop-add-button.ant-btn-primary:focus-visible {
+  border-color: var(--shop-primary);
+  background: #eff6ff;
+  color: var(--shop-primary-strong);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.14);
 }
 @media (prefers-reduced-motion: reduce) {
   .af-shop-nav-link,

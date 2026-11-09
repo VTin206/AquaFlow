@@ -110,6 +110,7 @@ export function DrinksPage() {
                         <small> / {product.unit.toLowerCase()}</small>
                       </span>
                       <Button
+                        className="af-shop-add-button"
                         type="primary"
                         icon={<ShoppingCart size={15} />}
                         disabled={product.available === false}

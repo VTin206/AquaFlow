@@ -80,6 +80,7 @@ export function ProductDetailPage() {
                 />
               </Space.Compact>
               <Button
+                className="af-shop-add-button"
                 type="primary"
                 size="large"
                 icon={<ShoppingCart size={17} />}
