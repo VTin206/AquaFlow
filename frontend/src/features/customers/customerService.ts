@@ -169,7 +169,11 @@ export const customerService = {
       const deposit = action.deposit ?? 0
       const note = action.note?.trim() || undefined
 
-      if (action.kind === 'Thu vỏ') {
+      if (action.kind === 'Giao vỏ') {
+        if (!Number.isSafeInteger(bottles) || bottles <= 0) throw mockError(400, 'Số vỏ giao phải là số nguyên dương.')
+        if (!note) throw mockError(400, 'Ghi rõ mã đơn hoặc lý do để đối chiếu.')
+        addBottleEntry({ customerId, kind: 'Giao kèm đơn', bottles, deposit: 0, note })
+      } else if (action.kind === 'Thu vỏ') {
         if (!Number.isSafeInteger(bottles) || bottles <= 0) throw mockError(400, 'Số vỏ thu về phải là số nguyên dương.')
         if (bottles > balance.bottles) throw mockError(400, `Khách chỉ đang giữ ${balance.bottles} vỏ.`)
         addBottleEntry({

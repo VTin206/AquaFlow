@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/shared/api/client'
 import { useIsDemo } from '@/shared/features'
 import { bottleTypeApi } from '@/features/live/bottleTypeApi'
+import { demoBottleTypeApi } from '@/features/live/demoBottleTypeApi'
 import { useStaff } from '@/features/auth/useStaff'
 import { inventoryApi } from '@/features/live/inventoryApi'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
@@ -129,17 +130,15 @@ const useInvalidateProducts = () => {
   return () => Promise.all([invalidateLiveData(queryClient), queryClient.invalidateQueries({ queryKey: productKeys.all })])
 }
 
-/** Loại vỏ cho form sản phẩm; dữ liệu mẫu chỉ có một loại vỏ 20L. */
+/** Loại vỏ cho form sản phẩm, cùng nguồn với danh mục loại vỏ. */
 export function useBottleTypeOptions(enabled: boolean) {
   const demo = useIsDemo()
   const query = useQuery({
-    queryKey: ['live', 'bottle-types', 'product-form'],
-    queryFn: () => bottleTypeApi.list(),
-    enabled: enabled && !demo,
+    queryKey: ['live', 'bottle-types', 'product-form', demo],
+    queryFn: () => (demo ? demoBottleTypeApi : bottleTypeApi).list(),
+    enabled,
   })
-  return demo
-    ? { types: [{ id: 1, name: 'Vỏ bình 20L', active: true }], isPending: false }
-    : { types: query.data ?? [], isPending: query.isPending }
+  return { types: query.data ?? [], isPending: query.isPending }
 }
 
 /** Thêm mới khi không có `id`; khi sửa, mã sản phẩm và tồn kho không đổi (tồn chỉ tăng qua phiếu nhập). */

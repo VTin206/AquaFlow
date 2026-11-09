@@ -186,8 +186,8 @@ export function LiveBottleLedger({ customerId }: { customerId: number | string }
         <Tag color="green">Có thể hoàn {currency(data.balance.refundable)}</Tag>
       </p>
       <Space wrap style={{ marginBottom: 16 }}>
-        <Button onClick={() => setKind('GIVE')} disabled={demo || !data.balance.active || !data.types.some((t) => t.active)}>
-          {demo ? 'Giao vỏ (chưa hỗ trợ)' : 'Giao vỏ'}
+        <Button onClick={() => setKind('GIVE')} disabled={!data.balance.active || !data.types.some((t) => t.active)}>
+          Giao vỏ
         </Button>
         <Button onClick={() => setKind('RECEIVE')} disabled={data.balance.bottlesHeld <= 0}>
           Thu vỏ

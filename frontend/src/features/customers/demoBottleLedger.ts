@@ -17,6 +17,7 @@ const entryKinds: Record<BottleEntryKind, string> = {
 }
 
 const actions: Partial<Record<BottleInput['kind'], BottleAction['kind']>> = {
+  GIVE: 'Giao vỏ',
   RECEIVE: 'Thu vỏ',
   LOSS: 'Báo mất/vỡ',
   COLLECT: 'Thu cọc',
@@ -24,6 +25,19 @@ const actions: Partial<Record<BottleInput['kind'], BottleAction['kind']>> = {
 }
 
 export const demoBottleApi = {
+  balances: async () =>
+    (await customerService.list()).map((customer) => {
+      const requiredDeposit = customer.bottlesHeld * DEPOSIT_PER_BOTTLE
+      return {
+        customerId: customer.id,
+        name: customer.name,
+        active: true,
+        bottlesHeld: customer.bottlesHeld,
+        depositHeld: customer.depositHeld,
+        requiredDeposit,
+        refundable: Math.max(0, customer.depositHeld - requiredDeposit),
+      }
+    }),
   ledger: async (customerId: string): Promise<BottleLedger> => {
     const [customers, entries] = await Promise.all([customerService.list(), customerService.ledger(customerId)])
     const customer = customers.find((item) => item.id === customerId)
@@ -40,7 +54,14 @@ export const demoBottleApi = {
         refundable: Math.max(0, customer.depositHeld - requiredDeposit),
       },
       types: [
-        { bottleTypeId: 1, name: 'Vỏ bình 19L', active: true, held: customer.bottlesHeld, unitAmount: DEPOSIT_PER_BOTTLE, liability: requiredDeposit },
+        {
+          bottleTypeId: 1,
+          name: 'Vỏ bình 19L',
+          active: true,
+          held: customer.bottlesHeld,
+          unitAmount: DEPOSIT_PER_BOTTLE,
+          liability: requiredDeposit,
+        },
       ],
       entries: entries.map((entry) => ({
         id: entry.id,
@@ -56,7 +77,7 @@ export const demoBottleApi = {
   },
   create: async (customerId: string, input: BottleInput) => {
     const kind = actions[input.kind]
-    if (!kind) throw new Error('Giao vỏ chưa hỗ trợ ở bản dùng thử.')
+    if (!kind) throw new Error('Nghiệp vụ này chưa hỗ trợ ở bản dùng thử.')
     await customerService.recordBottles(customerId, { kind, bottles: input.quantity, deposit: input.amount, note: input.note })
   },
 }

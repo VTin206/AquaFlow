@@ -53,7 +53,7 @@ export type BottleEntry = {
 }
 
 export type BottleAction = {
-  kind: 'Thu vỏ' | 'Báo mất/vỡ' | 'Thu cọc' | 'Hoàn cọc'
+  kind: 'Giao vỏ' | 'Thu vỏ' | 'Báo mất/vỡ' | 'Thu cọc' | 'Hoàn cọc'
   bottles?: number
   deposit?: number
   note?: string

@@ -43,7 +43,10 @@ describe('sổ vỏ mẫu theo kiểu API', () => {
     expect(ledger.balance.refundable).toBe(Math.max(0, customer.depositHeld - ledger.balance.requiredDeposit))
   })
 
-  it('báo chưa hỗ trợ với nghiệp vụ giao vỏ', async () => {
-    await expect(demoBottleApi.create('any', { requestId: 'x', kind: 'GIVE', quantity: 1 })).rejects.toThrow('chưa hỗ trợ')
+  it('giao vỏ làm tăng số vỏ khách giữ và bắt buộc có lý do', async () => {
+    const customer = (await customerService.list())[0]
+    await expect(demoBottleApi.create(customer.id, { requestId: 'x', kind: 'GIVE', quantity: 1 })).rejects.toThrow('lý do')
+    await demoBottleApi.create(customer.id, { requestId: 'y', kind: 'GIVE', quantity: 2, note: 'Giao tại quầy' })
+    expect((await demoBottleApi.ledger(customer.id)).balance.bottlesHeld).toBe(customer.bottlesHeld + 2)
   })
 })

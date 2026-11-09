@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, App, Button, Card, Descriptions, Form, Input, Modal, Select, Table, Tag } from 'antd'
+import { App, Button, Card, Descriptions, Form, Input, Modal, Select, Table, Tag } from 'antd'
 import { KeyRound, Pencil, Plus } from 'lucide-react'
 import { ViewButton } from '@/shared/components/ViewButton'
 import { modalWidth } from '@/shared/utils/modal'
@@ -8,18 +8,20 @@ import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
 import { useIsDemo } from '@/shared/features'
 import { useAuth } from './useAuth'
+import { demoStaffApi } from './demoStaffApi'
 import { staffApi, type StaffAccount, type StaffCreate, type StaffUpdate } from './staffApi'
 import { roleLabel } from './roles'
 
 type Action = { kind: 'create' } | { kind: 'edit' | 'password'; account: StaffAccount }
 export function StaffAccountsPage() {
   const demo = useIsDemo()
+  const source = demo ? demoStaffApi : staffApi
   const { user } = useAuth()
   const client = useQueryClient()
   const { message } = App.useApp()
   const [action, setAction] = useState<Action | null>(null)
   const [viewingId, setViewingId] = useState<number>()
-  const query = useQuery({ queryKey: ['live', 'staff-accounts', user?.email], queryFn: staffApi.list, enabled: !demo })
+  const query = useQuery({ queryKey: ['live', 'staff-accounts', user?.email, demo], queryFn: source.list })
   const save = useMutation({
     mutationFn: (operation: () => Promise<unknown>) => operation(),
     onSuccess: async () => {
@@ -34,33 +36,25 @@ export function StaffAccountsPage() {
       title="Tài khoản nhân viên"
       description="Tạo tài khoản bán hàng và giao hàng; mỗi người đăng nhập bằng email và mật khẩu riêng."
       actions={
-        <Button type="primary" icon={<Plus size={16} />} disabled={demo} onClick={() => setAction({ kind: 'create' })}>
+        <Button type="primary" icon={<Plus size={16} />} onClick={() => setAction({ kind: 'create' })}>
           Thêm nhân viên
         </Button>
       }
     >
-      {demo && (
-        <Alert
-          type="info"
-          showIcon
-          style={{ marginBottom: 16 }}
-          title="Chưa hỗ trợ trong bản dùng thử. Đăng nhập tài khoản admin thật để quản lý tài khoản; chuyển vai trò trong menu tài khoản để xem Demo nhân viên."
-        />
-      )}
       {query.isError ? (
         <QueryError error={query.error} onRetry={query.refetch} />
       ) : (
         <Card>
           <Table<StaffAccount>
             rowKey="id"
-            loading={!demo && query.isPending}
+            loading={query.isPending}
             dataSource={query.data}
             scroll={{ x: 720 }}
             columns={[
               { title: 'Họ tên', dataIndex: 'fullName' },
               { title: 'Email đăng nhập', dataIndex: 'email' },
               { title: 'Vai trò', dataIndex: 'role', render: roleLabel },
-              { title: 'Điện thoại', dataIndex: 'phone' },
+              { title: 'Điện thoại', dataIndex: 'phone', render: (phone: string | null) => phone || '—' },
               {
                 title: 'Trạng thái',
                 dataIndex: 'status',
@@ -92,10 +86,10 @@ export function StaffAccountsPage() {
           onSave={(values) =>
             save.mutate(() =>
               action.kind === 'create'
-                ? staffApi.create(values as StaffCreate)
+                ? source.create(values as StaffCreate)
                 : action.kind === 'edit'
-                  ? staffApi.update(action.account.id, values as StaffUpdate)
-                  : staffApi.password(action.account.id, values.password!),
+                  ? source.update(action.account.id, values as StaffUpdate)
+                  : source.password(action.account.id, values.password!),
             )
           }
         />

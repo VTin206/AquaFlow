@@ -12,16 +12,21 @@ import { notificationService, type Notification } from './notificationService'
 
 type Item = Notification & { orderRef?: string }
 
-/** Bản dùng thử: thông báo suy từ đơn mẫu cần xử lý; chưa lưu trạng thái đã đọc. */
-const demoItems = (orders: Order[]): Item[] =>
+/** Bản dùng thử: thông báo suy từ đơn mẫu cần xử lý; trạng thái đã đọc chỉ giữ trong phiên. */
+const demoItems = (orders: Order[], read: ReadonlySet<string>): Item[] =>
   orders
     .filter((order) => ['Chờ xác nhận', 'Giao thất bại'].includes(order.status) || isOverdue(order))
     .map((order, index) => ({
       id: index + 1,
-      title: order.status === 'Giao thất bại' ? 'Đơn giao thất bại' : order.status === 'Chờ xác nhận' ? 'Đơn hàng chờ xác nhận' : 'Đơn đã quá giờ hẹn',
+      title:
+        order.status === 'Giao thất bại'
+          ? 'Đơn giao thất bại'
+          : order.status === 'Chờ xác nhận'
+            ? 'Đơn hàng chờ xác nhận'
+            : 'Đơn đã quá giờ hẹn',
       message: `${order.code ?? order.id} · ${order.customer}`,
       createdAt: order.history[0]?.at ?? new Date().toISOString(),
-      readAt: null,
+      readAt: read.has(order.id) ? new Date().toISOString() : null,
       resolvedAt: null,
       kind: order.status === 'Giao thất bại' ? 'DELIVERY_FAILED' : order.status === 'Chờ xác nhận' ? 'ORDER_PENDING' : 'ORDER_OVERDUE',
       entityType: 'ORDER',
@@ -34,6 +39,7 @@ export function LiveNotificationPopover() {
   const { user } = useAuth()
   const demo = useIsDemo()
   const demoOrders = useOrders(demo)
+  const [demoRead, setDemoRead] = useState<ReadonlySet<string>>(new Set())
   const [open, setOpen] = useState(false)
   const [page, setPage] = useState(0)
   const [orderId, setOrderId] = useState<string | null>(null)
@@ -55,17 +61,22 @@ export function LiveNotificationPopover() {
     enabled: !demo && !!user,
     refetchInterval: 30_000,
   })
-  const items: Item[] = demo ? demoItems(demoOrders.data ?? []) : (list.data ?? [])
+  const items: Item[] = demo ? demoItems(demoOrders.data ?? [], demoRead) : (list.data ?? [])
   const loading = demo ? demoOrders.isPending : list.isPending
   const failed = demo ? demoOrders.isError : list.isError || unread.isError
   const read = useMutation({
     mutationFn: async (id: number | null) => {
+      if (demo) {
+        const refs = items.filter((item) => id === null || item.id === id).flatMap((item) => (item.orderRef ? [item.orderRef] : []))
+        setDemoRead((current) => new Set([...current, ...refs]))
+        return
+      }
       if (id === null) await notificationService.markAllRead()
       else await notificationService.markRead(id)
     },
     onSuccess: () => client.invalidateQueries({ queryKey: key }),
   })
-  const count = demo ? items.length : (unread.data?.count ?? 0)
+  const count = demo ? items.filter((item) => !item.readAt).length : (unread.data?.count ?? 0)
   const close = () => {
     setOpen(false)
     trigger.current?.focus()
@@ -132,7 +143,7 @@ export function LiveNotificationPopover() {
                         disabled={read.isPending}
                         aria-label={`${item.title} — ${item.entityType === 'ORDER' ? 'xem đơn hàng' : item.entityType ? 'xem kho' : 'đánh dấu đã đọc'}`}
                         onClick={() => {
-                          if (!demo && !item.readAt) read.mutate(item.id)
+                          if (!item.readAt) read.mutate(item.id)
                           if (item.entityType === 'ORDER' && item.entityId) {
                             close()
                             setOrderId(item.orderRef ?? String(item.entityId))
@@ -160,8 +171,8 @@ export function LiveNotificationPopover() {
               )}
             </div>
             <div className="af-notifications-footer" style={{ gap: 8, flexWrap: 'wrap' }}>
-              <Button size="small" disabled={demo || !count || read.isPending || unread.isError} onClick={() => read.mutate(null)}>
-                {demo ? 'Đọc tất cả (chưa hỗ trợ)' : 'Đọc tất cả'}
+              <Button size="small" disabled={!count || read.isPending || unread.isError} onClick={() => read.mutate(null)}>
+                Đọc tất cả
               </Button>
               <Button size="small" disabled={demo || page === 0 || list.isFetching} onClick={() => setPage((value) => value - 1)}>
                 Trước
