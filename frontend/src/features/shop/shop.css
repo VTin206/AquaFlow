@@ -2027,8 +2027,8 @@
   object-fit: contain;
   background: var(--af-image-bg);
   filter: drop-shadow(0 18px 24px rgba(3, 40, 64, 0.32));
-  opacity: 0;
-  transform: translateX(28px) scale(0.74);
+  opacity: 1;
+  transform: translateX(16px) scale(0.78);
   will-change: transform, opacity;
   transform-origin: center;
 }
@@ -2037,7 +2037,7 @@
 }
 @keyframes af-shop-product-focus {
   0% {
-    opacity: 0;
+    opacity: 1;
     transform: translateX(16px) scale(0.78);
   }
   16% {
@@ -2049,8 +2049,8 @@
     transform: translateX(0) scale(1);
   }
   100% {
-    opacity: 0.42;
-    transform: translateX(-16px) scale(0.88);
+    opacity: 1;
+    transform: translateX(0) scale(0.9);
   }
 }
 .af-shop-product-carousel .slick-arrow {

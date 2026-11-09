@@ -84,7 +84,7 @@ export function ShopIntro({ showPolicy, phone, products, onShop }: Props) {
                   className="af-shop-product-carousel"
                   autoplay={{ dotDuration: true }}
                   autoplaySpeed={3800}
-                  speed={900}
+                  speed={650}
                   effect="fade"
                   arrows
                   pauseOnHover={false}
