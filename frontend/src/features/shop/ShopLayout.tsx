@@ -156,9 +156,6 @@ export function ShopLayout() {
                 Tra cứu đơn
               </NavLink>
             )}
-            <Link to="/shop/account" className="af-shop-nav-link">
-              Tài khoản
-            </Link>
           </nav>
           <div className="af-shop-icons">
             <Button
