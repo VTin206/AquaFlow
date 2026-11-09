@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { App, Avatar, Button, Descriptions, Dropdown, Empty, Modal, Space, Table, Tabs, Tag, Typography } from 'antd'
+import { App, Avatar, Button, Descriptions, Dropdown, Empty, Modal, Table, Tabs, Tag } from 'antd'
 import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
 import { Ellipsis, Pencil, Phone, ShoppingBag } from 'lucide-react'
 import { MapLink } from '@/shared/address/MapLink'
@@ -7,17 +7,14 @@ import { Money } from '@/shared/components/Money'
 import { useFeature, useLiveOnly } from '@/shared/features'
 import { Unsupported } from '@/shared/components/Unsupported'
 import { currency } from '@/shared/utils/format'
-import { can } from '@/features/auth/permissions'
-import { useStaff } from '@/features/auth/useStaff'
 import { OrderDetails } from '@/features/orders/components/OrderDetails'
 import { OrderStatusTag } from '@/features/orders/components/OrderStatusTag'
 import { useOrderList } from '@/features/orders/orderData'
 import { amountDue, createdAtOf, paymentLabel, type Order } from '@/features/orders/types'
 import { useIntakeAddresses } from '@/features/orders/useOrderIntake'
 import { LiveCustomerAddresses } from '@/features/live/LiveCustomerAddresses'
-import { customerCode, refundableOf, type BottleEntry, type Customer } from '../types'
-import { useBottleLedger, useCustomers, useDeactivateCustomer } from '../useCustomers'
-import { BottleActionModal, type BottleActionKind } from './BottleActionModal'
+import { customerCode, type Customer } from '../types'
+import { useCustomers, useDeactivateCustomer } from '../useCustomers'
 import { LiveBottleLedger } from '../LiveBottleLedger'
 
 type CustomerDrawerProps = {
@@ -27,12 +24,8 @@ type CustomerDrawerProps = {
   onCreateOrder: (customer: Customer) => void
 }
 
-const signed = (value: number, render: (value: number) => string = String) =>
-  value > 0 ? `+${render(value)}` : value < 0 ? `−${render(-value)}` : '—'
-
 /** Hồ sơ khách: liên hệ, đơn hàng, công nợ và sổ vỏ/cọc trong một ngăn kéo. */
 export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: CustomerDrawerProps) {
-  const staff = useStaff()
   const { message, modal } = App.useApp()
   const canManageAddresses = useLiveOnly()
   const showPayments = useFeature('orderPayments')
@@ -40,14 +33,10 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
   const showExtras = useFeature('customerProfileExtras')
   const showDebt = useFeature('customerDebt')
   const showBottles = useFeature('bottleLedger')
-  // Hoàn cọc, báo mất/vỡ làm đổi tiền cọc nên chỉ chủ cửa hàng thấy.
-  const canAdjust = !staff || can(staff.role, 'adjustBottles')
   const { data: customers = [] } = useCustomers()
   const { data: orders = [], isPending: loadingOrders } = useOrderList()
-  const ledgerQuery = useBottleLedger(customerId)
   const deactivate = useDeactivateCustomer()
   const [managingAddresses, setManagingAddresses] = useState(false)
-  const [bottleAction, setBottleAction] = useState<BottleActionKind | null>(null)
   const [orderId, setOrderId] = useState<string | null>(null)
   const customer = customers.find((item) => item.id === customerId)
   const { addresses, isError: addressesFailed } = useIntakeAddresses(customer)
@@ -56,7 +45,6 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
   const customerOrders = orders
     .filter((order) => order.customerId === customer.id)
     .sort((a, b) => (createdAtOf(b) ?? '').localeCompare(createdAtOf(a) ?? ''))
-  const refundable = refundableOf(customer)
 
   const summary = [
     { label: 'Đơn đã mua', value: String(customer.orders), show: true },
@@ -122,11 +110,14 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
       ) : (
         'Chưa có địa chỉ giao'
       )}
-      {canManageAddresses && (
-        <Button size="small" style={{ alignSelf: 'flex-start', marginTop: 4 }} onClick={() => setManagingAddresses(true)}>
-          Quản lý địa chỉ
-        </Button>
-      )}
+      <Button
+        size="small"
+        style={{ alignSelf: 'flex-start', marginTop: 4 }}
+        disabled={!canManageAddresses}
+        onClick={() => setManagingAddresses(true)}
+      >
+        {canManageAddresses ? 'Quản lý địa chỉ' : 'Quản lý địa chỉ (chưa hỗ trợ)'}
+      </Button>
     </div>
   )
 
@@ -271,77 +262,7 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
             {
               key: 'bottles',
               label: 'Vỏ & cọc',
-              children: canManageAddresses ? <LiveBottleLedger customerId={Number(customerId)} /> : !showBottles ? (
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Tính năng đang phát triển — chờ backend bổ sung." />
-              ) : (
-                <>
-                  <div className="af-bottle-balance">
-                    <span>
-                      Đang giữ <strong>{customer.bottlesHeld} vỏ</strong> · cọc <Money value={customer.depositHeld} tone="deposit" />
-                    </span>
-                    {refundable > 0 && <Tag color="green">Có thể hoàn {currency(refundable)}</Tag>}
-                  </div>
-                  <Space wrap className="af-bottle-actions">
-                    <Button onClick={() => setBottleAction('Thu vỏ')} disabled={customer.bottlesHeld === 0}>
-                      Thu vỏ
-                    </Button>
-                    <Button onClick={() => setBottleAction('Thu cọc')}>Thu cọc</Button>
-                    {canAdjust && (
-                      <>
-                        <Button
-                          onClick={() => setBottleAction('Hoàn cọc')}
-                          disabled={refundable === 0}
-                          title={refundable === 0 ? 'Khách chưa trả đủ vỏ để hoàn cọc' : undefined}
-                        >
-                          Hoàn cọc
-                        </Button>
-                        <Button danger onClick={() => setBottleAction('Báo mất/vỡ')} disabled={customer.bottlesHeld === 0}>
-                          Báo mất/vỡ
-                        </Button>
-                      </>
-                    )}
-                  </Space>
-                  <Table<BottleEntry>
-                    rowKey="id"
-                    size="small"
-                    loading={ledgerQuery.isPending}
-                    dataSource={ledgerQuery.data}
-                    pagination={{ pageSize: 8, hideOnSinglePage: true }}
-                    scroll={{ x: 560 }}
-                    locale={{ emptyText: 'Chưa có giao dịch vỏ.' }}
-                    columns={[
-                      {
-                        title: 'Thời điểm',
-                        dataIndex: 'at',
-                        width: 120,
-                        render: (at: string) =>
-                          new Date(at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
-                      },
-                      {
-                        title: 'Nghiệp vụ',
-                        dataIndex: 'kind',
-                        render: (_, entry) => (
-                          <div className="af-cell-stack">
-                            <span>{entry.kind}</span>
-                            <small>{entry.orderId ?? entry.note ?? ''}</small>
-                          </div>
-                        ),
-                      },
-                      { title: 'Vỏ', dataIndex: 'bottles', align: 'right', width: 60, render: (value: number) => signed(value) },
-                      {
-                        title: 'Cọc',
-                        dataIndex: 'deposit',
-                        align: 'right',
-                        width: 120,
-                        render: (value: number) => signed(value, currency),
-                      },
-                    ]}
-                  />
-                  <Typography.Paragraph type="secondary" className="af-form-hint">
-                    Số dư được cộng dồn từ sổ, không sửa trực tiếp. Sai sót được điều chỉnh bằng một dòng nghiệp vụ mới.
-                  </Typography.Paragraph>
-                </>
-              ),
+              children: <LiveBottleLedger customerId={customerId} />,
             },
           ]}
         />
@@ -349,7 +270,6 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
       {managingAddresses && (
         <LiveCustomerAddresses customerId={Number(customer.id)} customerName={customer.name} onClose={() => setManagingAddresses(false)} />
       )}
-      <BottleActionModal customer={customer} kind={bottleAction} refundable={refundable} onClose={() => setBottleAction(null)} />
       {orderId && <OrderDetails id={orderId} onClose={() => setOrderId(null)} />}
     </>
   )

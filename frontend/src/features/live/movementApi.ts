@@ -28,6 +28,8 @@ export type InventoryMovement = {
   performedBy: number
   performedByName: string
   reason: string | null
+  /** Chỉ dữ liệu mẫu: mã đơn dạng chữ. */
+  orderRef?: string
 }
 export type MovementFilter = { type?: MovementType; productId?: number; from?: string; to?: string; q?: string; page: number; size: number }
 export type MovementPage = { content: InventoryMovement[]; page: number; size: number; totalElements: number }

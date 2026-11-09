@@ -39,19 +39,21 @@ export function StaffAccountsPage() {
         </Button>
       }
     >
-      {demo ? (
+      {demo && (
         <Alert
           type="info"
           showIcon
-          title="Đăng nhập tài khoản admin thật để quản lý tài khoản. Chuyển vai trò trong menu tài khoản để xem Demo nhân viên."
+          style={{ marginBottom: 16 }}
+          title="Chưa hỗ trợ trong bản dùng thử. Đăng nhập tài khoản admin thật để quản lý tài khoản; chuyển vai trò trong menu tài khoản để xem Demo nhân viên."
         />
-      ) : query.isError ? (
+      )}
+      {query.isError ? (
         <QueryError error={query.error} onRetry={query.refetch} />
       ) : (
         <Card>
           <Table<StaffAccount>
             rowKey="id"
-            loading={query.isPending}
+            loading={!demo && query.isPending}
             dataSource={query.data}
             scroll={{ x: 720 }}
             columns={[

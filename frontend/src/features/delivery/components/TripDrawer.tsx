@@ -1,70 +1,169 @@
-import { useState } from 'react'
-import { App, Button, Descriptions, Dropdown, Modal, Form, Input, InputNumber, Popconfirm, Select, Space, Tag, Typography } from 'antd'
+import { useEffect, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { App, Button, Collapse, Descriptions, Dropdown, Modal, Popconfirm, Skeleton, Tag, type MenuProps } from 'antd'
 import { Ellipsis, MapPin, Phone, Truck } from 'lucide-react'
+import { Money } from '@/shared/components/Money'
+import { QueryError } from '@/shared/components/QueryError'
 import { usePrinter } from '@/shared/print/usePrinter'
 import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
-import { Money } from '@/shared/components/Money'
-import { dueTone } from '@/shared/utils/money'
 import { currency } from '@/shared/utils/format'
-import { useSettings } from '@/features/settings/settingsService'
+import { dueTone } from '@/shared/utils/money'
+import { useStaff } from '@/features/auth/useStaff'
 import { AdvanceStatusButton } from '@/features/orders/components/AdvanceStatusButton'
-import { OrderDetailsModal } from '@/features/orders/components/OrderDetailsModal'
-import { OrderFocusBanner } from '@/features/orders/components/OrderSheet'
 import { LateTag } from '@/features/orders/components/LateTag'
-import { OrderStatusTag } from '@/features/orders/components/OrderStatusTag'
-import { canDispatch } from '@/features/orders/orderService'
-import { amountDue, awaitingReturnInspection, deliveryAttempts, jugCount } from '@/features/orders/types'
-import { useOrders } from '@/features/orders/useOrders'
-import type { SettlementDraft } from '../types'
-import { demoTripFocus } from '../tripFocus'
-import { dispatchedIn, openIn } from '../tripService'
-import { useTripAction, useTrips } from '../useTrips'
+import { OrderDetails } from '@/features/orders/components/OrderDetails'
+import { OrderFocusBanner } from '@/features/orders/components/OrderSheet'
+import { useOrderList } from '@/features/orders/orderData'
+import { awaitingReturnInspection } from '@/features/orders/types'
+import { useSettings } from '@/features/settings/settingsService'
+import type { DeliveryStop, SettlementInput } from '../deliveryApi'
+import { stopOrderId, useTripBackend } from '../tripBackend'
+import { liveTripFocus, liveTripStatus } from '../tripFocus'
+import { AttemptsTimeline } from './AttemptsTimeline'
+import { DeliveryActionModal, type DeliveryAction } from './DeliveryActionModal'
+import { DeliveryBottlesButton } from './DeliveryBottlesButton'
 import { TripManifest } from './TripManifest'
 import { TripStatusTag } from './TripStatusTag'
 import { TripRouteButton } from './TripRouteButton'
 import { MapLink } from '@/shared/address/MapLink'
 
-/** Chi tiết chuyến: danh sách điểm giao, ghi kết quả từng đơn và đối soát tiền/vỏ khi về. */
-export function TripDrawer({ tripId, onClose }: { tripId: string; onClose: () => void }) {
-  const { message, modal } = App.useApp()
+const dateTime = (value: string) => new Date(value).toLocaleString('vi-VN')
+
+function StopTag({ stop }: { stop: DeliveryStop }) {
+  if (stop.latestAttempt?.outcome === 'SUCCESS') return <Tag color="green">Đã giao</Tag>
+  if (stop.latestAttempt?.outcome === 'FAILED') return <Tag color="red">Giao thất bại</Tag>
+  if (stop.orderStatus === 'PREPARING') return <Tag>Chờ xuất kho</Tag>
+  return <Tag color="cyan">Đang giao</Tag>
+}
+
+/** Chi tiết chuyến: nói rõ đang cần gì, một nút chính ở chân ngăn kéo, các thao tác ít dùng gom vào menu. */
+export function TripDrawer({ tripId, onClose }: { tripId: number; onClose: () => void }) {
+  const staff = useStaff()
+  const canManage = staff?.role === 'ADMIN' || staff?.role === 'SALES_STAFF'
+  const { message } = App.useApp()
+  const client = useQueryClient()
+  const backend = useTripBackend()
+  const { ops, demo } = backend
+  const detail = backend.useDetail(tripId)
+  const collections = backend.useCollections(tripId)
+  const drivers = backend.useDrivers(canManage)
+  const available = backend.useAvailable()
+  const ordersQuery = useOrderList()
   const { data: settings } = useSettings()
   const printer = usePrinter()
-  const { data: trips = [] } = useTrips()
-  const { data: orders = [] } = useOrders()
-  const action = useTripAction()
-  const [form] = Form.useForm<SettlementDraft>()
+  const [action, setAction] = useState<DeliveryAction | null>(null)
   const [orderId, setOrderId] = useState<string | null>(null)
-  const [adding, setAdding] = useState<string[]>([])
-  const cash = Form.useWatch('cashHandedOver', form)
-  const bottles = Form.useWatch('bottlesHandedOver', form)
-  const trip = trips.find((item) => item.id === tripId)
-  if (!trip) return null
+  const [history, setHistory] = useState<DeliveryStop | null>(null)
+  const attempts = useQuery({
+    queryKey: ['live', 'delivery-attempts', tripId, history?.id],
+    queryFn: () => ops.attempts(history!),
+    enabled: history !== null,
+  })
+  const change = useMutation({
+    mutationFn: (operation: () => Promise<unknown>) => operation(),
+    onSuccess: async () => {
+      await ops.refresh(client)
+      message.success('Đã cập nhật chuyến giao.')
+    },
+    onError: async (error: Error) => {
+      await ops.refresh(client)
+      message.error(error.message)
+    },
+  })
+  const execute = (operation: () => Promise<unknown>) => change.mutate(operation)
+  const trip = detail.data
+  const gone = demo && detail.isError
 
-  const stops = trip.orderIds.map((id) => orders.find((order) => order.id === id)).filter((order) => order !== undefined)
-  const done = stops.filter((order) => !openIn(trip, order)).length
-  const undispatched = stops.filter((order) => !dispatchedIn(trip, order))
-  // Đơn chờ giao chưa thuộc chuyến nào đang chạy: thêm được vào chuyến chưa đối soát.
-  const busy = new Set(
-    trips
-      .filter((item) => !item.settlement)
-      .flatMap((item) =>
-        item.orderIds.filter((id) => {
-          const order = orders.find((entry) => entry.id === id)
-          return !order || openIn(item, order)
-        }),
-      ),
-  )
-  const addable = orders.filter((order) => canDispatch(order) && !busy.has(order.id))
-  const expected = trip.expected ?? { cash: 0, bottles: 0 }
-  const mismatch = cash !== undefined && bottles !== undefined && (cash !== expected.cash || bottles !== expected.bottles)
-  const run = (payload: Parameters<typeof action.mutate>[0], success: string, close = false) =>
-    action.mutate(payload, {
-      onSuccess: () => {
-        message.success(success)
-        if (close) onClose()
-      },
-      onError: (error) => message.error(error.message),
-    })
+  // Dữ liệu mẫu xóa hẳn chuyến khi hủy hoặc bỏ hết đơn.
+  useEffect(() => {
+    if (gone) onClose()
+  }, [gone, onClose])
+
+  if (!trip) {
+    return (
+      <Modal open centered onCancel={onClose} width={modalWidth.medium} footer={null} title={`Chuyến #${tripId}`}>
+        {detail.isError && detail.error ? <QueryError error={detail.error} onRetry={detail.refetch} /> : <Skeleton active />}
+      </Modal>
+    )
+  }
+
+  const { focus, next } = liveTripFocus(trip)
+  const editable = canManage && trip.status === 'CREATED'
+  const preparing = trip.orders.filter((stop) => stop.orderStatus === 'PREPARING').length
+  const firstPending = trip.orders.find((stop) => !stop.latestAttempt)
+  const orderOf = (stop: DeliveryStop) => ordersQuery.data?.find((order) => order.id === stopOrderId(stop))
+  const stopOrders = trip.orders.map(orderOf).filter((order) => order !== undefined)
+
+  const menuItems: MenuProps['items'] = [
+    {
+      key: 'print',
+      label: 'In phiếu chuyến',
+      disabled: !settings || stopOrders.length < trip.orders.length,
+      onClick: () =>
+        printer.print(
+          <TripManifest
+            trip={{
+              id: `#${trip.id}`,
+              driver: trip.driverName ?? 'Chưa phân tài xế',
+              vehicle: trip.vehicle ?? undefined,
+              orderIds: stopOrders.map((order) => order.id),
+              createdAt: trip.createdAt,
+              status: 'Đang giao',
+            }}
+            stops={stopOrders}
+            settings={settings}
+          />,
+        ),
+    },
+    ...(editable && next !== 'assignDriver'
+      ? [
+          {
+            key: 'driver',
+            label: `${trip.driverId ? 'Đổi tài xế' : 'Phân tài xế'}${ops.assignDriver ? '' : ' (chưa hỗ trợ)'}`,
+            disabled: !ops.assignDriver,
+            onClick: () => setAction({ kind: 'driver', tripId: trip.id }),
+          },
+        ]
+      : []),
+    ...(editable && next !== 'addOrders' ? [{ key: 'add', label: 'Thêm đơn', onClick: () => setAction({ kind: 'add', tripId: trip.id }) }] : []),
+  ]
+
+  const primary =
+    !canManage && next !== 'depart' ? null : next === 'addOrders' ? (
+      <Button type="primary" disabled={change.isPending} onClick={() => setAction({ kind: 'add', tripId: trip.id })}>
+        Thêm đơn
+      </Button>
+    ) : next === 'assignDriver' ? (
+      <Button type="primary" disabled={change.isPending || !ops.assignDriver} onClick={() => setAction({ kind: 'driver', tripId: trip.id })}>
+        Phân tài xế
+      </Button>
+    ) : next === 'dispatch' ? (
+      <Popconfirm
+        title={`Xuất kho ${preparing} đơn?`}
+        description="Từng đơn được xuất độc lập: đơn nào lỗi thì các đơn đã xuất trước đó vẫn giữ nguyên."
+        okText="Xuất kho"
+        cancelText="Chưa"
+        onConfirm={() => execute(() => ops.dispatchAll(trip))}
+      >
+        <Button type="primary" loading={change.isPending}>
+          Xuất kho {preparing} đơn
+        </Button>
+      </Popconfirm>
+    ) : next === 'depart' ? (
+      <Popconfirm title="Tài xế đã nhận đủ hàng và khởi hành?" okText="Khởi hành" cancelText="Chưa" onConfirm={() => execute(() => ops.depart(trip))}>
+        <Button type="primary" loading={change.isPending}>
+          Khởi hành
+        </Button>
+      </Popconfirm>
+    ) : next === 'settle' ? (
+      <Button
+        type="primary"
+        disabled={change.isPending || collections.isPending || collections.isError}
+        onClick={() => setAction({ kind: 'settle', tripId: trip.id })}
+      >
+        Đối soát chuyến
+      </Button>
+    ) : null
 
   return (
     <>
@@ -80,268 +179,269 @@ export function TripDrawer({ tripId, onClose }: { tripId: string; onClose: () =>
               <Truck size={20} />
             </span>
             <div className="af-cell-stack">
-              <span className="af-profile-name">Chuyến {trip.id} <TripStatusTag status={trip.status} /></span>
+              <span className="af-profile-name">
+                Chuyến #{trip.id} <TripStatusTag status={liveTripStatus(trip)} />
+              </span>
               <small>
-                {trip.driver}
+                {trip.driverName ?? 'Chưa phân tài xế'}
                 {trip.vehicle ? ` · ${trip.vehicle}` : ''}
               </small>
             </div>
           </div>
         }
-
         footer={
           <div className="af-order-footer">
             <div>
-              {!trip.settlement && !trip.departedAt && (
+              {editable && !trip.orders.some((stop) => stop.orderStatus === 'OUT_FOR_DELIVERY') && (
                 <Popconfirm
                   title="Hủy chuyến này?"
-                  description="Các đơn trở lại danh sách chờ xếp chuyến."
+                  description="Các đơn chưa xuất kho trở lại danh sách chờ xếp chuyến."
                   okText="Hủy chuyến"
                   okButtonProps={{ danger: true }}
                   cancelText="Giữ"
-                  onConfirm={() => run({ kind: 'cancel', id: trip.id }, 'Đã hủy chuyến.', true)}
+                  onConfirm={() => execute(() => ops.cancel(trip))}
                 >
-                  <Button type="text" danger>
+                  <Button type="text" danger disabled={change.isPending}>
                     Hủy chuyến
                   </Button>
                 </Popconfirm>
               )}
             </div>
             <div>
-              <Dropdown
-                trigger={['click']}
-                menu={{
-                  items: [
-                    {
-                      key: 'print',
-                      label: 'In phiếu chuyến',
-                      onClick: () => printer.print(<TripManifest trip={trip} stops={stops} settings={settings} />),
-                    },
-                  ],
-                }}
-              >
+              <Dropdown trigger={['click']} menu={{ items: menuItems }}>
                 <Button icon={<Ellipsis size={16} />}>Thao tác khác</Button>
               </Dropdown>
-              {!trip.settlement && undispatched.length > 0 && (
-                <Popconfirm
-                  title={`Xuất kho ${undispatched.length} đơn?`}
-                  description="Xuất toàn bộ hàng đã giữ của từng đơn theo lô (FEFO). Đơn đã xuất không bỏ khỏi chuyến được."
-                  okText="Xuất kho"
-                  cancelText="Chưa"
-                  onConfirm={() => run({ kind: 'dispatch', id: trip.id }, `Đã xuất kho ${undispatched.length} đơn của chuyến ${trip.id}.`)}
-                >
-                  <Button type="primary" loading={action.isPending}>
-                    Xuất kho {undispatched.length} đơn
-                  </Button>
-                </Popconfirm>
-              )}
+              {primary}
             </div>
           </div>
         }
       >
-        <OrderFocusBanner focus={demoTripFocus(trip, undispatched.length, done, stops.length)} />
-        {!trip.departedAt && addable.length > 0 && (
-          <div className="af-trip-add">
-            <Select
-              mode="multiple"
-              allowClear
-              aria-label="Thêm đơn vào chuyến"
-              placeholder={`Thêm đơn chờ giao (${addable.length})`}
-              value={adding}
-              onChange={setAdding}
-              options={addable.map((order) => ({ value: order.id, label: `${order.id} · ${order.customer}` }))}
-              className="af-trip-add-select"
-            />
-            <Button
-              disabled={!adding.length}
-              loading={action.isPending}
-              onClick={() =>
-                action.mutate(
-                  { kind: 'addOrders', id: trip.id, orderIds: adding },
-                  {
-                    onSuccess: () => {
-                      message.success(`Đã thêm ${adding.length} đơn vào chuyến.`)
-                      setAdding([])
-                    },
-                    onError: (error) => message.error(error.message),
-                  },
-                )
-              }
-            >
-              Thêm vào chuyến
-            </Button>
-          </div>
-        )}
-        <TripRouteButton addresses={stops.map((order) => [order.address, order.area].filter(Boolean).join(', '))} />
+        <OrderFocusBanner focus={focus} />
+        <TripRouteButton addresses={trip.orders.map((stop) => stop.deliveryAddress)} />
         <ol className="af-trip-stops af-trip-stops-detail">
-          {stops.map((order, index) => (
-            <li key={order.id}>
-              <span className="af-trip-stop-index">{index + 1}</span>
-              <div className="af-trip-stop-body">
-                <div className="af-trip-stop-top">
-                  <Button type="link" size="small" onClick={() => setOrderId(order.id)}>
-                    {order.id}
-                  </Button>
-                  {dispatchedIn(trip, order) ? <OrderStatusTag status={order.status} method={order.method} /> : <Tag>Chờ xuất kho</Tag>}
-                  {awaitingReturnInspection(order) && <Tag color="orange">Chờ kiểm hàng hoàn</Tag>}
-                  <LateTag order={order} />
-                </div>
-                <strong>{order.customer}</strong>
-                {deliveryAttempts(order).length > 0 && (
-                  <small className="af-text-muted">
-                    {deliveryAttempts(order)
-                      .map((attempt, index) => `Lần ${index + 1}: ${attempt.success ? 'thành công' : `thất bại (${attempt.reason})`}`)
-                      .join(' · ')}
-                  </small>
-                )}
-                <div className="af-delivery-line">
-                  <MapPin size={14} />
-                  <span>
-                    {order.address}
-                    <MapLink address={[order.address, order.area].filter(Boolean).join(', ')} />
-                  </span>
-                </div>
-                {order.phone && (
-                  <div className="af-delivery-line">
-                    <Phone size={14} /> <a href={`tel:${order.phone.replace(/\s/g, '')}`}>{order.phone}</a>
+          {trip.orders.map((stop, index) => {
+            const balance = collections.data?.balances.find((item) => item.orderId === stop.orderId)
+            const order = orderOf(stop)
+            // Mỗi phân công chỉ ghi một kết quả; giao lại phải qua kiểm hàng hoàn rồi xếp chuyến mới (BE trả 409 nếu ghi lần nữa).
+            const canRecord = trip.status === 'IN_PROGRESS' && stop.orderStatus === 'OUT_FOR_DELIVERY' && !stop.latestAttempt
+            return (
+              <li key={stop.id}>
+                <span className="af-trip-stop-index">{index + 1}</span>
+                <div className="af-trip-stop-body">
+                  <div className="af-trip-stop-top">
+                    <Button type="link" size="small" className="af-cell-truncate" onClick={() => setOrderId(stopOrderId(stop))}>
+                      {stop.orderCode}
+                    </Button>
+                    <StopTag stop={stop} />
+                    {order && awaitingReturnInspection(order) && <Tag color="orange">Chờ kiểm hàng hoàn</Tag>}
+                    {order && <LateTag order={order} />}
                   </div>
-                )}
-                <div className="af-trip-stop-foot">
-                  <small>
-                    {jugCount(order) ? `${jugCount(order)} bình · ` : ''}thu{' '}
-                    <Money value={amountDue(order)} tone={dueTone(amountDue(order))} />
-                    {order.bottles ? ` · vỏ về ${order.bottles.returned}` : ''}
-                  </small>
-                  {!dispatchedIn(trip, order) && !trip.settlement ? (
-                    <Space size={4}>
-                      <Popconfirm
-                        title={`Bỏ ${order.id} khỏi chuyến?`}
-                        description="Đơn quay lại danh sách chờ xếp chuyến."
-                        okText="Bỏ khỏi chuyến"
-                        okButtonProps={{ danger: true }}
-                        cancelText="Giữ"
-                        onConfirm={() =>
-                          run({ kind: 'removeOrder', id: trip.id, orderId: order.id }, `Đã bỏ ${order.id} khỏi chuyến.`, stops.length === 1)
-                        }
-                      >
-                        <Button size="small" type="text" danger>
-                          Bỏ khỏi chuyến
+                  <strong>{stop.recipientName || 'Khách hàng'}</strong>
+                  {stop.latestAttempt?.failureReason && <small className="af-text-danger">Lý do: {stop.latestAttempt.failureReason}</small>}
+                  {stop.deliveryAddress && (
+                    <div className="af-delivery-line">
+                      <MapPin size={14} />
+                      <span>
+                        {stop.deliveryAddress}
+                        <MapLink address={stop.deliveryAddress} />
+                      </span>
+                    </div>
+                  )}
+                  {stop.recipientPhone && (
+                    <div className="af-delivery-line">
+                      <Phone size={14} /> <a href={`tel:${stop.recipientPhone}`}>{stop.recipientPhone}</a>
+                    </div>
+                  )}
+                  {stop.items.length > 0 && (
+                    <small className="af-text-muted">
+                      {stop.items
+                        .map((line) => `${line.productName} × ${line.quantity} ${line.unit.toLowerCase()}${line.lotCode ? ` (lô ${line.lotCode})` : ''}`)
+                        .join(' · ')}
+                    </small>
+                  )}
+                  <div className="af-trip-stop-foot">
+                    <small>{balance ? <Money value={balance.due} tone={dueTone(balance.due)} prefix="Thu " /> : null}</small>
+                    <div className="af-trip-stop-actions">
+                      {stop.latestAttempt && (
+                        <Button size="small" type="text" onClick={() => setHistory(stop)}>
+                          Lịch sử giao
                         </Button>
-                      </Popconfirm>
-                      {canDispatch(order) && (
+                      )}
+                      {editable && stop.orderStatus !== 'OUT_FOR_DELIVERY' && (
                         <Popconfirm
-                          title={`Xuất kho đơn ${order.id}?`}
-                          okText="Xuất kho"
-                          cancelText="Chưa"
-                          onConfirm={() => run({ kind: 'dispatch', id: trip.id, orderId: order.id }, `Đã xuất kho đơn ${order.id}.`)}
+                          title={`Bỏ ${stop.orderCode} khỏi chuyến?`}
+                          description="Đơn quay lại danh sách chờ xếp chuyến."
+                          okText="Bỏ khỏi chuyến"
+                          okButtonProps={{ danger: true }}
+                          cancelText="Giữ"
+                          onConfirm={() => execute(() => ops.removeStop(trip, stop))}
                         >
-                          <Button size="small">Xuất kho</Button>
+                          <Button size="small" type="text" danger disabled={change.isPending}>
+                            Bỏ khỏi chuyến
+                          </Button>
                         </Popconfirm>
                       )}
-                    </Space>
-                  ) : (
-                    openIn(trip, order) && <AdvanceStatusButton order={order} />
-                  )}
+                      {editable && trip.driverId && stop.orderStatus === 'PREPARING' && (
+                        <Popconfirm
+                          title={`Xuất kho đơn ${stop.orderCode}?`}
+                          okText="Xuất kho"
+                          cancelText="Chưa"
+                          onConfirm={() => execute(() => ops.dispatchStop(trip, stop))}
+                        >
+                          <Button size="small" disabled={change.isPending}>
+                            Xuất kho
+                          </Button>
+                        </Popconfirm>
+                      )}
+                      {canRecord &&
+                        (ops.recordResult ? (
+                          <Button
+                            size="small"
+                            type={stop === firstPending ? 'primary' : 'default'}
+                            disabled={change.isPending}
+                            onClick={() => setAction({ kind: 'result', tripId: trip.id, order: stop })}
+                          >
+                            Ghi kết quả
+                          </Button>
+                        ) : (
+                          order && <AdvanceStatusButton order={order} />
+                        ))}
+                      {demo ? (
+                        <Button size="small" disabled>
+                          Vỏ của đơn (chưa hỗ trợ)
+                        </Button>
+                      ) : (
+                        <DeliveryBottlesButton assignmentId={stop.id} orderCode={stop.orderCode} />
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            )
+          })}
         </ol>
 
-        {trip.status === 'Chờ đối soát' && (
-          <div className="af-trip-settle">
-            <Typography.Title level={5}>Đối soát cuối chuyến</Typography.Title>
-            <Form
-              form={form}
-              layout="vertical"
-              initialValues={{ cashHandedOver: expected.cash, bottlesHandedOver: expected.bottles }}
-              onFinish={(draft) =>
-                modal.confirm({
-                  title: `Chốt đối soát chuyến ${trip.id}?`,
-                  content: `Tiền mặt ${currency(draft.cashHandedOver)} · ${draft.bottlesHandedOver} vỏ. Sau khi chốt không sửa được.`,
-                  okText: 'Chốt đối soát',
-                  cancelText: 'Xem lại',
-                  centered: true,
-                  onOk: () => run({ kind: 'settle', id: trip.id, draft }, `Đã đối soát chuyến ${trip.id}.`),
-                })
-              }
-            >
-              <Space wrap size={16}>
-                <Form.Item
-                  name="cashHandedOver"
-                  label={`Tiền mặt nhận (sổ: ${currency(expected.cash)})`}
-                  rules={[{ required: true, message: 'Nhập số tiền.' }]}
-                >
-                  <InputNumber<number>
-                    min={0}
-                    step={1000}
-                    precision={0}
-                    style={{ width: 200 }}
-                    formatter={(value) => `${value ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
-                    parser={(value) => Number(value?.replace(/\./g, '') ?? 0)}
-                  />
-                </Form.Item>
-                <Form.Item
-                  name="bottlesHandedOver"
-                  label={`Vỏ rỗng nhận (sổ: ${expected.bottles})`}
-                  rules={[{ required: true, message: 'Nhập số vỏ.' }]}
-                >
-                  <InputNumber min={0} precision={0} style={{ width: 160 }} />
-                </Form.Item>
-              </Space>
-              <Form.Item
-                name="note"
-                label="Ghi chú chênh lệch"
-                rules={[{ required: mismatch, whitespace: true, message: 'Có chênh lệch, ghi rõ lý do.' }, { max: 300 }]}
-              >
-                <Input.TextArea rows={2} placeholder={mismatch ? 'Thiếu tiền, vỏ để lại nhà khách...' : 'Không có chênh lệch'} />
-              </Form.Item>
-              <Button type="primary" htmlType="submit" loading={action.isPending}>
-                Xác nhận đối soát
-              </Button>
-            </Form>
-          </div>
-        )}
-
-        {trip.settlement && (
-          <Descriptions
-            className="af-trip-settle"
-            size="small"
-            column={1}
-            title="Kết quả đối soát"
+        {trip.settlement && <SettlementResult settlement={trip.settlement} />}
+        {collections.isError && collections.error && <QueryError error={collections.error} onRetry={collections.refetch} />}
+        {collections.data && trip.status !== 'CREATED' && (
+          <Collapse
+            ghost
+            className="af-order-more"
             items={[
               {
-                key: 'cash',
-                label: 'Tiền mặt',
-                children: (
-                  <>
-                    <Money
-                      value={trip.settlement.cashHandedOver}
-                      tone={trip.settlement.cashHandedOver < trip.settlement.cashExpected ? 'refund' : 'paid'}
-                    />{' '}
-                    / sổ {currency(trip.settlement.cashExpected)}{' '}
-                    {trip.settlement.cashHandedOver !== trip.settlement.cashExpected && <Tag color="red">Lệch</Tag>}
-                  </>
+                key: 'collections',
+                label: 'Tiền và vỏ đã thu',
+                extra: `${currency(collections.data.cashExpected)} · ${collections.data.bottlesExpected} vỏ`,
+                children: collections.data.receipts.length ? (
+                  <ul className="af-return-list">
+                    {collections.data.receipts.map((receipt) => (
+                      <li key={receipt.id}>
+                        <strong>{trip.orders.find((stop) => stop.orderId === receipt.orderId)?.orderCode ?? `Đơn #${receipt.orderId}`}</strong>
+                        <span>
+                          {currency(receipt.amount)} · {receipt.method === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'} · {receipt.bottlesReturned} vỏ
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="af-order-more-empty">{demo ? 'Chi tiết từng khoản thu chưa hỗ trợ trong bản dùng thử.' : 'Tài xế chưa ghi khoản thu nào.'}</p>
                 ),
               },
-              {
-                key: 'bottles',
-                label: 'Vỏ rỗng',
-                children: (
-                  <>
-                    {trip.settlement.bottlesHandedOver} / sổ {trip.settlement.bottlesExpected}{' '}
-                    {trip.settlement.bottlesHandedOver !== trip.settlement.bottlesExpected && <Tag color="red">Lệch</Tag>}
-                  </>
-                ),
-              },
-              { key: 'note', label: 'Ghi chú', children: trip.settlement.note ?? '—' },
-              { key: 'at', label: 'Thời điểm', children: new Date(trip.settlement.settledAt).toLocaleString('vi-VN') },
             ]}
           />
         )}
       </Modal>
-      {orderId && <OrderDetailsModal key={orderId} orderId={orderId} onClose={() => setOrderId(null)} />}
+
+      {action && (
+        <DeliveryActionModal
+          key={`${action.kind}-${action.kind === 'result' ? action.order.id : ''}`}
+          action={action}
+          expected={
+            action.kind === 'settle' && collections.data && (demo || collections.data.receipts.length)
+              ? { cash: collections.data.cashExpected, bottles: collections.data.bottlesExpected }
+              : undefined
+          }
+          loading={change.isPending}
+          drivers={drivers.data ?? []}
+          available={available.data ?? []}
+          optionError={action.kind === 'driver' ? drivers.error : action.kind === 'add' ? available.error : null}
+          onRetry={() => {
+            void drivers.refetch()
+            void available.refetch()
+          }}
+          onClose={() => setAction(null)}
+          onSubmit={async (values) => {
+            try {
+              await change.mutateAsync(async () => {
+                if (action.kind === 'driver') return ops.assignDriver?.(trip, values.driverId!)
+                if (action.kind === 'add') {
+                  const selected = available.data?.find((order) => order.id === values.orderId)
+                  if (!selected) throw new Error('Đơn không còn trong danh sách chờ xếp chuyến.')
+                  return ops.addOrder(trip, selected)
+                }
+                if (action.kind === 'result') {
+                  return ops.recordResult?.(action.order, {
+                    outcome: values.outcome!,
+                    recipientName: values.outcome === 'SUCCESS' ? values.recipientName : undefined,
+                    failureReason: values.outcome === 'FAILED' ? values.failureReason : undefined,
+                    note: values.note,
+                  })
+                }
+                return ops.settle(trip, values as SettlementInput)
+              })
+              setAction(null)
+            } catch {
+              /* Thông báo lỗi đã hiện; giữ nguyên dữ liệu đã nhập để sửa và lưu lại. */
+            }
+          }}
+        />
+      )}
+      <Modal open={history !== null} title={`Lịch sử giao ${history?.orderCode ?? ''}`} onCancel={() => setHistory(null)} footer={null}>
+        {attempts.isError ? (
+          <QueryError error={attempts.error} onRetry={attempts.refetch} />
+        ) : attempts.isPending ? (
+          <Skeleton active />
+        ) : (
+          <AttemptsTimeline attempts={attempts.data} />
+        )}
+      </Modal>
+      {orderId && <OrderDetails id={orderId} onClose={() => setOrderId(null)} />}
       {printer.portal}
     </>
+  )
+}
+
+function SettlementResult({ settlement }: { settlement: SettlementInput & { handedOverAt: string } }) {
+  return (
+    <Descriptions
+      className="af-trip-settle"
+      size="small"
+      column={1}
+      title="Kết quả đối soát"
+      items={[
+        {
+          key: 'cash',
+          label: 'Tiền mặt',
+          children: (
+            <>
+              <Money value={settlement.cashConfirmed} tone={settlement.cashConfirmed < settlement.cashReported ? 'refund' : 'paid'} /> / tài xế báo{' '}
+              {currency(settlement.cashReported)} {settlement.cashConfirmed !== settlement.cashReported && <Tag color="red">Lệch</Tag>}
+            </>
+          ),
+        },
+        {
+          key: 'bottles',
+          label: 'Vỏ rỗng',
+          children: (
+            <>
+              {settlement.bottlesConfirmed} / dự kiến {settlement.bottlesExpected}{' '}
+              {settlement.bottlesConfirmed !== settlement.bottlesExpected && <Tag color="red">Lệch</Tag>}
+            </>
+          ),
+        },
+        ...(settlement.note ? [{ key: 'note', label: 'Ghi chú', children: settlement.note }] : []),
+        { key: 'at', label: 'Thời điểm', children: dateTime(settlement.handedOverAt) },
+      ]}
+    />
   )
 }

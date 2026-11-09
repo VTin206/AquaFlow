@@ -1,5 +1,4 @@
 import { lazy, Suspense, type ReactNode } from 'react'
-import { Spin } from 'antd'
 import { Navigate, Route, Routes } from 'react-router'
 import { AppLayout } from '@/app/layouts/AppLayout'
 import { DriverLayout } from '@/app/layouts/DriverLayout'
@@ -8,6 +7,7 @@ import { RequireAuth } from './RequireAuth'
 import { usePageSupported } from '@/shared/features'
 import { RequireCustomer } from './RequireCustomer'
 import { ScrollToTop } from './ScrollToTop'
+import { StartupSplash } from './StartupSplash'
 
 // Mỗi trang được tải khi người dùng mở tới, giúp lần tải đầu nhẹ hơn.
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })))
@@ -32,8 +32,6 @@ const CustomerOrderPage = lazy(() => import('@/features/shop/CustomerOrdersPage'
 const ProductDetailPage = lazy(() => import('@/features/shop/ProductDetailPage').then((m) => ({ default: m.ProductDetailPage })))
 const CheckoutPage = lazy(() => import('@/features/shop/CheckoutPage').then((m) => ({ default: m.CheckoutPage })))
 const TrackPage = lazy(() => import('@/features/shop/TrackPage').then((m) => ({ default: m.TrackPage })))
-const LoginPage = lazy(() => import('@/features/auth/LoginPage').then((m) => ({ default: m.LoginPage })))
-const RegisterPage = lazy(() => import('@/features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })))
 const ForgotPasswordPage = lazy(() => import('@/features/auth/PasswordRecoveryPages').then(m => ({ default: m.ForgotPasswordPage })))
 const ResetPasswordPage = lazy(() => import('@/features/auth/PasswordRecoveryPages').then(m => ({ default: m.ResetPasswordPage })))
 const UnavailablePage = lazy(() => import('@/features/live/UnavailablePage').then((m) => ({ default: m.UnavailablePage })))
@@ -43,19 +41,13 @@ function BackendPage({ path, title, children }: { path: string; title: string; c
   return usePageSupported()(path) ? children : <UnavailablePage title={title} />
 }
 
-const pageFallback = (
-  <div className="af-page-loading">
-    <Spin size="large" />
-  </div>
-)
-
 export function App() {
   return (
-    <Suspense fallback={pageFallback}>
+    <Suspense fallback={<StartupSplash />}>
       <ScrollToTop />
       <Routes>
-        <Route path="login" element={<LoginPage />} />
-        <Route path="register" element={<RegisterPage />} />
+        <Route path="login" element={<Navigate to="/shop/account" replace />} />
+        <Route path="register" element={<Navigate to="/shop/register" replace />} />
         {/* Trang công khai cho khách đặt hàng và tra cứu đơn, không cần đăng nhập. */}
         <Route element={<ShopLayout />}>
           <Route path="forgot-password" element={<ForgotPasswordPage />} />

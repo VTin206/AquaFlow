@@ -1,12 +1,11 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 import {
   Alert,
   App,
   Button,
   Checkbox,
-  Collapse,
   Descriptions,
-  Dropdown,
   Form,
   Input,
   InputNumber,
@@ -21,7 +20,6 @@ import {
   theme,
   type CollapseProps,
 } from 'antd'
-import { Ellipsis } from 'lucide-react'
 import { Money } from '@/shared/components/Money'
 import { OrderTotals } from '@/shared/components/OrderTotals'
 import { TransferQr } from '@/shared/payment/TransferQr'
@@ -31,26 +29,28 @@ import { currency } from '@/shared/utils/format'
 import { can } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/useStaff'
 import { useSettings } from '@/features/settings/settingsService'
+import { AttemptsTimeline } from '@/features/delivery/components/AttemptsTimeline'
+import { demoAttempts } from '@/features/delivery/demoDriverData'
+import type { LiveOrder } from '@/features/live/orderApi'
 import { canCancel as cancellable, returnableQuantity } from '../orderService'
 import { demoOrderFocus } from '../orderFocus'
 import { nextActionLabel } from '../orderStatus'
 import { DeliverySlipDocument, InvoiceDocument } from '../print/OrderDocuments'
 import { useCopyOrderMessage } from '../useCopyOrderMessage'
-import { OrderFocusBanner, OrderLines, OrderParty } from './OrderSheet'
-import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
+import { OrderDetailsFrame } from './OrderDetailsFrame'
+import { modalWidth } from '@/shared/utils/modal'
 import {
   amountDue,
   awaitingReturnInspection,
   paidAmount,
   returnedValue,
+  type Order,
   type Payment,
   type PaymentDraft,
   type RefundDraft,
 } from '../types'
 import { useOrderAction, useOrders } from '../useOrders'
 import { AdvanceStatusButton } from './AdvanceStatusButton'
-import { LateTag } from './LateTag'
-import { OrderStatusTag } from './OrderStatusTag'
 
 type ReturnForm = {
   quantities: Record<string, number | null>
@@ -60,6 +60,16 @@ type ReturnForm = {
   refundReference?: string
 }
 const paymentMethods = ['Tiền mặt', 'Chuyển khoản'].map((value) => ({ value, label: value }))
+const progressStatus: Record<Order['status'], LiveOrder['status']> = {
+  'Chờ xác nhận': 'PENDING',
+  'Đã xác nhận': 'CONFIRMED',
+  'Đang chuẩn bị': 'PREPARING',
+  'Đang giao': 'OUT_FOR_DELIVERY',
+  'Giao thất bại': 'OUT_FOR_DELIVERY',
+  'Đã giao': 'DELIVERED',
+  'Đã hoàn tất': 'COMPLETED',
+  'Đã hủy': 'CANCELLED',
+}
 
 export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClose: () => void }) {
   const { message } = App.useApp()
@@ -103,6 +113,7 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
   }
 
   const hasAdvance = Boolean(nextActionLabel(order))
+  const attempts = demoAttempts(order)
   const moreMenu = [
     ...(cancelled ? [] : [{ key: 'copy', label: 'Sao chép tin nhắn xác nhận', onClick: () => void copyMessage(order, settings?.storeName) }]),
     { key: 'invoice', label: 'In hóa đơn bán lẻ', onClick: () => printer.print(<InvoiceDocument order={order} settings={settings} />) },
@@ -162,6 +173,45 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
         />
       ) : (
         <p className="af-order-more-empty">Chưa ghi nhận khoản thanh toán.</p>
+      ),
+    },
+    ...(order.method === 'Giao tận nơi'
+      ? [
+          {
+            key: 'delivery',
+            label: 'Giao hàng',
+            extra: attempts.length ? `${attempts.length} lần giao` : 'Chưa có kết quả giao',
+            children: attempts.length ? <AttemptsTimeline attempts={attempts} /> : <p className="af-order-more-empty">Đơn chưa có kết quả giao.</p>,
+          },
+        ]
+      : []),
+    {
+      key: 'stock',
+      label: 'Xuất kho',
+      extra: order.dispatches?.length ? `${order.dispatches.length} phiếu` : 'Chưa xuất',
+      children: order.dispatches?.length ? (
+        order.dispatches.map((dispatch, index) => (
+          <div key={dispatch.at} className="af-order-receipt">
+            <p>
+              <strong>Phiếu xuất #{index + 1}</strong> · {new Date(dispatch.at).toLocaleString('vi-VN')}
+            </p>
+            <Table
+              rowKey={(line) => `${line.productId}-${line.lotCode ?? ''}`}
+              size="small"
+              dataSource={dispatch.lines}
+              pagination={false}
+              scroll={{ x: 450 }}
+              columns={[
+                { title: 'Sản phẩm', dataIndex: 'name' },
+                { title: 'Lô', dataIndex: 'lotCode', render: (code?: string) => code ?? '—' },
+                { title: 'Hạn dùng', dataIndex: 'expiryDate', render: (date?: string) => date ?? '—' },
+                { title: 'Đã xuất', dataIndex: 'quantity', align: 'right' },
+              ]}
+            />
+          </div>
+        ))
+      ) : (
+        <p className="af-order-more-empty">Đơn chưa có phiếu xuất kho.</p>
       ),
     },
     ...(order.returns?.length
@@ -242,84 +292,74 @@ export function OrderDetailsModal({ orderId, onClose }: { orderId: string; onClo
 
   return (
     <>
-      <Modal
-        open
-        centered
-        className="af-order-details"
-        onCancel={onClose}
-        width={modalWidth.medium}
-        styles={modalScrollBody}
-        title={
-          <span className="af-order-title">
-            <span>Đơn {order.code ?? order.id}</span>
-            <OrderStatusTag status={order.status} method={order.method} />
-            <LateTag order={order} />
-          </span>
+      <OrderDetailsFrame
+        order={order}
+        focus={demoOrderFocus(order)}
+        progress={{
+          status: progressStatus[order.status],
+          fulfillmentType: order.method === 'Giao tận nơi' ? 'DELIVERY' : 'COUNTER',
+        }}
+        onClose={onClose}
+        moreItems={moreMenu}
+        sections={moreSections}
+        cancelAction={
+          canCancel && (
+            <Tooltip title={needsRefundRight ? 'Đơn đã thu tiền: cần chủ cửa hàng hủy và hoàn tiền.' : undefined}>
+              <Button type="text" danger disabled={needsRefundRight} onClick={() => setMode('cancel')}>
+                Hủy đơn
+              </Button>
+            </Tooltip>
+          )
         }
-        footer={
-          <div className="af-order-footer">
-            <div>
-              {canCancel && (
-                <Tooltip title={needsRefundRight ? 'Đơn đã thu tiền: cần chủ cửa hàng hủy và hoàn tiền.' : undefined}>
-                  <Button type="text" danger disabled={needsRefundRight} onClick={() => setMode('cancel')}>
-                    Hủy đơn
-                  </Button>
-                </Tooltip>
-              )}
-            </div>
-            <div>
-              <Dropdown trigger={['click']} menu={{ items: moreMenu }}>
-                <Button icon={<Ellipsis size={16} />}>Thao tác khác</Button>
-              </Dropdown>
-              {canPay && (
-                <Button type={hasAdvance ? 'default' : 'primary'} onClick={() => setMode('pay')}>
-                  Ghi nhận thanh toán
-                </Button>
-              )}
-              {hasAdvance && <AdvanceStatusButton order={order} size="middle" primary />}
-            </div>
-          </div>
+        actions={
+          <>
+            {canPay && (
+              <Button type={hasAdvance ? 'default' : 'primary'} onClick={() => setMode('pay')}>
+                Ghi nhận thanh toán
+              </Button>
+            )}
+            {hasAdvance && <AdvanceStatusButton order={order} size="middle" primary />}
+            {order.status === 'Đang chuẩn bị' && order.method === 'Giao tận nơi' && (
+              <Link to="/delivery" onClick={onClose}>
+                <Button type="primary">Xếp chuyến</Button>
+              </Link>
+            )}
+          </>
         }
-      >
-        <OrderFocusBanner focus={demoOrderFocus(order)} />
-        <div className="af-order-sheet">
-          <OrderParty order={order} />
-          <OrderLines lines={order.lines}>
-            <OrderTotals
-              wide
-              rows={[
-                { label: 'Tiền hàng', value: currency(order.lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0)) },
-                ...(order.method === 'Giao tận nơi'
-                  ? [{ label: 'Phí giao', value: order.deliveryFee > 0 ? currency(order.deliveryFee) : 'Miễn phí' }]
-                  : []),
-                ...(order.returns?.length ? [{ label: 'Hàng khách trả lại', value: `−${currency(returnedValue(order))}` }] : []),
-              ]}
-              total={{ label: 'Tổng cộng', value: currency(order.total) }}
-              after={
-                cancelled ? null : (
-                  <>
-                    <div className="is-after-total">
-                      <dt>Đã thu</dt>
-                      <dd>
-                        <Money value={paid} tone={paid > 0 ? 'paid' : 'neutral'} />
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Còn phải thu</dt>
-                      <dd>
-                        <strong>
-                          <Money value={due} tone={dueTone(due)} />
-                        </strong>
-                      </dd>
-                    </div>
-                  </>
-                )
-              }
-            />
-          </OrderLines>
-        </div>
-        <Collapse ghost className="af-order-more" items={moreSections} />
-      </Modal>
+        totals={
+          <OrderTotals
+            wide
+            rows={[
+              { label: 'Tiền hàng', value: currency(order.lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0)) },
+              ...(order.method === 'Giao tận nơi'
+                ? [{ label: 'Phí giao', value: order.deliveryFee > 0 ? currency(order.deliveryFee) : 'Miễn phí' }]
+                : []),
+              ...(order.returns?.length ? [{ label: 'Hàng khách trả lại', value: `−${currency(returnedValue(order))}` }] : []),
+            ]}
+            total={{ label: 'Tổng cộng', value: currency(order.total) }}
+            after={
+              cancelled ? null : (
+                <>
+                  <div className="is-after-total">
+                    <dt>Đã thu</dt>
+                    <dd>
+                      <Money value={paid} tone={paid > 0 ? 'paid' : 'neutral'} />
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Còn phải thu</dt>
+                    <dd>
+                      <strong>
+                        <Money value={due} tone={dueTone(due)} />
+                      </strong>
+                    </dd>
+                  </div>
+                </>
+              )
+            }
+          />
+        }
+      />
       <Modal
         open={mode === 'pay'}
         title="Ghi nhận thanh toán"

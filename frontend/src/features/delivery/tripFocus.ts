@@ -1,6 +1,6 @@
 import type { OrderFocus } from '@/features/orders/orderFocus'
 import type { DeliveryTrip } from './deliveryApi'
-import type { Trip, TripStatus } from './types'
+import type { TripStatus } from './types'
 
 export type TripViewStatus = TripStatus | 'Đã hủy'
 /** Bước tiếp theo của chuyến, cũng là nút chính duy nhất ở chân ngăn kéo. */
@@ -36,6 +36,11 @@ export function liveTripFocus(trip: Pick<DeliveryTrip, 'status' | 'driverId' | '
     }
     return { next: 'depart', focus: { tone: 'action', title: 'Sẵn sàng khởi hành', description: 'Đã xuất kho đủ đơn. Xác nhận khi tài xế đã nhận hàng.' } }
   }
+  // Xuất kho từng đơn nên chuyến có thể đã chạy mà vẫn còn đơn chưa xuất.
+  const undispatched = trip.orders.filter((order) => order.orderStatus === 'PREPARING').length
+  if (undispatched) {
+    return { next: 'dispatch', focus: { tone: 'action', title: `Cần xuất kho ${undispatched} đơn`, description: 'Đơn đã xuất không bỏ khỏi chuyến được.' } }
+  }
   const results = trip.orders.filter((order) => order.latestAttempt).length
   const failed = trip.orders.filter((order) => order.latestAttempt?.outcome === 'FAILED').length
   const failedNote = failed ? `${failed} đơn giao thất bại.` : ''
@@ -52,14 +57,6 @@ export function liveTripFocus(trip: Pick<DeliveryTrip, 'status' | 'driverId' | '
     next: 'settle',
     focus: { tone: 'action', title: 'Cần đối soát với tài xế', description: `Đã có kết quả đủ ${total} điểm. ${failedNote}`.trim() },
   }
-}
-
-/** Bản dùng thử: xuất kho xong là đang giao, không có bước khởi hành riêng. */
-export function demoTripFocus(trip: Pick<Trip, 'status'>, undispatched: number, done: number, total: number): OrderFocus {
-  if (trip.status === 'Đã đối soát') return { tone: 'done', title: 'Chuyến đã đối soát xong' }
-  if (trip.status === 'Chờ đối soát') return { tone: 'action', title: 'Cần đối soát với tài xế', description: `Đã có kết quả đủ ${total} điểm.` }
-  if (undispatched) return { tone: 'action', title: `Cần xuất kho ${undispatched} đơn`, description: 'Đơn đã xuất không bỏ khỏi chuyến được.' }
-  return { tone: 'waiting', title: `Đã có kết quả ${done}/${total} điểm giao`, description: 'Ghi đủ kết quả rồi mới đối soát được.' }
 }
 
 type DriverFocusInput = {
