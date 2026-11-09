@@ -13,10 +13,10 @@ import { useOrderList } from '@/features/orders/orderData'
 import { knownAmountDue, type Order, type OrderStatus } from '@/features/orders/types'
 import { useLiveTrips } from '../useLiveTrips'
 
-// Mỗi cột là một bước, đơn đi từ trái sang phải. Bản dùng thử xác nhận là chuyển thẳng sang chuẩn bị nên không có "Đã xác nhận".
-const columns: { status: OrderStatus; title: string; hint: string; color: string; liveOnly?: boolean }[] = [
+// Mỗi cột là một bước, đơn đi từ trái sang phải. Bản dùng thử xác nhận là chuyển thẳng sang chuẩn bị nên cột "Đã xác nhận" luôn trống.
+const columns: { status: OrderStatus; title: string; hint: string; color: string }[] = [
   { status: 'Chờ xác nhận', title: 'Chờ xác nhận', hint: 'Gọi lại cho khách để xác nhận', color: '#f59f00' },
-  { status: 'Đã xác nhận', title: 'Đã xác nhận', hint: 'Đã giữ hàng, chuyển sang soạn hàng', color: '#4263eb', liveOnly: true },
+  { status: 'Đã xác nhận', title: 'Đã xác nhận', hint: 'Đã giữ hàng, chuyển sang soạn hàng', color: '#4263eb' },
   { status: 'Đang chuẩn bị', title: 'Đang chuẩn bị', hint: 'Xếp vào chuyến, xuất kho ở chi tiết chuyến', color: '#1c7ed6' },
   { status: 'Đang giao', title: 'Đang giao', hint: 'Xác nhận khi khách đã nhận hàng', color: '#0b7a83' },
   { status: 'Giao thất bại', title: 'Giao thất bại', hint: 'Kiểm hàng hoàn ở Kho hàng rồi giao lại', color: '#c34444' },
@@ -109,7 +109,6 @@ export function DeliveryBoard() {
     <>
       <Row gutter={[16, 16]}>
         {columns
-          .filter((column) => !demo || !column.liveOnly)
           .map((column) => {
             const items = deliveries.filter((order) => columnOf(order) === column.status)
             return (

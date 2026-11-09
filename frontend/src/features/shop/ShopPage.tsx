@@ -8,7 +8,7 @@ import { useCartActions, useCart } from './cart'
 import { ShopFilters } from './components/ShopFilters'
 import { ShopIntro } from './components/ShopIntro'
 import { ALL, filterProducts, type ShopFilterState } from './shopGroups'
-import { useShopDemo, useShopContact, useShopFeature, useShopProducts, type ShopProduct } from './shopService'
+import { useShopDemo, useShopContact, useShopProducts, type ShopProduct } from './shopService'
 
 function ShopImage({ product }: { product: ShopProduct }) {
   const [failed, setFailed] = useState(false)
@@ -37,7 +37,6 @@ export function ShopPage() {
   const productsQuery = useShopProducts()
   const contact = useShopContact()
   const showPolicy = useShopDemo()
-  const showTracking = useShopFeature('orderTracking')
   const cartActions = useCartActions()
   const cart = useCart()
   const [page, setPage] = useState(1)
@@ -83,7 +82,6 @@ export function ShopPage() {
     <div className="af-shop-page">
       <ShopIntro
         showPolicy={showPolicy}
-        showTracking={showTracking}
         storeName={contact?.storeName}
         phone={contact?.phone}
         products={products}

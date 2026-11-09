@@ -8,7 +8,7 @@ import { AccountMenu } from './components/AccountMenu'
 import { CartDrawer } from './components/CartDrawer'
 import { UkFlag, VietnamFlag } from './components/Flags'
 import { ShopFooter } from './components/ShopFooter'
-import { shopKeys, useShopContact, useShopDemo, useShopFeature } from './shopService'
+import { shopKeys, useShopContact, useShopDemo } from './shopService'
 import { useHomeLink, type FreshState } from '@/app/useHomeLink'
 import './shop.css'
 
@@ -64,7 +64,6 @@ const drinkMenuHref = (filter: DrinkMenuFilter) => {
 export function ShopLayout() {
   // Chỉ dùng cho nhãn báo đang xem dữ liệu mẫu.
   const demo = useShopDemo()
-  const showTracking = useShopFeature('orderTracking')
   const settings = useShopContact()
   const navigate = useNavigate()
   const location = useLocation()
@@ -151,11 +150,9 @@ export function ShopLayout() {
                 ))}
               </div>
             </div>
-            {showTracking && (
-              <NavLink to="/track" className={({ isActive }) => `af-shop-nav-link${isActive ? ' is-active' : ''}`}>
-                Tra cứu đơn
-              </NavLink>
-            )}
+            <NavLink to="/track" className={({ isActive }) => `af-shop-nav-link${isActive ? ' is-active' : ''}`}>
+              Tra cứu đơn
+            </NavLink>
             <Link to="/shop/account" className="af-shop-nav-link">
               Tài khoản
             </Link>
@@ -169,16 +166,14 @@ export function ShopLayout() {
               title="Tìm sản phẩm"
               onClick={() => navigate('/shop', { state: { focusSearch: Date.now() } })}
             />
-            {showTracking && (
-              <Button
-                type="text"
-                shape="circle"
-                icon={<PackageSearch size={24} />}
-                aria-label="Tra cứu đơn"
-                title="Tra cứu đơn"
-                onClick={() => navigate('/track')}
-              />
-            )}
+            <Button
+              type="text"
+              shape="circle"
+              icon={<PackageSearch size={24} />}
+              aria-label="Tra cứu đơn"
+              title="Tra cứu đơn"
+              onClick={() => navigate('/track')}
+            />
             <AccountMenu />
           </div>
           <Badge count={count} size="small" offset={[-4, 4]}>
@@ -200,7 +195,9 @@ export function ShopLayout() {
             Quay lại
           </Button>
         )}
-        <ErrorBoundary key={location.pathname} homeHref="/shop"><Outlet key={fresh ?? 'page'} context={{ openCart: () => setCartOpen(true) }} /></ErrorBoundary>
+        <ErrorBoundary key={location.pathname} homeHref="/shop">
+          <Outlet key={fresh ?? 'page'} context={{ openCart: () => setCartOpen(true) }} />
+        </ErrorBoundary>
       </main>
       <ShopFooter demo={demo} contact={settings} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />

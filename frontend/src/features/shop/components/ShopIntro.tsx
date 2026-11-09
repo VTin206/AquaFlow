@@ -21,7 +21,6 @@ import type { ShopProduct } from '../shopService'
 type Props = {
   /** Có cấu hình cửa hàng thì hiện con số chính sách (miễn phí giao, cọc vỏ). */
   showPolicy: boolean
-  showTracking: boolean
   storeName?: string
   phone?: string
   products: ShopProduct[]
@@ -31,7 +30,7 @@ type Props = {
 /**
  * Phần giới thiệu trước danh mục: banner kèm tin mới, ưu đãi, lý do chọn và cách đặt hàng.
  */
-export function ShopIntro({ showPolicy, showTracking, storeName, phone, products, onShop }: Props) {
+export function ShopIntro({ showPolicy, storeName, phone, products, onShop }: Props) {
   const showcase = products.filter((product) => product.image && product.available !== false).slice(0, 3)
   const tel = phone?.replace(/\s/g, '')
 
@@ -73,13 +72,13 @@ export function ShopIntro({ showPolicy, showTracking, storeName, phone, products
                 <Button size="large" ghost icon={<Phone size={18} />} href={`tel:${tel}`}>
                   {phone}
                 </Button>
-              ) : showTracking ? (
+              ) : (
                 <Link to="/track">
                   <Button size="large" ghost icon={<PackageSearch size={18} />}>
                     Tra cứu đơn
                   </Button>
                 </Link>
-              ) : null}
+              )}
             </div>
           </div>
           <div className={`af-shop-banner-art ${showcase.length ? '' : 'is-empty'}`} aria-hidden>
