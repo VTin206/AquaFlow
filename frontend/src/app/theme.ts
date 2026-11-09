@@ -47,7 +47,7 @@ const buildTheme = (p: Palette): ThemeConfig => ({
     Dropdown: { borderRadiusSM: 10 },
     Card: { headerFontSize: 15, headerHeight: 56, bodyPadding: 20, borderRadiusLG: 14 },
     Statistic: { titleFontSize: 13, contentFontSize: 'clamp(18px, 2vw, 28px)' },
-    Button: { fontWeight: 600, primaryShadow: '0 5px 14px rgba(37, 99, 235, 0.18)', defaultShadow: 'none' },
+    Button: { borderRadius: 9, borderRadiusSM: 9, borderRadiusLG: 12, fontWeight: 600, primaryShadow: '0 5px 14px rgba(8, 127, 173, 0.18)', defaultShadow: 'none' },
     Table: {
       headerBg: p.surfaceMuted,
       headerColor: p.textSecondary,
