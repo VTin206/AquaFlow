@@ -7,6 +7,7 @@ import { useCart } from './cart'
 import { AccountMenu } from './components/AccountMenu'
 import { CartDrawer } from './components/CartDrawer'
 import { UkFlag, VietnamFlag } from './components/Flags'
+import { ShopEnter } from './components/ShopEnter'
 import { ShopFooter } from './components/ShopFooter'
 import { shopKeys, useShopContact, useShopDemo } from './shopService'
 import { useHomeLink, type FreshState } from '@/app/useHomeLink'
@@ -182,7 +183,10 @@ export function ShopLayout() {
           </Button>
         )}
         <ErrorBoundary key={location.pathname} homeHref="/shop">
-          <Outlet key={fresh ?? 'page'} context={{ openCart: () => setCartOpen(true) }} />
+          {/* Từng thẻ hiện fade-in-up nối tiếp; chạy lại mỗi lần đổi trang. */}
+          <ShopEnter key={fresh ?? 'page'}>
+            <Outlet context={{ openCart: () => setCartOpen(true) }} />
+          </ShopEnter>
         </ErrorBoundary>
       </main>
       <ShopFooter demo={demo} contact={settings} />
