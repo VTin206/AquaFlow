@@ -66,11 +66,14 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
       <div className="af-topbar-right">
         {staff?.isDemo && <span className="af-demo-label">Dữ liệu mẫu</span>}
         <GlobalSearch />
-        <Tooltip title={staff?.isDemo ? 'Trang khách đặt hàng (dùng chung dữ liệu mẫu trong tab này)' : 'Trang khách đặt hàng'}>
-          <Link to="/shop" className="af-notification-link" aria-label="Mở trang khách đặt hàng">
-            <ShoppingCart size={19} aria-hidden />
-          </Link>
-        </Tooltip>
+        {/* Chỉ bản dùng thử mới có lối sang trang khách (cùng dữ liệu mẫu trong tab); tài khoản thật không cần. */}
+        {staff?.isDemo && (
+          <Tooltip title="Trang khách đặt hàng (dùng chung dữ liệu mẫu trong tab này)">
+            <Link to="/shop" className="af-notification-link" aria-label="Mở trang khách đặt hàng">
+              <ShoppingCart size={19} aria-hidden />
+            </Link>
+          </Tooltip>
+        )}
         {showNotifications ? (
           <NotificationPopover />
         ) : (
