@@ -38,7 +38,7 @@
   align-items: center;
   gap: 8px;
   color: var(--af-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -56,13 +56,13 @@
   padding: 12px 0 8px;
   background: var(--af-surface);
   color: var(--af-text-strong);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
 }
 .af-activity-day h3 span {
   margin-left: 6px;
   color: var(--af-text-tertiary);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 400;
 }
 .af-activity-day ol {
@@ -87,7 +87,7 @@
 .af-activity-avatar.ant-avatar {
   background: var(--af-primary-soft);
   color: var(--af-primary);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
 }
 .af-activity-main p {
@@ -115,7 +115,7 @@
 }
 span.af-activity-target {
   color: var(--af-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
 }
 .af-activity-area .lucide {
   margin-right: 4px;
@@ -126,7 +126,7 @@ span.af-activity-target {
   align-items: center;
   gap: 8px;
   color: var(--af-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
   white-space: nowrap;
 }
 .af-activity-more {

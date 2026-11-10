@@ -10,7 +10,7 @@
 .af-shop-topbar {
   background: var(--af-primary);
   color: #fff;
-  font-size: 13px;
+  font-size: 14px;
 }
 .af-shop-topbar-inner {
   max-width: 1180px;
@@ -62,7 +62,7 @@
   padding-block: 0;
   padding-inline: 0;
   color: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
 }
 .af-shop-topbar-link.ant-btn:hover,
@@ -110,7 +110,7 @@
 }
 .af-shop-account-head small {
   color: var(--af-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -134,7 +134,7 @@
   padding: 8px 12px;
   border-radius: 8px;
   color: var(--af-text-secondary);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   white-space: nowrap;
   text-decoration: none;
@@ -184,7 +184,7 @@
   padding-bottom: 12px;
   border-bottom: 1px solid var(--af-border);
   color: var(--af-text-strong);
-  font-size: 13px;
+  font-size: 14px;
   letter-spacing: 0.04em;
 }
 .af-shop-mega-column ul {
@@ -199,7 +199,7 @@
   display: block;
   padding: 10px 0;
   color: var(--af-text-secondary);
-  font-size: 14px;
+  font-size: 15px;
   text-decoration: none;
 }
 .af-shop-mega-column a:hover,
@@ -281,7 +281,7 @@
   border-top: 0;
   background: linear-gradient(135deg, #0f2f64 0%, #123f82 48%, #075985 100%);
   color: rgba(239, 246, 255, 0.78);
-  font-size: 14px;
+  font-size: 15px;
 }
 .af-shop-footer::before,
 .af-shop-footer::after {
@@ -326,7 +326,7 @@
 }
 .af-shop-footer-kicker {
   color: #7dd3fc;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.14em;
 }
@@ -387,7 +387,7 @@
 }
 .af-shop-footer h2 {
   margin: 3px 0 14px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
@@ -427,7 +427,7 @@
   border: 1px solid rgba(186, 230, 253, 0.2);
   border-radius: 999px;
   color: rgba(239, 246, 255, 0.86);
-  font-size: 12px;
+  font-size: 13px;
 }
 .af-shop-footer-trust svg {
   color: #7dd3fc;
@@ -457,7 +457,7 @@
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 4px 16px;
-  font-size: 13px;
+  font-size: 14px;
   color: rgba(219, 234, 254, 0.68);
 }
 .af-shop-footer-bottom-links {
@@ -517,7 +517,7 @@
   flex-direction: column;
   gap: 4px;
   color: var(--af-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
 }
 .af-shop-hero li {
   display: flex;
@@ -592,7 +592,7 @@
   padding: 4px 12px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.16);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
 }
 .af-shop-banner h1 {
@@ -760,13 +760,13 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.4;
   font-weight: 600;
 }
 .af-shop-news-text small {
   color: var(--af-text-tertiary);
-  font-size: 12px;
+  font-size: 13px;
 }
 .af-shop-article article {
   display: flex;
@@ -797,7 +797,7 @@
 }
 .af-shop-article time {
   color: var(--af-text-tertiary);
-  font-size: 13px;
+  font-size: 14px;
 }
 .af-shop-article h2 {
   margin: 16px 0 0;
@@ -855,7 +855,7 @@
 }
 .af-shop-promo small {
   color: var(--af-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
 }
 .af-shop-promo-icon {
   flex: none;
@@ -889,7 +889,7 @@
 }
 .af-shop-why-grid span {
   color: var(--af-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
 }
 /* Giá bán trên trang khách cùng màu với số tiền khách phải trả ở trang thanh toán. */
@@ -991,7 +991,7 @@
 .af-shop-account-side .ant-divider {
   margin: 4px 0;
   color: var(--af-text-tertiary);
-  font-size: 13px;
+  font-size: 14px;
 }
 .af-shop-account-side ul.af-shop-account-links {
   margin: 0;
@@ -1005,7 +1005,7 @@
   height: auto;
   padding: 4px 0;
   color: var(--af-text);
-  font-size: 14px;
+  font-size: 15px;
 }
 .af-shop-account-links a:hover,
 .af-shop-account-links .ant-btn:hover {
@@ -1041,7 +1041,7 @@
 }
 .af-shop-account-divider {
   color: var(--af-text-tertiary);
-  font-size: 11px;
+  font-size: 12px;
 }
 .af-shop-account-dev {
   display: flex;
@@ -1061,7 +1061,7 @@
 }
 .af-shop-account-switch small {
   color: var(--af-text-tertiary);
-  font-size: 11px;
+  font-size: 12px;
 }
 @media (max-width: 800px) {
   .af-shop-account-grid {
@@ -1136,7 +1136,7 @@
 .af-checkout-fee-row {
   padding-bottom: 10px;
   color: var(--af-text);
-  font-size: 14px;
+  font-size: 15px;
 }
 .af-checkout-fee-row > span {
   flex: none;
@@ -1145,7 +1145,7 @@
   display: block;
   margin-top: 1px;
   color: var(--af-text-tertiary);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
 }
 .af-checkout-fee-total {
@@ -1242,7 +1242,7 @@
   }
   .af-checkout-bar small {
     color: var(--af-text-secondary);
-    font-size: 12px;
+    font-size: 13px;
   }
   .af-checkout-bar .ant-btn {
     flex: none;
@@ -1291,7 +1291,7 @@
 }
 .af-checkout-lines small {
   color: var(--af-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
 }
 .af-checkout-line-total {
   color: var(--af-text-strong);
@@ -1401,7 +1401,7 @@
   border-radius: 50%;
   background: var(--af-primary);
   color: var(--af-on-primary);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
 }
 .af-shop-steps li > svg {
@@ -1418,7 +1418,7 @@
 }
 .af-shop-steps li span {
   color: var(--af-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
 }
 .af-shop-steps .ant-btn-link {
   margin-top: 8px;
@@ -1528,7 +1528,7 @@
   gap: 8px;
   margin-bottom: 10px;
   color: rgba(255, 255, 255, 0.82);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1567,7 +1567,7 @@
 .af-drinks-hero-meta span {
   margin-top: 7px;
   color: rgba(255, 255, 255, 0.84);
-  font-size: 13px;
+  font-size: 14px;
 }
 .af-shop-filters {
   border-color: var(--shop-line);
@@ -1605,7 +1605,7 @@
 }
 .af-shop-card .af-product-brand-line {
   color: var(--shop-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -1662,7 +1662,7 @@
     font-size: 28px;
   }
   .af-drinks-hero p {
-    font-size: 14px;
+    font-size: 15px;
   }
 }
 @media (max-width: 900px) {
@@ -1721,7 +1721,7 @@
   border: 1px solid var(--af-border);
   border-radius: 999px;
   background: var(--af-surface);
-  font-size: 14px;
+  font-size: 15px;
 }
 .af-shop-groups .ant-tag-checkable-checked {
   border-color: var(--af-primary);
@@ -1859,7 +1859,7 @@
 }
 .af-shop-cart small {
   color: var(--af-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
 }
 .af-shop-cart-footer {
   display: flex;
@@ -1876,7 +1876,7 @@
   padding: 10px 12px;
   border-radius: 8px;
   background: var(--af-primary-soft);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--af-text-secondary);
 }
@@ -1921,7 +1921,7 @@
   align-items: center;
 }
 .af-shop-track-privacy.ant-typography {
-  font-size: 12px;
+  font-size: 13px;
   margin: 0;
 }
 @media (max-width: 640px) {

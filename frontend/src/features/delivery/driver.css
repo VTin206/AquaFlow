@@ -23,7 +23,7 @@
 }
 .af-driver-bar .af-topbar-brand small {
   color: var(--af-text-tertiary);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   padding-left: 8px;
   border-left: 1px solid var(--af-border);
@@ -59,7 +59,7 @@
 .af-driver-head p {
   margin: 2px 0 0;
   color: var(--af-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
 }
 .af-driver-trip {
   margin-top: 16px;
@@ -154,7 +154,7 @@
   gap: 2px;
   height: 58px;
   padding: 4px 6px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.2;
   white-space: normal;
 }
@@ -178,7 +178,7 @@
   margin-bottom: 0;
 }
 .af-driver-stop .af-text-muted {
-  font-size: 12px;
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
 .af-driver-finished {

@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from 'react'
-import { App as AntApp, ConfigProvider } from 'antd'
+import { App as AntApp, ConfigProvider, Grid } from 'antd'
 import { useColorMode } from '@/app/colorMode'
-import { appTheme, darkTheme } from '@/app/theme'
+import { appTheme, darkTheme, withTouchInputs } from '@/app/theme'
 
 /**
  * Vùng theo chế độ sáng/tối (khu quản lý, màn hình tài xế); cửa hàng và đăng nhập luôn sáng.
@@ -10,6 +10,7 @@ import { appTheme, darkTheme } from '@/app/theme'
  */
 export function ThemedArea({ children }: { children: ReactNode }) {
   const { dark } = useColorMode()
+  const narrow = Grid.useBreakpoint().md === false
   useEffect(() => {
     const root = document.documentElement
     if (dark) root.dataset.theme = 'dark'
@@ -19,7 +20,7 @@ export function ThemedArea({ children }: { children: ReactNode }) {
     }
   }, [dark])
   return (
-    <ConfigProvider theme={dark ? darkTheme : appTheme}>
+    <ConfigProvider theme={narrow ? withTouchInputs(dark ? darkTheme : appTheme) : dark ? darkTheme : appTheme}>
       <AntApp message={{ maxCount: 3 }}>{children}</AntApp>
     </ConfigProvider>
   )

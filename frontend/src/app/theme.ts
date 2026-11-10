@@ -5,7 +5,7 @@ import { palettes, type Palette } from './palette'
 const buildTheme = (p: Palette): ThemeConfig => ({
   token: {
     fontFamily: "'Nunito Sans', 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif",
-    fontSize: 14,
+    fontSize: 15,
     colorPrimary: p.primary,
     colorInfo: p.primary,
     colorSuccess: p.successSolid,
@@ -25,7 +25,7 @@ const buildTheme = (p: Palette): ThemeConfig => ({
   },
   components: {
     Breadcrumb: {
-      fontSize: 13,
+      fontSize: 14,
       linkColor: p.textTertiary,
       linkHoverColor: p.primary,
       lastItemColor: p.textStrong,
@@ -45,8 +45,8 @@ const buildTheme = (p: Palette): ThemeConfig => ({
     },
     // Khung menu bo 14, đệm 4 nên dòng bên trong bo 10 để hai góc khớp nhau.
     Dropdown: { borderRadiusSM: 10 },
-    Card: { headerFontSize: 15, headerHeight: 56, bodyPadding: 20, borderRadiusLG: 14 },
-    Statistic: { titleFontSize: 13, contentFontSize: 'clamp(18px, 2vw, 28px)' },
+    Card: { headerFontSize: 16, headerHeight: 56, bodyPadding: 20, borderRadiusLG: 14 },
+    Statistic: { titleFontSize: 14, contentFontSize: 'clamp(18px, 2vw, 28px)' },
     Button: { borderRadius: 9, borderRadiusSM: 9, borderRadiusLG: 12, fontWeight: 600, primaryShadow: '0 5px 14px rgba(8, 127, 173, 0.18)', defaultShadow: 'none' },
     Table: {
       headerBg: p.surfaceMuted,
@@ -60,12 +60,24 @@ const buildTheme = (p: Palette): ThemeConfig => ({
       cellPaddingInlineMD: 20,
     },
     Segmented: { trackBg: p.segmentTrack, itemSelectedColor: p.selectedText, itemSelectedBg: p.segmentSelected, trackPadding: 4 },
-    Form: { labelColor: p.text, labelFontSize: 13, verticalLabelPadding: '0 0 4px', itemMarginBottom: 14 },
+    Form: { labelColor: p.text, labelFontSize: 14, verticalLabelPadding: '0 0 4px', itemMarginBottom: 14 },
     Modal: { titleFontSize: 18 },
   },
 })
 
 export const appTheme = buildTheme(palettes.light)
+
+/** iOS tự phóng to khi chạm vào ô nhập có chữ dưới 16px; trên điện thoại cho ô nhập 16px. */
+export const withTouchInputs = (t: ThemeConfig): ThemeConfig => ({
+  ...t,
+  components: {
+    ...t.components,
+    Input: { ...t.components?.Input, inputFontSize: 16 },
+    InputNumber: { ...t.components?.InputNumber, inputFontSize: 16 },
+    DatePicker: { ...t.components?.DatePicker, inputFontSize: 16 },
+    Select: { ...t.components?.Select, fontSize: 16 },
+  },
+})
 
 // Chế độ tối: thuật toán tối của AntD + bảng màu tối trong palette.ts.
 const darkBase = buildTheme(palettes.dark)
