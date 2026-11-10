@@ -10,6 +10,7 @@ import { productService } from './productService'
 import { resolveProductImage } from './productImages'
 import { isLowStock, type Product } from './types'
 import { productKeys } from './useProducts'
+import { sortByName } from '@/shared/utils/table'
 
 /**
  * Danh mục cho trang Sản phẩm: bản dùng thử đọc mock, tài khoản thật gọi ProductController (BE2)
@@ -122,6 +123,7 @@ export function useCatalog(status: ProductStatus) {
       demo
         ? (await productService.listAll()).map(fromDemo).filter((item) => status === 'all' || item.active === (status === 'active'))
         : liveCatalog(status),
+    select: sortByName,
   })
 }
 

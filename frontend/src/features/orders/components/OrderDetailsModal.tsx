@@ -51,6 +51,7 @@ import {
 } from '../types'
 import { useOrderAction, useOrders } from '../useOrders'
 import { AdvanceStatusButton } from './AdvanceStatusButton'
+import { TextArea } from '@/shared/components/TextArea'
 
 type ReturnForm = {
   quantities: Record<string, number | null>
@@ -467,7 +468,7 @@ export function OrderDetailsModal({ orderId, onClose, payOnly = false }: { order
             </>
           )}
           <Form.Item name="reason" label="Lý do hủy" rules={[{ required: true, whitespace: true, message: 'Nhập lý do hủy.' }]}>
-            <Input.TextArea rows={3} />
+            <TextArea rows={3} />
           </Form.Item>
         </Form>
       </Modal>
@@ -519,7 +520,7 @@ export function OrderDetailsModal({ orderId, onClose, payOnly = false }: { order
             <Checkbox>Hàng còn nguyên, nhập lại tồn bán được (bỏ chọn nếu hàng hỏng)</Checkbox>
           </Form.Item>
           <Form.Item name="reason" label="Lý do trả" rules={[{ required: true, whitespace: true, message: 'Nhập lý do trả hàng.' }]}>
-            <Input.TextArea rows={2} placeholder="Ví dụ: bình rò nước, giao nhầm loại" />
+            <TextArea rows={2} placeholder="Ví dụ: bình rò nước, giao nhầm loại" />
           </Form.Item>
           <div className="af-order-summary">
             <span>Giá trị hàng trả</span>

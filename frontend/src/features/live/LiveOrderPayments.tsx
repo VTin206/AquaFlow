@@ -5,6 +5,7 @@ import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { invalidateLiveData } from './invalidateLiveData'
 import { paymentApi, useOrderPayments, type PaymentInput } from './paymentApi'
+import { TextArea } from '@/shared/components/TextArea'
 
 export function LiveOrderPayments({ orderId }: { orderId: number }) {
   const query = useOrderPayments(orderId)
@@ -62,7 +63,7 @@ export function LiveOrderPayments({ orderId }: { orderId: number }) {
         <Form.Item name="amount" label="Số tiền" rules={[{ required: true, message: 'Nhập số tiền.' }, { type: 'number', min: 0.01, max: Number(maximum), message: `Số tiền phải lớn hơn 0 và không vượt ${currency(maximum)}.` }]}><InputNumber precision={2} min={0.01} max={Number(maximum)} style={{ width: '100%' }} /></Form.Item>
         <Form.Item name="method" label="Hình thức" rules={[{ required: true }]}><Select options={[{ value: 'CASH', label: 'Tiền mặt' }, { value: 'BANK_TRANSFER', label: 'Chuyển khoản' }]} /></Form.Item>
         <Form.Item name="reference" label="Mã giao dịch (nếu có)" rules={[{ max: 200 }]}><Input /></Form.Item>
-        <Form.Item name="note" label="Lý do / ghi chú" rules={[{ required: direction === 'OUT', whitespace: true, message: 'Nhập lý do hoàn tiền.' }, { max: 200 }]}><Input.TextArea rows={2} /></Form.Item>
+        <Form.Item name="note" label="Lý do / ghi chú" rules={[{ required: direction === 'OUT', whitespace: true, message: 'Nhập lý do hoàn tiền.' }, { max: 200 }]}><TextArea rows={2} maxLength={200} /></Form.Item>
       </Form>
     </Modal>
   </>

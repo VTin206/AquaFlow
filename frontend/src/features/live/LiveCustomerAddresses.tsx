@@ -10,6 +10,7 @@ import { QueryError } from '@/shared/components/QueryError'
 import { invalidateLiveData } from './invalidateLiveData'
 import { modalWidth } from '@/shared/utils/modal'
 import { WardSelect } from '@/shared/address/WardSelect'
+import { TextArea } from '@/shared/components/TextArea'
 
 export type Address = {
   id: number
@@ -145,8 +146,8 @@ export function LiveCustomerAddresses({
           >
             <Input />
           </Form.Item>
-          <Form.Item label="Địa chỉ" name="addressLine" rules={[{ required: true }]}>
-            <Input.TextArea />
+          <Form.Item label="Địa chỉ" name="addressLine" rules={[{ required: true }, { max: 255 }]}>
+            <TextArea maxLength={255} />
           </Form.Item>
           <Form.Item label="Phường/Xã" name="area" rules={[{ max: 150 }]}>
             <WardSelect />

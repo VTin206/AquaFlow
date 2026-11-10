@@ -6,6 +6,7 @@ import { QueryError } from '@/shared/components/QueryError'
 import { accountKey, customerAccountApi, phoneRules, type AddressInput, type SavedAddress } from './customerAccountApi'
 import { demoCustomerAccountApi } from './demoCustomerData'
 import { WardSelect } from '@/shared/address/WardSelect'
+import { TextArea } from '@/shared/components/TextArea'
 
 export function CustomerAccountPanel() {
   const { user, updateProfile } = useAuth()
@@ -94,7 +95,7 @@ export function CustomerAccountPanel() {
         <Form form={addressForm} layout="vertical" onFinish={values => { if (!saveAddress.isPending) saveAddress.mutate(values) }} disabled={saveAddress.isPending}>
           <Form.Item name="recipientName" label="Tên người nhận" rules={[{ required: true, whitespace: true }, { max: 150 }]}><Input /></Form.Item>
           <Form.Item name="recipientPhone" label="Điện thoại người nhận" rules={phoneRules}><Input /></Form.Item>
-          <Form.Item name="addressLine" label="Địa chỉ" rules={[{ required: true, whitespace: true }, { max: 255 }]}><Input.TextArea rows={2} /></Form.Item>
+          <Form.Item name="addressLine" label="Địa chỉ" rules={[{ required: true, whitespace: true }, { max: 255 }]}><TextArea rows={2} maxLength={255} /></Form.Item>
           <Form.Item name="area" label="Phường/Xã" rules={[{ required: true, whitespace: true, message: 'Chọn phường/xã.' }, { max: 150 }]}><WardSelect /></Form.Item>
           <Form.Item name="isDefault" valuePropName="checked"><Checkbox>Địa chỉ mặc định</Checkbox></Form.Item>
           {saveAddress.isError && <Alert type="error" showIcon title={saveAddress.error.message} />}

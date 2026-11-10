@@ -18,6 +18,7 @@ import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { FormSection } from '@/shared/components/FormSection'
 import { ModalTotalFooter } from '@/shared/components/ModalTotalFooter'
 import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
+import { TextArea } from '@/shared/components/TextArea'
 
 type ReceiveStockModalProps = {
   open: boolean
@@ -398,7 +399,7 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
           </FormSection>
           <FormSection title="Ghi chú">
             <Form.Item name="note" label="Ghi chú kiểm nhận" rules={[{ max: 500 }]}>
-              <Input.TextArea rows={2} placeholder="Thiếu so với hóa đơn, bao bì móp, nhiệt độ xe..." />
+              <TextArea rows={2} maxLength={500} placeholder="Thiếu so với hóa đơn, bao bì móp, nhiệt độ xe..." />
             </Form.Item>
             <Typography.Paragraph type="secondary" className="af-form-hint">
               Chỉ hàng đạt mới cộng vào tồn bán được. Hàng hỏng, thiếu hoặc lô đã hết hạn được ghi trên phiếu để đối soát với nhà cung cấp.
