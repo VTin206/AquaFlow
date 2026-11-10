@@ -27,6 +27,7 @@ import { FormSection } from '@/shared/components/FormSection'
 import { ModalTotalFooter } from '@/shared/components/ModalTotalFooter'
 import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
 import { WardSelect } from '@/shared/address/WardSelect'
+import { TextArea } from '@/shared/components/TextArea'
 
 type OrderIntakeModalProps = {
   onClose: () => void
@@ -475,7 +476,7 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
 
               <FormSection title="Ghi chú">
                 <Form.Item name="note" rules={[{ max: 500, message: 'Tối đa 500 ký tự.' }]}>
-                  <Input.TextArea aria-label="Ghi chú" rows={3} placeholder="Hướng dẫn tìm địa chỉ, lưu ý giao nhận..." />
+                  <TextArea aria-label="Ghi chú" rows={3} maxLength={500} placeholder="Hướng dẫn tìm địa chỉ, lưu ý giao nhận..." />
                 </Form.Item>
                 <p className="af-form-hint">
                   Đơn mới ở trạng thái chờ xác nhận. Tồn kho được kiểm tra và giữ hàng khi xác nhận đơn. Phí giao và tổng tiền cuối cùng do

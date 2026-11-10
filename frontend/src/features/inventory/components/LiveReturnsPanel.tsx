@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Form, Input, InputNumber, Modal, Table } from 'antd'
+import { App, Button, Form, InputNumber, Modal, Table } from 'antd'
 import { returnApi, usePendingReturns, type PendingReturn, type ReturnInspection } from '@/features/live/returnApi'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { OrderFocusBanner } from '@/features/orders/components/OrderSheet'
@@ -8,6 +8,7 @@ import { QueryError } from '@/shared/components/QueryError'
 import { modalWidth } from '@/shared/utils/modal'
 import { isoToVnDate } from '../expiry'
 import { ReturnsView, type ReturnHistoryRow } from './ReturnsView'
+import { TextArea } from '@/shared/components/TextArea'
 
 export function LiveReturnsPanel() {
   const pending = usePendingReturns()
@@ -212,7 +213,7 @@ export function InspectionModal({
           style={{ marginTop: 16 }}
           rules={[{ required: damaged, whitespace: true, message: 'Ghi rõ tình trạng hàng loại bỏ' }, { max: 300 }]}
         >
-          <Input.TextArea rows={2} maxLength={300} />
+          <TextArea rows={2} maxLength={300} />
         </Form.Item>
       </Form>
     </Modal>

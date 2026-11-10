@@ -5,6 +5,7 @@ import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { useFeature } from '@/shared/features'
 import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
+import { TextArea } from '@/shared/components/TextArea'
 
 /** Thêm mới khi không có `supplier`; sửa khi có. */
 export function SupplierFormModal({ supplier, onClose, onSaved }: { supplier?: Supplier; onClose: () => void; onSaved: () => void }) {
@@ -118,7 +119,7 @@ export function SupplierFormModal({ supplier, onClose, onSaved }: { supplier?: S
             { max: 300, message: 'Địa chỉ tối đa 300 ký tự.' },
           ]}
         >
-          <Input.TextArea rows={2} placeholder="Số nhà, đường, phường/xã, tỉnh/thành phố" maxLength={300} />
+          <TextArea rows={2} placeholder="Số nhà, đường, phường/xã, tỉnh/thành phố" maxLength={300} />
         </Form.Item>
       </Form>
     </Modal>

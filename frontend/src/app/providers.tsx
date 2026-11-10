@@ -39,6 +39,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
         theme={narrow ? withTouchInputs(appTheme) : appTheme}
         form={{ requiredMark }}
         modal={{ centered: true }}
+        // Ô nhiều dòng tự giãn (shared/components/TextArea) nên bỏ tay kéo góc, tránh kéo vỡ khung hộp thoại.
+        textArea={{ styles: { textarea: { resize: 'none' } } }}
       >
         <AntApp message={{ maxCount: 3 }}>
           <AuthProvider>

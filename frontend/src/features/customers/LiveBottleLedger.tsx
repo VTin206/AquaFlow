@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, App, Button, Checkbox, Form, Input, InputNumber, Modal, Select, Skeleton, Space, Table, Tag } from 'antd'
+import { Alert, App, Button, Checkbox, Form, InputNumber, Modal, Select, Skeleton, Space, Table, Tag } from 'antd'
 import { useStaff } from '@/features/auth/useStaff'
 import { bottleLedgerApi, type BottleInput, type BottleLedger } from '@/features/live/bottleLedgerApi'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
@@ -8,6 +8,7 @@ import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { demoBottleApi } from './demoBottleLedger'
 import { customerKeys } from './useCustomers'
+import { TextArea } from '@/shared/components/TextArea'
 
 const labels: Record<string, string> = {
   GIVE: 'Giao vỏ',
@@ -149,7 +150,7 @@ function BottleForm({
             { max: 300 },
           ]}
         >
-          <Input.TextArea rows={2} />
+          <TextArea rows={2} maxLength={300} />
         </Form.Item>
       </Form>
     </Modal>

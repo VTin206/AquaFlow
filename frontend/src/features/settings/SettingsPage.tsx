@@ -21,6 +21,7 @@ import { Unsupported } from '@/shared/components/Unsupported'
 import { ApiError } from '@/shared/api/client'
 import { type SettingsSnapshot } from './settingsApi'
 import type { StoreSettings } from './types'
+import { TextArea } from '@/shared/components/TextArea'
 
 export function SettingsPage() {
   const settingsQuery = useSettings()
@@ -216,7 +217,7 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
               </Col>
             </Row>
             <Form.Item name="invoiceNote" label="Ghi chú cuối hóa đơn" rules={[{ max: 200 }]}>
-              <Input.TextArea rows={2} showCount maxLength={200} />
+              <TextArea rows={2} showCount maxLength={200} />
             </Form.Item>
           </Card>
 

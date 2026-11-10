@@ -6,6 +6,7 @@ import { useFeature } from '@/shared/features'
 import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 import { modalWidth } from '@/shared/utils/modal'
 import { WardSelect } from '@/shared/address/WardSelect'
+import { TextArea } from '@/shared/components/TextArea'
 
 type CustomerFormModalProps = { open: boolean; customer?: Customer; onClose: () => void; onSaved?: (customer: Customer) => void }
 
@@ -99,7 +100,7 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
           <WardSelect disabled={!showExtras} />
         </Form.Item>
         <Form.Item name="note" label="Ghi chú" extra={showExtras ? undefined : UNSUPPORTED_HINT} rules={[{ max: 500 }]}>
-          <Input.TextArea rows={2} placeholder="Giờ nhận hàng thuận tiện, người liên hệ, lưu ý giao nhận..." disabled={!showExtras} />
+          <TextArea rows={2} maxLength={500} placeholder="Giờ nhận hàng thuận tiện, người liên hệ, lưu ý giao nhận..." disabled={!showExtras} />
         </Form.Item>
         {!customer && <p className="af-form-hint">Thêm địa chỉ giao trong hồ sơ khách sau khi lưu.</p>}
       </Form>
