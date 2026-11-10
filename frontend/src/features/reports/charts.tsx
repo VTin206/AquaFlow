@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { fontSizes } from '@/app/typography'
 import { Grid } from 'antd'
 import { Bar, BarChart, CartesianGrid, ComposedChart, LabelList, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { compactCurrency, currency } from '@/shared/utils/format'
@@ -6,7 +7,7 @@ import type { RevenueBucket } from './periods'
 import type { DriverReportRow, ProductReportRow } from './reportService'
 
 // Màu lấy từ biến CSS nên biểu đồ tự đổi theo chế độ sáng/tối.
-const axisTick = { fill: 'var(--af-text-tertiary)', fontSize: 12 }
+const axisTick = { fill: 'var(--af-text-tertiary)', fontSize: fontSizes.xs }
 const hoverCursor = { fill: 'var(--af-surface-hover)' }
 
 /** Nhãn trục danh mục một dòng, cắt bớt nếu dài (Recharts mặc định tự xuống dòng). */
@@ -23,7 +24,7 @@ function CategoryTick({
 }) {
   const value = payload?.value ?? ''
   return (
-    <text x={x} y={y} dy={4} textAnchor="end" fill="var(--af-text)" fontSize={13}>
+    <text x={x} y={y} dy={4} textAnchor="end" fill="var(--af-text)" fontSize={fontSizes.sm}>
       <title>{value}</title>
       {value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value}
     </text>
@@ -164,7 +165,7 @@ export function TopProductsChart({ rows }: { rows: Pick<ProductReportRow, 'name'
               dataKey="revenue"
               position="right"
               formatter={(value) => compactCurrency(Number(value))}
-              style={{ fill: 'var(--af-text-secondary)', fontSize: 12 }}
+              style={{ fill: 'var(--af-text-secondary)', fontSize: fontSizes.xs }}
             />
           </Bar>
         </BarChart>
@@ -243,7 +244,7 @@ export function DriverDeliveryChart({ rows }: { rows: Pick<DriverReportRow, 'dri
                         dy={4}
                         textAnchor="middle"
                         fill="var(--af-surface)"
-                        fontSize={12}
+                        fontSize={fontSizes.xs}
                         fontWeight={600}
                       >
                         {value}
