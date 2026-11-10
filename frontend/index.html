@@ -8,7 +8,7 @@
     <meta name="description" content="AquaFlow — quản lý bán hàng, kho hàng và giao nhận cho đại lý nước tinh khiết." />
     <title>AquaFlow | Quản lý đại lý nước</title>
     <script>
-      // Màn hình chờ theo chế độ màu đã lưu (cùng khóa với app/colorMode.ts). Không dùng data-theme: thuộc tính đó do ThemedArea quản lý.
+      // Nền tối ngay từ đầu theo chế độ màu đã lưu (cùng khóa với app/colorMode.ts), tránh chớp trắng. Không dùng data-theme: thuộc tính đó do ThemedArea quản lý.
       try {
         var afMode = localStorage.getItem('aquaflow.color-mode')
         if (afMode === 'dark' || (afMode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -17,22 +17,24 @@
       } catch (e) {}
     </script>
     <style>
-      /* Màn hình chờ: hiện trước khi có bundle nên phải nằm ngay trong trang. Màu chép từ app/palette.ts. */
+      /* Không có màn hình chờ; khối này chỉ hiện khi không tải được app hoặc trình duyệt tắt JavaScript. Màu chép từ app/palette.ts. */
       body {
         margin: 0;
       }
+      html[data-startup-theme='dark'] body {
+        background: #0a0f1a;
+      }
       .af-startup {
-        --s-bg: #f4f7fb;
         --s-strong: #16324f;
         --s-text: #52687b;
-        --s-track: #e1e9f1;
         --s-accent: #087fad;
         align-items: center;
-        background: var(--s-bg);
         box-sizing: border-box;
         color: var(--s-text);
-        display: flex;
+        display: none;
+        flex-direction: column;
         font-family: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        font-size: 13px;
         justify-content: center;
         line-height: 1.55;
         min-height: 100vh;
@@ -41,100 +43,34 @@
         text-align: center;
       }
       html[data-startup-theme='dark'] .af-startup {
-        --s-bg: #0a0f1a;
         --s-strong: #e2e8f0;
         --s-text: #94a3b8;
-        --s-track: #273042;
         --s-accent: #3aa6d6;
       }
-      html[data-startup-theme='dark'] body {
-        background: #0a0f1a;
-      }
-      .af-startup-body {
-        align-items: center;
+      .af-startup[data-state='failed'] {
         display: flex;
-        flex-direction: column;
-        position: relative;
       }
-      .af-startup-brand {
-        align-items: center;
-        color: var(--s-strong);
-        display: flex;
-        justify-content: center;
-      }
-      .af-startup-brand img {
-        display: block;
-        height: auto;
-        max-height: 86px;
-        max-width: min(320px, calc(100vw - 48px));
-        object-fit: contain;
-        width: min(320px, calc(100vw - 48px));
-      }
-      .af-startup-spinner {
-        animation: af-startup-spin 0.8s linear infinite;
-        border: 2.5px solid var(--s-track);
-        border-radius: 50%;
-        border-top-color: var(--s-accent);
-        box-sizing: border-box;
-        height: 24px;
-        margin-top: 22px;
-        width: 24px;
-      }
-      /* Chỉ hiện khi tải quá lâu; đặt tuyệt đối để logo luôn ở giữa màn hình. */
-      .af-startup-message {
-        animation: af-startup-reveal 0.2s ease 8s both;
-        font-size: 13px;
-        left: 50%;
-        margin-top: 16px;
-        position: absolute;
-        top: 100%;
-        transform: translateX(-50%);
-        width: min(320px, calc(100vw - 32px));
-      }
-      .af-startup-message p {
+      .af-startup p {
         margin: 0 0 8px;
+        max-width: 320px;
       }
-      .af-startup-message a {
+      .af-startup a {
         color: var(--s-accent);
         font-weight: 500;
       }
-      .af-startup[data-state='failed'] .af-startup-spinner {
-        display: none;
-      }
-      .af-startup[data-state='failed'] .af-startup-message {
-        animation: none;
-      }
-      .af-startup[data-state='failed'] #af-startup-title {
+      #af-startup-title {
         color: var(--s-strong);
         font-size: 15px;
         font-weight: 600;
       }
-      @keyframes af-startup-spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
-      @keyframes af-startup-reveal {
-        from {
-          opacity: 0;
-          visibility: hidden;
-        }
-        to {
-          opacity: 1;
-          visibility: visible;
-        }
-      }
     </style>
     <noscript>
       <style>
-        .af-startup-spinner {
-          visibility: hidden;
+        .af-startup {
+          display: flex;
         }
-        .af-startup-message {
-          animation: none;
-        }
-        .af-startup-message p:not(.af-startup-noscript),
-        .af-startup-message a {
+        .af-startup p:not(.af-startup-noscript),
+        .af-startup a {
           display: none;
         }
       </style>
@@ -142,19 +78,11 @@
   </head>
   <body>
     <div id="root">
-      <main class="af-startup" id="af-startup">
-        <div class="af-startup-body">
-          <div class="af-startup-brand">
-            <img src="/images/aquaflow-logo.png" alt="AquaFlow" />
-          </div>
-          <div class="af-startup-spinner" role="status" aria-label="Đang tải"></div>
-          <div class="af-startup-message" role="status">
-            <p id="af-startup-title">Vẫn đang tải…</p>
-            <p id="af-startup-description">Hãy kiểm tra kết nối mạng hoặc thử tải lại trang.</p>
-            <a href="">Tải lại trang</a>
-            <noscript><p class="af-startup-noscript">Bạn cần bật JavaScript trong trình duyệt để sử dụng AquaFlow.</p></noscript>
-          </div>
-        </div>
+      <main class="af-startup" id="af-startup" role="status">
+        <p id="af-startup-title">Không khởi động được AquaFlow</p>
+        <p id="af-startup-description">Kiểm tra kết nối mạng rồi tải lại trang. Nếu vẫn gặp lỗi, vui lòng thử lại sau.</p>
+        <a href="">Tải lại trang</a>
+        <noscript><p class="af-startup-noscript">Bạn cần bật JavaScript trong trình duyệt để sử dụng AquaFlow.</p></noscript>
       </main>
     </div>
     <script type="module" src="/src/bootstrap.ts"></script>
