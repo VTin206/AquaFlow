@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { fontSizes } from '@/app/typography'
 import { useQuery } from '@tanstack/react-query'
 import { Alert, Card, Col, DatePicker, Empty, Row, Space, Statistic, Tooltip, Typography } from 'antd'
 import { Info } from 'lucide-react'
@@ -67,7 +68,7 @@ function Metrics({ demo }: { demo: boolean }) {
     {summary.isError ? <QueryError error={summary.error} onRetry={summary.refetch} /> : <>
       <Row gutter={[16, 16]}>
         {metrics.map(([title, value, money]) => <Col xs={12} sm={8} xl={4} key={title}>
-          <Card size="small" loading={summary.isPending}><Statistic title={title} styles={{ content: { fontSize: 18 } }} value={value === undefined ? '—' : money ? currency(Math.round(Number(value))) : Number(value)} /></Card>
+          <Card size="small" loading={summary.isPending}><Statistic title={title} styles={{ content: { fontSize: fontSizes.xl } }} value={value === undefined ? '—' : money ? currency(Math.round(Number(value))) : Number(value)} /></Card>
         </Col>)}
       </Row>
       {sales?.netPayments !== undefined && <p>Thanh toán ròng đã xác nhận trong kỳ: <strong>{currency(Number(sales.netPayments))}</strong></p>}

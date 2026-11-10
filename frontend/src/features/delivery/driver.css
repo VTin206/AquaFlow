@@ -23,7 +23,7 @@
 }
 .af-driver-bar .af-topbar-brand small {
   color: var(--af-text-tertiary);
-  font-size: 13px;
+  font-size: var(--af-fs-md);
   font-weight: 500;
   padding-left: 8px;
   border-left: 1px solid var(--af-border);
@@ -53,13 +53,13 @@
 }
 .af-driver-head h1 {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--af-fs-2xl);
   color: var(--af-text-strong);
 }
 .af-driver-head p {
   margin: 2px 0 0;
   color: var(--af-text-secondary);
-  font-size: 13px;
+  font-size: var(--af-fs-md);
 }
 .af-driver-trip {
   margin-top: 16px;
@@ -121,12 +121,12 @@
 .af-driver-customer {
   flex: 1;
   min-width: 0;
-  font-size: 16px;
+  font-size: var(--af-fs-lg);
   color: var(--af-text-strong);
 }
 .af-driver-address {
   margin: 8px 0;
-  font-size: 15px;
+  font-size: var(--af-fs-base);
   color: var(--af-text);
 }
 .af-driver-facts {
@@ -154,7 +154,7 @@
   gap: 2px;
   height: 58px;
   padding: 4px 6px;
-  font-size: 13px;
+  font-size: var(--af-fs-md);
   line-height: 1.2;
   white-space: normal;
 }
@@ -171,14 +171,14 @@
   flex-direction: row;
   width: 100%;
   height: 52px;
-  font-size: 16px;
+  font-size: var(--af-fs-lg);
   font-weight: 600;
 }
 .af-driver-summary .af-order-focus {
   margin-bottom: 0;
 }
 .af-driver-stop .af-text-muted {
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
   overflow-wrap: anywhere;
 }
 .af-driver-finished {
