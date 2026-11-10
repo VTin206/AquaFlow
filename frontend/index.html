@@ -18,11 +18,13 @@
     </script>
     <style>
       /* Không có màn hình chờ; khối này chỉ hiện khi không tải được app hoặc trình duyệt tắt JavaScript. Màu chép từ app/palette.ts. */
+      /* Nền lúc chờ tải code trùng màu nền app (palette.ts: bg) để không chớp trắng khi mở/tải lại trang. */
       body {
         margin: 0;
+        background: #f8fafc;
       }
       html[data-startup-theme='dark'] body {
-        background: #0a0f1a;
+        background: #0f172a;
       }
       .af-startup {
         --s-strong: #16324f;
