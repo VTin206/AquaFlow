@@ -81,6 +81,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/sales/**").hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers(HttpMethod.POST, "/api/v1/delivery-quotes").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/customer/orders/guest").permitAll()
+                        // Khách tra cứu đơn không cần đăng nhập; controller tự giới hạn số lần theo IP.
+                        .requestMatchers(HttpMethod.POST, "/api/v1/order-tracking/lookups").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/order-tracking/*").permitAll()
 
                         // Delivery option lists expose store-wide data and are restricted to store staff.
                         .requestMatchers(HttpMethod.GET,

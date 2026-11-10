@@ -178,6 +178,7 @@ public class OrderService {
                 BigDecimal.ZERO,
                 fee);
 
+        order.assignTrackingToken(TrackingTokens.generate());
         Order savedOrder = orderRepository.save(order);
         orderItemRepository.saveAll(items);
 
@@ -279,7 +280,8 @@ public class OrderService {
                 order.getConfirmedAt(),
                 order.getCancelledAt(),
                 order.getNote(),
-                items
+                items,
+                order.getTrackingToken()
         );
     }
 

@@ -40,6 +40,8 @@ export type LiveOrder = {
   cancelledAt: string | null
   note: string | null
   items: { id: number; productId: number; quantity: number; unitPrice: number; lineTotal: number }[]
+  /** Liên kết tra cứu cho khách: /track/{trackingToken}. */
+  trackingToken?: string | null
 }
 export type OrderStatus = LiveOrder['status']
 /** Theo OrderCreateRequest; nhân viên không tạo đơn kênh WEB (đơn web đi luồng khách hàng). */

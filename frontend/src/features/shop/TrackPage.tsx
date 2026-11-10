@@ -9,7 +9,7 @@ import { dueTone } from '@/shared/utils/money'
 import { currency } from '@/shared/utils/format'
 import type { PublicOrder } from '@/features/orders/types'
 import { useSettings } from '@/features/settings/settingsService'
-import { lookupOrder, useShopContact, useShopFeature, useTrackedOrder } from './shopService'
+import { useLookupOrder, useShopContact, useShopFeature, useTrackedOrder } from './shopService'
 
 const stepOf: Record<PublicOrder['status'], number> = {
   'Chờ xác nhận': 0,
@@ -26,6 +26,7 @@ const stepOf: Record<PublicOrder['status'], number> = {
 function LookupForm() {
   const navigate = useNavigate()
   const supported = useShopFeature('orderTracking')
+  const lookupOrder = useLookupOrder()
   const phone = useShopContact()?.phone?.trim()
   const [error, setError] = useState<string>()
   const [loading, setLoading] = useState(false)
@@ -115,7 +116,9 @@ function TrackedOrder({ token }: { token: string }) {
   const { message } = App.useApp()
   const location = useLocation()
   const navigate = useNavigate()
+  // Khách chưa đăng nhập không đọc được cài đặt cửa hàng: lấy số gọi từ hồ sơ công khai, không có tài khoản ngân hàng thì ẩn QR.
   const { data: settings } = useSettings()
+  const storePhone = useShopContact()?.phone ?? settings?.phone
   const orderQuery = useTrackedOrder(token)
   const order = orderQuery.data
   const placed = (location.state as { placed?: boolean } | null)?.placed
@@ -141,7 +144,7 @@ function TrackedOrder({ token }: { token: string }) {
 
   const cancelled = order.status === 'Đã hủy'
   const failed = order.status === 'Giao thất bại'
-  const canTransfer = !cancelled && order.due > 0 && order.status !== 'Chờ xác nhận'
+  const canTransfer = !cancelled && order.due > 0 && order.status !== 'Chờ xác nhận' && Boolean(settings?.bankAccount)
 
   return (
     <div className="af-shop-track">
@@ -289,8 +292,8 @@ function TrackedOrder({ token }: { token: string }) {
         >
           Chép liên kết
         </Button>
-        {settings?.phone && (
-          <Button icon={<Phone size={16} />} href={`tel:${settings.phone.replace(/\s/g, '')}`}>
+        {storePhone && (
+          <Button icon={<Phone size={16} />} href={`tel:${storePhone.replace(/\s/g, '')}`}>
             Gọi cửa hàng
           </Button>
         )}
