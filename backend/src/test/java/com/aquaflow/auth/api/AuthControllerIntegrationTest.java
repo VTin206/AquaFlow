@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -146,6 +147,38 @@ class AuthControllerIntegrationTest {
                         .content("{\"email\":\"an@example.com\",\"password\":\"wrong-password\"}"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("Unauthorized"));
+    }
+
+    @Test
+    void repeatedFailedLoginsFromOneAddressAreLimited() throws Exception {
+        when(userRepository.findByEmailIgnoreCase("an@example.com")).thenReturn(Optional.of(activeUser));
+        for (int i = 0; i < AuthController.LOGIN_FAILURE_LIMIT; i++) {
+            mockMvc.perform(login("10.9.0.1", "wrong-password")).andExpect(status().isUnauthorized());
+        }
+
+        // Đủ số lần sai thì chặn cả mật khẩu đúng, để không dò tiếp được.
+        mockMvc.perform(login("10.9.0.1", "correct-password"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().string("Retry-After", "900"))
+                .andExpect(jsonPath("$.status").value(429))
+                .andExpect(jsonPath("$.message").isNotEmpty());
+        // Địa chỉ khác không bị ảnh hưởng.
+        mockMvc.perform(login("10.9.0.2", "correct-password")).andExpect(status().isOk());
+    }
+
+    @Test
+    void successfulLoginsAreNotCounted() throws Exception {
+        when(userRepository.findByEmailIgnoreCase("an@example.com")).thenReturn(Optional.of(activeUser));
+        for (int i = 0; i <= AuthController.LOGIN_FAILURE_LIMIT; i++) {
+            mockMvc.perform(login("10.9.0.3", "correct-password")).andExpect(status().isOk());
+        }
+    }
+
+    private org.springframework.test.web.servlet.RequestBuilder login(String address, String password) {
+        return post("/api/v1/auth/login")
+                .with(request -> { request.setRemoteAddr(address); return request; })
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"an@example.com\",\"password\":\"" + password + "\"}");
     }
 
     @Test
