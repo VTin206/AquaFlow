@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/features/auth/useAuth'
 import { useStaff } from '@/features/auth/useStaff'
 import { catalogApi } from '@/features/live/catalogApi'
@@ -236,30 +236,27 @@ async function liveStock(): Promise<StockItem[]> {
   return rows
 }
 
-/** Lô lấy từ tồn kho; ngày sản xuất, số nhập, giá vốn và phiếu nguồn ghép từ các phiếu đã nhập kho. */
+/** Lô lấy từ tồn kho; ngày sản xuất, số nhập, giá vốn và phiếu nguồn lấy từ nguồn nhập của lô (BE gộp từ phiếu đã nhập kho). */
 async function liveLots(): Promise<LotItem[]> {
-  const [stock, receipts] = await Promise.all([inventoryApi.stock(), inventoryApi.receipts()])
-  const confirmed = receipts.filter((receipt) => receipt.status === 'CONFIRMED').sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))
+  const [stock, sources] = await Promise.all([inventoryApi.stock(), inventoryApi.lotSources()])
+  const sourceOf = new Map(sources.map((source) => [source.batchId, source]))
   return stock.flatMap((product) =>
     product.batches.map((batch) => {
-      const sources = confirmed.flatMap((receipt) =>
-        receipt.items.filter((item) => item.batchId === batch.batchId).map((item) => ({ receipt, item })),
-      )
-      const first = sources[0]
+      const source = sourceOf.get(batch.batchId)
       return {
         id: String(batch.batchId),
         productId: String(product.productId),
         productName: product.productName,
         lotCode: batch.lotCode,
-        mfgDate: first?.item.manufacturedOn ?? undefined,
+        mfgDate: source?.manufacturedOn ?? undefined,
         expiryDate: batch.expiresOn,
         onHand: batch.onHand,
         reserved: batch.reserved,
         available: batch.available,
-        received: sources.length ? sources.reduce((sum, source) => sum + source.item.quantityAccepted, 0) : undefined,
-        costPrice: first?.item.unitCost,
-        receiptCode: first && receiptCode(first.receipt),
-        receivedAt: first && isoDate(first.receipt.receivedAt),
+        received: source?.received,
+        costPrice: source?.unitCost,
+        receiptCode: source && receiptCode({ id: source.receiptId }),
+        receivedAt: source && isoDate(source.receivedAt),
       }
     }),
   )
@@ -291,17 +288,34 @@ export function useLotItems() {
   })
 }
 
-export function useReceiptViews() {
+/** Một trang phiếu nhập (ngày nhận mới nhất trước); `statusCounts` đếm trên toàn bộ phiếu, không theo bộ lọc. */
+export type ReceiptPageView = { items: ReceiptView[]; total: number; statusCounts: Record<ReceiptStatus, number> }
+export type ReceiptPageQuery = { status?: ReceiptStatus; page: number; size: number }
+
+async function demoReceiptPage({ status, page, size }: ReceiptPageQuery): Promise<ReceiptPageView> {
+  const all = [...(await demoReceiptDrafts.list()), ...(await productService.receipts()).map(demoReceipt)].sort(
+    (a, b) => b.receivedAt.localeCompare(a.receivedAt) || b.id.localeCompare(a.id),
+  )
+  const matched = status ? all.filter((receipt) => receipt.status === status) : all
+  const count = (value: ReceiptStatus) => all.filter((receipt) => receipt.status === value).length
+  return {
+    items: matched.slice(page * size, page * size + size),
+    total: matched.length,
+    statusCounts: { DRAFT: count('DRAFT'), CONFIRMED: count('CONFIRMED'), CANCELLED: count('CANCELLED') },
+  }
+}
+
+export function useReceiptPage(query: ReceiptPageQuery) {
   const demo = useDemo()
   const who = useLiveKey()
   return useQuery({
-    queryKey: demo ? [...productKeys.receipts, 'view'] : ['live', 'receipts', ...who],
-    queryFn: async () =>
-      demo
-        ? [...(await demoReceiptDrafts.list()), ...(await productService.receipts()).map(demoReceipt)]
-        : (await inventoryApi.receipts())
-            .map(liveReceipt)
-            .sort((a, b) => b.receivedAt.localeCompare(a.receivedAt) || Number(b.id) - Number(a.id)),
+    queryKey: demo ? [...productKeys.receipts, 'view', query] : ['live', 'receipts', ...who, query],
+    queryFn: async (): Promise<ReceiptPageView> => {
+      if (demo) return demoReceiptPage(query)
+      const page = await inventoryApi.receipts(query)
+      return { items: page.items.map(liveReceipt), total: page.total, statusCounts: page.statusCounts }
+    },
+    placeholderData: keepPreviousData,
   })
 }
 
