@@ -172,9 +172,22 @@ body {
   font-size: var(--af-fs-base);
   color: var(--af-text-strong);
 }
-.af-notifications-header strong span {
+.af-notifications-header strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.af-notifications-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: -6px;
+}
+.af-notifications-header-actions .ant-btn:not(:disabled) {
+  color: var(--af-primary);
+}
+.af-notifications-header-actions .ant-btn[aria-label] {
   color: var(--af-text-tertiary);
-  font-weight: 400;
 }
 .af-notifications-list {
   max-height: min(360px, calc(100dvh - 200px));
@@ -189,22 +202,79 @@ body {
 .af-notifications-list li + li {
   border-top: 1px solid var(--af-border);
 }
+.af-notifications-group {
+  padding: 10px 16px 6px;
+  border-top: 1px solid var(--af-border);
+  color: var(--af-text-tertiary);
+  font-size: var(--af-fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.af-notifications-list > div:first-child .af-notifications-group {
+  border-top: 0;
+}
+.af-notifications-group span {
+  font-weight: 400;
+}
+/* Vạch trái theo mức gấp: đỏ làm ngay, cam làm sớm. Chưa đọc: nền nhạt, tiêu đề đậm, chấm xanh. */
 .af-notification-item {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 14px 16px;
-  width: 100%;
-  border: 0;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
+  padding: 12px 16px 12px 13px;
+  border-left: 3px solid transparent;
 }
-.af-notification-item:hover,
-.af-notification-item:focus-visible {
-  background: var(--af-primary-soft);
+.af-notification-item[data-tone='urgent'] {
+  border-left-color: var(--af-danger);
+}
+.af-notification-item[data-tone='soon'] {
+  border-left-color: var(--af-warning);
+}
+.af-notification-item[data-unread] {
+  background: color-mix(in srgb, var(--af-primary) 6%, transparent);
+}
+.af-notification-item[data-resolved] {
+  opacity: 0.6;
+}
+.af-notification-title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.af-notification-title time {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--af-text-tertiary);
+  font-size: var(--af-fs-xs);
+  white-space: nowrap;
+}
+.af-notification-item:not([data-unread]) .af-notification-copy strong {
+  font-weight: 500;
+}
+.af-notification-dot {
+  flex-shrink: 0;
+  align-self: center;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--af-primary);
+}
+.af-notification-action.ant-btn {
+  align-self: flex-start;
+  margin-top: 6px;
+}
+.af-notification-item[data-tone='urgent'] .af-notification-icon {
+  color: var(--af-danger);
+  background: color-mix(in srgb, var(--af-danger) 12%, transparent);
+}
+.af-notification-item[data-tone='soon'] .af-notification-icon {
+  color: var(--af-warning);
+  background: color-mix(in srgb, var(--af-warning) 14%, transparent);
+}
+.af-notification-item[data-resolved] .af-notification-icon {
+  color: var(--af-text-tertiary);
+  background: color-mix(in srgb, var(--af-text-tertiary) 12%, transparent);
 }
 .af-notification-icon {
   display: inline-flex;
@@ -257,11 +327,29 @@ body {
 .af-notifications-footer {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 11px 16px;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 10px 6px 16px;
   border-top: 1px solid var(--af-border);
   font-size: var(--af-fs-sm);
+}
+.af-notifications-footer > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+}
+.af-notifications-pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--af-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.af-notifications-pager > span {
+  min-width: 20px;
+  text-align: center;
 }
 .af-topbar .af-account-menu:hover {
   background: var(--af-primary-soft);
@@ -1360,7 +1448,9 @@ body {
 }
 /* Thẻ sản phẩm trang quản lý: cùng hiệu ứng rê chuột với thẻ ở cửa hàng. */
 .af-shell .af-product-card.ant-card {
-  transition: transform 200ms ease, box-shadow 200ms ease;
+  transition:
+    transform 200ms ease,
+    box-shadow 200ms ease;
 }
 .af-shell .af-product-card.ant-card:hover {
   transform: translateY(-4px);
@@ -2586,7 +2676,9 @@ body {
 }
 .af-menu .ant-menu-item:hover {
   transform: translateX(2px);
-  transition: transform 160ms ease, background 160ms ease;
+  transition:
+    transform 160ms ease,
+    background 160ms ease;
 }
 .af-sider-footer {
   padding-inline: 12px;
@@ -2633,7 +2725,10 @@ body {
 .af-shell .ant-btn {
   border-radius: 9px;
   font-weight: 600;
-  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
 }
 .af-shell .ant-btn:not(:disabled):hover {
   transform: translateY(-1px);
@@ -3140,4 +3235,3 @@ html:has(.af-shell) body {
   color: var(--af-primary);
   font-weight: 500;
 }
-
