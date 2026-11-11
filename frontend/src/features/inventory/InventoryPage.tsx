@@ -1,13 +1,13 @@
 import { useState } from 'react'
-import { Badge, Button, Card, Empty, Input, Progress, Segmented, Table, Tag, Typography, type TableColumnsType } from 'antd'
+import { Badge, Button, Card, Input, Progress, Segmented, Table, Tag, Typography, type TableColumnsType } from 'antd'
 import { FilePlus2, PackagePlus, Search } from 'lucide-react'
 import { BulkBar } from '@/shared/components/BulkBar'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
-import { UNSUPPORTED_HINT, Unsupported } from '@/shared/components/Unsupported'
+import { Unsupported } from '@/shared/components/Unsupported'
 import { usePendingReturns } from '@/features/live/returnApi'
-import { useIsDemo, useFeature } from '@/shared/features'
+import { useIsDemo } from '@/shared/features'
 import { awaitingReturnInspection } from '@/features/orders/types'
 import { useOrders } from '@/features/orders/useOrders'
 import { useColumnSort } from '@/shared/components/sortableColumn'
@@ -34,7 +34,6 @@ export function InventoryPage() {
   const stockQuery = useStockItems()
   const receiptsQuery = useReceiptViews()
   const warningDays = useExpiryWarningDays()
-  const showReturns = useFeature('deliveryReturns')
   const demo = useIsDemo()
   const demoReturns = (useOrders(demo).data ?? []).filter(awaitingReturnInspection).length
   const liveReturns = usePendingReturns(!demo)
@@ -114,7 +113,7 @@ export function InventoryPage() {
           },
         ]
       : []),
-    ...(showReturns && returnsCount
+    ...(returnsCount
       ? [
           {
             key: 'returns',
@@ -285,17 +284,7 @@ export function InventoryPage() {
               { key: 'movements', label: 'Xuất / nhập kho' },
             ]}
           >
-            {view === 'returns' && !showReturns ? (
-              <Empty
-                className="af-unsupported-empty"
-                description={
-                  <>
-                    <strong>Chưa hỗ trợ</strong>
-                    <div className="af-text-muted">{UNSUPPORTED_HINT}</div>
-                  </>
-                }
-              />
-            ) : view === 'returns' ? (
+            {view === 'returns' ? (
               <ReturnsPanel />
             ) : view === 'movements' ? (
               <MovementsPanel />

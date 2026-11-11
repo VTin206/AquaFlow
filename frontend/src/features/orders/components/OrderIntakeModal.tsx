@@ -6,7 +6,6 @@ import { customerCode, type Customer } from '@/features/customers/types'
 import { useCustomer, useCustomerSearch } from '@/features/customers/useCustomers'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import { QueryError } from '@/shared/components/QueryError'
-import { useFeature } from '@/shared/features'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { focusNextOnEnter } from '@/shared/utils/forms'
 import { currency } from '@/shared/utils/format'
@@ -48,8 +47,6 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
   const { message } = App.useApp()
   const [form] = Form.useForm<IntakeValues>()
   const cancel = useConfirmDiscard(form, onClose)
-  const showBottles = useFeature('bottleLedger')
-  const showDebt = useFeature('customerDebt')
   const { products, isPending: loadingProducts, error: productsError, refetch: refetchProducts } = useIntakeProducts()
   const { data: orders = [] } = useOrderList()
   const submit = useSubmitIntake()
@@ -164,8 +161,8 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
     ? [
         customerCode(customer),
         `${customer.orders} đơn`,
-        ...(showBottles ? [`đang giữ ${customer.bottlesHeld} vỏ`] : []),
-        ...(showDebt && customer.debt > 0 ? [`còn nợ ${currency(customer.debt)}`] : []),
+        `đang giữ ${customer.bottlesHeld} vỏ`,
+        ...(customer.debt > 0 ? [`còn nợ ${currency(customer.debt)}`] : []),
       ].join(' · ')
     : ''
 
@@ -484,7 +481,7 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
                 <p className="af-form-hint">
                   Đơn mới ở trạng thái chờ xác nhận. Tồn kho được kiểm tra và giữ hàng khi xác nhận đơn. Phí giao và tổng tiền cuối cùng do
                   hệ thống tính.
-                  {showBottles && ' Khách chưa có vỏ để đổi đặt cọc riêng khi nhận hàng, không gộp vào tiền hàng.'}
+                  {' Khách chưa có vỏ để đổi đặt cọc riêng khi nhận hàng, không gộp vào tiền hàng.'}
                 </p>
               </FormSection>
             </div>

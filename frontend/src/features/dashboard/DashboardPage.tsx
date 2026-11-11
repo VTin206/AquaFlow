@@ -6,7 +6,6 @@ import { DashboardMetrics } from './DashboardMetrics'
 import { Page } from '@/shared/components/Page'
 import { PanelHeading } from '@/shared/components/PanelHeading'
 import { QueryError } from '@/shared/components/QueryError'
-import { useFeature } from '@/shared/features'
 import { canOpen } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/useStaff'
 import { currency, shortDate } from '@/shared/utils/format'
@@ -32,10 +31,8 @@ function useLowStock() {
   return { ...stock, rows }
 }
 
-/** Đã giao mà chưa thu đủ; chưa có phiếu thu thì dựa vào trạng thái thanh toán của BE. */
-const isUnpaid = (order: Order, hasPayments: boolean) =>
-  ['Đã giao', 'Đã hoàn tất'].includes(order.status) &&
-  (hasPayments ? amountDue(order) > 0 : ['Chưa thanh toán', 'Thanh toán một phần'].includes(order.paymentStatusLabel ?? ''))
+/** Đã giao mà chưa thu đủ. */
+const isUnpaid = (order: Order) => ['Đã giao', 'Đã hoàn tất'].includes(order.status) && amountDue(order) > 0
 
 const timeOfDay = (iso: string) => new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
 /** Giờ hẹn: hôm nay chỉ hiện giờ, ngày khác kèm ngày. */
@@ -61,12 +58,11 @@ const taskTags: Record<Task['kind'], { label: string; color: string }> = {
 const TASK_LIMIT = 8
 
 export function DashboardPage() {
-  const hasPayments = useFeature('orderPayments')
   const staff = useStaff()
   const ordersQuery = useOrderList()
   const productsQuery = useLowStock()
   // API báo cáo chỉ cho chủ cửa hàng, cùng quyền với trang Báo cáo.
-  const showRevenue = useFeature('revenueReports') && staff !== null && canOpen(staff.role, '/reports')
+  const showRevenue = staff !== null && canOpen(staff.role, '/reports')
   const revenueQuery = useDailyRevenue(showRevenue)
   const revenueToday = revenueQuery.data?.at(-1)
   const revenueYesterday = revenueQuery.data?.at(-2)
@@ -77,7 +73,7 @@ export function DashboardPage() {
   const orders = ordersQuery.data ?? []
   const failed = orders.filter((order) => order.status === 'Giao thất bại')
   const pending = orders.filter((order) => order.status === 'Chờ xác nhận')
-  const unpaid = orders.filter((order) => isUnpaid(order, hasPayments))
+  const unpaid = orders.filter(isUnpaid)
   const shipping = orders
     .filter((order) => order.status === 'Đang giao')
     .sort((a, b) => (a.appointment ?? '9').localeCompare(b.appointment ?? '9'))
@@ -101,7 +97,7 @@ export function DashboardPage() {
       </>
     ),
     detail,
-    amount: currency(kind === 'unpaid' && hasPayments ? amountDue(order) : order.total),
+    amount: currency(kind === 'unpaid' ? amountDue(order) : order.total),
     action,
   })
   // Gấp nhất lên trước: giao lỗi cần hẹn lại, đơn mới chờ khách, tiền chưa thu, rồi mới tới nhập hàng.
@@ -133,8 +129,8 @@ export function DashboardPage() {
       orderTask(
         order,
         'unpaid',
-        hasPayments ? `Đã thu ${currency(order.total - amountDue(order))} / ${currency(order.total)}` : order.paymentStatusLabel,
-        openButton(order, hasPayments ? 'Thu tiền' : 'Xem đơn'),
+        `Đã thu ${currency(order.total - amountDue(order))} / ${currency(order.total)}`,
+        openButton(order, 'Thu tiền'),
       ),
     ),
     ...lowStock.map((product): Task => ({
@@ -303,7 +299,7 @@ export function DashboardPage() {
             </div>
           </>
         )}
-        {hasPayments && staff?.role === 'ADMIN' && (
+        {staff?.role === 'ADMIN' && (
           <div>
             <dt>Còn phải thu</dt>
             <dd>

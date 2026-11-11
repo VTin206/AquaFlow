@@ -1,10 +1,9 @@
-import { lazy, Suspense, type ReactNode } from 'react'
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router'
 import { AppLayout } from '@/app/layouts/AppLayout'
 import { DriverLayout } from '@/app/layouts/DriverLayout'
 import { ThemedArea } from '@/app/layouts/ThemedArea'
 import { RequireAuth } from './RequireAuth'
-import { usePageSupported } from '@/shared/features'
 import { RequireCustomer } from './RequireCustomer'
 import { ScrollToTop } from './ScrollToTop'
 
@@ -34,12 +33,6 @@ const CheckoutPage = lazy(() => import('@/features/shop/CheckoutPage').then((m) 
 const TrackPage = lazy(() => import('@/features/shop/TrackPage').then((m) => ({ default: m.TrackPage })))
 const ForgotPasswordPage = lazy(() => import('@/features/auth/PasswordRecoveryPages').then(m => ({ default: m.ForgotPasswordPage })))
 const ResetPasswordPage = lazy(() => import('@/features/auth/PasswordRecoveryPages').then(m => ({ default: m.ResetPasswordPage })))
-const UnavailablePage = lazy(() => import('@/features/live/UnavailablePage').then((m) => ({ default: m.UnavailablePage })))
-
-/** Trang chưa có API BE: tài khoản thật vẫn mở được nhưng thấy "Chưa hỗ trợ" thay cho dữ liệu mẫu. */
-function BackendPage({ path, title, children }: { path: string; title: string; children: ReactNode }) {
-  return usePageSupported()(path) ? children : <UnavailablePage title={title} />
-}
 
 export function App() {
   return (
@@ -75,52 +68,17 @@ export function App() {
               </ThemedArea>
             }
           >
-            <Route
-              index
-              element={
-                <BackendPage path="/" title="Tổng quan">
-                  <DashboardPage />
-                </BackendPage>
-              }
-            />
+            <Route index element={<DashboardPage />} />
             <Route path="orders" element={<OrdersPage />} />
             <Route path="inventory" element={<InventoryPage />} />
             <Route path="products" element={<ProductsPage />} />
             <Route path="customers" element={<CustomersPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
             <Route path="staff" element={<StaffAccountsPage />} />
-            <Route
-              path="delivery"
-              element={
-                <BackendPage path="/delivery" title="Giao hàng">
-                  <DeliveryPage />
-                </BackendPage>
-              }
-            />
-            <Route
-              path="reports"
-              element={
-                <BackendPage path="/reports" title="Báo cáo">
-                  <ReportsPage />
-                </BackendPage>
-              }
-            />
-            <Route
-              path="activity"
-              element={
-                <BackendPage path="/activity" title="Nhật ký">
-                  <ActivityPage />
-                </BackendPage>
-              }
-            />
-            <Route
-              path="settings"
-              element={
-                <BackendPage path="/settings" title="Cài đặt">
-                  <SettingsPage />
-                </BackendPage>
-              }
-            />
+            <Route path="delivery" element={<DeliveryPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="activity" element={<ActivityPage />} />
+            <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
           {/* Nhân viên giao hàng dùng khung riêng, không vào trang quản lý. */}
@@ -131,14 +89,7 @@ export function App() {
               </ThemedArea>
             }
           >
-            <Route
-              path="driver"
-              element={
-                <BackendPage path="/driver" title="Chuyến của tôi">
-                  <DriverPage />
-                </BackendPage>
-              }
-            />
+            <Route path="driver" element={<DriverPage />} />
           </Route>
         </Route>
       </Routes>

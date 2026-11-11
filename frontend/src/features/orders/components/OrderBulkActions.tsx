@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { App, Button, Dropdown } from 'antd'
 import { CheckCheck, FileSpreadsheet, Printer } from 'lucide-react'
 import { BulkBar } from '@/shared/components/BulkBar'
-import { useFeature } from '@/shared/features'
 import { usePrinter } from '@/shared/print/usePrinter'
 import { runEach } from '@/shared/utils/bulk'
 import { downloadExcel, type ExcelColumn } from '@/shared/utils/excel'
@@ -16,11 +15,9 @@ const codeOf = (order: Order) => order.code ?? order.id
 /** Thao tác cho các đơn đã tích chọn: xác nhận đơn chờ, in chứng từ, xuất Excel. */
 export function OrderBulkActions({ orders, onSelect }: { orders: Order[]; onSelect: (ids: string[]) => void }) {
   const { message, modal } = App.useApp()
-  const showPayments = useFeature('orderPayments')
-  const canPrint = useFeature('orderPrinting')
   const { confirm, refresh } = useConfirmOrderRequest()
   const printer = usePrinter()
-  const { data: settings } = useSettings(canPrint)
+  const { data: settings } = useSettings()
   const [confirming, setConfirming] = useState(false)
   const [exporting, setExporting] = useState(false)
   const pending = orders.filter((order) => order.status === 'Chờ xác nhận')
@@ -81,7 +78,7 @@ export function OrderBulkActions({ orders, onSelect }: { orders: Order[]; onSele
       { title: 'Hẹn giao', width: 20, value: (order) => (order.appointment ? new Date(order.appointment).toLocaleString('vi-VN') : '') },
       { title: 'Sản phẩm', width: 40, value: (order) => order.items },
       { title: 'Tổng tiền', width: 16, format: 'money', value: (order) => order.total },
-      ...(showPayments ? [{ title: 'Còn phải thu', width: 16, format: 'money', value: amountDue } satisfies ExcelColumn<Order>] : []),
+      { title: 'Còn phải thu', width: 16, format: 'money', value: amountDue },
     ]
     try {
       await downloadExcel(`don-hang-${new Date().toISOString().slice(0, 10)}.xlsx`, 'Đơn hàng', columns, orders)
@@ -98,46 +95,44 @@ export function OrderBulkActions({ orders, onSelect }: { orders: Order[]; onSele
         <Button type="primary" icon={<CheckCheck size={16} />} disabled={!pending.length} loading={confirming} onClick={confirmPending}>
           Xác nhận{pending.length ? ` (${pending.length})` : ''}
         </Button>
-        {canPrint && (
-          <Dropdown
-            trigger={['click']}
-            menu={{
-              items: [
-                {
-                  key: 'invoice',
-                  label: `Hóa đơn (${printable.length})`,
-                  disabled: !printable.length,
-                  onClick: () =>
-                    printer.print(
-                      <>
-                        {printable.map((order) => (
-                          <InvoiceDocument key={order.id} order={order} settings={settings} />
-                        ))}
-                      </>,
-                    ),
-                },
-                {
-                  key: 'slip',
-                  label: `Phiếu giao (${deliveries.length})`,
-                  disabled: !deliveries.length,
-                  onClick: () =>
-                    printer.print(
-                      <>
-                        {deliveries.map((order) => (
-                          <DeliverySlipDocument key={order.id} order={order} settings={settings} />
-                        ))}
-                      </>,
-                    ),
-                },
-              ],
-            }}
-          >
-            {/* Chờ thông tin cửa hàng để chứng từ không bị thiếu phần đầu. */}
-            <Button icon={<Printer size={16} />} disabled={!settings}>
-              In
-            </Button>
-          </Dropdown>
-        )}
+        <Dropdown
+          trigger={['click']}
+          menu={{
+            items: [
+              {
+                key: 'invoice',
+                label: `Hóa đơn (${printable.length})`,
+                disabled: !printable.length,
+                onClick: () =>
+                  printer.print(
+                    <>
+                      {printable.map((order) => (
+                        <InvoiceDocument key={order.id} order={order} settings={settings} />
+                      ))}
+                    </>,
+                  ),
+              },
+              {
+                key: 'slip',
+                label: `Phiếu giao (${deliveries.length})`,
+                disabled: !deliveries.length,
+                onClick: () =>
+                  printer.print(
+                    <>
+                      {deliveries.map((order) => (
+                        <DeliverySlipDocument key={order.id} order={order} settings={settings} />
+                      ))}
+                    </>,
+                  ),
+              },
+            ],
+          }}
+        >
+          {/* Chờ thông tin cửa hàng để chứng từ không bị thiếu phần đầu. */}
+          <Button icon={<Printer size={16} />} disabled={!settings}>
+            In
+          </Button>
+        </Dropdown>
         <Button icon={<FileSpreadsheet size={16} />} loading={exporting} onClick={() => void exportExcel()}>
           Xuất Excel
         </Button>

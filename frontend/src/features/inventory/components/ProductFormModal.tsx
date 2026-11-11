@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react'
 import { App, Col, Form, Input, InputNumber, Modal, Row, Select, Upload } from 'antd'
 import { ImagePlus } from 'lucide-react'
 import { useSettings } from '@/features/settings/settingsService'
-import { useFeature } from '@/shared/features'
-import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 import { useBottleTypeOptions, useSaveProduct, type CatalogItem, type ProductForm } from '../useProductCatalog'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { FormSection } from '@/shared/components/FormSection'
@@ -19,8 +17,6 @@ type ProductFormModalProps = { open: boolean; product?: CatalogItem; onClose: ()
 /** Thêm mới khi không có `product`; sửa khi có (mã sản phẩm không đổi). */
 export function ProductFormModal({ open, product, onClose }: ProductFormModalProps) {
   const { message } = App.useApp()
-  const showImage = useFeature('productImage')
-  const showDetails = useFeature('productCatalogDetails')
   const [form] = Form.useForm<ProductForm>()
   const [image, setImage] = useState<string | undefined>(product?.image)
   const settings = useSettings(open && !product)
@@ -107,14 +103,7 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
         <div className="af-product-form">
           <div className="af-product-form-top">
             <div className="af-product-form-image">
-              <Upload
-                accept="image/*"
-                listType="picture-card"
-                maxCount={1}
-                showUploadList={false}
-                beforeUpload={readImage}
-                disabled={!showImage}
-              >
+              <Upload accept="image/*" listType="picture-card" maxCount={1} showUploadList={false} beforeUpload={readImage}>
                 {image ? (
                   <img src={image} alt="Ảnh xem trước" className="af-upload-preview" />
                 ) : (
@@ -156,9 +145,7 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
               </FormSection>
             </div>
           </div>
-          <p className="af-form-hint af-product-form-hint">
-            {showImage ? `PNG, JPG hoặc WEBP, tối đa ${MAX_IMAGE_MB} MB. Bấm vào ảnh để đổi.` : UNSUPPORTED_HINT}
-          </p>
+          <p className="af-form-hint af-product-form-hint">PNG, JPG hoặc WEBP, tối đa {MAX_IMAGE_MB} MB. Bấm vào ảnh để đổi.</p>
 
           <FormSection title="Bán hàng">
             <Row gutter={12}>
@@ -186,29 +173,27 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
             </Row>
           </FormSection>
 
-          {showDetails && (
-            <FormSection title="Phân loại">
-              <Row gutter={12}>
-                <Col xs={24} sm={12}>
-                  <Form.Item name="waterType" label="Loại nước" tooltip="Dùng cho bộ lọc ở trang Sản phẩm và trang đặt hàng.">
-                    <Select
-                      allowClear
-                      placeholder="Chưa phân loại"
-                      options={(Object.keys(waterTypeLabels) as WaterTypeCode[]).map((code) => ({
-                        value: code,
-                        label: waterTypeLabels[code],
-                      }))}
-                    />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <Form.Item name="volumeMl" label="Dung tích mỗi chai/bình (ml)">
-                    <InputNumber min={1} max={100000} precision={0} style={{ width: '100%' }} placeholder="Ví dụ: 500 hoặc 19000" />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </FormSection>
-          )}
+          <FormSection title="Phân loại">
+            <Row gutter={12}>
+              <Col xs={24} sm={12}>
+                <Form.Item name="waterType" label="Loại nước" tooltip="Dùng cho bộ lọc ở trang Sản phẩm và trang đặt hàng.">
+                  <Select
+                    allowClear
+                    placeholder="Chưa phân loại"
+                    options={(Object.keys(waterTypeLabels) as WaterTypeCode[]).map((code) => ({
+                      value: code,
+                      label: waterTypeLabels[code],
+                    }))}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Form.Item name="volumeMl" label="Dung tích mỗi chai/bình (ml)">
+                  <InputNumber min={1} max={100000} precision={0} style={{ width: '100%' }} placeholder="Ví dụ: 500 hoặc 19000" />
+                </Form.Item>
+              </Col>
+            </Row>
+          </FormSection>
 
           <FormSection title="Kho">
             <Row gutter={12}>

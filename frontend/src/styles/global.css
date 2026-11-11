@@ -355,12 +355,6 @@ body {
   justify-content: space-between;
   width: 100%;
 }
-.af-menu-soon {
-  color: var(--af-text-tertiary);
-  font-size: var(--af-fs-xs);
-  margin-left: auto;
-  white-space: nowrap;
-}
 .af-sider-footer {
   border-top: 1px solid var(--af-border);
   padding: 12px 16px;
@@ -2479,9 +2473,6 @@ body {
 }
 .af-panel-alert {
   margin: 12px 16px;
-}
-.af-unsupported-empty {
-  padding: 40px 16px;
 }
 .af-trip-stops {
   list-style: none;

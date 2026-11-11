@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router'
 import { devAccounts, type DevAccount } from '@/features/auth/devAccounts'
 import { useAuth } from '@/features/auth/useAuth'
 import { useStaff } from '@/features/auth/useStaff'
-import { backendFeatures } from '@/shared/features'
 import { accountDestination, isCustomer } from '@/features/auth/accountAccess'
 
 /**
@@ -33,11 +32,9 @@ export function AccountMenu({ variant = 'icon' }: { variant?: 'icon' | 'text' })
         <Button type="link" className="af-shop-topbar-link" onClick={() => navigate('/shop/account')}>
           Đăng nhập
         </Button>
-        {backendFeatures.customerAccounts && (
-          <Button type="link" className="af-shop-topbar-link af-shop-topbar-register" onClick={() => navigate('/shop/register')}>
-            Tạo tài khoản
-          </Button>
-        )}
+        <Button type="link" className="af-shop-topbar-link af-shop-topbar-register" onClick={() => navigate('/shop/register')}>
+          Tạo tài khoản
+        </Button>
       </>
     ) : (
       <Button type="text" shape="circle" icon={icon} aria-label="Đăng nhập" title="Đăng nhập" onClick={() => navigate('/shop/account')} />

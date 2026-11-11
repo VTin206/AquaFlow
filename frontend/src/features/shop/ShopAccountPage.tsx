@@ -13,7 +13,6 @@ import {
   UserRoundPlus,
 } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router'
-import { backendFeatures } from '@/shared/features'
 import { focusNextOnEnter } from '@/shared/utils/forms'
 import type { LoginCredentials } from '@/features/auth/authService'
 import { devAccounts } from '@/features/auth/devAccounts'
@@ -182,17 +181,13 @@ export function ShopAccountPage() {
         </section>
 
         <section className="af-shop-account-side" aria-label="Chưa có tài khoản">
-          {backendFeatures.customerAccounts && (
-            <>
-              <Link to="/shop/register">
-                <Button size="large" block icon={<UserRoundPlus size={18} />}>
-                  Tạo tài khoản
-                </Button>
-              </Link>
-              <p>Lưu địa chỉ giao và xem lại đơn đã đặt.</p>
-              <Divider plain>hoặc</Divider>
-            </>
-          )}
+          <Link to="/shop/register">
+            <Button size="large" block icon={<UserRoundPlus size={18} />}>
+              Tạo tài khoản
+            </Button>
+          </Link>
+          <p>Lưu địa chỉ giao và xem lại đơn đã đặt.</p>
+          <Divider plain>hoặc</Divider>
           <ul className="af-shop-account-links">
             <li>
               <Link to="/shop">

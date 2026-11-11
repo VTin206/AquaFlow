@@ -9,7 +9,7 @@ import { dueTone } from '@/shared/utils/money'
 import { currency } from '@/shared/utils/format'
 import type { PublicOrder } from '@/features/orders/types'
 import { useSettings } from '@/features/settings/settingsService'
-import { useLookupOrder, useShopContact, useShopFeature, useTrackedOrder } from './shopService'
+import { useLookupOrder, useShopContact, useTrackedOrder } from './shopService'
 
 const stepOf: Record<PublicOrder['status'], number> = {
   'Chờ xác nhận': 0,
@@ -22,12 +22,10 @@ const stepOf: Record<PublicOrder['status'], number> = {
   'Đã hủy': 0,
 }
 
-/** Tra cứu đơn không cần tài khoản (bố cục như trang tài khoản): mã đơn + số điện thoại đặt hàng. Chưa có API thì giữ form, khóa lại và ghi rõ. */
+/** Tra cứu đơn không cần tài khoản (bố cục như trang tài khoản): mã đơn + số điện thoại đặt hàng. */
 function LookupForm() {
   const navigate = useNavigate()
-  const supported = useShopFeature('orderTracking')
   const lookupOrder = useLookupOrder()
-  const phone = useShopContact()?.phone?.trim()
   const [error, setError] = useState<string>()
   const [loading, setLoading] = useState(false)
   return (
@@ -38,19 +36,9 @@ function LookupForm() {
       </header>
       <div className="af-shop-account-grid">
         <section aria-label="Tra cứu đơn">
-          {!supported && (
-            <Alert
-              type="info"
-              showIcon
-              style={{ marginBottom: 16 }}
-              title="Tra cứu trực tuyến chưa hỗ trợ"
-              description="Vui lòng gọi cửa hàng và đọc mã đơn để hỏi tình trạng đơn."
-            />
-          )}
           <Form
             layout="vertical"
             requiredMark={false}
-            disabled={!supported}
             onKeyDown={focusNextOnEnter}
             onFinish={async ({ id, phone }: { id: string; phone: string }) => {
               setLoading(true)
@@ -87,13 +75,6 @@ function LookupForm() {
           </Form>
         </section>
         <section className="af-shop-account-side" aria-label="Lựa chọn khác">
-          {!supported && phone && (
-            <a href={`tel:${phone.replace(/\s/g, '')}`}>
-              <Button type="primary" size="large" block icon={<Phone size={18} />}>
-                {phone}
-              </Button>
-            </a>
-          )}
           <p>Có tài khoản? Đăng nhập để xem mọi đơn đã đặt.</p>
           <Link to="/shop/account">
             <Button size="large" block icon={<LogIn size={18} />}>
@@ -309,12 +290,11 @@ function TrackedOrder({ token }: { token: string }) {
 }
 
 export function TrackPage() {
-  const supported = useShopFeature('orderTracking')
   const { token } = useParams()
   useEffect(() => {
     if (!token) document.title = 'Tra cứu đơn hàng'
   }, [token])
-  if (!token || !supported) return <LookupForm />
+  if (!token) return <LookupForm />
   return (
     <div className="af-shop-page af-shop-narrow">
       <TrackedOrder token={token} />

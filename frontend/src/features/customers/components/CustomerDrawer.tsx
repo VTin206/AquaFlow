@@ -4,8 +4,6 @@ import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
 import { Ellipsis, Pencil, Phone, ShoppingBag } from 'lucide-react'
 import { MapLink } from '@/shared/address/MapLink'
 import { Money } from '@/shared/components/Money'
-import { useFeature } from '@/shared/features'
-import { Unsupported } from '@/shared/components/Unsupported'
 import { currency } from '@/shared/utils/format'
 import { OrderDetails } from '@/features/orders/components/OrderDetails'
 import { OrderStatusTag } from '@/features/orders/components/OrderStatusTag'
@@ -27,11 +25,6 @@ type CustomerDrawerProps = {
 /** Hồ sơ khách: liên hệ, đơn hàng, công nợ và sổ vỏ/cọc trong một ngăn kéo. */
 export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: CustomerDrawerProps) {
   const { message, modal } = App.useApp()
-  const showPayments = useFeature('orderPayments')
-  const showType = useFeature('customerType')
-  const showExtras = useFeature('customerProfileExtras')
-  const showDebt = useFeature('customerDebt')
-  const showBottles = useFeature('bottleLedger')
   const { data: customer } = useCustomer(customerId)
   const { data: customerOrders = [], isPending: loadingOrders } = useCustomerOrders(customerId)
   const deactivate = useDeactivateCustomer()
@@ -41,16 +34,15 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
   if (!customer) return null
 
   const summary = [
-    { label: 'Đơn đã mua', value: String(customer.orders), show: true },
-    { label: 'Còn phải thu', value: currency(customer.debt), tone: customer.debt > 0 ? 'due' : 'paid', show: showDebt },
+    { label: 'Đơn đã mua', value: String(customer.orders) },
+    { label: 'Còn phải thu', value: currency(customer.debt), tone: customer.debt > 0 ? 'due' : 'paid' },
     {
       label: 'Vỏ đang giữ',
       value: `${customer.bottlesHeld} vỏ`,
       tone: customer.bottlesHeld > 0 ? 'warning' : undefined,
-      show: showBottles,
     },
-    { label: 'Cọc đang giữ', value: currency(customer.depositHeld), tone: 'deposit', show: showBottles },
-  ].map((item) => (item.show ? item : { ...item, value: <Unsupported />, tone: undefined }))
+    { label: 'Cọc đang giữ', value: currency(customer.depositHeld), tone: 'deposit' },
+  ]
 
   const archive = () =>
     modal.confirm({
@@ -128,7 +120,7 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
               <small>
                 {customerCode(customer)}
                 {' · '}
-                {showType ? <Tag className="af-inline-tag">{customer.type}</Tag> : <Unsupported label="Loại khách: chưa hỗ trợ" />}
+                <Tag className="af-inline-tag">{customer.type}</Tag>
               </small>
             </div>
           </div>
@@ -187,9 +179,9 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
                         '—'
                       ),
                     },
-                    { key: 'area', label: 'Khu vực', children: showExtras ? customer.area : <Unsupported /> },
+                    { key: 'area', label: 'Khu vực', children: customer.area || '—' },
                     { key: 'addresses', label: 'Địa chỉ giao', children: addressView },
-                    { key: 'note', label: 'Ghi chú', children: showExtras ? customer.note || '—' : <Unsupported /> },
+                    { key: 'note', label: 'Ghi chú', children: customer.note || '—' },
                   ]}
                 />
               ),
@@ -237,7 +229,7 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
                           <small>
                             {order.status === 'Đã hủy' ? (
                               ''
-                            ) : showPayments && amountDue(order) > 0 ? (
+                            ) : amountDue(order) > 0 ? (
                               <Money value={amountDue(order)} tone="due" prefix="Còn " />
                             ) : (
                               <span className="af-money is-paid">{paymentLabel(order)}</span>

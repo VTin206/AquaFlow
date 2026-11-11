@@ -1,6 +1,5 @@
 import { ArrowRight, Clock3, Mail, MapPin, Phone, ShieldCheck, Truck } from 'lucide-react'
 import { Link } from 'react-router'
-import { backendFeatures } from '@/shared/features'
 import { shopArticles, shopPolicies } from '../shopNews'
 
 type Props = {
@@ -57,11 +56,9 @@ export function ShopFooter({ demo, contact }: Props) {
             <li>
               <Link to="/shop/account">Đăng nhập</Link>
             </li>
-            {backendFeatures.customerAccounts && (
-              <li>
-                <Link to="/shop/register">Tạo tài khoản</Link>
-              </li>
-            )}
+            <li>
+              <Link to="/shop/register">Tạo tài khoản</Link>
+            </li>
           </ul>
         </nav>
         <nav aria-labelledby="af-footer-policy">

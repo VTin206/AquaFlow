@@ -16,7 +16,6 @@ import {
   Skeleton,
   Space,
   Tag,
-  Tooltip,
   Typography,
   type MenuProps,
 } from 'antd'
@@ -24,7 +23,6 @@ import { Droplets, Ellipsis, FunnelX, LayoutGrid, Plus, Search } from 'lucide-re
 import { Page } from '@/shared/components/Page'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
-import { useFeature } from '@/shared/features'
 import { currency } from '@/shared/utils/format'
 import { LiveBottleTypes } from '@/features/live/LiveBottleTypes'
 import { brandGroups, capacityGroups, catalogCategories, getBrandGroup, getCatalogDetails, normalizeSearch } from './catalogGroups'
@@ -62,13 +60,11 @@ function StockTag({ product }: { product: CatalogItem }) {
 export function ProductsPage() {
   const { message, modal } = App.useApp()
   const canManage = useCanManageProducts()
-  const showDetails = useFeature('productCatalogDetails')
   const [status, setStatus] = useState<ProductStatus>('active')
   // Quản lý tải hết một lần rồi lọc tại chỗ để đếm được từng trạng thái; nhân viên chỉ xem sản phẩm đang bán (BE cũng giới hạn như vậy).
   const productsQuery = useCatalog(canManage ? 'all' : 'active')
   const deactivate = useDeactivateProduct()
   const activate = useActivateProduct()
-  const canReactivate = useFeature('reactivate')
   const [query, setQuery] = useLinkedQuery()
   const [brand, setBrand] = useState<string>()
   const [category, setCategory] = useState<string>()
@@ -175,8 +171,7 @@ export function ProductsPage() {
       : {
           key: 'resume',
           label: 'Bán lại',
-          disabled: !canReactivate || activate.isPending,
-          extra: canReactivate ? undefined : 'Chưa hỗ trợ',
+          disabled: activate.isPending,
           onClick: () => void resumeSelling(product),
         },
   ]
@@ -216,14 +211,7 @@ export function ProductsPage() {
         <Row gutter={[16, 16]}>
           {shown.map((product) => {
             const details = getCatalogDetails(product)
-            const spec = showDetails
-              ? `${details.packaging} · ${details.volumeMl ? (details.volumeMl >= 1000 ? `${(details.volumeMl / 1000).toLocaleString('vi-VN')}L` : `${details.volumeMl}ml`) : details.capacity}`
-              : [
-                  product.unitsPerCase && `${product.unitsPerCase} ${product.unit.toLowerCase()}/thùng`,
-                  product.bottleTypeName && `Vỏ ${product.bottleTypeName}`,
-                ]
-                  .filter(Boolean)
-                  .join(' · ')
+            const spec = `${details.packaging} · ${details.volumeMl ? (details.volumeMl >= 1000 ? `${(details.volumeMl / 1000).toLocaleString('vi-VN')}L` : `${details.volumeMl}ml`) : details.capacity}`
             return (
               <Col key={product.id} xs={12} sm={12} lg={8} xl={6}>
                 {/* Người quản lý bấm thẻ để sửa; thao tác khác nằm trong ⋯ ở góc ảnh. */}
@@ -366,21 +354,18 @@ export function ProductsPage() {
               setPage(1)
             }}
           />
-          <Tooltip title={showDetails ? undefined : 'Backend chưa hỗ trợ loại nước'}>
-            <Select
-              aria-label="Loại nước"
-              className={filterOn(Boolean(category))}
-              allowClear
-              disabled={!showDetails}
-              placeholder={showDetails ? 'Tất cả loại nước' : 'Loại nước (chưa hỗ trợ)'}
-              value={category}
-              options={catalogCategories.map((value) => ({ value, label: value }))}
-              onChange={(value) => {
-                setCategory(value)
-                setPage(1)
-              }}
-            />
-          </Tooltip>
+          <Select
+            aria-label="Loại nước"
+            className={filterOn(Boolean(category))}
+            allowClear
+            placeholder="Tất cả loại nước"
+            value={category}
+            options={catalogCategories.map((value) => ({ value, label: value }))}
+            onChange={(value) => {
+              setCategory(value)
+              setPage(1)
+            }}
+          />
           <Select
             aria-label="Quy cách"
             className={filterOn(Boolean(packaging))}
@@ -393,21 +378,18 @@ export function ProductsPage() {
               setPage(1)
             }}
           />
-          <Tooltip title={showDetails ? undefined : 'Backend chưa hỗ trợ dung tích'}>
-            <Select
-              aria-label="Dung tích"
-              className={filterOn(Boolean(capacity))}
-              allowClear
-              disabled={!showDetails}
-              placeholder={showDetails ? 'Tất cả dung tích' : 'Dung tích (chưa hỗ trợ)'}
-              value={capacity}
-              options={filterOptions('capacity')}
-              onChange={(value) => {
-                setCapacity(value)
-                setPage(1)
-              }}
-            />
-          </Tooltip>
+          <Select
+            aria-label="Dung tích"
+            className={filterOn(Boolean(capacity))}
+            allowClear
+            placeholder="Tất cả dung tích"
+            value={capacity}
+            options={filterOptions('capacity')}
+            onChange={(value) => {
+              setCapacity(value)
+              setPage(1)
+            }}
+          />
         </div>
         <div className="af-catalog-results">
           {canManage && (

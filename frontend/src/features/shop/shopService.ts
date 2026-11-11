@@ -17,7 +17,6 @@ import type { PublicOrder } from '@/features/orders/types'
 import { useSettings } from '@/features/settings/settingsService'
 import { settingsApi } from '@/features/settings/settingsApi'
 import type { StoreSettings } from '@/features/settings/types'
-import { backendFeatures, type BackendFeature } from '@/shared/features'
 
 // Kênh công khai cho khách; live checkout gửi đơn qua guest order API.
 
@@ -34,12 +33,6 @@ export type ShopProduct = Pick<Product, 'id' | 'name' | 'brand' | 'unit' | 'pric
 export const useShopDemo = () => {
   const { user, demoGuest } = useAuth()
   return Boolean(user?.isDemo || demoGuest)
-}
-
-/** Như `useFeature` nhưng cho trang khách, gồm cả chế độ dev "xem như khách". */
-export const useShopFeature = (feature: BackendFeature) => {
-  const demo = useShopDemo()
-  return demo || backendFeatures[feature]
 }
 
 export type ShopContact = Partial<Pick<StoreSettings, 'storeName' | 'phone' | 'address' | 'email' | 'openingHours'>>

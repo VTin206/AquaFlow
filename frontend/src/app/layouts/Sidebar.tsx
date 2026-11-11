@@ -5,7 +5,6 @@ import { useLocation, useNavigate } from 'react-router'
 import { navGroups } from '@/app/navigation'
 import { canOpen } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/useStaff'
-import { useFeature, usePageSupported } from '@/shared/features'
 import { useOrderList } from '@/features/orders/orderData'
 import { useSettings } from '@/features/settings/settingsService'
 
@@ -22,8 +21,7 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: Sid
   const navigate = useNavigate()
   const [helpOpen, setHelpOpen] = useState(false)
   const staff = useStaff()
-  const { data: settings } = useSettings(useFeature('storeSettings'))
-  const supported = usePageSupported()
+  const { data: settings } = useSettings()
   const allowed = (path: string) => !staff || canOpen(staff.role, path)
   const { data: orders = [] } = useOrderList(allowed('/orders'))
   const pendingCount = orders.filter((order) => order.status === 'Chờ xác nhận').length
@@ -49,7 +47,6 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: Sid
         <span className="af-menu-label">
           {label}
           {pending && <Badge count={pendingCount} size="small" color="var(--af-primary)" title={`${pendingCount} đơn chờ xác nhận`} />}
-          {!supported(path) && <small className="af-menu-soon">Chưa hỗ trợ</small>}
         </span>
       ),
     }
@@ -62,7 +59,7 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: Sid
     children: group.items.map(toItem),
   }))
 
-  const footerLink = (label: string, icon: ReactNode, onClick: () => void, extra?: ReactNode, active = false) => (
+  const footerLink = (label: string, icon: ReactNode, onClick: () => void, active = false) => (
     <Tooltip title={collapsed ? label : undefined} placement="right">
       <button
         className={`af-sider-link${active ? ' is-active' : ''}`}
@@ -71,12 +68,7 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: Sid
         onClick={onClick}
       >
         {icon}
-        {!collapsed && (
-          <span className="af-sider-link-text">
-            {label}
-            {extra}
-          </span>
-        )}
+        {!collapsed && <span className="af-sider-link-text">{label}</span>}
       </button>
     </Tooltip>
   )
@@ -131,7 +123,6 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }: Sid
               navigate('/settings')
               onNavigate?.()
             },
-            !supported('/settings') && <small className="af-menu-soon">Chưa hỗ trợ</small>,
             location.pathname === '/settings',
           )}
         {footerLink('Trợ giúp', <CircleQuestionMark size={18} strokeWidth={1.8} />, () => setHelpOpen(true))}

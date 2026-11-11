@@ -2,8 +2,6 @@ import { App, Col, Form, Input, Modal, Row } from 'antd'
 import type { Supplier, SupplierDraft } from '../types'
 import { useSaveSupplier } from '../useSuppliers'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
-import { useFeature } from '@/shared/features'
-import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
 import { TextArea } from '@/shared/components/TextArea'
 
@@ -13,8 +11,6 @@ export function SupplierFormModal({ supplier, onClose, onSaved }: { supplier?: S
   const [form] = Form.useForm<SupplierDraft>()
   const cancel = useConfirmDiscard(form, onClose)
   const save = useSaveSupplier()
-  const showContact = useFeature('supplierContactName')
-  const showEmail = useFeature('supplierEmail')
 
   const submit = (draft: SupplierDraft) => {
     if (save.isPending) return
@@ -74,13 +70,8 @@ export function SupplierFormModal({ supplier, onClose, onSaved }: { supplier?: S
         </Form.Item>
         <Row gutter={16}>
           <Col xs={24} sm={12}>
-            <Form.Item
-              name="contactName"
-              label="Người liên hệ"
-              extra={showContact ? undefined : UNSUPPORTED_HINT}
-              rules={[{ max: 100, message: 'Tên người liên hệ tối đa 100 ký tự.' }]}
-            >
-              <Input placeholder="Họ và tên người liên hệ" maxLength={100} disabled={!showContact} />
+            <Form.Item name="contactName" label="Người liên hệ" rules={[{ max: 100, message: 'Tên người liên hệ tối đa 100 ký tự.' }]}>
+              <Input placeholder="Họ và tên người liên hệ" maxLength={100} />
             </Form.Item>
           </Col>
           <Col xs={24} sm={12}>
@@ -103,13 +94,12 @@ export function SupplierFormModal({ supplier, onClose, onSaved }: { supplier?: S
         <Form.Item
           name="email"
           label="Email"
-          extra={showEmail ? undefined : UNSUPPORTED_HINT}
           rules={[
             { type: 'email', transform: (value: string) => value?.trim(), message: 'Email không đúng định dạng.' },
             { max: 254, message: 'Email tối đa 254 ký tự.' },
           ]}
         >
-          <Input placeholder="Ví dụ: lienhe@congty.vn" maxLength={254} disabled={!showEmail} />
+          <Input placeholder="Ví dụ: lienhe@congty.vn" maxLength={254} />
         </Form.Item>
         <Form.Item
           name="address"

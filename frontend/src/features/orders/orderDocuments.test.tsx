@@ -8,10 +8,6 @@ import { orderConfirmationMessage } from './orderMessage'
 import { DeliverySlipDocument, InvoiceDocument } from './print/OrderDocuments'
 import { knownAmountDue, type Order } from './types'
 
-vi.mock('@/shared/features', async (original) => ({
-  ...(await original<typeof import('@/shared/features')>()),
-  useFeature: () => false,
-}))
 vi.mock('@/shared/payment/TransferQr', () => ({ TransferQr: ({ note }: { note: string }) => <div>QR {note}</div> }))
 
 const money = (text: string | null | undefined) => text?.replace(/\s/g, ' ')
@@ -77,11 +73,11 @@ describe('order documents for live orders', () => {
     expect(screen.queryByText(/^QR/)).toBeNull()
   })
 
-  it('leaves the amount blank and omits the mock deposit on a partially paid slip', () => {
+  it('leaves the amount blank on a partially paid slip and keeps blanks for bottles and deposit', () => {
     const { container } = render(<DeliverySlipDocument order={viewOf('PARTIALLY_PAID')} settings={settings} />)
     expect(screen.getByText('Tiền cần thu').parentElement?.querySelector('.af-doc-blank')).toBeTruthy()
     expect(container.textContent).toContain('Vỏ rỗng cần đổi')
-    expect(container.textContent).not.toContain('Cọc thu thêm')
+    expect(container.textContent).toContain('Cọc thu thêm')
   })
 })
 

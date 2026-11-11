@@ -4,8 +4,6 @@ import { ViewButton } from '@/shared/components/ViewButton'
 import { MobileRecordList } from '@/shared/components/MobileRecordList'
 import type { ServerPagination } from '@/shared/utils/table'
 import { Money } from '@/shared/components/Money'
-import { useFeature } from '@/shared/features'
-import { Unsupported } from '@/shared/components/Unsupported'
 import { amountDue, deliveryTimingOf, paymentLabel, type Order } from '../types'
 import { LateTag } from './LateTag'
 import { OrderNextAction } from './OrderNextAction'
@@ -24,7 +22,6 @@ type OrderCardsProps = {
 type Sort = 'default' | 'total' | 'due'
 
 export function OrderCards({ orders, loading, compact, emptyText, onDetails, filterKey, server }: OrderCardsProps) {
-  const showPayments = useFeature('orderPayments')
   const [sort, setSort] = useState<Sort>('default')
   const sorted = [...orders].sort((a, b) =>
     sort === 'total'
@@ -53,7 +50,7 @@ export function OrderCards({ orders, loading, compact, emptyText, onDetails, fil
             options={[
               { value: 'default', label: 'Thứ tự mặc định' },
               { value: 'total', label: 'Tổng tiền: cao trước' },
-              ...(showPayments ? [{ value: 'due' as const, label: 'Còn phải thu: cao trước' }] : []),
+              { value: 'due' as const, label: 'Còn phải thu: cao trước' },
             ]}
           />
         )
@@ -81,7 +78,7 @@ export function OrderCards({ orders, loading, compact, emptyText, onDetails, fil
             {order.status !== 'Đã hủy' && (
               <>
                 <dt>Còn phải thu</dt>
-                <dd>{showPayments ? <Money value={amountDue(order)} tone={amountDue(order) > 0 ? 'due' : 'paid'} /> : <Unsupported />}</dd>
+                <dd><Money value={amountDue(order)} tone={amountDue(order) > 0 ? 'due' : 'paid'} /></dd>
               </>
             )}
           </dl>

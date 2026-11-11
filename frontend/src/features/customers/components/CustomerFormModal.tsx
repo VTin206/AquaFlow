@@ -2,8 +2,6 @@ import { App, Col, Form, Input, Modal, Row, Segmented } from 'antd'
 import type { Customer, CustomerDraft } from '../types'
 import { useSaveCustomer } from '../useCustomers'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
-import { useFeature } from '@/shared/features'
-import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 import { modalWidth } from '@/shared/utils/modal'
 import { WardSelect } from '@/shared/address/WardSelect'
 import { TextArea } from '@/shared/components/TextArea'
@@ -15,8 +13,6 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
   const [form] = Form.useForm<CustomerDraft>()
   const cancel = useConfirmDiscard(form, onClose)
   const save = useSaveCustomer()
-  const showType = useFeature('customerType')
-  const showExtras = useFeature('customerProfileExtras')
 
   return (
     <Modal
@@ -59,8 +55,8 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
           )
         }
       >
-        <Form.Item name="type" label="Loại khách" extra={showType ? undefined : UNSUPPORTED_HINT}>
-          <Segmented options={['Cá nhân', 'Doanh nghiệp']} disabled={!showType} />
+        <Form.Item name="type" label="Loại khách">
+          <Segmented options={['Cá nhân', 'Doanh nghiệp']} />
         </Form.Item>
         <Row gutter={16}>
           <Col xs={24} sm={14}>
@@ -94,13 +90,12 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
           name="area"
           label="Phường/Xã"
           tooltip="Dùng để lọc và xếp chuyến giao."
-          extra={showExtras ? undefined : UNSUPPORTED_HINT}
           rules={[{ max: 80 }]}
         >
-          <WardSelect disabled={!showExtras} />
+          <WardSelect />
         </Form.Item>
-        <Form.Item name="note" label="Ghi chú" extra={showExtras ? undefined : UNSUPPORTED_HINT} rules={[{ max: 500 }]}>
-          <TextArea rows={2} maxLength={500} placeholder="Giờ nhận hàng thuận tiện, người liên hệ, lưu ý giao nhận..." disabled={!showExtras} />
+        <Form.Item name="note" label="Ghi chú" rules={[{ max: 500 }]}>
+          <TextArea rows={2} maxLength={500} placeholder="Giờ nhận hàng thuận tiện, người liên hệ, lưu ý giao nhận..." />
         </Form.Item>
         {!customer && <p className="af-form-hint">Thêm địa chỉ giao trong hồ sơ khách sau khi lưu.</p>}
       </Form>
