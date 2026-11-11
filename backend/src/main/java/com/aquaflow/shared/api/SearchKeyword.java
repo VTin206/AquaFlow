@@ -24,6 +24,21 @@ public record SearchKeyword(String text, String phone) {
         return new SearchKeyword(escapeLike(trimmed), phone);
     }
 
+    /**
+     * Điều kiện SQL cho câu dùng tham số có tên: {@code textExpr} (bỏ dấu, chữ thường) chứa từ khóa, hoặc
+     * chữ số của {@code phoneExpr} chứa số điện thoại trong từ khóa. Thêm tham số {@code keyword}, {@code phone}.
+     */
+    public String condition(String textExpr, String phoneExpr,
+                            org.springframework.jdbc.core.namedparam.MapSqlParameterSource params) {
+        params.addValue("keyword", text);
+        String sql = "af_search_text(" + textExpr + ") LIKE '%' || af_search_text(:keyword) || '%'";
+        if (phone != null && !phone.isEmpty() && phoneExpr != null) {
+            params.addValue("phone", phone);
+            sql += " OR af_phone_digits(" + phoneExpr + ") LIKE '%' || :phone || '%'";
+        }
+        return "(" + sql + ")";
+    }
+
     private static String escapeLike(String value) {
         return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }

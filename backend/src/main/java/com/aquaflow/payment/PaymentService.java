@@ -14,7 +14,7 @@ public class PaymentService {
     public Payments payments(long id) { return new Payments(repository.balance(id),repository.receipts(id)); }
     public Receipt detail(long orderId,long id) { return repository.detail(orderId,id); }
     public List<Balance> balances() { return repository.balances(); }
-    public List<CustomerBalance> customers() { return repository.customerBalances(); }
+    public PageResponse<CustomerBalance> customers(String q, PageRequestParams page) { return repository.customerBalances(SearchKeyword.of(q), page); }
     public List<Balance> receivables(long id) { return repository.receivables(id); }
     @Transactional
     public Receipt create(long id,long actor,Create input) {

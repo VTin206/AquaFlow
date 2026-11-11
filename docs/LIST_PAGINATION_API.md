@@ -79,6 +79,23 @@ Số liệu tính cùng quy tắc với các API cũ: `orderCount`/`lastOrderAt`
 
 Trả một khách cùng dạng `items` ở trên (thêm trường so với `CustomerResponse` cũ, không bỏ trường nào).
 
+## Công nợ, sổ vỏ và phiếu nhập
+
+Cùng dạng trang `{ items, page, size, total, totalPages }` (`page` từ 0, `size` 1–100, mặc định 20; sai thì 400).
+`q` tìm không dấu theo tên hoặc số điện thoại, như danh sách khách.
+
+| API | Gồm | Thứ tự |
+|---|---|---|
+| `GET /api/v1/sales/customer-balances?page&size&q` | Khách còn phải thu hoặc cần hoàn tiền (kể cả hồ sơ đã lưu trữ); không tính đơn chờ xác nhận | Còn phải thu nhiều trước, rồi cần hoàn |
+| `GET /api/v1/sales/bottle-balances?page&size&q` | Sổ vỏ và cọc của mọi khách (kể cả hồ sơ đã lưu trữ) | Khách mới nhất trước |
+| `GET /api/v1/purchase-receipts?status&page&size` | Phiếu nhập, lọc theo `DRAFT`/`CONFIRMED`/`CANCELLED`; thêm `statusCounts` đếm trên **mọi** phiếu | Ngày nhận mới nhất trước |
+
+Trước đây ba API này trả mảng đầy đủ. `customer-balances` trước trả cả khách không còn nợ; nay chỉ trả khách còn khoản
+phải xử lý (frontend vốn đã lọc như vậy).
+
+`GET /api/v1/purchase-receipts/lot-sources`: nguồn nhập của từng lô (phiếu đầu tiên, ngày sản xuất, tổng số đạt đã nhập,
+giá vốn ở phiếu đầu tiên), gộp từ phiếu đã nhập kho. Danh sách lô ở trang Kho dùng API này thay vì tải toàn bộ phiếu nhập.
+
 ## Frontend
 
 - Trang Đơn hàng: nhóm "Cần xử lý" và "Đang thực hiện" chỉ gồm đơn chưa xong nên lọc và sắp xếp (giao sớm nhất trước)

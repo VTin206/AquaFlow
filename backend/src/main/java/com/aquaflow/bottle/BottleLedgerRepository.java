@@ -32,7 +32,16 @@ public class BottleLedgerRepository {
     public void lockCustomer(long id) {
         if(jdbc.queryForList("SELECT id FROM customers WHERE id=? FOR UPDATE",Long.class,id).isEmpty()) throw new NotFoundException("Không tìm thấy khách hàng");
     }
-    public List<Balance> balances() { return jdbc.query(BALANCES+" ORDER BY c.id DESC",BALANCE); }
+    /** Sổ vỏ và cọc theo khách (kể cả hồ sơ đã lưu trữ), khách mới nhất trước; tìm theo tên hoặc số điện thoại. */
+    public PageResponse<Balance> balances(SearchKeyword keyword, PageRequestParams page) {
+        var named=new org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate(jdbc);
+        var params=new org.springframework.jdbc.core.namedparam.MapSqlParameterSource();
+        String where=keyword==null ? "" : " WHERE "+keyword.condition("c.full_name","c.phone",params);
+        long total=named.queryForObject("SELECT COUNT(*) FROM customers c"+where,params,Long.class);
+        if(total==0 || page.offset()>=total) return PageResponse.of(List.of(),page,total);
+        params.addValue("limit",page.size()).addValue("offset",page.offset());
+        return PageResponse.of(named.query(BALANCES+where+" ORDER BY c.id DESC LIMIT :limit OFFSET :offset",params,BALANCE),page,total);
+    }
     public Balance balance(long id) { return jdbc.query(BALANCES+" WHERE c.id=?",BALANCE,id).stream().findFirst().orElseThrow(()->new NotFoundException("Không tìm thấy khách hàng")); }
     public List<TypeBalance> types(long id) {
         return jdbc.query("""

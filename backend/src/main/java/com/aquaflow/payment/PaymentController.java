@@ -21,6 +21,10 @@ public class PaymentController {
         return ResponseEntity.created(URI.create("/api/v1/sales/orders/"+id+"/payments/"+receipt.id())).body(receipt);
     }
     @GetMapping("/order-balances") public List<Balance> balances() { return service.balances(); }
-    @GetMapping("/customer-balances") public List<CustomerBalance> customers() { return service.customers(); }
+    /** Khách còn phải thu hoặc cần hoàn, nhiều tiền nhất trước; q tìm theo tên hoặc số điện thoại. */
+    @GetMapping("/customer-balances") public com.aquaflow.shared.api.PageResponse<CustomerBalance> customers(@RequestParam(required=false) Integer page,
+            @RequestParam(required=false) Integer size,@RequestParam(required=false) String q) {
+        return service.customers(q,com.aquaflow.shared.api.PageRequestParams.of(page,size));
+    }
     @GetMapping("/customers/{id}/receivables") public List<Balance> receivables(@PathVariable long id) { return service.receivables(id); }
 }

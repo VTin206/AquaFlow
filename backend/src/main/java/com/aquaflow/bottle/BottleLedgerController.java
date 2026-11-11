@@ -14,7 +14,10 @@ import java.util.*;
 public class BottleLedgerController {
     private final BottleLedgerService service;
     public BottleLedgerController(BottleLedgerService service) { this.service=service; }
-    @GetMapping("/bottle-balances") public List<Balance> balances() { return service.balances(); }
+    @GetMapping("/bottle-balances") public com.aquaflow.shared.api.PageResponse<Balance> balances(@RequestParam(required=false) Integer page,
+            @RequestParam(required=false) Integer size,@RequestParam(required=false) String q) {
+        return service.balances(q,com.aquaflow.shared.api.PageRequestParams.of(page,size));
+    }
     @GetMapping("/customers/{id}/bottle-ledger") public Ledger ledger(@PathVariable long id) { return service.ledger(id); }
     @GetMapping("/customers/{id}/bottle-transactions/{requestId}") public Entry detail(@PathVariable long id,@PathVariable UUID requestId) { return service.detail(id,requestId); }
     @PostMapping("/customers/{id}/bottle-transactions") public ResponseEntity<Entry> create(@PathVariable long id,@Valid @RequestBody Create input,@AuthenticationPrincipal AuthUserDetails user) {

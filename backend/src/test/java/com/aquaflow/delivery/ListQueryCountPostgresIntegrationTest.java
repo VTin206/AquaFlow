@@ -4,6 +4,7 @@ import com.aquaflow.delivery.api.DeliveryDtos.TripResponse;
 import com.aquaflow.delivery.application.DeliveryService;
 import com.aquaflow.inventory.api.dto.PurchaseReceiptResponse;
 import com.aquaflow.inventory.application.PurchaseReceiptService;
+import com.aquaflow.shared.api.PageRequestParams;
 import jakarta.persistence.EntityManagerFactory;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
@@ -66,13 +67,14 @@ class ListQueryCountPostgresIntegrationTest {
     void purchaseReceiptListUsesTheSameNumberOfQueriesForMoreReceipts() {
         receipt(3);
         Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
-        long few = statements(statistics, () -> receipts.findAll(null));
+        long few = statements(statistics, () -> receipts.page(null, PageRequestParams.of(0, 100)));
 
         for (int i = 0; i < 4; i++) receipt(3);
         var listed = new Object() { List<PurchaseReceiptResponse> value; };
-        long many = statements(statistics, () -> listed.value = receipts.findAll(null));
+        long many = statements(statistics, () -> listed.value = receipts.page(null, PageRequestParams.of(0, 100)).items());
 
-        assertThat(many).isEqualTo(few).isLessThanOrEqualTo(2);
+        // Mã phiếu của trang, đếm tổng, nạp chi tiết, đếm theo trạng thái: không tăng theo số phiếu.
+        assertThat(many).isEqualTo(few).isLessThanOrEqualTo(4);
         // Đủ dòng hàng, đúng lô của từng phiếu (nạp chung một truy vấn không làm lẫn hay lặp phiếu).
         var mine = listed.value.stream().filter(r -> r.supplierId().equals(supplier)).toList();
         assertThat(mine).hasSize(5).allSatisfy(r -> assertThat(r.items()).hasSize(3)
