@@ -12,6 +12,8 @@ Hai API này nay lọc, tìm và phân trang ở PostgreSQL. Quyền giữ nguy�
   Từ khóa trông như số điện thoại (`+84 901 234 567`, `0901-234-567`) còn được so theo chữ số, `+84`/`84` đổi về `0`.
   Ký tự `%` và `_` được tìm đúng nghĩa đen.
 - Hàm SQL dùng chung: `af_search_text`, `af_phone_digits` (migration V26, cần extension `unaccent` có sẵn trong ảnh `postgres:16`).
+  V26 gọi `unaccent` theo schema nơi extension được cài (Supabase cài trong schema `extensions`), không viết cứng `public`.
+  DB đã chạy bản V26 cũ (trước bản sửa này) báo sai checksum khi khởi động: chạy `flyway repair` hoặc tạo lại DB local.
 
 ## Đơn hàng
 
