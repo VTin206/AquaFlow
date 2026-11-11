@@ -71,6 +71,10 @@ public class Customer {
         this.active = false;
     }
 
+    public void activate() {
+        this.active = true;
+    }
+
     public Long getId() {
         return id;
     }

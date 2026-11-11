@@ -21,3 +21,5 @@ FE /activity: dữ liệu thật cho tài khoản thật, demo giữ dữ liệu
 Migration V13 chỉ bổ sung index theo thời gian và actor. Không thay đổi migration cũ.
 
 Kiểm tra: đăng nhập ADMIN → tạo/cập nhật sản phẩm hoặc nhà cung cấp, xuất kho/hoàn hàng/chuyển trạng thái đơn/giao hàng → mở Nhật ký → tìm theo khu vực/người/ngày, xem chi tiết và xuất trang CSV. Thử thao tác nghiệp vụ lỗi: không được có nhật ký thành công. Test PostgreSQL kiểm quyền, phân trang, biên thời gian, tìm ký tự đặc biệt, actor và rollback nguyên tử.
+
+Nhật ký của một đơn cho nhân viên bán hàng (ADMIN, SALES_STAFF): `GET /api/v1/sales/orders/{id}/activity`, gộp nhật ký gắn với đơn (cột `order_id`, V28) và phiếu thu/hoàn. Chi tiết: [UNLOCKED_FEATURES_API.md](UNLOCKED_FEATURES_API.md).

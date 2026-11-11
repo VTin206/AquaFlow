@@ -31,7 +31,8 @@ public class ActivityAuditConfig {
         Map.entry("com.aquaflow.inventory.application.PurchaseReceiptService","PURCHASE_RECEIPT"),
         Map.entry("com.aquaflow.customer.application.CustomerService","CUSTOMER"),
         Map.entry("com.aquaflow.customer.application.CustomerAddressService","CUSTOMER_ADDRESS"),
-        Map.entry("com.aquaflow.delivery.application.DeliveryService","DELIVERY_TRIP"));
+        Map.entry("com.aquaflow.delivery.application.DeliveryService","DELIVERY_TRIP"),
+        Map.entry("com.aquaflow.customer.order.application.OrderReturnService","ORDER_RETURN"));
     private static final Map<String,String> LABELS=Map.ofEntries(
         Map.entry("create","Tạo mới"), Map.entry("createForStaff","Tạo đơn tại cửa hàng"),
         Map.entry("createForCustomer","Khách tạo đơn"), Map.entry("createForGuest","Khách vãng lai tạo đơn"),
@@ -40,7 +41,8 @@ public class ActivityAuditConfig {
         Map.entry("dispatch","Xuất kho"), Map.entry("confirm","Xác nhận nhập kho"),
         Map.entry("cancel","Hủy"), Map.entry("assignDriver","Phân tài xế"), Map.entry("addOrder","Thêm đơn vào chuyến"),
         Map.entry("removeOrder","Bỏ đơn khỏi chuyến"), Map.entry("start","Bắt đầu chuyến"),
-        Map.entry("recordResult","Ghi kết quả giao hàng"), Map.entry("settle","Kết thúc / đối soát chuyến"));
+        Map.entry("recordResult","Ghi kết quả giao hàng"), Map.entry("settle","Kết thúc / đối soát chuyến"),
+        Map.entry("reactivate","Mở lại / dùng lại"), Map.entry("receive","Nhận trả hàng sau giao"));
 
     @Bean
     @org.springframework.context.annotation.Role(org.springframework.beans.factory.config.BeanDefinition.ROLE_INFRASTRUCTURE)
@@ -80,7 +82,7 @@ public class ActivityAuditConfig {
                     if(method.equals("recordResult") && invocation.getArguments().length>2
                         && invocation.getArguments()[2] instanceof com.aquaflow.delivery.api.DeliveryDtos.DeliveryResultRequest request)
                         description+=" · đơn #"+invocation.getArguments()[1]+" · "+request.outcome();
-                    repositories.getObject().append(actor,method,entity,id,description);
+                    repositories.getObject().append(actor,method,entity,id,description,orderOf(entity,method,invocation.getArguments(),value,id));
                     return result;
                 } catch(RuntimeException | Error error) { throw error; }
                 catch(Throwable error) { throw new IllegalStateException("Business command failed",error); }
@@ -90,6 +92,25 @@ public class ActivityAuditConfig {
         // Outer transaction encloses both existing service transaction and audit INSERT, independent of advisor ties.
         advisor.setOrder(Ordered.HIGHEST_PRECEDENCE+100);
         return advisor;
+    }
+    /** Đơn liên quan để xem nhật ký theo đơn; null khi thao tác không thuộc đơn nào. */
+    private static Long orderOf(String entity, String method, Object[] args, Object value, Long id) {
+        return switch(entity) {
+            case "ORDER" -> id;
+            case "ORDER_RETURN", "DISPATCH" -> args.length>0 && args[0] instanceof Long order ? order : null;
+            case "INVENTORY_RETURN" -> number(value,"orderId");
+            case "DELIVERY_TRIP" -> switch(method) {
+                case "removeOrder", "recordResult", "dispatchAssignment" -> args.length>1 && args[1] instanceof Long order ? order : null;
+                case "addOrder" -> args.length>1 ? number(args[1],"orderId") : null;
+                default -> null;
+            };
+            default -> null;
+        };
+    }
+    private static Long number(Object value, String accessor) {
+        if(value==null) return null;
+        try { Object result=value.getClass().getMethod(accessor).invoke(value); return result instanceof Number n ? n.longValue() : null; }
+        catch(ReflectiveOperationException ignored) { return null; }
     }
     private static Long identifier(Object value) {
         if(value==null) return null;

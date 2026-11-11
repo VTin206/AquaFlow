@@ -28,8 +28,12 @@ public class OrderQueryRepository {
     public record IdPage(List<Long> ids, long total) {
     }
 
-    public record Balance(BigDecimal paid, BigDecimal due, BigDecimal refundDue) {
-        public static final Balance ZERO = new Balance(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+    public record Balance(BigDecimal paid, BigDecimal due, BigDecimal refundDue, BigDecimal returned) {
+        public static final Balance ZERO = new Balance(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+
+        public Balance(BigDecimal paid, BigDecimal due, BigDecimal refundDue) {
+            this(paid, due, refundDue, BigDecimal.ZERO);
+        }
     }
 
     /** Đơn còn việc phải làm: chưa hoàn tất và chưa hủy (đơn đã giao nhưng chưa thu đủ vẫn thuộc nhóm này). */
@@ -85,11 +89,12 @@ public class OrderQueryRepository {
     public Map<Long, Balance> balances(Collection<Long> orderIds) {
         Map<Long, Balance> balances = new HashMap<>();
         if (orderIds.isEmpty()) return balances;
-        jdbc.query("SELECT order_id, paid, due, refund_due FROM order_payment_balances WHERE order_id IN (:ids)",
+        jdbc.query("SELECT order_id, paid, due, refund_due, returned FROM order_payment_balances WHERE order_id IN (:ids)",
                 new MapSqlParameterSource("ids", orderIds),
                 rs -> {
                     balances.put(rs.getLong("order_id"),
-                            new Balance(rs.getBigDecimal("paid"), rs.getBigDecimal("due"), rs.getBigDecimal("refund_due")));
+                            new Balance(rs.getBigDecimal("paid"), rs.getBigDecimal("due"), rs.getBigDecimal("refund_due"),
+                                    rs.getBigDecimal("returned")));
                 });
         return balances;
     }

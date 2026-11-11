@@ -74,6 +74,21 @@ public class CustomerController {
         return customerService.search(q, idle, order, PageRequestParams.of(page, size));
     }
 
+    @GetMapping("/archived")
+    @Operation(summary = "Archived customers, by name")
+    public List<CustomerResponse> archived() {
+        return customerService.findArchived();
+    }
+
+    @PostMapping("/{id}/reactivate")
+    @Operation(summary = "Restore an archived customer",
+            description = "Idempotent. 409 when the phone number now belongs to another active customer.")
+    public ResponseEntity<CustomerResponse> reactivate(@PathVariable Long id) {
+        return customerService.reactivate(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get a customer with order count, latest order, debt and bottle balances")
     public ResponseEntity<CustomerSummary> findById(

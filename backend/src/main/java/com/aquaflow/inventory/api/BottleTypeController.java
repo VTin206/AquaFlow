@@ -95,6 +95,13 @@ public class BottleTypeController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{id}/reactivate")
+    @Operation(summary = "Put a retired bottle type back into circulation", description = "Idempotent.")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BottleTypeResponse> reactivateBottleType(@PathVariable Long id) {
+        return ResponseEntity.ok(bottleTypeService.reactivate(id));
+    }
+
     private boolean canManage(Authentication authentication) {
         return authentication != null && authentication.getAuthorities().stream()
                 .anyMatch(authority -> ("ROLE_ADMIN".equals(authority.getAuthority()) || "ROLE_SALES_STAFF".equals(authority.getAuthority())));

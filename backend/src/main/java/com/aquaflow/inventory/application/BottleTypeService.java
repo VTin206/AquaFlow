@@ -53,6 +53,14 @@ public class BottleTypeService {
         getBottleType(id).deactivate();
     }
 
+    /** Cho loại vỏ đã ngừng lưu hành trở lại; gọi lại khi đang lưu hành không đổi gì. */
+    @Transactional
+    public BottleTypeResponse reactivate(Long id) {
+        BottleType bottleType = getBottleType(id);
+        bottleType.activate();
+        return toResponse(bottleType);
+    }
+
     private BottleType getBottleType(Long id) {
         return bottleTypeRepository.findById(id).orElseThrow(() -> new NotFoundException("BottleType not found: " + id));
     }

@@ -80,6 +80,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/store-settings").hasAnyRole("ADMIN", "SALES_STAFF", "DELIVERY_STAFF")
                         .requestMatchers("/api/v1/store-settings/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        // Nhận trả hàng làm giảm doanh thu và có thể hoàn tiền: chỉ chủ cửa hàng.
+                        .requestMatchers(HttpMethod.POST, "/api/v1/sales/orders/*/returns").hasRole("ADMIN")
                         .requestMatchers("/api/v1/sales/**").hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers(HttpMethod.POST, "/api/v1/delivery-quotes").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/customer/orders/guest").permitAll()

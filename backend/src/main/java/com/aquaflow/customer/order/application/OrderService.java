@@ -244,7 +244,7 @@ public class OrderService {
                 .map(id -> {
                     OrderQueryRepository.Balance balance = balances.getOrDefault(id, OrderQueryRepository.Balance.ZERO);
                     return new OrderListItem(toResponse(orders.get(id), items.getOrDefault(id, List.of())),
-                            balance.paid(), balance.due(), balance.refundDue());
+                            balance.paid(), balance.due(), balance.refundDue(), balance.returned());
                 })
                 .toList();
     }

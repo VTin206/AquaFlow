@@ -26,7 +26,9 @@ public class PaymentService {
             if (List.of("PENDING","CANCELLED").contains(balance.status())) throw new ConflictException("Chỉ thu tiền đơn đã xác nhận và chưa hủy.");
             if (input.amount().compareTo(balance.due())>0) throw new ConflictException("Số tiền vượt quá số còn phải thu. Vui lòng tải lại đơn.");
         } else {
-            if (!"CANCELLED".equals(balance.status())) throw new ConflictException("Chỉ hoàn tiền sau khi đơn đã hủy hoặc hoàn tất xử lý hàng hoàn.");
+            // Đơn chưa hủy chỉ có số phải hoàn khi khách trả hàng sau giao làm giá trị đơn thấp hơn số đã thu.
+            if (!"CANCELLED".equals(balance.status()) && balance.refundDue().signum() <= 0)
+                throw new ConflictException("Chỉ hoàn tiền sau khi đơn đã hủy hoặc hoàn tất xử lý hàng hoàn.");
             if (input.note()==null) throw new BadRequestException("Nhập lý do hoàn tiền.");
             if (input.amount().compareTo(balance.refundDue())>0) throw new ConflictException("Số tiền vượt quá số phải hoàn.");
         }
