@@ -1,12 +1,13 @@
 import { TransferQr } from '@/shared/payment/TransferQr'
 import { bankBinOf, transferNote } from '@/shared/payment/vietqr'
 import { PrintHeader } from '@/shared/print/PrintHeader'
-import { DEPOSIT_PER_BOTTLE } from '@/shared/policy'
 import { currency, printDate } from '@/shared/utils/format'
 import type { StoreSettings } from '@/features/settings/types'
 import { jugCount, knownAmountDue, paidAmount, returnedValue, type Order } from '../types'
 
 type DocumentProps = { order: Order; settings?: StoreSettings }
+/** `depositRate`: mức cọc theo loại vỏ của đơn (`useOrderDepositLabel`); thiếu thì để trống cho tài xế ghi. */
+type SlipProps = DocumentProps & { depositRate?: string }
 
 /** Hóa đơn bán lẻ cho khách: dòng hàng, tiền đã thu, còn phải thu. Không thay thế hóa đơn điện tử GTGT. */
 export function InvoiceDocument({ order, settings }: DocumentProps) {
@@ -120,7 +121,7 @@ export function InvoiceDocument({ order, settings }: DocumentProps) {
 }
 
 /** Phiếu giao hàng cho tài xế: địa chỉ, hàng, tiền và vỏ cần xử lý, chỗ ký nhận. */
-export function DeliverySlipDocument({ order, settings }: DocumentProps) {
+export function DeliverySlipDocument({ order, settings, depositRate }: SlipProps) {
   const jugs = jugCount(order)
   const due = knownAmountDue(order)
   // Mức cọc cố định chỉ là chính sách của dữ liệu mẫu; chưa có sổ vỏ thì không in số này.
@@ -176,7 +177,7 @@ export function DeliverySlipDocument({ order, settings }: DocumentProps) {
               <strong className="af-doc-blank" />
             </div>
             <div>
-              <span>Cọc thu thêm ({currency(DEPOSIT_PER_BOTTLE)}/vỏ thiếu)</span>
+              <span>Cọc thu thêm{depositRate ? ` (${depositRate})` : ' (theo loại vỏ)'}</span>
               <strong className="af-doc-blank" />
             </div>
           </>

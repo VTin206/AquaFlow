@@ -1,3 +1,4 @@
+import { useOrderDepositLabel } from '@/features/live/bottleDeposits'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import {
@@ -89,6 +90,7 @@ export function OrderDetailsModal({ orderId, onClose, payOnly = false }: { order
   const returnValues = Form.useWatch([], returnForm)
   const { data: settings } = useSettings()
   const printer = usePrinter()
+  const depositOf = useOrderDepositLabel()
   const copyMessage = useCopyOrderMessage()
   const order = orders.find((item) => item.id === orderId)
   if (!order) return null
@@ -121,7 +123,7 @@ export function OrderDetailsModal({ orderId, onClose, payOnly = false }: { order
     ...(cancelled ? [] : [{ key: 'copy', label: 'Sao chép tin nhắn xác nhận', onClick: () => void copyMessage(order, settings?.storeName) }]),
     { key: 'invoice', label: 'In hóa đơn bán lẻ', onClick: () => printer.print(<InvoiceDocument order={order} settings={settings} />) },
     ...(order.method === 'Giao tận nơi'
-      ? [{ key: 'slip', label: 'In phiếu giao hàng', onClick: () => printer.print(<DeliverySlipDocument order={order} settings={settings} />) }]
+      ? [{ key: 'slip', label: 'In phiếu giao hàng', onClick: () => printer.print(<DeliverySlipDocument order={order} settings={settings} depositRate={depositOf(order)} />) }]
       : []),
     ...(canReturn ? [{ key: 'return', label: 'Nhận trả hàng', onClick: () => setMode('return') }] : []),
   ]

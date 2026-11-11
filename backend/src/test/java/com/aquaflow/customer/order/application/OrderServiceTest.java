@@ -64,6 +64,10 @@ class OrderServiceTest {
     @Mock
     private OrderQueryRepository orderQueryRepository;
 
+    /** Không trả phí giao (null): dùng mức mặc định. */
+    @Mock
+    private com.aquaflow.workspace.repository.StoreSettingsRepository storeSettings;
+
     @InjectMocks
     private OrderService orderService;
 

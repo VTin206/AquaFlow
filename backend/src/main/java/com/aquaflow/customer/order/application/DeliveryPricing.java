@@ -1,8 +1,10 @@
 package com.aquaflow.customer.order.application;
 
+import com.aquaflow.workspace.api.DeliveryFees;
+
 import java.math.BigDecimal;
 
-/** Shared by checkout quotes and order creation. No distance surcharge. */
+/** Shared by checkout quotes and order creation. No distance surcharge. Fees come from the store settings. */
 public final class DeliveryPricing {
     private DeliveryPricing() {}
 
@@ -10,11 +12,16 @@ public final class DeliveryPricing {
                         BigDecimal deliveryFee, BigDecimal total) {}
 
     public static Quote calculate(BigDecimal subtotal, long units, long jugs, int floor) {
+        return calculate(subtotal, units, jugs, floor, DeliveryFees.DEFAULT);
+    }
+
+    /** {@code fees} null: mức mặc định. */
+    public static Quote calculate(BigDecimal subtotal, long units, long jugs, int floor, DeliveryFees fees) {
         if (floor < 0 || floor > 30 || units <= 0 || jugs < 0 || jugs > units)
             throw new IllegalArgumentException("Invalid delivery quantities or stair floor");
-        BigDecimal base = BigDecimal.valueOf(units >= 3 ? 0 : 15000);
-        long perJug = floor <= 2 ? 2000L * floor : floor == 3 ? 8000 : 12000;
-        BigDecimal stairs = BigDecimal.valueOf(perJug).multiply(BigDecimal.valueOf(jugs));
+        DeliveryFees rules = fees == null ? DeliveryFees.DEFAULT : fees;
+        BigDecimal base = BigDecimal.valueOf(units >= rules.freeFromUnits() ? 0 : rules.smallOrderFee());
+        BigDecimal stairs = BigDecimal.valueOf(rules.stairsFeePerJug(floor)).multiply(BigDecimal.valueOf(jugs));
         return new Quote(subtotal, base, stairs, base.add(stairs), subtotal.add(base).add(stairs));
     }
 

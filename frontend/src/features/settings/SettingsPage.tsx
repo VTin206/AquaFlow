@@ -5,22 +5,15 @@ import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
 import { TransferQr } from '@/shared/payment/TransferQr'
 import { vietQrBanks } from '@/shared/payment/vietqr'
-import {
-  DEPOSIT_PER_BOTTLE,
-  EXCHANGEABLE_BRANDS,
-  FREE_DELIVERY_MIN_UNITS,
-  PICKUP_FEE,
-  PICKUP_FEE_BELOW,
-  SMALL_ORDER_FEE,
-  stairsSurcharge,
-} from '@/shared/policy'
+import { EXCHANGEABLE_BRANDS, PICKUP_FEE, PICKUP_FEE_BELOW } from '@/shared/policy'
 import { currency } from '@/shared/utils/format'
 import { useSettings, useUpdateSettings } from './settingsService'
 import { useIsDemo } from '@/shared/features'
 import { Unsupported } from '@/shared/components/Unsupported'
 import { ApiError } from '@/shared/api/client'
 import { type SettingsSnapshot } from './settingsApi'
-import type { StoreSettings } from './types'
+import { normalizeDeliveryFees, STAIR_FLOORS, type StoreSettings } from './types'
+import { depositRatesLabel, useBottleDepositRates } from '@/features/live/bottleDeposits'
 import { TextArea } from '@/shared/components/TextArea'
 
 export function SettingsPage() {
@@ -58,13 +51,17 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
   const update = useUpdateSettings()
   const [dirty, setDirty] = useState(false)
   const preview = Form.useWatch([], form) ?? settings
+  const depositRates = useBottleDepositRates()
+  // Đủ một ô cho mỗi lầu trên form.
+  const toForm = (value: SettingsSnapshot): SettingsSnapshot =>
+    value.deliveryFees ? { ...value, deliveryFees: normalizeDeliveryFees(value.deliveryFees) } : value
 
   return (
     <Form<StoreSettings>
       form={form}
       layout="vertical"
       disabled={update.isPending}
-      initialValues={settings}
+      initialValues={toForm(settings)}
       onValuesChange={() => setDirty(true)}
       onFinish={(values) =>
         update.mutate(
@@ -72,7 +69,7 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
           {
             onSuccess: (saved: SettingsSnapshot) => {
               setVersion(saved.version)
-              form.setFieldsValue(saved)
+              form.setFieldsValue(toForm(saved))
               setConflict(false)
               message.success('Đã lưu cài đặt cửa hàng.')
               setDirty(false)
@@ -100,7 +97,7 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
                   onOk: async () => {
                     try {
                       const latest = await reload()
-                      form.setFieldsValue(latest)
+                      form.setFieldsValue(toForm(latest))
                       setVersion(latest.version)
                       setDirty(false)
                       setConflict(false)
@@ -272,28 +269,70 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
             </p>
           </Card>
 
-          <Card className="af-card af-settings-card" title="Chính sách vỏ & giao hàng">
+          <Card className="af-card af-settings-card" title="Phí giao hàng">
+            <Row gutter={12}>
+              <Col xs={12}>
+                <Form.Item
+                  name={['deliveryFees', 'freeFromUnits']}
+                  label="Miễn phí từ (bình/thùng)"
+                  rules={[{ required: true, message: 'Nhập số bình/thùng.' }, { type: 'integer', min: 0, max: 1000, message: 'Từ 0 đến 1.000.' }]}
+                >
+                  <InputNumber min={0} max={1000} precision={0} style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+              <Col xs={12}>
+                <Form.Item
+                  name={['deliveryFees', 'smallOrderFee']}
+                  label="Phí đơn ít hơn (₫)"
+                  rules={[{ required: true, message: 'Nhập phí giao.' }, { type: 'integer', min: 0, max: 10000000, message: 'Từ 0 đến 10.000.000 ₫.' }]}
+                >
+                  <InputNumber min={0} max={10000000} step={1000} precision={0} style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Typography.Text strong>Phụ phí thang bộ mỗi bình (₫)</Typography.Text>
+            <Row gutter={8} style={{ marginTop: 8 }}>
+              {Array.from({ length: STAIR_FLOORS }, (_, index) => (
+                <Col xs={12} sm={6} key={index}>
+                  <Form.Item
+                    name={['deliveryFees', 'stairsPerJug', index]}
+                    label={index === STAIR_FLOORS - 1 ? `Lầu ${index + 1}+` : `Lầu ${index + 1}`}
+                    rules={[{ required: true, message: 'Nhập phụ phí.' }, { type: 'integer', min: 0, max: 1000000, message: 'Từ 0 đến 1.000.000 ₫.' }]}
+                  >
+                    <InputNumber min={0} max={1000000} step={1000} precision={0} style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
+              ))}
+            </Row>
+            <Typography.Paragraph type="secondary" className="af-form-hint">
+              Áp dụng cho báo giá ở trang đặt hàng và đơn giao tận nơi tạo sau khi lưu; đơn đã tạo giữ phí cũ. Chỉ tính bình giao lên lầu bằng
+              thang bộ.
+            </Typography.Paragraph>
+          </Card>
+
+          <Card className="af-card af-settings-card" title="Chính sách vỏ">
             <Descriptions
               size="small"
               column={1}
               items={[
-                { key: 'deposit', label: 'Cọc vỏ (khách chưa có vỏ)', children: demo ? `${currency(DEPOSIT_PER_BOTTLE)}/vỏ` : <Unsupported /> },
+                {
+                  key: 'deposit',
+                  label: 'Cọc mỗi vỏ (khách chưa có vỏ)',
+                  children: depositRates.isPending
+                    ? 'Đang tải…'
+                    : depositRates.isError
+                      ? 'Không tải được danh mục loại vỏ.'
+                      : depositRates.data.length
+                        ? depositRatesLabel(depositRates.data)
+                        : 'Chưa có loại vỏ đang lưu hành.',
+                },
                 { key: 'brands', label: 'Đổi bù vỏ', children: demo ? EXCHANGEABLE_BRANDS.join(', ') : <Unsupported /> },
                 { key: 'pickup', label: 'Thu hồi tận nơi', children: demo ? `${currency(PICKUP_FEE)}/lần khi dưới ${PICKUP_FEE_BELOW} vỏ` : <Unsupported /> },
-                {
-                  key: 'delivery',
-                  label: 'Phí giao',
-                  children: demo ? `Miễn phí từ ${FREE_DELIVERY_MIN_UNITS} bình/thùng; ít hơn ${currency(SMALL_ORDER_FEE.min)}–${currency(SMALL_ORDER_FEE.max)}` : <Unsupported />,
-                },
-                {
-                  key: 'stairs',
-                  label: 'Thang bộ / bình',
-                  children: demo ? [1, 2, 3, 4].map((floor) => `L${floor}: ${currency(stairsSurcharge(floor, 1))}`).join(' · ') : <Unsupported />,
-                },
               ]}
             />
             <Typography.Paragraph type="secondary" className="af-form-hint">
-              {demo ? 'Mức mẫu tham khảo chính sách công khai của iWater. Nhóm cần chốt chính sách thật trước khi cho chỉnh ở đây.' : 'Backend chưa trả về các mức này. Nhóm cần chốt chính sách thật trước khi cho xem và chỉnh ở đây.'}
+              Tiền cọc sửa ở Danh mục loại vỏ (trang Khách hàng › Vỏ bình), áp dụng theo loại vỏ của sản phẩm.{' '}
+              {demo ? 'Đổi bù vỏ và thu hồi tận nơi là mức mẫu tham khảo.' : 'Đổi bù vỏ và thu hồi tận nơi chưa áp dụng.'}
             </Typography.Paragraph>
           </Card>
         </Col>
@@ -304,7 +343,7 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
           <Button
             disabled={!dirty}
             onClick={() => {
-              form.setFieldsValue(settings)
+              form.setFieldsValue(toForm(settings))
               setVersion(settings.version)
               setConflict(false)
               setDirty(false)
