@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Select, Space } from 'antd'
 import { ViewButton } from '@/shared/components/ViewButton'
 import { MobileRecordList } from '@/shared/components/MobileRecordList'
+import type { ServerPagination } from '@/shared/utils/table'
 import { Money } from '@/shared/components/Money'
 import { useFeature } from '@/shared/features'
 import { Unsupported } from '@/shared/components/Unsupported'
@@ -17,10 +18,12 @@ type OrderCardsProps = {
   emptyText: string
   onDetails: (id: string) => void
   filterKey?: string
+  /** BE đã phân trang: chỉ hiện trang hiện tại, bỏ ô sắp xếp (chỉ sắp được trong một trang). */
+  server?: ServerPagination
 }
 type Sort = 'default' | 'total' | 'due'
 
-export function OrderCards({ orders, loading, compact, emptyText, onDetails, filterKey }: OrderCardsProps) {
+export function OrderCards({ orders, loading, compact, emptyText, onDetails, filterKey, server }: OrderCardsProps) {
   const showPayments = useFeature('orderPayments')
   const [sort, setSort] = useState<Sort>('default')
   const sorted = [...orders].sort((a, b) =>
@@ -40,8 +43,9 @@ export function OrderCards({ orders, loading, compact, emptyText, onDetails, fil
       emptyText={emptyText}
       label="Danh sách đơn hàng"
       paginate={!compact}
+      server={server}
       controls={
-        !compact && (
+        !compact && !server && (
           <Select<Sort>
             aria-label="Sắp xếp đơn hàng"
             value={sort}

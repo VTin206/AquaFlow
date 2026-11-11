@@ -1,6 +1,7 @@
 import { afterAll, test } from 'vitest'
 import assert from 'node:assert/strict'
 import { createServer as createHttpServer } from 'node:http'
+import { URL } from 'node:url'
 import { QueryClient } from '@tanstack/react-query'
 
 // HTTP fixtures theo controller/DTO hiện có. Đây là contract FE, không thay cho test BE/PostgreSQL.
@@ -63,16 +64,42 @@ const guestOrder = {
   createdBy: null,
   confirmedAt: null,
 }
+const orderItem = { ...order, paid: 10000, due: 60000, refundDue: 0 }
+const orderPage = { items: [orderItem], page: 1, size: 20, total: 21, totalPages: 2, statusCounts: { CONFIRMED: 21 } }
+const customerSummary = {
+  ...customer,
+  orderCount: 3,
+  lastOrderAt: '2026-11-01T08:00:00+07:00',
+  lastDeliveryAddress: '1 Nguyễn Trãi',
+  due: 60000,
+  bottlesHeld: 2,
+  depositHeld: 100000,
+}
+const customerPage = {
+  items: [customerSummary],
+  page: 0,
+  size: 10,
+  total: 1,
+  totalPages: 1,
+  totals: { customers: 1, due: 60000, bottlesHeld: 2, depositHeld: 100000 },
+}
 const routes = new Map([
   ['/api/v1/products?active=true', [product]],
   ['/api/v1/products/12', product],
   ['/api/v1/suppliers?active=true', [supplier]],
-  ['/api/v1/sales/orders', [order]],
+  ['/api/v1/sales/orders/working-set?days=30', [orderItem]],
   ['/api/v1/sales/orders/8', order],
   ['/api/v1/customer/orders/guest', guestOrder],
-  ['/api/v1/sales/customers', [customer]],
+  ['/api/v1/sales/customers/3', customerSummary],
+  ['/api/v1/sales/customers/3/orders', [orderItem]],
   ['/api/v1/sales/customers/3/addresses', [address]],
 ])
+/** Danh sách có tham số lọc: trả trang mẫu, test đọc lại tham số đã gửi từ `requests`. */
+const pagedRoutes = new Map([
+  ['/api/v1/sales/orders', orderPage],
+  ['/api/v1/sales/customers', customerPage],
+])
+const pagedRoute = (url) => (url.includes('?') ? pagedRoutes.get(url.slice(0, url.indexOf('?'))) : undefined)
 const requests = []
 let bottleType = { id: 7, name: 'Vỏ thử 20L', depositUnitAmount: 50000, active: true }
 const http = createHttpServer(async (request, response) => {
@@ -108,6 +135,13 @@ const http = createHttpServer(async (request, response) => {
     response.end(JSON.stringify(request.method === 'GET' ? [bottleType] : bottleType))
     return
   }
+  const paged = request.method === 'GET' ? pagedRoute(request.url) : undefined
+  if (paged) {
+    requestRecord.responseStatus = 200
+    response.writeHead(200)
+    response.end(JSON.stringify(paged))
+    return
+  }
   const status =
     request.url === '/api/v1/sales/orders/403'
       ? 403
@@ -140,7 +174,13 @@ test('live API adapters match the backend contract and never fall back to demo d
   assert.deepEqual(await catalogApi.products(), [product])
   assert.deepEqual(await catalogApi.product('12'), product)
   assert.deepEqual(await catalogApi.suppliers(), [supplier])
-  assert.deepEqual(await customerApi.list(), [customer])
+  const lastQuery = () => new URL(requests.at(-1).url, 'http://local').searchParams
+  assert.deepEqual(await customerApi.page({ page: 0, size: 10, q: '  Bình  ', idle: '14', sort: { field: 'ORDERS', direction: 'DESC' } }), customerPage)
+  assert.deepEqual(Object.fromEntries(lastQuery()), { page: '0', size: '10', q: 'Bình', idle: '14', sort: 'ORDERS', direction: 'DESC' })
+  // Không lọc thì không gửi tham số rỗng: BE hiểu là không lọc và sắp theo tên.
+  await customerApi.page({ page: 0, size: 10, q: '  ', idle: 'all' })
+  assert.deepEqual(Object.fromEntries(lastQuery()), { page: '0', size: '10' })
+  assert.deepEqual(await customerApi.summary(3), customerSummary)
   assert.deepEqual(await customerApi.addresses(3), [address])
   const shop = toShopProduct(product)
   assert.equal(shop.id, '12')
@@ -152,7 +192,20 @@ test('live API adapters match the backend contract and never fall back to demo d
   assert.equal(toShopProduct({ ...product, active: false }).available, false)
   // catalog list/detail/suppliers use existing HTTP endpoints; SKU and price map correctly; stock stays unknown
 
-  assert.deepEqual(await orderApi.list(), [order])
+  assert.deepEqual(
+    await orderApi.page({ page: 1, size: 20, statuses: ['PENDING', 'CONFIRMED'], fulfillment: 'DELIVERY', payment: 'DUE', q: ' 0901 ' }),
+    orderPage,
+  )
+  // `status` lặp lại cho từng trạng thái, như Spring đọc Set<OrderStatus>.
+  assert.deepEqual(lastQuery().getAll('status'), ['PENDING', 'CONFIRMED'])
+  assert.deepEqual(
+    Object.fromEntries([...lastQuery()].filter(([key]) => key !== 'status')),
+    { page: '1', size: '20', fulfillment: 'DELIVERY', payment: 'DUE', q: '0901' },
+  )
+  await orderApi.page({ page: 0, size: 1 })
+  assert.deepEqual(Object.fromEntries(lastQuery()), { page: '0', size: '1' })
+  assert.deepEqual(await orderApi.workingSet(), [orderItem])
+  assert.deepEqual(await orderApi.byCustomer(3), [orderItem])
   assert.deepEqual(await orderApi.detail(8), order)
   assert.equal(orderStatusLabels.CONFIRMED, 'Đã xác nhận')
   assert.equal(paymentStatusLabels.REFUND_PENDING, 'Chờ hoàn tiền')

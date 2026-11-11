@@ -66,8 +66,47 @@ export const canConfirm = (order: Pick<LiveOrder, 'status'>) => order.status ===
 export const canPrepare = (order: Pick<LiveOrder, 'status'>) => order.status === 'CONFIRMED'
 export const canCancel = (order: Pick<LiveOrder, 'status'>) => ['PENDING', 'CONFIRMED', 'PREPARING'].includes(order.status)
 
+/** Một dòng trong danh sách đơn: đơn kèm số đã thu/còn thu từ sổ thanh toán. */
+export type LiveOrderListItem = LiveOrder & { paid: number; due: number; refundDue: number }
+
+/** Bộ lọc GET /sales/orders; trường bỏ trống là không lọc. */
+export type OrderPageQuery = {
+  page: number
+  size: number
+  statuses?: OrderStatus[]
+  fulfillment?: LiveOrder['fulfillmentType']
+  payment?: 'DUE' | 'SETTLED'
+  q?: string
+}
+
+export type OrderPage = {
+  items: LiveOrderListItem[]
+  page: number
+  size: number
+  total: number
+  totalPages: number
+  /** Đếm trên toàn bộ đơn, không theo bộ lọc. */
+  statusCounts: Partial<Record<OrderStatus, number>>
+}
+
+/** Ghép tham số; `status` lặp lại cho từng trạng thái như Spring đọc `Set<OrderStatus>`. */
+export const orderPageParams = ({ page, size, statuses, fulfillment, payment, q }: OrderPageQuery) => {
+  const params = new URLSearchParams({ page: String(page), size: String(size) })
+  for (const status of statuses ?? []) params.append('status', status)
+  if (fulfillment) params.set('fulfillment', fulfillment)
+  if (payment) params.set('payment', payment)
+  if (q?.trim()) params.set('q', q.trim())
+  return params
+}
+
+/** Số ngày đơn đã xong vẫn nằm trong tập đơn của các màn hình vận hành. */
+export const WORKING_SET_DAYS = 30
+
 export const orderApi = {
-  list: () => api.get<LiveOrder[]>('/sales/orders'),
+  page: (query: OrderPageQuery) => api.get<OrderPage>('/sales/orders', { params: orderPageParams(query) }),
+  /** Đơn còn việc phải làm cộng đơn tạo trong `days` ngày gần nhất; không phân trang, luôn nhỏ. */
+  workingSet: (days = WORKING_SET_DAYS) => api.get<LiveOrderListItem[]>('/sales/orders/working-set', { params: { days } }),
+  byCustomer: (customerId: number) => api.get<LiveOrderListItem[]>(`/sales/customers/${customerId}/orders`),
   detail: (id: number) => api.get<LiveOrder>(`/sales/orders/${id}`),
   create: (input: OrderInput) => api.post<LiveOrder>('/sales/orders', input),
   updateStatus: (id: number, status: OrderStatus) => api.patch<LiveOrder>(`/sales/orders/${id}/status`, { status }),

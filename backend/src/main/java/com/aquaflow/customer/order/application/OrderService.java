@@ -10,8 +10,20 @@ import com.aquaflow.customer.order.domain.Order;
 import com.aquaflow.customer.order.domain.OrderChannel;
 import com.aquaflow.customer.order.domain.FulfillmentType;
 import com.aquaflow.customer.order.domain.OrderItem;
+import com.aquaflow.customer.order.api.dto.OrderListItem;
+import com.aquaflow.customer.order.api.dto.OrderPageResponse;
 import com.aquaflow.customer.order.repository.OrderItemRepository;
+import com.aquaflow.customer.order.repository.OrderQueryRepository;
 import com.aquaflow.customer.order.repository.OrderRepository;
+import com.aquaflow.shared.api.BadRequestException;
+import com.aquaflow.shared.api.PageRequestParams;
+import java.time.Clock;
+import java.time.OffsetDateTime;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import com.aquaflow.inventory.application.ReservationLine;
 import com.aquaflow.inventory.application.StockReservationService;
 import com.aquaflow.inventory.domain.Product;
@@ -30,20 +42,29 @@ import java.util.Optional;
 @Transactional(readOnly = true)
 public class OrderService {
 
+    /** Giới hạn cửa sổ "tập đơn đang xử lý" để lượng dữ liệu luôn nhỏ. */
+    public static final int MAX_WORKING_SET_DAYS = 90;
+
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final StockReservationService stockReservationService;
     private final ProductRepository productRepository;
+    private final OrderQueryRepository orderQueryRepository;
+    private final Clock clock;
 
     public OrderService(
             OrderRepository orderRepository,
             OrderItemRepository orderItemRepository,
             StockReservationService stockReservationService,
-            ProductRepository productRepository) {
+            ProductRepository productRepository,
+            OrderQueryRepository orderQueryRepository,
+            Clock clock) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.stockReservationService = stockReservationService;
         this.productRepository = productRepository;
+        this.orderQueryRepository = orderQueryRepository;
+        this.clock = clock;
     }
 
     @Transactional
@@ -189,11 +210,49 @@ public class OrderService {
         return String.format(Locale.ROOT, "AF-%06d", orderRepository.nextOrderCodeNumber());
     }
 
-    public List<OrderResponse> findAll() {
-        return orderRepository.findAll()
-                .stream()
-                .map(this::toResponse)
+    /** Trang Đơn hàng: lọc/tìm/phân trang ở SQL, mới nhất trước. */
+    public OrderPageResponse search(OrderSearch search, PageRequestParams page) {
+        OrderQueryRepository.IdPage ids = orderQueryRepository.search(search, page);
+        return new OrderPageResponse(
+                listItems(ids.ids()), page.page(), page.size(), ids.total(), page.totalPages(ids.total()),
+                orderQueryRepository.statusCounts());
+    }
+
+    /** Đơn còn việc phải làm cộng đơn tạo trong {@code days} ngày gần nhất, cho các màn hình vận hành. */
+    public List<OrderListItem> workingSet(int days) {
+        if (days < 1 || days > MAX_WORKING_SET_DAYS) {
+            throw new BadRequestException("days must be between 1 and " + MAX_WORKING_SET_DAYS);
+        }
+        OffsetDateTime since = OffsetDateTime.now(clock).minusDays(days);
+        return listItems(orderQueryRepository.workingSetIds(since));
+    }
+
+    /** Lịch sử đơn của một khách cho nhân viên (hồ sơ khách), mới nhất trước. */
+    public List<OrderListItem> customerOrders(long customerId) {
+        return listItems(orderQueryRepository.customerOrderIds(customerId));
+    }
+
+    /** Nạp đơn, dòng hàng và số dư thanh toán theo lô, giữ đúng thứ tự {@code ids}. */
+    private List<OrderListItem> listItems(List<Long> ids) {
+        if (ids.isEmpty()) return List.of();
+        Map<Long, Order> orders = orderRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(Order::getId, Function.identity()));
+        Map<Long, List<OrderItem>> items = itemsByOrder(ids);
+        Map<Long, OrderQueryRepository.Balance> balances = orderQueryRepository.balances(ids);
+        return ids.stream()
+                .filter(orders::containsKey)
+                .map(id -> {
+                    OrderQueryRepository.Balance balance = balances.getOrDefault(id, OrderQueryRepository.Balance.ZERO);
+                    return new OrderListItem(toResponse(orders.get(id), items.getOrDefault(id, List.of())),
+                            balance.paid(), balance.due(), balance.refundDue());
+                })
                 .toList();
+    }
+
+    private Map<Long, List<OrderItem>> itemsByOrder(Collection<Long> orderIds) {
+        return orderItemRepository.findAllByOrder_IdIn(orderIds).stream()
+                .sorted(Comparator.comparing(OrderItem::getId))
+                .collect(Collectors.groupingBy(item -> item.getOrder().getId()));
     }
 
     @Transactional
@@ -232,9 +291,11 @@ public class OrderService {
     }
 
     public List<OrderResponse> findAllByCustomerId(Long customerId) {
-        return orderRepository.findAllByCustomerId(customerId)
-                .stream()
-                .map(this::toResponse)
+        List<Order> orders = orderRepository.findAllByCustomerId(customerId);
+        if (orders.isEmpty()) return List.of();
+        Map<Long, List<OrderItem>> items = itemsByOrder(orders.stream().map(Order::getId).toList());
+        return orders.stream()
+                .map(order -> toResponse(order, items.getOrDefault(order.getId(), List.of())))
                 .toList();
     }
 
@@ -252,11 +313,14 @@ public class OrderService {
     }
 
     private OrderResponse toResponse(Order order) {
-        List<OrderResponse.OrderItemResponse> items =
-                orderItemRepository.findAllByOrder_Id(order.getId())
-                        .stream()
-                        .map(this::toItemResponse)
-                        .toList();
+        return toResponse(order, orderItemRepository.findAllByOrder_Id(order.getId()));
+    }
+
+    private OrderResponse toResponse(Order order, List<OrderItem> orderItems) {
+        List<OrderResponse.OrderItemResponse> items = orderItems
+                .stream()
+                .map(this::toItemResponse)
+                .toList();
 
         return new OrderResponse(
                 order.getId(),
