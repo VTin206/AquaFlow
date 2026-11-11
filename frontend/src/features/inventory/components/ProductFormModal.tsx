@@ -7,6 +7,7 @@ import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 import { useBottleTypeOptions, useSaveProduct, type CatalogItem, type ProductForm } from '../useProductCatalog'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { FormSection } from '@/shared/components/FormSection'
+import { waterTypeLabels, waterTypeOf, type WaterTypeCode } from '../catalogGroups'
 
 // Vừa đủ để ô tên hiện trọn tên sản phẩm dài nhất.
 const MODAL_WIDTH = 680
@@ -19,6 +20,7 @@ type ProductFormModalProps = { open: boolean; product?: CatalogItem; onClose: ()
 export function ProductFormModal({ open, product, onClose }: ProductFormModalProps) {
   const { message } = App.useApp()
   const showImage = useFeature('productImage')
+  const showDetails = useFeature('productCatalogDetails')
   const [form] = Form.useForm<ProductForm>()
   const [image, setImage] = useState<string | undefined>(product?.image)
   const settings = useSettings(open && !product)
@@ -92,6 +94,9 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
                 unitsPerCase: product.unitsPerCase,
                 bottleTypeId: product.bottleTypeId,
                 threshold: product.threshold,
+                // Chưa nhập thì điền sẵn phần đoán từ tên để người sửa chỉ cần kiểm tra lại.
+                waterType: product.waterType ?? waterTypeOf(product.catalog?.category),
+                volumeMl: product.volumeMl ?? (product.catalog?.volumeMl || undefined),
               }
             : { unit: 'Bình', price: 0, threshold: settings.data?.defaultLowStock ?? 10 }
         }
@@ -180,6 +185,30 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
               </Col>
             </Row>
           </FormSection>
+
+          {showDetails && (
+            <FormSection title="Phân loại">
+              <Row gutter={12}>
+                <Col xs={24} sm={12}>
+                  <Form.Item name="waterType" label="Loại nước" tooltip="Dùng cho bộ lọc ở trang Sản phẩm và trang đặt hàng.">
+                    <Select
+                      allowClear
+                      placeholder="Chưa phân loại"
+                      options={(Object.keys(waterTypeLabels) as WaterTypeCode[]).map((code) => ({
+                        value: code,
+                        label: waterTypeLabels[code],
+                      }))}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Form.Item name="volumeMl" label="Dung tích mỗi chai/bình (ml)">
+                    <InputNumber min={1} max={100000} precision={0} style={{ width: '100%' }} placeholder="Ví dụ: 500 hoặc 19000" />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </FormSection>
+          )}
 
           <FormSection title="Kho">
             <Row gutter={12}>

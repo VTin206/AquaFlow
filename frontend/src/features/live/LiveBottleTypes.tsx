@@ -102,6 +102,14 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
     },
     onError: (error: Error) => message.error(error.message),
   })
+  const reactivate = useMutation({
+    mutationFn: source.reactivate,
+    onSuccess: (item) => {
+      void invalidateLiveData(client)
+      message.success(`Đã lưu hành lại ${item.name}.`)
+    },
+    onError: (error: Error) => message.error(error.message),
+  })
   const visible = allTypes.filter((type) => (status === 'all' || type.active === (status === 'active')) && matchesSearch(search, type.name))
   const confirmStop = (item: BottleType) =>
     modal.confirm({
@@ -127,7 +135,7 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
           type="info"
           showIcon
           title="Quản lý loại vỏ và tiền cọc"
-          description="Loại vỏ ngừng lưu hành vẫn giữ lịch sử nhưng không chọn được cho sản phẩm mới; lưu hành lại đang chờ backend hỗ trợ."
+          description="Loại vỏ ngừng lưu hành vẫn giữ lịch sử nhưng không chọn được cho sản phẩm mới; lưu hành lại khi cần dùng tiếp."
           style={{ marginBottom: 16 }}
         />
         <Space wrap style={{ marginBottom: 16 }}>
@@ -224,10 +232,18 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
                             </Dropdown>
                           </Space>
                         ) : (
-                          // BE chưa có API lưu hành lại; giữ chỗ để người dùng biết thao tác sẽ có.
                           <Dropdown
                             trigger={['click']}
-                            menu={{ items: [{ key: 'resume', label: 'Lưu hành lại', disabled: true, extra: 'Chưa hỗ trợ' }] }}
+                            menu={{
+                              items: [
+                                {
+                                  key: 'resume',
+                                  label: 'Lưu hành lại',
+                                  disabled: reactivate.isPending,
+                                  onClick: () => reactivate.mutate(item.id),
+                                },
+                              ],
+                            }}
                           >
                             <Button size="small" type="text" icon={<Ellipsis size={16} />} aria-label={`Thao tác khác với ${item.name}`} />
                           </Dropdown>

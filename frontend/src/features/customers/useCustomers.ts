@@ -228,12 +228,29 @@ export function useDeactivateCustomer() {
   })
 }
 
-/** Khách đã lưu trữ; BE chưa có API nên chỉ bản dùng thử (cờ `reactivate`). */
+/** Khách đã lưu trữ (GET /sales/customers/archived). Bảng chỉ hiện tên, số điện thoại, khu vực nên không cần số đơn. */
 export function useArchivedCustomers(enabled: boolean) {
-  return useQuery({ queryKey: [...customerKeys.all, 'archived'], queryFn: customerService.archived, enabled })
+  const demo = useIsDemo()
+  const liveKey = useLiveKey()
+  return useQuery({
+    queryKey: [...customerKeys.all, 'archived', demo ? 'demo' : liveKey],
+    queryFn: async () =>
+      demo
+        ? customerService.archived()
+        : (await api.get<CustomerResponse[]>('/sales/customers/archived')).map((customer) => fromResponse(customer, 0)),
+    enabled,
+  })
 }
 
+/** Khôi phục hồ sơ. BE từ chối (409) khi số điện thoại đã thuộc một khách đang hoạt động. */
 export function useActivateCustomer() {
+  const demo = useIsDemo()
   const invalidate = useInvalidateCustomers()
-  return useMutation({ mutationFn: customerService.activate, onSuccess: () => void invalidate() })
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (demo) await customerService.activate(id)
+      else await api.post<CustomerResponse>(`/sales/customers/${id}/reactivate`)
+    },
+    onSuccess: () => void invalidate(),
+  })
 }

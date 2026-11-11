@@ -39,6 +39,7 @@ export const productService = {
         unit: draft.unit,
         price: draft.price,
         ...(draft.image && { image: draft.image }),
+        ...(draft.catalog && { catalog: draft.catalog }),
       })
       logActivity('Kho hàng', product.id, `Sửa sản phẩm ${product.name}`)
       return product
@@ -80,6 +81,7 @@ export const productService = {
         threshold: db.settings.defaultLowStock,
         expiry: '—',
         image: draft.image || undefined,
+        catalog: draft.catalog,
       }
       db.products.unshift(product)
       logActivity('Kho hàng', product.id, `Thêm sản phẩm ${product.name}`)

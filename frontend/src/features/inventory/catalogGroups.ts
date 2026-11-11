@@ -94,4 +94,45 @@ export function inferCatalog(name: string, unit: string): CatalogDetails {
   return { category, packaging, capacity: capacityOf(volumeMl), volumeMl }
 }
 
+/** Mã loại nước của ProductResponse.waterType; null là chưa phân loại. */
+export type WaterTypeCode = 'PURIFIED' | 'MINERAL' | 'ALKALINE' | 'REMINERALIZED' | 'SPARKLING' | 'ELECTROLYTE' | 'CONTAINER'
+export const waterTypeLabels: Record<WaterTypeCode, string> = {
+  PURIFIED: 'Tinh khiết',
+  MINERAL: 'Nước khoáng',
+  ALKALINE: 'Ion kiềm',
+  REMINERALIZED: 'Hoàn lưu khoáng',
+  SPARKLING: 'Nước có ga',
+  ELECTROLYTE: 'Bù khoáng & điện giải',
+  CONTAINER: 'Vỏ bình & phụ kiện',
+}
+export const waterTypeOf = (category?: string) =>
+  (Object.keys(waterTypeLabels) as WaterTypeCode[]).find((code) => waterTypeLabels[code] === category)
+
+/**
+ * Loại nước, dung tích đã lưu ở BE; field nào chưa nhập thì đoán từ tên như trang khách.
+ * Quy cách đóng gói BE chưa lưu nên luôn đoán từ tên và đơn vị.
+ */
+export function catalogFromApi(product: { name: string; unit: string; waterType?: WaterTypeCode | null; volumeMl?: number | null }) {
+  const guess = inferCatalog(product.name, product.unit)
+  const volumeMl = product.volumeMl ?? guess.volumeMl
+  return {
+    category: product.waterType ? waterTypeLabels[product.waterType] : guess.category,
+    packaging: guess.packaging,
+    capacity: capacityOf(volumeMl),
+    volumeMl,
+  }
+}
+
+/** Dạng lưu của bản dùng thử từ hai ô trên form. */
+export const demoCatalog = (name: string, unit: string, waterType?: WaterTypeCode, volumeMl?: number): CatalogDetails => {
+  const guess = inferCatalog(name, unit)
+  const ml = volumeMl ?? 0
+  return {
+    category: waterType ? waterTypeLabels[waterType] : 'Chưa phân loại',
+    packaging: guess.packaging,
+    capacity: capacityOf(ml),
+    volumeMl: ml,
+  }
+}
+
 export { normalizeSearch } from '@/shared/utils/search'

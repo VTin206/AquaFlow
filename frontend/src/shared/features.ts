@@ -20,8 +20,8 @@ export const backendFeatures = {
   bottleLedger: true,
   /** Ảnh sản phẩm được lưu và trả về qua ProductController. */
   productImage: true,
-  /** Loại nước, dung tích để lọc danh mục (ProductResponse chưa có). */
-  productCatalogDetails: false,
+  /** Loại nước, dung tích để lọc danh mục (ProductResponse.waterType, volumeMl). */
+  productCatalogDetails: true,
   /** Tồn kho tối thiểu để cảnh báo sắp hết (ProductController, mặc định 10). */
   lowStockThreshold: true,
   /** Phiếu thu/hoàn và số còn phải thu từ PaymentController. */
@@ -30,8 +30,8 @@ export const backendFeatures = {
   /** Kiểm hàng hoàn theo lô sau chuyến giao thất bại (Inventory Return API). */
   deliveryReturns: true,
 
-  /** Bật lại nhà cung cấp, loại vỏ đã ngừng và xem/khôi phục khách đã lưu trữ (BE mới có chiều ngừng). */
-  reactivate: false,
+  /** Bật lại nhà cung cấp, loại vỏ, sản phẩm đã ngừng và xem/khôi phục khách đã lưu trữ (POST .../reactivate). */
+  reactivate: true,
   /** Hộp thông báo cá nhân qua NotificationController. */
   notifications: true,
   /** Đăng ký CUSTOMER qua /auth/register, đăng nhập qua /auth/login. */

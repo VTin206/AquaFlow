@@ -27,6 +27,14 @@ vi.mock('@/features/live/paymentApi', async original => {
   return actual
 })
 
+// Chi tiết đơn tải thêm hàng trả lại và nhật ký theo đơn; không có máy chủ thì trả rỗng thay vì gọi mạng.
+vi.mock('@/features/live/orderReturnApi', async original => {
+  const actual = await original<typeof import('@/features/live/orderReturnApi')>()
+  actual.orderReturnApi.summary = vi.fn().mockResolvedValue({ returns: [], items: [] })
+  actual.orderReturnApi.activity = vi.fn().mockResolvedValue([])
+  return actual
+})
+
 vi.mock('@/features/auth/authService', () => ({ authService: { login: vi.fn(), me: vi.fn() } }))
 vi.mock('@/features/shop/customerOrderApi', () => ({ customerOrderApi: { list: vi.fn(), detail: vi.fn() } }))
 vi.mock('@/features/live/catalogApi', () => ({ catalogApi: { products: vi.fn().mockResolvedValue([]) } }))
