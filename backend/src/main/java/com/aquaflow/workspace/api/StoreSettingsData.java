@@ -14,7 +14,22 @@ public record StoreSettingsData(
         @Size(max = 150) String bankHolder,
         @Size(max = 200) String invoiceNote,
         @NotNull @Min(1) @Max(730) Integer expiryWarningDays,
-        @NotNull @Min(0) @Max(1000000) Integer defaultLowStock) {
+        @NotNull @Min(0) @Max(1000000) Integer defaultLowStock,
+        /** Thiếu (dữ liệu lưu trước khi có mục này, client cũ): dùng mức đang áp dụng hoặc giữ nguyên khi lưu. */
+        @jakarta.validation.Valid DeliveryFees deliveryFees) {
+    public StoreSettingsData(String storeName, String address, String phone, String email, String openingHours, String taxCode,
+                             String bankName, String bankAccount, String bankHolder, String invoiceNote,
+                             Integer expiryWarningDays, Integer defaultLowStock) {
+        this(storeName, address, phone, email, openingHours, taxCode, bankName, bankAccount, bankHolder, invoiceNote,
+                expiryWarningDays, defaultLowStock, null);
+    }
+
+    /** Cùng cài đặt, thay phí giao. */
+    public StoreSettingsData withDeliveryFees(DeliveryFees fees) {
+        return new StoreSettingsData(storeName, address, phone, email, openingHours, taxCode, bankName, bankAccount, bankHolder,
+                invoiceNote, expiryWarningDays, defaultLowStock, fees);
+    }
+
     public StoreSettingsData {
         storeName=trim(storeName); address=trim(address);
         phone=phone==null?null:phone.trim().replaceAll("[\\s().-]", "");

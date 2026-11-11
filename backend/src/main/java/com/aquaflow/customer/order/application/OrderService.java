@@ -50,6 +50,7 @@ public class OrderService {
     private final StockReservationService stockReservationService;
     private final ProductRepository productRepository;
     private final OrderQueryRepository orderQueryRepository;
+    private final com.aquaflow.workspace.repository.StoreSettingsRepository storeSettings;
     private final Clock clock;
 
     public OrderService(
@@ -58,12 +59,14 @@ public class OrderService {
             StockReservationService stockReservationService,
             ProductRepository productRepository,
             OrderQueryRepository orderQueryRepository,
+            com.aquaflow.workspace.repository.StoreSettingsRepository storeSettings,
             Clock clock) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.stockReservationService = stockReservationService;
         this.productRepository = productRepository;
         this.orderQueryRepository = orderQueryRepository;
+        this.storeSettings = storeSettings;
         this.clock = clock;
     }
 
@@ -191,7 +194,7 @@ public class OrderService {
         }
 
         BigDecimal fee = channel == OrderChannel.WEB && fulfillmentType == FulfillmentType.DELIVERY
-                ? DeliveryPricing.calculate(subtotal, units, jugs, stairFloor).deliveryFee() : BigDecimal.ZERO;
+                ? DeliveryPricing.calculate(subtotal, units, jugs, stairFloor, storeSettings.deliveryFees()).deliveryFee() : BigDecimal.ZERO;
         if (expectedTotal != null && expectedTotal.compareTo(subtotal.add(fee)) != 0)
             throw new ConflictException("Giá hoặc phí giao đã thay đổi. Vui lòng tải lại phí giao và kiểm tra tổng tiền.");
         order.updateAmounts(

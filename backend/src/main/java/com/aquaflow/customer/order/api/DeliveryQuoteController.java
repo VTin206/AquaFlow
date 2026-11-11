@@ -16,7 +16,11 @@ import java.util.List;
 @RequestMapping("/api/v1/delivery-quotes")
 public class DeliveryQuoteController {
     private final ProductRepository products;
-    public DeliveryQuoteController(ProductRepository products) { this.products = products; }
+    private final com.aquaflow.workspace.repository.StoreSettingsRepository settings;
+    public DeliveryQuoteController(ProductRepository products, com.aquaflow.workspace.repository.StoreSettingsRepository settings) {
+        this.products = products;
+        this.settings = settings;
+    }
 
     public record Request(@NotEmpty @Size(max = 100) List<@NotNull @Valid OrderItemRequest> items,
                           @Min(0) @Max(30) int stairFloor) {}
@@ -33,6 +37,6 @@ public class DeliveryQuoteController {
             units += line.quantity();
             if (DeliveryPricing.isJug(product.getUnit())) jugs += line.quantity();
         }
-        return DeliveryPricing.calculate(subtotal, units, jugs, request.stairFloor());
+        return DeliveryPricing.calculate(subtotal, units, jugs, request.stairFloor(), settings.deliveryFees());
     }
 }
