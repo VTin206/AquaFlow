@@ -13,10 +13,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PurchaseReceiptRepository extends JpaRepository<PurchaseReceipt, Long> {
-    @EntityGraph(attributePaths = "supplier")
+    @EntityGraph(attributePaths = {"supplier", "items", "items.product", "items.batch"})
     List<PurchaseReceipt> findAllByOrderByIdDesc();
 
-    @EntityGraph(attributePaths = "supplier")
+    @EntityGraph(attributePaths = {"supplier", "items", "items.product", "items.batch"})
     List<PurchaseReceipt> findByStatusOrderByIdDesc(PurchaseReceiptStatus status);
 
     @EntityGraph(attributePaths = {"supplier", "items", "items.product", "items.batch"})

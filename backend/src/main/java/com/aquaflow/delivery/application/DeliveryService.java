@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
 
+import java.time.Clock;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /** Trip assignments, inventory dispatch and delivery outcomes share one trip workflow. */
@@ -27,20 +29,38 @@ public class DeliveryService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final DeliveryBottleService bottleLedger;
+    private final Clock clock;
+
+    /** Giới hạn của bộ lọc "chuyến gần đây". */
+    public static final int MAX_RECENT_DAYS = 365;
 
     public DeliveryService(DeliveryRepository repository, AssignmentDispatchService assignmentDispatch,
                           RedeliveryReservationService redeliveryReservations,
-                          OrderRepository orderRepository, OrderItemRepository orderItemRepository, DeliveryBottleService bottleLedger) {
+                          OrderRepository orderRepository, OrderItemRepository orderItemRepository, DeliveryBottleService bottleLedger,
+                          Clock clock) {
         this.repository = repository;
         this.assignmentDispatch = assignmentDispatch;
         this.redeliveryReservations = redeliveryReservations;
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.bottleLedger = bottleLedger;
+        this.clock = clock;
     }
 
     public List<TripResponse> list(long actorId, boolean admin) {
-        return repository.listTrips(actorId, admin).stream().map(repository::viewTrip).toList();
+        return list(actorId, admin, null, null);
+    }
+
+    /**
+     * @param orderId chỉ chuyến có đơn này
+     * @param days    chỉ chuyến chưa xong hoặc có hoạt động trong số ngày này (1–365); null: mọi chuyến
+     */
+    public List<TripResponse> list(long actorId, boolean admin, Long orderId, Integer days) {
+        if (orderId != null && orderId <= 0) throw new BadRequestException("Mã đơn không hợp lệ");
+        if (days != null && (days < 1 || days > MAX_RECENT_DAYS))
+            throw new BadRequestException("Số ngày phải từ 1 đến " + MAX_RECENT_DAYS);
+        OffsetDateTime since = days == null ? null : OffsetDateTime.now(clock).minusDays(days);
+        return repository.viewTrips(repository.listTrips(actorId, admin, orderId, since));
     }
 
     public TripResponse get(long id, long actorId, boolean admin) {
