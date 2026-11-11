@@ -80,12 +80,16 @@ export type DeliveryTrip = {
 export type ResultInput = { outcome: 'SUCCESS' | 'FAILED'; recipientName?: string; failureReason?: string; note?: string }
 export const tripLabels = { CREATED: 'Chờ khởi hành', IN_PROGRESS: 'Đang giao', COMPLETED: 'Đã đối soát', CANCELLED: 'Đã hủy' }
 const base = '/delivery/trips'
+/** `orderId`: chỉ chuyến chở đơn đó (mọi lúc). `days`: chỉ chuyến chưa xong hoặc có hoạt động trong số ngày này. */
+export type TripListQuery = { orderId?: number; days?: number }
+/** Màn hình vận hành (bảng giao, danh sách chuyến, tài xế) xem cùng khoảng với tập đơn đang xử lý. */
+export const RECENT_TRIP_DAYS = 30
 export const deliveryApi = {
   dispatchAssignment: (id: number) =>
     api.post<import('@/features/live/dispatchApi').DispatchReceipt>(`/delivery/assignments/${id}/dispatch`),
   assignmentResult: (id: number, input: ResultInput) => api.post<DeliveryAttempt>(`/delivery/assignments/${id}/attempts`, input),
   assignmentAttempts: (id: number) => api.get<DeliveryAttempt[]>(`/delivery/assignments/${id}/attempts`),
-  list: () => api.get<DeliveryTrip[]>(base),
+  list: (query: TripListQuery = {}) => api.get<DeliveryTrip[]>(base, { params: query }),
   detail: (id: number) => api.get<DeliveryTrip>(`${base}/${id}`),
   drivers: () => api.get<{ id: number; name: string }[]>('/delivery/drivers'),
   available: () => api.get<AvailableOrder[]>('/delivery/available-orders'),

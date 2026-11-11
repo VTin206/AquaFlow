@@ -11,8 +11,13 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /** JDBC repository, consistent with the existing DispatchRepository and V1/V6/V9 schema. */
 @Repository
@@ -53,8 +58,22 @@ public class DeliveryRepository {
     }
 
     public List<TripRow> listTrips(long userId, boolean admin) {
-        return jdbc.query(TRIP_SELECT + " WHERE (? OR t.driver_id = ?) ORDER BY t.id DESC",
-                TRIP_MAPPER, admin, userId);
+        return listTrips(userId, admin, null, null);
+    }
+
+    /**
+     * @param orderId chỉ chuyến có đơn này (mọi thời điểm); null: mọi chuyến
+     * @param since   chỉ chuyến chưa xong (chờ khởi hành, đang giao) hoặc có hoạt động từ mốc này; null: không giới hạn
+     */
+    public List<TripRow> listTrips(long userId, boolean admin, Long orderId, OffsetDateTime since) {
+        return jdbc.query(TRIP_SELECT + """
+                 WHERE (? OR t.driver_id = ?)
+                   AND (CAST(? AS BIGINT) IS NULL OR EXISTS (
+                        SELECT 1 FROM delivery_assignments a WHERE a.trip_id = t.id AND a.order_id = ?))
+                   AND (CAST(? AS TIMESTAMPTZ) IS NULL OR t.status IN ('CREATED', 'IN_PROGRESS')
+                        OR COALESCE(t.ended_at, t.started_at, t.created_at) >= ?)
+                 ORDER BY t.id DESC
+                """, TRIP_MAPPER, admin, userId, orderId, orderId, since, since);
     }
 
     public Long createTrip(long creatorId, Long driverId, String driverName, String vehicle) {
@@ -114,42 +133,6 @@ public class DeliveryRepository {
                 WHERE da.assignment_id = ? ORDER BY da.attempt_no DESC, da.id DESC
                 """, (rs, i) -> mapAttempt(rs), assignmentId);
     }
-
-    /**
-     * Prefer the immutable load manifest captured for this assignment. Looking up the latest order dispatch
-     * alone is incorrect after redelivery because it makes an older trip display the newer dispatch lots.
-     * Before a trip starts its manifest does not exist yet, so use the latest dispatch as the pending-load view.
-     */
-    private List<LoadLineResponse> orderLoad(long assignmentId, long orderId) {
-        List<LoadLineResponse> manifest = jdbc.query("""
-                SELECT b.product_id, p.name, p.unit, b.lot_code, l.quantity_loaded AS quantity
-                FROM delivery_load_items l
-                JOIN product_batches b ON b.id = l.batch_id
-                JOIN products p ON p.id = b.product_id
-                WHERE l.assignment_id = ?
-                ORDER BY b.product_id, b.expires_on, b.id, l.id
-                """, (rs, i) -> new LoadLineResponse(rs.getLong("product_id"), rs.getString("name"),
-                rs.getString("unit"), rs.getString("lot_code"), rs.getInt("quantity")), assignmentId);
-        if (!manifest.isEmpty()) {
-            return manifest;
-        }
-        return jdbc.query("""
-                SELECT di.product_id, p.name, p.unit, di.lot_code, di.quantity
-                FROM order_dispatch_items di JOIN order_dispatches d ON d.id = di.dispatch_id
-                JOIN products p ON p.id = di.product_id
-                WHERE d.id = (SELECT id FROM order_dispatches WHERE order_id = ? ORDER BY dispatched_at DESC, id DESC LIMIT 1)
-                  AND EXISTS (
-                      SELECT 1 FROM delivery_assignments a
-                      JOIN delivery_trips t ON t.id = a.trip_id
-                      JOIN orders o ON o.id = a.order_id
-                      WHERE a.id = ? AND a.order_id = ? AND a.active
-                        AND t.status = 'CREATED' AND o.status = 'OUT_FOR_DELIVERY'
-                  )
-                ORDER BY di.id
-                """, (rs, i) -> new LoadLineResponse(rs.getLong("product_id"), rs.getString("name"),
-                rs.getString("unit"), rs.getString("lot_code"), rs.getInt("quantity")), orderId, assignmentId, orderId);
-    }
-
 
     public Optional<String> activeDriverName(long driverId) {
         return jdbc.query("""
@@ -354,8 +337,21 @@ public class DeliveryRepository {
     }
 
     public TripResponse viewTrip(TripRow trip) {
-        List<AssignmentResponse> assigned = jdbc.query("""
-                SELECT a.id AS assignment_id, o.id AS order_id, o.order_code, o.status AS order_status,
+        return viewTrips(List.of(trip)).getFirst();
+    }
+
+    /**
+     * Dựng nhiều chuyến bằng số truy vấn cố định (điểm giao, hàng đã xếp, hàng chờ xếp, bàn giao), không phụ thuộc
+     * số chuyến hay số điểm giao: danh sách chuyến được tải lại mỗi 15 giây và database có thể ở xa.
+     */
+    public List<TripResponse> viewTrips(List<TripRow> trips) {
+        if (trips.isEmpty()) return List.of();
+        var named = new NamedParameterJdbcTemplate(jdbc);
+        var tripIds = new MapSqlParameterSource("ids", trips.stream().map(TripRow::id).toList());
+        record Stop(long tripId, long assignmentId, long orderId, String orderCode, String orderStatus, String recipientName,
+                    String recipientPhone, String deliveryAddress, AttemptResponse attempt, OffsetDateTime requestedAt, String note) {}
+        List<Stop> stops = named.query("""
+                SELECT a.trip_id, a.id AS assignment_id, o.id AS order_id, o.order_code, o.status AS order_status,
                        o.recipient_name, o.recipient_phone, o.delivery_address, o.requested_delivery_at, o.note,
                        da.id AS attempt_id, da.attempt_no, da.outcome, da.recipient_name AS actual_recipient,
                        da.failure_reason, da.note AS attempt_note, da.attempted_at
@@ -364,24 +360,70 @@ public class DeliveryRepository {
                     SELECT * FROM delivery_attempts x WHERE x.assignment_id = a.id
                     ORDER BY x.attempt_no DESC LIMIT 1
                 ) da ON TRUE
-                WHERE a.trip_id = ? ORDER BY a.id
-                """, (rs, i) -> new AssignmentResponse(
-                rs.getLong("assignment_id"), rs.getLong("order_id"), rs.getString("order_code"),
-                rs.getString("order_status"), rs.getString("recipient_name"),
-                rs.getString("recipient_phone"), rs.getString("delivery_address"),
-                mapAttempt(rs), orderLoad(rs.getLong("assignment_id"), rs.getLong("order_id")),
-                rs.getObject("requested_delivery_at", OffsetDateTime.class), rs.getString("note")), trip.id());
-        HandoverResponse handover = jdbc.query("""
-                SELECT * FROM handover_records WHERE trip_id = ?
-                """, (rs, i) -> new HandoverResponse(
-                rs.getLong("id"), rs.getBigDecimal("cash_reported"),
-                rs.getBigDecimal("cash_confirmed"), rs.getInt("bottles_expected"),
-                rs.getInt("bottles_confirmed"), rs.getString("note"),
-                rs.getLong("received_by"), rs.getObject("handed_over_at", OffsetDateTime.class)),
-                trip.id()).stream().findFirst().orElse(null);
-        return new TripResponse(trip.id(), trip.driverId(), trip.driverName(), trip.vehicle(),
+                WHERE a.trip_id IN (:ids) ORDER BY a.id
+                """, tripIds, (rs, i) -> new Stop(rs.getLong("trip_id"), rs.getLong("assignment_id"), rs.getLong("order_id"),
+                rs.getString("order_code"), rs.getString("order_status"), rs.getString("recipient_name"),
+                rs.getString("recipient_phone"), rs.getString("delivery_address"), mapAttempt(rs),
+                rs.getObject("requested_delivery_at", OffsetDateTime.class), rs.getString("note")));
+        Map<Long, List<LoadLineResponse>> loads = orderLoads(named, stops.stream().map(Stop::assignmentId).toList());
+        Map<Long, HandoverResponse> handovers = new HashMap<>();
+        named.query("SELECT * FROM handover_records WHERE trip_id IN (:ids)", tripIds, rs -> {
+            handovers.put(rs.getLong("trip_id"), new HandoverResponse(
+                    rs.getLong("id"), rs.getBigDecimal("cash_reported"),
+                    rs.getBigDecimal("cash_confirmed"), rs.getInt("bottles_expected"),
+                    rs.getInt("bottles_confirmed"), rs.getString("note"),
+                    rs.getLong("received_by"), rs.getObject("handed_over_at", OffsetDateTime.class)));
+        });
+        Map<Long, List<AssignmentResponse>> assigned = new HashMap<>();
+        for (Stop stop : stops) {
+            assigned.computeIfAbsent(stop.tripId(), id -> new ArrayList<>()).add(new AssignmentResponse(
+                    stop.assignmentId(), stop.orderId(), stop.orderCode(), stop.orderStatus(), stop.recipientName(),
+                    stop.recipientPhone(), stop.deliveryAddress(), stop.attempt(),
+                    loads.getOrDefault(stop.assignmentId(), List.of()), stop.requestedAt(), stop.note()));
+        }
+        return trips.stream().map(trip -> new TripResponse(trip.id(), trip.driverId(), trip.driverName(), trip.vehicle(),
                 trip.status(), trip.createdAt(), trip.startedAt(), trip.endedAt(),
-                trip.createdBy(), assigned, handover);
+                trip.createdBy(), assigned.getOrDefault(trip.id(), List.of()), handovers.get(trip.id()))).toList();
+    }
+
+    /**
+     * Hàng của từng điểm giao: ưu tiên danh sách hàng đã xếp lên chuyến (không đổi sau khi xếp; lấy phiếu xuất mới nhất
+     * sẽ sai sau khi giao lại vì chuyến cũ hiện lô của lần xuất mới). Chuyến chưa xuất phát chưa có danh sách xếp
+     * nên dùng phiếu xuất kho mới nhất của đơn.
+     */
+    private Map<Long, List<LoadLineResponse>> orderLoads(NamedParameterJdbcTemplate named, List<Long> assignmentIds) {
+        Map<Long, List<LoadLineResponse>> loads = new HashMap<>();
+        if (assignmentIds.isEmpty()) return loads;
+        var ids = new MapSqlParameterSource("ids", assignmentIds);
+        named.query("""
+                SELECT l.assignment_id, b.product_id, p.name, p.unit, b.lot_code, l.quantity_loaded AS quantity
+                FROM delivery_load_items l
+                JOIN product_batches b ON b.id = l.batch_id
+                JOIN products p ON p.id = b.product_id
+                WHERE l.assignment_id IN (:ids)
+                ORDER BY l.assignment_id, b.product_id, b.expires_on, b.id, l.id
+                """, ids, rs -> {
+            loads.computeIfAbsent(rs.getLong("assignment_id"), id -> new ArrayList<>()).add(new LoadLineResponse(
+                    rs.getLong("product_id"), rs.getString("name"), rs.getString("unit"), rs.getString("lot_code"), rs.getInt("quantity")));
+        });
+        List<Long> pending = assignmentIds.stream().filter(id -> !loads.containsKey(id)).toList();
+        if (pending.isEmpty()) return loads;
+        named.query("""
+                SELECT a.id AS assignment_id, di.product_id, p.name, p.unit, di.lot_code, di.quantity
+                FROM delivery_assignments a
+                JOIN delivery_trips t ON t.id = a.trip_id
+                JOIN orders o ON o.id = a.order_id
+                JOIN LATERAL (SELECT d.id FROM order_dispatches d WHERE d.order_id = a.order_id
+                              ORDER BY d.dispatched_at DESC, d.id DESC LIMIT 1) d ON TRUE
+                JOIN order_dispatch_items di ON di.dispatch_id = d.id
+                JOIN products p ON p.id = di.product_id
+                WHERE a.id IN (:ids) AND a.active AND t.status = 'CREATED' AND o.status = 'OUT_FOR_DELIVERY'
+                ORDER BY a.id, di.id
+                """, new MapSqlParameterSource("ids", pending), rs -> {
+            loads.computeIfAbsent(rs.getLong("assignment_id"), id -> new ArrayList<>()).add(new LoadLineResponse(
+                    rs.getLong("product_id"), rs.getString("name"), rs.getString("unit"), rs.getString("lot_code"), rs.getInt("quantity")));
+        });
+        return loads;
     }
 
     private static AttemptResponse mapAttempt(ResultSet rs) throws SQLException {

@@ -23,6 +23,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        # Nạp quan hệ lazy theo nhóm (IN (...)) thay vì từng bản ghi một: database ở xa thì mỗi lượt đi về đều đắt.
+        default_batch_fetch_size: 100
   flyway:
     enabled: true
     locations: classpath:db/migration

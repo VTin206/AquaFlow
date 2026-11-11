@@ -66,7 +66,7 @@ class DeliveryServiceTest {
     @BeforeEach
     void setUp() {
         service = new DeliveryService(repository, assignmentDispatch, redeliveryReservations,
-                orderRepository, orderItemRepository, bottleLedger);
+                orderRepository, orderItemRepository, bottleLedger, java.time.Clock.systemUTC());
     }
 
     @Test
