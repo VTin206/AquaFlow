@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({ supported: false, phone: '0283 456 7890' as st
 
 vi.mock('@/features/settings/settingsService', () => ({ useSettings: () => ({ data: undefined }) }))
 vi.mock('./shopService', () => ({
-  lookupOrder: vi.fn(),
+  useLookupOrder: () => vi.fn(),
   useTrackedOrder: vi.fn(),
   useShopFeature: () => mocks.supported,
   useShopContact: () => ({ phone: mocks.phone }),

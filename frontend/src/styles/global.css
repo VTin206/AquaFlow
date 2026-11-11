@@ -23,6 +23,7 @@ body {
   background: var(--af-bg);
   color: var(--af-text);
   font-family: 'Nunito Sans', 'Be Vietnam Pro', system-ui, sans-serif;
+  font-size: var(--af-fs-base);
   margin: 0;
   -webkit-font-smoothing: antialiased;
 }
@@ -77,7 +78,7 @@ body {
   gap: 10px;
 }
 .af-topbar-brand strong {
-  font-size: 21px;
+  font-size: var(--af-fs-2xl);
   font-weight: 700;
   letter-spacing: -0.7px;
 }
@@ -118,7 +119,7 @@ body {
   color: var(--af-text-secondary);
   display: inline-flex;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--af-fs-md);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -136,7 +137,7 @@ body {
   background: var(--af-primary-soft);
   border-radius: 6px;
   color: var(--af-primary);
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
   padding: 5px 10px;
   white-space: nowrap;
 }
@@ -168,7 +169,7 @@ body {
   border-bottom: 1px solid var(--af-border);
 }
 .af-notifications-header strong {
-  font-size: 14px;
+  font-size: var(--af-fs-base);
   color: var(--af-text-strong);
 }
 .af-notifications-header strong span {
@@ -227,16 +228,16 @@ body {
   gap: 3px;
 }
 .af-notification-copy strong {
-  font-size: 13px;
+  font-size: var(--af-fs-md);
   font-weight: 600;
 }
 .af-notification-copy > span {
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
   color: var(--af-text-secondary);
   overflow-wrap: anywhere;
 }
 .af-notification-copy small {
-  font-size: 11px;
+  font-size: var(--af-fs-xs);
   color: var(--af-text-tertiary);
 }
 .af-notification-arrow {
@@ -260,7 +261,7 @@ body {
   gap: 4px;
   padding: 11px 16px;
   border-top: 1px solid var(--af-border);
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
 }
 .af-topbar .af-account-menu:hover {
   background: var(--af-primary-soft);
@@ -279,14 +280,14 @@ body {
 }
 .af-topbar-user-text strong {
   display: block;
-  font-size: 14px;
+  font-size: var(--af-fs-base);
   font-weight: 600;
   line-height: 1.2;
 }
 .af-topbar-user-text small {
   color: var(--af-text-tertiary);
   display: block;
-  font-size: 11px;
+  font-size: var(--af-fs-xs);
   margin-top: 4px;
 }
 .af-avatar {
@@ -328,12 +329,12 @@ body {
 }
 .af-workspace strong {
   display: block;
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
   font-weight: 600;
 }
 .af-workspace small {
   color: var(--af-text-tertiary);
-  font-size: 11px;
+  font-size: var(--af-fs-xs);
 }
 .af-menu {
   border-inline-end: 0 !important;
@@ -343,7 +344,7 @@ body {
   padding: 0 12px;
 }
 .af-menu .ant-menu-item-group-title {
-  font-size: 11px;
+  font-size: var(--af-fs-xs);
   font-weight: 600;
   padding: 14px 12px 6px !important;
 }
@@ -356,7 +357,7 @@ body {
 }
 .af-menu-soon {
   color: var(--af-text-tertiary);
-  font-size: 11px;
+  font-size: var(--af-fs-xs);
   margin-left: auto;
   white-space: nowrap;
 }
@@ -556,7 +557,7 @@ body {
   background: var(--af-surface-sunken);
   border-radius: 999px;
   color: var(--af-text-secondary);
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   line-height: 18px;
@@ -619,7 +620,7 @@ body {
   background: var(--af-accent-soft);
   border-radius: 4px;
   color: var(--af-accent);
-  font-size: 11px;
+  font-size: var(--af-fs-xs);
   font-weight: 700;
   padding: 0 5px;
   text-transform: uppercase;
@@ -644,7 +645,7 @@ body {
 }
 .af-page-header h1 {
   color: var(--af-text-strong);
-  font-size: 22px;
+  font-size: var(--af-fs-3xl);
   font-weight: 700;
   line-height: 1.3;
   margin: 0;
@@ -656,7 +657,7 @@ body {
 }
 .af-page-header p {
   color: var(--af-text-secondary);
-  font-size: 13px;
+  font-size: var(--af-fs-md);
   margin: 2px 0 0;
 }
 .af-page-actions {
@@ -679,7 +680,7 @@ body {
   margin-bottom: 2px;
 }
 .af-stat-row .ant-statistic-content {
-  font-size: 22px;
+  font-size: var(--af-fs-3xl);
   line-height: 1.35;
 }
 /* Khung "Cần xử lý" của kho: danh sách việc, không phải thẻ số. */
@@ -693,7 +694,7 @@ body {
 .af-attention h2 {
   margin: 0 0 6px;
   color: var(--af-text-strong);
-  font-size: 14px;
+  font-size: var(--af-fs-base);
   font-weight: 600;
 }
 .af-attention ul {
@@ -770,7 +771,7 @@ body {
   line-height: 1.25;
 }
 .af-order-group strong {
-  font-size: 18px;
+  font-size: var(--af-fs-xl);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -778,7 +779,7 @@ body {
   color: var(--af-danger);
 }
 .af-order-group small {
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
   white-space: normal;
 }
 .af-global-search ul {
@@ -810,7 +811,7 @@ body {
 .af-global-search small,
 .af-global-search-note {
   color: var(--af-text-tertiary);
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
 }
 .af-global-search-note {
   margin: 10px 0 0;
@@ -905,7 +906,7 @@ body {
 .af-inactive-tag.ant-tag {
   margin: 0;
   flex: none;
-  font-size: 11px;
+  font-size: var(--af-fs-xs);
   line-height: 18px;
   color: var(--af-text-secondary);
 }
@@ -939,7 +940,7 @@ body {
   line-height: 20px;
 }
 .af-data-table .af-cell-stack > small {
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
 }
 .af-cell-stack > .af-cell-truncate {
   display: block;
@@ -978,7 +979,7 @@ body {
 }
 .af-cell-stack > small {
   color: var(--af-text-tertiary);
-  font-size: 13px;
+  font-size: var(--af-fs-md);
   overflow-wrap: anywhere;
 }
 .af-money {
@@ -993,7 +994,7 @@ body {
   color: var(--af-danger) !important;
 }
 .af-money-stack > small {
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
 }
 .af-money.is-due,
 .af-stat-due .ant-statistic-content {
@@ -1016,7 +1017,7 @@ body {
 }
 .af-stock-cell small {
   color: var(--af-text-tertiary);
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
 }
 /* ---------- Tổng quan ---------- */
 .af-dash-summary {
@@ -1025,7 +1026,7 @@ body {
   gap: 4px 20px;
   margin: 0 0 16px;
   color: var(--af-text-secondary);
-  font-size: 13px;
+  font-size: var(--af-fs-md);
 }
 .af-dash-summary a {
   color: var(--af-text);
@@ -1081,7 +1082,7 @@ body {
 .af-dash-shipping .af-cell-stack > span small {
   display: inline;
   color: var(--af-text-tertiary);
-  font-size: 11px;
+  font-size: var(--af-fs-xs);
   margin-left: 4px;
 }
 .af-dash-tasks .af-money {
@@ -1091,7 +1092,7 @@ body {
 .af-dash-more {
   margin: 12px 0 0;
   color: var(--af-text-tertiary);
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
 }
 .af-dash-shipping li {
   display: grid;
@@ -1115,7 +1116,7 @@ body {
   color: var(--af-text-strong);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  font-size: 13px;
+  font-size: var(--af-fs-md);
 }
 .af-dash-today {
   display: flex;
@@ -1128,12 +1129,12 @@ body {
 }
 .af-dash-today dt {
   color: var(--af-text-tertiary);
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
 }
 .af-dash-today dd {
   margin: 2px 0 0;
   color: var(--af-text-strong);
-  font-size: 18px;
+  font-size: var(--af-fs-xl);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   display: flex;
@@ -1142,7 +1143,7 @@ body {
 }
 .af-dash-today dd small {
   color: var(--af-text-tertiary);
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
   font-weight: 400;
 }
 @media (max-width: 575px) {
@@ -1175,13 +1176,13 @@ body {
 }
 .af-section-heading h2 {
   color: var(--af-text-strong);
-  font-size: 16px;
+  font-size: var(--af-fs-lg);
   font-weight: 600;
   margin: 0;
 }
 .af-section-heading > span {
   color: var(--af-text-tertiary);
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
 }
 .af-panel-title,
 .af-text-link {
@@ -1204,11 +1205,11 @@ body {
 .af-panel-heading-extra {
   display: inline-flex;
   align-items: center;
-  font-size: 13px;
+  font-size: var(--af-fs-md);
   font-weight: 400;
 }
 .af-text-link {
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
   font-weight: 500;
 }
 .af-stat-row > .ant-col > .ant-card {
@@ -1264,7 +1265,7 @@ body {
 .af-bar-label {
   bottom: -22px;
   color: var(--af-text-tertiary);
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
   position: absolute;
   white-space: nowrap;
 }
@@ -1341,7 +1342,7 @@ body {
   object-fit: contain;
 }
 .af-brand-filter > span {
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -1449,11 +1450,11 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
   color: var(--af-text-secondary);
 }
 .af-product-spec {
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
   color: var(--af-text-secondary);
   margin: 0 0 4px;
 }
@@ -1520,14 +1521,14 @@ body {
   justify-content: center;
   flex-direction: column;
   gap: 10px;
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
 }
 .af-product-image {
   padding: 16px;
   background: var(--af-image-bg);
 }
 .af-product-sku {
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
 }
 .af-product-name.ant-typography {
   margin: 4px 0 10px;
@@ -1637,11 +1638,11 @@ body {
   color: var(--af-text-secondary);
   display: flex;
   flex-direction: column;
-  font-size: 13px;
+  font-size: var(--af-fs-md);
   gap: 6px;
 }
 .af-order-total {
-  font-size: 15px;
+  font-size: var(--af-fs-base);
   margin: 0;
 }
 
@@ -1665,12 +1666,12 @@ body {
   background: var(--af-surface);
   border-radius: 10px;
   color: var(--af-text-secondary);
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
   font-weight: 600;
   padding: 0 8px;
 }
 .af-board-hint {
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
   margin-top: -6px;
 }
 .af-delivery-top,
@@ -1704,7 +1705,7 @@ body {
   align-items: flex-start;
   color: var(--af-text-secondary);
   display: flex;
-  font-size: 13px;
+  font-size: var(--af-fs-md);
   gap: 6px;
   margin-top: 2px;
 }
@@ -1775,7 +1776,7 @@ body {
     padding: 14px 0 12px;
   }
   .af-page-header h1 {
-    font-size: 20px;
+    font-size: var(--af-fs-2xl);
   }
   .af-toolbar .ant-segmented {
     max-width: 100%;
@@ -1884,7 +1885,7 @@ body {
 }
 .af-totals dt {
   color: var(--af-text-tertiary);
-  font-size: 13px;
+  font-size: var(--af-fs-md);
 }
 .af-totals dd {
   margin: 0;
@@ -1899,12 +1900,12 @@ body {
 .af-totals > .is-total dt {
   color: var(--af-text-strong);
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--af-fs-base);
 }
 .af-totals > .is-total dd {
   color: var(--af-text-strong);
   font-weight: 700;
-  font-size: 18px;
+  font-size: var(--af-fs-xl);
 }
 .af-totals > .is-after-total {
   margin-top: 2px;
@@ -1917,7 +1918,7 @@ body {
 }
 .af-form-hint {
   color: var(--af-text-secondary);
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
   line-height: 1.7;
   margin-top: 12px;
 }
@@ -1943,7 +1944,7 @@ body {
   gap: 8px;
   padding: 0 20px 12px;
   color: var(--af-text-secondary);
-  font-size: 13px;
+  font-size: var(--af-fs-md);
 }
 .af-detail-actions {
   margin-bottom: 16px;
@@ -1979,11 +1980,11 @@ body {
 .af-order-focus strong {
   color: var(--af-text-strong);
   display: block;
-  font-size: 15px;
+  font-size: var(--af-fs-base);
 }
 .af-order-focus p {
   color: var(--af-text-secondary);
-  font-size: 13px;
+  font-size: var(--af-fs-md);
   margin: 2px 0 0;
   overflow-wrap: anywhere;
 }
@@ -2005,7 +2006,7 @@ body {
 }
 .af-order-sheet h3 {
   color: var(--af-text-tertiary);
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
   font-weight: 500;
   margin: 0 0 8px;
 }
@@ -2017,7 +2018,7 @@ body {
 }
 .af-order-party > strong {
   color: var(--af-text-strong);
-  font-size: 16px;
+  font-size: var(--af-fs-lg);
   overflow-wrap: anywhere;
 }
 .af-order-party > a {
@@ -2031,7 +2032,7 @@ body {
 .af-order-party p > span {
   color: var(--af-text-tertiary);
   display: block;
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
 }
 .af-order-goods {
   min-width: 0;
@@ -2057,7 +2058,7 @@ body {
 .af-order-goods li small {
   color: var(--af-text-tertiary);
   display: block;
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
 }
 .af-order-goods li > strong {
   color: var(--af-text);
@@ -2070,7 +2071,7 @@ body {
 }
 .af-order-more .ant-collapse-extra {
   color: var(--af-text-tertiary);
-  font-size: 13px;
+  font-size: var(--af-fs-md);
 }
 .af-order-more-empty {
   color: var(--af-text-tertiary);
@@ -2130,7 +2131,7 @@ body {
 }
 .af-delivery-reason {
   margin: 10px 0 0;
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
 }
 @media (max-width: 575px) {
   .af-order-line-form {
@@ -2191,7 +2192,7 @@ body {
   min-width: 0;
 }
 .af-profile-name {
-  font-size: 17px;
+  font-size: var(--af-fs-lg);
   font-weight: 700;
   color: var(--af-text-strong);
 }
@@ -2216,11 +2217,11 @@ body {
 }
 .af-profile-summary small {
   color: var(--af-text-secondary);
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
 }
 .af-profile-summary strong {
   color: var(--af-text-strong);
-  font-size: 15px;
+  font-size: var(--af-fs-base);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2254,14 +2255,14 @@ body {
   margin: 0;
   padding: 0 6px;
   border: 0;
-  font-size: 13px;
+  font-size: var(--af-fs-md);
   font-weight: 600;
   color: var(--af-text-strong);
 }
 .af-form-label {
   margin-bottom: 8px;
   color: var(--af-text);
-  font-size: 14px;
+  font-size: var(--af-fs-base);
 }
 .af-address-list {
   display: flex;
@@ -2365,7 +2366,7 @@ body {
 }
 .af-modal-total strong {
   color: var(--af-text-strong);
-  font-size: 18px;
+  font-size: var(--af-fs-xl);
   font-variant-numeric: tabular-nums;
 }
 @media (max-width: 900px) {
@@ -2415,7 +2416,7 @@ body {
   justify-content: space-between;
   margin-bottom: 6px;
   color: var(--af-text-strong);
-  font-size: 13px;
+  font-size: var(--af-fs-md);
 }
 .af-receipt-line .ant-form-item {
   margin-bottom: 12px;
@@ -2424,7 +2425,7 @@ body {
   display: block;
   margin: -4px 0 8px;
   color: var(--af-text-secondary);
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
 }
 .af-receipt-note {
   margin: 8px 0 0;
@@ -2510,7 +2511,7 @@ body {
   border-radius: 50%;
   background: var(--af-primary-soft);
   color: var(--af-primary);
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
   font-weight: 700;
 }
 
@@ -2611,7 +2612,7 @@ body {
 }
 .af-page-header p {
   max-width: 720px;
-  font-size: 14px;
+  font-size: var(--af-fs-base);
   line-height: 1.6;
 }
 .af-page-actions {
@@ -2678,7 +2679,7 @@ html:has(.af-shell) body {
 .af-shell .ant-table-thead > tr > th {
   background: var(--af-surface-muted);
   color: var(--af-text-secondary);
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -2716,7 +2717,7 @@ html:has(.af-shell) body {
   margin-top: 34px;
 }
 .af-section-heading h2 {
-  font-size: 18px;
+  font-size: var(--af-fs-xl);
   letter-spacing: -0.02em;
 }
 .af-page-loading {
@@ -2756,7 +2757,7 @@ html:has(.af-shell) body {
     padding-top: 20px;
   }
   .af-page-header h1 {
-    font-size: 24px;
+    font-size: var(--af-fs-3xl);
   }
   .af-topbar-user-text {
     display: none;
@@ -2833,17 +2834,17 @@ html:has(.af-shell) body {
   border-radius: 8px;
   background: var(--af-image-bg);
   text-align: center;
-  font-size: 13px;
+  font-size: var(--af-fs-md);
   color: var(--af-text-secondary);
 }
 .af-invoice-preview strong {
-  font-size: 16px;
+  font-size: var(--af-fs-lg);
   color: var(--af-text-strong);
   text-transform: uppercase;
 }
 .af-invoice-preview em {
   margin-top: 6px;
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
 }
 :root[data-theme='dark'] .af-invoice-preview {
   background: var(--af-surface-muted);
@@ -2866,7 +2867,7 @@ html:has(.af-shell) body {
   gap: 2px 10px;
   margin: 0;
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--af-fs-md);
 }
 .af-transfer-qr dt {
   color: var(--af-text-secondary);
@@ -2925,7 +2926,7 @@ html:has(.af-shell) body {
 .af-theme-menu .ant-dropdown-menu-item-group-title {
   padding: 6px 10px 4px;
   color: var(--af-text-tertiary);
-  font-size: 11px;
+  font-size: var(--af-fs-xs);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -2949,12 +2950,12 @@ html:has(.af-shell) body {
   line-height: 1.3;
 }
 .af-theme-option strong {
-  font-size: 14px;
+  font-size: var(--af-fs-base);
   font-weight: 600;
 }
 .af-theme-option small {
   color: var(--af-text-secondary);
-  font-size: 12px;
+  font-size: var(--af-fs-sm);
 }
 .af-theme-option > svg {
   flex: none;
@@ -3013,16 +3014,16 @@ html:has(.af-shell) body {
   align-items: baseline;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: var(--af-fs-md);
   color: var(--af-text-secondary);
 }
 .af-record-heading strong {
   color: var(--af-primary);
-  font-size: 14px;
+  font-size: var(--af-fs-base);
 }
 .af-record h3 {
   margin: 8px 0 4px;
-  font-size: 16px;
+  font-size: var(--af-fs-lg);
   line-height: 1.5;
   color: var(--af-text-strong);
 }
@@ -3032,7 +3033,7 @@ html:has(.af-shell) body {
   align-items: center;
   gap: 4px 12px;
   margin: 4px 0 10px;
-  font-size: 13px;
+  font-size: var(--af-fs-md);
   line-height: 1.6;
   color: var(--af-text-secondary);
 }
@@ -3046,7 +3047,7 @@ html:has(.af-shell) body {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px 12px;
   margin: 12px 0;
-  font-size: 14px;
+  font-size: var(--af-fs-base);
 }
 .af-record-facts dt {
   color: var(--af-text-secondary);
@@ -3069,7 +3070,7 @@ html:has(.af-shell) body {
   justify-content: space-between;
   gap: 8px;
   margin-top: 16px;
-  font-size: 13px;
+  font-size: var(--af-fs-md);
   color: var(--af-text-secondary);
 }
 
@@ -3122,7 +3123,7 @@ html:has(.af-shell) body {
   padding: 6px 12px;
   border: 1px solid var(--af-border);
   border-radius: 999px;
-  font-size: 14px;
+  font-size: var(--af-fs-base);
 }
 
 /* Ô lọc đang bật: viền, nền nhạt và chữ màu chính, giống ô thương hiệu đang chọn. */

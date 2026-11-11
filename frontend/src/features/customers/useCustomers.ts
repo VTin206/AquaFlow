@@ -9,6 +9,7 @@ import { bottleLedgerApi } from '@/features/live/bottleLedgerApi'
 import { customerService } from './customerService'
 import { initialsOf, type Customer, type CustomerDraft } from './types'
 import { latest } from './lastOrder'
+import { sortByName } from '@/shared/utils/table'
 
 export const customerKeys = {
   all: ['customers'] as const,
@@ -79,6 +80,7 @@ export function useCustomers() {
   return useQuery({
     queryKey: demo ? customerKeys.all : ['live', 'customers', ...who],
     queryFn: demo ? customerService.list : liveCustomers,
+    select: sortByName,
   })
 }
 

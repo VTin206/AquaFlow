@@ -4,6 +4,7 @@ import { useStaff } from '@/features/auth/useStaff'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { supplierApi, supplierService, type SupplierStatus } from './supplierService'
 import type { SupplierDraft } from './types'
+import { sortByName } from '@/shared/utils/table'
 
 export const supplierKeys = { all: ['suppliers'] as const }
 
@@ -24,6 +25,7 @@ export function useSuppliers(status: SupplierStatus = 'active') {
       demo
         ? (await supplierService.list()).filter((supplier) => status === 'all' || supplier.active === (status === 'active'))
         : supplierApi.list(status),
+    select: sortByName,
   })
 }
 

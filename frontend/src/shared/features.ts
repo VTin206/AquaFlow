@@ -38,8 +38,8 @@ export const backendFeatures = {
   customerAccounts: true,
   /** Doanh thu, tiền đã thu trên Tổng quan qua ReportController (API chỉ cho chủ cửa hàng). */
   revenueReports: true,
-  /** Khách tự tra cứu đơn theo mã + số điện thoại hoặc liên kết riêng (chờ API công khai). */
-  orderTracking: false,
+  /** Khách tự tra cứu đơn theo mã + số điện thoại hoặc liên kết riêng (OrderTrackingController). */
+  orderTracking: true,
   /** In hóa đơn, phiếu giao; thông tin cửa hàng trên chứng từ lấy từ StoreSettingsController. */
   orderPrinting: true,
   /** Báo trước phí giao cho khách trên trang đặt hàng (API báo giá và tính lại khi tạo đơn). */

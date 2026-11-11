@@ -2,6 +2,7 @@ import { Alert, Form, Input, InputNumber, Modal, Segmented, Select, Tag } from '
 import { QueryError } from '@/shared/components/QueryError'
 import { modalWidth } from '@/shared/utils/modal'
 import type { DeliveryStop, ResultInput, SettlementInput } from '../deliveryApi'
+import { TextArea } from '@/shared/components/TextArea'
 
 export type DeliveryAction = { kind: 'driver' | 'add' | 'settle'; tripId: number } | { kind: 'result'; tripId: number; order: DeliveryStop }
 export type DeliveryFormValues = Partial<SettlementInput & ResultInput> & { driverId?: number; orderId?: number }
@@ -128,7 +129,7 @@ export function DeliveryActionModal({
                   extra="Chạm một lý do ở trên hoặc tự ghi."
                   rules={[{ required: true, whitespace: true, message: 'Chọn hoặc nhập lý do giao thất bại.' }]}
                 >
-                  <Input.TextArea maxLength={2000} autoSize={{ minRows: 2, maxRows: 4 }} />
+                  <TextArea maxLength={2000} />
                 </Form.Item>
               </>
             )}
@@ -163,7 +164,7 @@ export function DeliveryActionModal({
         )}
         {(action.kind === 'result' || action.kind === 'settle') && (
           <Form.Item name="note" label={action.kind === 'settle' ? 'Ghi chú / lý do chênh lệch' : 'Ghi chú'}>
-            <Input.TextArea maxLength={action.kind === 'result' ? 1000 : 2000} />
+            <TextArea maxLength={action.kind === 'result' ? 1000 : 2000} />
           </Form.Item>
         )}
       </Form>

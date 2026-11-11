@@ -7,6 +7,7 @@ import { rememberDemoOrder } from './demoCustomerData'
 import { customerOrderApi } from './customerOrderApi'
 import { catalogApi, type CatalogProduct } from '@/features/live/catalogApi'
 import { guestOrderApi, type GuestOrderInput } from '@/features/live/guestOrderApi'
+import { orderTrackingApi } from '@/features/live/orderTrackingApi'
 import { daysUntilExpiry } from '@/features/inventory/expiry'
 import { inferCatalog } from '@/features/inventory/catalogGroups'
 import type { Product } from '@/features/inventory/types'
@@ -157,7 +158,20 @@ export function usePlaceWebOrder() {
   })
 }
 
-export const useTrackedOrder = (token: string) =>
-  useQuery({ queryKey: shopKeys.track(token), queryFn: () => orderService.track({ token }), retry: false, refetchInterval: 20_000 })
+/** Theo dõi đơn qua liên kết riêng; tự cập nhật mỗi 20 giây. */
+export function useTrackedOrder(token: string) {
+  const demo = useShopDemo()
+  return useQuery<PublicOrder>({
+    queryKey: [...shopKeys.track(token), demo ? 'demo' : 'live'],
+    queryFn: () => (demo ? orderService.track({ token }) : orderTrackingApi.byToken(token)),
+    retry: false,
+    refetchInterval: 20_000,
+  })
+}
 
-export const lookupOrder = (id: string, phone: string) => orderService.track({ id, phone })
+/** Tra cứu bằng mã đơn + số điện thoại đặt hàng. */
+export function useLookupOrder() {
+  const demo = useShopDemo()
+  return (id: string, phone: string): Promise<PublicOrder> =>
+    demo ? orderService.track({ id, phone }) : orderTrackingApi.lookup(id, phone)
+}

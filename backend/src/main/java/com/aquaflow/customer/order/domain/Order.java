@@ -86,6 +86,10 @@ public class Order {
     @Column(columnDefinition = "TEXT")
     private String note;
 
+    /** Khóa bí mật của liên kết tra cứu đơn cho khách; cấp khi tạo đơn, đơn cũ được cấp khi tra cứu lần đầu. */
+    @Column(name = "tracking_token", length = 64, unique = true, updatable = false)
+    private String trackingToken;
+
     protected Order() {
     }
 
@@ -314,5 +318,16 @@ public class Order {
 
     public String getNote() {
         return note;
+    }
+
+    public String getTrackingToken() {
+        return trackingToken;
+    }
+
+    /** Chỉ cấp một lần cho đơn mới; đơn đã lưu được cấp qua OrderTrackingRepository. */
+    public void assignTrackingToken(String token) {
+        if (trackingToken == null) {
+            trackingToken = Objects.requireNonNull(token, "Tracking token is required");
+        }
     }
 }

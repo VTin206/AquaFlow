@@ -21,6 +21,7 @@ import { useAuth } from '@/features/auth/useAuth'
 import { isCustomer } from '@/features/auth/accountAccess'
 import { SavedAddressPicker } from './SavedAddressPicker'
 import { WardSelect } from '@/shared/address/WardSelect'
+import { TextArea } from '@/shared/components/TextArea'
 
 type CheckoutForm = {
   customer: string
@@ -250,7 +251,7 @@ export function CheckoutPage() {
                   label="Địa chỉ giao"
                   rules={[{ required: true, whitespace: true, message: 'Nhập địa chỉ giao.' }, { max: 255 }]}
                 >
-                  <Input.TextArea autoComplete="street-address" rows={2} placeholder="Số nhà, tên đường, tòa nhà, tầng" />
+                  <TextArea autoComplete="street-address" rows={2} maxLength={255} placeholder="Số nhà, tên đường, tòa nhà, tầng" />
                 </Form.Item>
                 <div className="af-checkout-pair">
                   <Form.Item
@@ -319,7 +320,7 @@ export function CheckoutPage() {
                   }
                 </Form.Item>
                 <Form.Item name="note" label="Ghi chú (không bắt buộc)" rules={[{ max: 500 }]}>
-                  <Input.TextArea rows={2} placeholder="Ví dụ: gọi trước khi đến" />
+                  <TextArea rows={2} maxLength={500} placeholder="Ví dụ: gọi trước khi đến" />
                 </Form.Item>
                 <Form.Item name="remember" valuePropName="checked" className="af-checkout-remember">
                   <Checkbox>Lưu thông tin trên máy này cho lần đặt sau</Checkbox>

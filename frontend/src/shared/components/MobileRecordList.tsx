@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { fontSizes } from '@/app/typography'
 import { Card, ConfigProvider, Empty, Pagination, Skeleton } from 'antd'
 
 type MobileRecordListProps<T> = {
@@ -30,7 +31,7 @@ export function MobileRecordList<T>({
   const visible = paginate ? items.slice((current - 1) * pageSize, current * pageSize) : items
 
   return (
-    <ConfigProvider theme={{ token: { controlHeight: 44, fontSizeSM: 13 } }}>
+    <ConfigProvider theme={{ token: { controlHeight: 44, fontSizeSM: fontSizes.sm } }}>
       <section className="af-mobile-records" aria-label={label} aria-busy={Boolean(loading)}>
         {loading ? (
           <Skeleton active paragraph={{ rows: 6 }} />

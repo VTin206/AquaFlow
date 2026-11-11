@@ -10,3 +10,7 @@ export const tablePagination: TablePaginationConfig = {
 
 // Giới hạn vùng cuộn để tiêu đề và thanh phân trang luôn nằm ngoài danh sách.
 export const tableScrollHeight = 'min(60vh, 640px)'
+
+/** Danh mục (khách hàng, nhà cung cấp, sản phẩm) mặc định theo tên A→Z kiểu tiếng Việt; backend chưa trả theo thứ tự cố định. */
+export const sortByName = <T extends { name: string }>(rows: T[]) =>
+  [...rows].sort((a, b) => a.name.localeCompare(b.name, 'vi', { sensitivity: 'base' }))

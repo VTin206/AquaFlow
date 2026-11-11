@@ -18,8 +18,13 @@
     </script>
     <style>
       /* Không có màn hình chờ; khối này chỉ hiện khi không tải được app hoặc trình duyệt tắt JavaScript. Màu chép từ app/palette.ts. */
+
       body {
         margin: 0;
+        background: #f8fafc;
+      }
+      html[data-startup-theme='dark'] body {
+        background: #0f172a;
       }
       html[data-startup-theme='dark'] body {
         background: #0a0f1a;

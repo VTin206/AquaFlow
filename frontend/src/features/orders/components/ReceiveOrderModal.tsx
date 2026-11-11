@@ -4,6 +4,7 @@ import { DEPOSIT_PER_BOTTLE, EXCHANGEABLE_BRANDS } from '@/shared/policy'
 import { jugCount, type DeliveryResult, type Order } from '../types'
 import { useOrderAction } from '../useOrders'
 import { modalWidth } from '@/shared/utils/modal'
+import { TextArea } from '@/shared/components/TextArea'
 
 export function ReceiveOrderModal({ order, open, onClose }: { order: Order; open: boolean; onClose: () => void }) {
   const { message } = App.useApp()
@@ -114,7 +115,7 @@ export function ReceiveOrderModal({ order, open, onClose }: { order: Order; open
           </>
         ) : (
           <Form.Item name="reason" label="Lý do giao thất bại" rules={[{ required: true, whitespace: true, message: 'Nhập lý do.' }]}>
-            <Input.TextArea rows={3} placeholder="Không liên hệ được khách, sai địa chỉ..." />
+            <TextArea rows={3} placeholder="Không liên hệ được khách, sai địa chỉ..." />
           </Form.Item>
         )}
         <p className="af-form-hint">
