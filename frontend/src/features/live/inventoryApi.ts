@@ -47,11 +47,14 @@ export type PurchaseReceipt = {
   confirmedAt: string | null
   note: string | null
   items: ReceiptItem[]
+  /** Người kiểm nhận hàng tại kho; null với phiếu cũ chưa ghi. */
+  receiverName?: string | null
 }
 export type ReceiptInput = {
   supplierId: number
   receivedAt: string
   note: string | null
+  receiverName: string | null
   items: {
     productId: number
     lotCode: string

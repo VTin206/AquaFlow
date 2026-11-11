@@ -78,6 +78,7 @@ public class PurchaseReceiptService {
     public PurchaseReceiptResponse create(PurchaseReceiptRequest request, Long userId) {
         PurchaseReceipt receipt = new PurchaseReceipt(
                 getActiveSupplier(request.supplierId()), request.receivedAt(), userId, request.note());
+        receipt.assignReceiver(request.receiverName());
         addItems(receipt, request);
         return toResponse(receiptRepository.save(receipt));
     }
@@ -86,6 +87,7 @@ public class PurchaseReceiptService {
     public PurchaseReceiptResponse update(Long id, PurchaseReceiptRequest request) {
         PurchaseReceipt receipt = getForUpdate(id);
         receipt.update(getActiveSupplier(request.supplierId()), request.receivedAt(), request.note());
+        receipt.assignReceiver(request.receiverName());
         receipt.clearItems();
         addItems(receipt, request);
         return toResponse(receipt);
@@ -192,7 +194,8 @@ public class PurchaseReceiptService {
                 receipt.getConfirmedBy(),
                 receipt.getConfirmedAt(),
                 receipt.getNote(),
-                receipt.getItems().stream().map(this::toItemResponse).toList());
+                receipt.getItems().stream().map(this::toItemResponse).toList(),
+                receipt.getReceiverName());
     }
 
     private PurchaseItemResponse toItemResponse(PurchaseItem item) {

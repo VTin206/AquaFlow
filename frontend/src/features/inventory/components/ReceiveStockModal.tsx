@@ -16,6 +16,7 @@ import {
 } from '../useInventory'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { FormSection } from '@/shared/components/FormSection'
+import { useAuth } from '@/features/auth/useAuth'
 import { ModalTotalFooter } from '@/shared/components/ModalTotalFooter'
 import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
 import { TextArea } from '@/shared/components/TextArea'
@@ -95,6 +96,7 @@ export function ReceiptResult({ receipt, onClose }: { receipt: ReceiptView; onCl
 function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt }: ReceiveStockModalProps) {
   const { message } = App.useApp()
   const caps = useInventoryCaps()
+  const currentUser = useAuth().user?.name
   const [form] = Form.useForm<ReceiptForm>()
   const discard = useConfirmDiscard(form, onClose)
   const options = useReceiptOptions()
@@ -173,7 +175,8 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
               ? receiptToForm(receipt)
               : {
                   receivedAt: today,
-                  receiver: caps.receiver ? 'Nguyễn An' : undefined,
+                  // Mặc định là người đang nhập phiếu; sửa được nếu người khác kiểm hàng.
+                  receiver: currentUser,
                   lines: (defaultLines ?? [{ productId: defaultProductId, received: 1 }]).map((line) => ({
                     ...line,
                     damaged: 0,
@@ -213,9 +216,12 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                 <Form.Item
                   name="receiver"
                   label="Người kiểm nhận"
-                  rules={caps.receiver ? [{ required: true, whitespace: true, message: 'Nhập người kiểm nhận.' }] : []}
+                  rules={[
+                    { required: true, whitespace: true, message: 'Nhập người kiểm nhận.' },
+                    { max: 150, message: 'Tối đa 150 ký tự.' },
+                  ]}
                 >
-                  <Input disabled={!caps.receiver} placeholder={caps.receiver ? undefined : 'Chưa hỗ trợ'} />
+                  <Input />
                 </Form.Item>
               </Col>
             </Row>

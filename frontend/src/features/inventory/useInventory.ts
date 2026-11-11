@@ -75,8 +75,6 @@ export type ReceiptForm = Omit<ReceiptDraft, 'receiver'> & { receiver?: string }
 export type ReceiptOption = { id: string; name: string; sku: string; unit?: string; onHand: number }
 
 export type InventoryCaps = {
-  /** Ghi tên người kiểm nhận trên phiếu (BE lấy theo tài khoản đăng nhập). */
-  receiver: boolean
   /** BE bắt buộc mã lô và hạn dùng cho mọi dòng, kể cả vỏ bình. */
   lotAlwaysRequired: boolean
 }
@@ -85,7 +83,7 @@ const useDemo = () => useAuth().user?.isDemo ?? false
 
 export const useInventoryCaps = (): InventoryCaps => {
   const demo = useDemo()
-  return { receiver: demo, lotAlwaysRequired: !demo }
+  return { lotAlwaysRequired: !demo }
 }
 
 // ---- Bản dùng thử: chuyển dữ liệu mock sang kiểu chung ----
@@ -162,6 +160,7 @@ const liveReceipt = (receipt: PurchaseReceipt): ReceiptView => ({
   supplierId: String(receipt.supplierId),
   supplierName: receipt.supplierName,
   receivedAt: isoDate(receipt.receivedAt),
+  receiver: receipt.receiverName ?? undefined,
   note: receipt.note ?? undefined,
   total: receipt.items.reduce((sum, item) => sum + item.quantityAccepted * item.unitCost, 0),
   lines: receipt.items.map((item) => ({
@@ -180,6 +179,7 @@ const liveInput = (form: ReceiptForm): ReceiptInput => ({
   supplierId: Number(form.supplierId),
   receivedAt: toInstant(form.receivedAt),
   note: form.note?.trim() || null,
+  receiverName: form.receiver?.trim() || null,
   items: form.lines.map((line) => ({
     productId: Number(line.productId),
     lotCode: line.lotCode?.trim() ?? '',
