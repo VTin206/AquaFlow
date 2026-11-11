@@ -138,7 +138,9 @@
   font-weight: 600;
   white-space: nowrap;
   text-decoration: none;
-  transition: color 0.2s ease, background 0.2s ease;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
 }
 .af-shop-nav-link:hover,
 .af-shop-nav-link.is-active {
@@ -376,7 +378,10 @@
   color: #1552a2 !important;
   font-weight: 800;
   box-shadow: 0 12px 28px rgba(2, 30, 72, 0.2);
-  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
 }
 .af-shop-footer-cta:hover,
 .af-shop-footer-cta:focus-visible {
@@ -1488,7 +1493,10 @@
 .af-shop-nav-link {
   min-height: 44px;
   border-radius: 12px;
-  transition: color 180ms ease, background 180ms ease, transform 180ms ease;
+  transition:
+    color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease;
 }
 .af-shop-nav-link:hover,
 .af-shop-nav-link:focus-visible {
@@ -1505,7 +1513,10 @@
 .af-shop-mega-column a {
   border-radius: 8px;
   padding-inline: 10px;
-  transition: color 180ms ease, background 180ms ease, padding 180ms ease;
+  transition:
+    color 180ms ease,
+    background 180ms ease,
+    padding 180ms ease;
 }
 .af-shop-mega-column a:hover,
 .af-shop-mega-column a:focus-visible {
@@ -1603,7 +1614,9 @@
   border-radius: 12px;
   background: var(--shop-surface);
   box-shadow: 0 8px 24px rgba(30, 41, 59, 0.07);
-  transition: transform 200ms ease, box-shadow 200ms ease;
+  transition:
+    transform 200ms ease,
+    box-shadow 200ms ease;
 }
 .af-shop-card.ant-card:hover {
   transform: translateY(-4px);
@@ -1612,6 +1625,9 @@
 .af-shop-card .ant-card-cover {
   overflow: hidden;
   background: linear-gradient(145deg, #f8fafc, #eaf5fb);
+}
+.af-shop-card-cover-link {
+  display: block;
 }
 .af-shop-card .af-product-image,
 .af-shop-card .af-product-placeholder {

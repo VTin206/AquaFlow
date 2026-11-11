@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Button, Card, Empty, Table, Tag } from 'antd'
+import { Button, Card, Empty, Table, Tag, Typography } from 'antd'
 import { Truck } from 'lucide-react'
 import { Money } from '@/shared/components/Money'
 import { dueTone } from '@/shared/utils/money'
@@ -40,9 +40,14 @@ export function WaitingOrdersCard({ orders, loading, selected, onSelect, onCreat
         </span>
       }
       extra={
-        <Button type="primary" icon={<Truck size={16} />} disabled={!chosen.length} onClick={onCreate}>
-          {chosen.length ? `Tạo chuyến (${chosen.length} đơn)` : 'Chọn đơn để tạo chuyến'}
-        </Button>
+        // Chưa chọn đơn: chỉ gợi ý bằng chữ, không để nút bị khóa xám lẫn màu với chữ trên nút.
+        chosen.length ? (
+          <Button type="primary" icon={<Truck size={16} />} onClick={onCreate}>
+            {`Tạo chuyến (${chosen.length} đơn)`}
+          </Button>
+        ) : (
+          <Typography.Text type="secondary">Chọn đơn để tạo chuyến</Typography.Text>
+        )
       }
     >
       {error ?? (
@@ -56,7 +61,9 @@ export function WaitingOrdersCard({ orders, loading, selected, onSelect, onCreat
           scroll={{ x: 820, y: 320 }}
           rowSelection={{ selectedRowKeys: chosen.map((order) => order.id), onChange: (keys) => onSelect(keys as string[]) }}
           locale={{
-            emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có đơn chờ giao. Đơn giao đang chuẩn bị sẽ hiện ở đây." />,
+            emptyText: (
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có đơn chờ giao. Đơn giao đang chuẩn bị sẽ hiện ở đây." />
+            ),
           }}
           columns={[
             {
@@ -93,7 +100,9 @@ export function WaitingOrdersCard({ orders, loading, selected, onSelect, onCreat
               dataIndex: 'appointment',
               width: 140,
               render: (value?: string) =>
-                value ? new Date(value).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '—',
+                value
+                  ? new Date(value).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
+                  : '—',
             },
             { title: 'Bình', dataIndex: 'jugs', width: 80, align: 'right', render: (jugs: number) => jugs || '—' },
             {

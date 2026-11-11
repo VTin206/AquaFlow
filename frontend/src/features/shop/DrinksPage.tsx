@@ -96,7 +96,20 @@ export function DrinksPage() {
               const inCart = cart.find((line) => line.productId === product.id)?.quantity ?? 0
               return (
                 <Col key={product.id} xs={12} md={8} xl={6}>
-                  <Card className="af-product-card af-shop-card" cover={<ShopImage product={product} />}>
+                  <Card
+                    className="af-product-card af-shop-card"
+                    cover={
+                      // Bấm ảnh cũng mở chi tiết; bàn phím và trình đọc màn hình dùng link ở tên nên bỏ khỏi thứ tự Tab.
+                      <Link
+                        to={`/shop/products/${encodeURIComponent(product.id)}`}
+                        className="af-shop-card-cover-link"
+                        tabIndex={-1}
+                        aria-hidden
+                      >
+                        <ShopImage product={product} />
+                      </Link>
+                    }
+                  >
                     <div className="af-product-brand-line">
                       <span>{product.brand}</span>
                       {product.available === false && <Tag>Tạm hết hàng</Tag>}
@@ -148,4 +161,3 @@ export function DrinksPage() {
     </div>
   )
 }
-
