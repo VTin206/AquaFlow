@@ -33,6 +33,7 @@ import { usePrinter } from '@/shared/print/usePrinter'
 import { LiveOrderPayments } from './LiveOrderPayments'
 import { useOrderPayments } from './paymentApi'
 import { LiveOrderReturnModal } from './LiveOrderReturnModal'
+import { useOrderDepositLabel } from './bottleDeposits'
 import { describeActivity, useOrderActivity, useOrderReturns } from './orderReturnApi'
 
 const dateTime = (value: string | null) => (value ? new Date(value).toLocaleString('vi-VN') : '—')
@@ -111,6 +112,8 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
   })
   const busy = update.isPending || handover.isPending
   const printer = usePrinter()
+  // Tải sẵn mức cọc theo loại vỏ để phiếu giao in được ngay.
+  const depositOf = useOrderDepositLabel()
   const copyMessage = useCopyOrderMessage()
   const { data: settings } = useSettings()
   const order = query.data
@@ -136,7 +139,7 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
                   key: 'slip',
                   label: 'In phiếu giao hàng',
                   disabled: !canPrint,
-                  onClick: () => printer.print(<DeliverySlipDocument order={viewOrder} settings={settings} />),
+                  onClick: () => printer.print(<DeliverySlipDocument order={viewOrder} settings={settings} depositRate={depositOf(viewOrder)} />),
                 },
               ]
             : []),

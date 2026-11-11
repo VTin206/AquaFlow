@@ -1,3 +1,4 @@
+import { useOrderDepositLabel } from '@/features/live/bottleDeposits'
 import { useState } from 'react'
 import { App, Button, Dropdown } from 'antd'
 import { CheckCheck, FileSpreadsheet, Printer } from 'lucide-react'
@@ -17,6 +18,7 @@ export function OrderBulkActions({ orders, onSelect }: { orders: Order[]; onSele
   const { message, modal } = App.useApp()
   const { confirm, refresh } = useConfirmOrderRequest()
   const printer = usePrinter()
+  const depositOf = useOrderDepositLabel()
   const { data: settings } = useSettings()
   const [confirming, setConfirming] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -120,7 +122,7 @@ export function OrderBulkActions({ orders, onSelect }: { orders: Order[]; onSele
                   printer.print(
                     <>
                       {deliveries.map((order) => (
-                        <DeliverySlipDocument key={order.id} order={order} settings={settings} />
+                        <DeliverySlipDocument key={order.id} order={order} settings={settings} depositRate={depositOf(order)} />
                       ))}
                     </>,
                   ),

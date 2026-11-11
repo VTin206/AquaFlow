@@ -14,4 +14,6 @@ export const initialSettings: StoreSettings = {
   invoiceNote: 'Cảm ơn quý khách. Vui lòng giữ vỏ bình để đổi ở lần đặt sau.',
   expiryWarningDays: 120,
   defaultLowStock: 10,
+  // Cùng mức mặc định với BE.
+  deliveryFees: { freeFromUnits: 3, smallOrderFee: 15_000, stairsPerJug: [2_000, 4_000, 8_000, 12_000] },
 }
