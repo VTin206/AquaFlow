@@ -86,7 +86,7 @@ class CustomerOrderControllerTest {
                     "recipientName": "Nguyen Van An",
                     "recipientPhone": "0901234567",
                     "deliveryAddress": "123 Nguyen Trai",
-                    "deliveryArea": "Quan 5",
+                    "deliveryArea": "Phường Chợ Quán",
                     "items": [
                         {
                             "productId": 101,
@@ -121,7 +121,7 @@ class CustomerOrderControllerTest {
                                     "recipientName": "Nguyen Van An",
                                     "recipientPhone": "0901234567",
                                     "deliveryAddress": "123 Nguyen Trai",
-                                    "deliveryArea": "Quan 5",
+                                    "deliveryArea": "Phường Chợ Quán",
                                     "items": [
                                         {
                                             "productId": 101,
@@ -251,7 +251,7 @@ class CustomerOrderControllerTest {
                 "Nguyen Van An",
                 "0901234567",
                 "123 Nguyen Trai",
-                "Quan 5",
+                "Phường Chợ Quán",
                 OffsetDateTime.parse("2027-01-15T09:00:00+07:00"),
                 new BigDecimal("250.00"),
                 BigDecimal.ZERO,
@@ -277,7 +277,7 @@ class CustomerOrderControllerTest {
                 "Nguyen Van An",
                 "0901234567",
                 "123 Nguyen Trai",
-                "Quan 5",
+                "Phường Chợ Quán",
                 null,
                 new BigDecimal("250.00"),
                 BigDecimal.ZERO,

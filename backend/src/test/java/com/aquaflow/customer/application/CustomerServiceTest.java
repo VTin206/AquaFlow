@@ -224,14 +224,14 @@ class CustomerServiceTest {
         Customer customer = customer(3L, "Cong ty Song Xanh", "0987654321");
         when(customerRepository.findByIdAndActiveTrue(3L)).thenReturn(Optional.of(customer));
         CustomerResponse updated = customerService.update(3L, new CustomerRequest(
-                "Cong ty Song Xanh", "0987654321", "Doanh nghiệp", " Quận 1 ", "Giao giờ hành chính")).orElseThrow();
+                "Cong ty Song Xanh", "0987654321", "Doanh nghiệp", " Phường Bến Thành ", "Giao giờ hành chính")).orElseThrow();
         assertThat(updated.customerType()).isEqualTo("Doanh nghiệp");
-        assertThat(updated.area()).isEqualTo("Quận 1");
+        assertThat(updated.area()).isEqualTo("Phường Bến Thành");
         assertThat(updated.note()).isEqualTo("Giao giờ hành chính");
 
         CustomerResponse kept = customerService.update(3L, new CustomerRequest("Cong ty Song Xanh", "0987654321")).orElseThrow();
         assertThat(kept.customerType()).isEqualTo("Doanh nghiệp");
-        assertThat(kept.area()).isEqualTo("Quận 1");
+        assertThat(kept.area()).isEqualTo("Phường Bến Thành");
 
         CustomerResponse cleared = customerService.update(3L, new CustomerRequest(
                 "Cong ty Song Xanh", "0987654321", null, "", "")).orElseThrow();

@@ -47,7 +47,7 @@ class CustomerAddressServiceTest {
                 "Nguyen Van An",
                 "0901234567",
                 "123 Nguyen Trai",
-                "Quan 5");
+                "Phường Chợ Quán");
 
         when(customerRepository.findByIdAndActiveTrue(5L))
                 .thenReturn(Optional.of(customer));
@@ -74,7 +74,7 @@ class CustomerAddressServiceTest {
         assertThat(response.recipientName()).isEqualTo("Nguyen Van An");
         assertThat(response.recipientPhone()).isEqualTo("0901234567");
         assertThat(response.addressLine()).isEqualTo("123 Nguyen Trai");
-        assertThat(response.area()).isEqualTo("Quan 5");
+        assertThat(response.area()).isEqualTo("Phường Chợ Quán");
         assertThat(response.isDefault()).isTrue();
 
         verify(customerAddressRepository)
@@ -92,7 +92,7 @@ class CustomerAddressServiceTest {
                 "Tran Thi Binh",
                 "0987654321",
                 "456 Le Loi",
-                "Quan 1",
+                "Phường Bến Thành",
                 true);
 
         when(customerRepository.findByIdAndActiveTrue(5L))
@@ -215,7 +215,7 @@ class CustomerAddressServiceTest {
                 "Tran Thi Binh",
                 "0987654321",
                 "456 Le Loi",
-                "Quan 1");
+                "Phường Bến Thành");
 
         when(customerRepository.findByIdAndActiveTrue(5L))
                 .thenReturn(Optional.of(customer));
@@ -238,7 +238,7 @@ class CustomerAddressServiceTest {
         assertThat(response.recipientName()).isEqualTo("Tran Thi Binh");
         assertThat(response.recipientPhone()).isEqualTo("0987654321");
         assertThat(response.addressLine()).isEqualTo("456 Le Loi");
-        assertThat(response.area()).isEqualTo("Quan 1");
+        assertThat(response.area()).isEqualTo("Phường Bến Thành");
 
         verify(customerAddressRepository).save(address);
 
@@ -263,7 +263,7 @@ class CustomerAddressServiceTest {
                 "Tran Thi Binh",
                 "0987654321",
                 "456 Le Loi",
-                "Quan 1");
+                "Phường Bến Thành");
 
         Optional<CustomerAddressResponse> result =
                 customerAddressService.update(7L, 12L, request);
@@ -287,7 +287,7 @@ class CustomerAddressServiceTest {
                 "Tran Thi Binh",
                 "0987654321",
                 "456 Le Loi",
-                "Quan 1",
+                "Phường Bến Thành",
                 true);
 
         when(customerRepository.findByIdAndActiveTrue(5L))
@@ -332,7 +332,7 @@ class CustomerAddressServiceTest {
                 "Nguyen Van An",
                 "0901234567",
                 "12 Nguyen Hue",
-                "Quan 1",
+                "Phường Bến Thành",
                 false);
 
         when(customerRepository.findByIdAndActiveTrue(5L))
@@ -453,7 +453,7 @@ class CustomerAddressServiceTest {
                 "Nguyen Van An",
                 "0901234567",
                 "123 Nguyen Trai",
-                "Quan 5");
+                "Phường Chợ Quán");
 
         ReflectionTestUtils.setField(address, "id", id);
 

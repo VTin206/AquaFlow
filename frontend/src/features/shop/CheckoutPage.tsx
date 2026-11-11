@@ -247,6 +247,14 @@ export function CheckoutPage() {
               <Card title="Giao đến">
                 {(isCustomer(user) || user?.isDemo) && <SavedAddressPicker onSelect={address => form.setFieldsValue({ customer: address.recipientName, phone: address.recipientPhone, address: address.addressLine, area: address.area })} />}
                 <Form.Item
+                  name="area"
+                  label="Phường/Xã"
+                  extra="Cửa hàng giao trong khu vực TP. Hồ Chí Minh cũ (chưa gồm Bình Dương, Bà Rịa - Vũng Tàu)."
+                  rules={[{ required: true, whitespace: true, message: 'Chọn phường/xã giao hàng.' }, { max: 150 }]}
+                >
+                  <WardSelect />
+                </Form.Item>
+                <Form.Item
                   name="address"
                   label="Địa chỉ giao"
                   rules={[{ required: true, whitespace: true, message: 'Nhập địa chỉ giao.' }, { max: 255 }]}
@@ -254,14 +262,6 @@ export function CheckoutPage() {
                   <TextArea autoComplete="street-address" rows={2} maxLength={255} placeholder="Số nhà, tên đường, tòa nhà, tầng" />
                 </Form.Item>
                 <div className="af-checkout-pair">
-                  <Form.Item
-                    name="area"
-                    label="Phường/Xã"
-                    extra="Cửa hàng giao trong TP. Hồ Chí Minh."
-                    rules={[{ required: true, whitespace: true, message: 'Chọn phường/xã giao hàng.' }, { max: 150 }]}
-                  >
-                    <WardSelect />
-                  </Form.Item>
                   <Form.Item name="floor" label="Số tầng phải đi thang bộ" extra="Nhập 0 nếu giao tầng trệt hoặc có thang máy." rules={[{ required: true }, { type: 'integer', min: 0, max: 30 }]}>
                     <InputNumber min={0} max={30} precision={0} />
                   </Form.Item>

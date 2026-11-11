@@ -1,5 +1,6 @@
 package com.aquaflow.customer.order.api.dto;
 
+import com.aquaflow.shared.address.DeliveryWard;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -27,6 +28,7 @@ public record GuestOrderCreateRequest(
         String deliveryAddress,
 
         @Size(max = 150, message = "Delivery area must not exceed 150 characters")
+        @DeliveryWard
         String deliveryArea,
 
         OffsetDateTime requestedDeliveryAt,

@@ -335,6 +335,9 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
                         action={<Button onClick={() => void refetchAddresses()}>Thử lại</Button>}
                       />
                     )}
+                    <Form.Item name="area" label="Phường/Xã" hidden={contactCollapsed} rules={[{ max: 150, message: 'Tối đa 150 ký tự.' }]}>
+                      <WardSelect />
+                    </Form.Item>
                     <Form.Item
                       name="address"
                       label="Địa chỉ giao hàng"
@@ -352,9 +355,6 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
                           if (saved) applyAddress(saved)
                         }}
                       />
-                    </Form.Item>
-                    <Form.Item name="area" label="Phường/Xã" hidden={contactCollapsed} rules={[{ max: 150, message: 'Tối đa 150 ký tự.' }]}>
-                      <WardSelect />
                     </Form.Item>
                     <Form.Item
                       name="appointment"
