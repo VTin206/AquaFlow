@@ -22,6 +22,7 @@ import { useOrders } from '@/features/orders/useOrders'
 import {
   collectionApi,
   deliveryApi,
+  RECENT_TRIP_DAYS,
   type CollectionInput,
   type DeliveryAttempt,
   type DeliveryStop,
@@ -53,8 +54,12 @@ export function DriverPage() {
 
 function LiveDriver() {
   const { user } = useAuth()
-  // BE chỉ trả chuyến của tài xế đang đăng nhập.
-  const trips = useQuery({ queryKey: ['live', 'driver-trips', user?.email], queryFn: deliveryApi.list, refetchInterval: 15000 })
+  // BE chỉ trả chuyến của tài xế đang đăng nhập; chuyến xong quá 30 ngày không cần hiện.
+  const trips = useQuery({
+    queryKey: ['live', 'driver-trips', user?.email],
+    queryFn: () => deliveryApi.list({ days: RECENT_TRIP_DAYS }),
+    refetchInterval: 15000,
+  })
   return (
     <DriverScreen
       trips={trips.data}
