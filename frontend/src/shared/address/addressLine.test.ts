@@ -10,6 +10,7 @@ test('tách địa chỉ mới thành số nhà/đường và phường/xã, b�
 test('địa chỉ cũ theo quận giữ nguyên, không mất chữ', () => {
   expect(splitAddressLine('26 Đường số 3, Gò Vấp, TP. Hồ Chí Minh')).toEqual({ street: '26 Đường số 3, Gò Vấp, TP. Hồ Chí Minh', ward: '' })
   expect(splitAddressLine('')).toEqual({ street: '', ward: '' })
+  expect(splitAddressLine('8 Đại lộ Bình Dương, Phường Thủ Dầu Một')).toEqual({ street: '8 Đại lộ Bình Dương, Phường Thủ Dầu Một', ward: '' })
 })
 
 test('ghép lại đúng chuỗi một dòng', () => {

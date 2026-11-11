@@ -156,7 +156,7 @@ class OrderServiceTest {
                 "Nguyen Van An",
                 "0901234567",
                 "123 Nguyen Trai",
-                "Quan 5",
+                "Phường Chợ Quán",
                 OffsetDateTime.parse("2027-01-15T09:00:00+07:00"),
                 new BigDecimal("10.00"),
                 "Order service test");
@@ -371,7 +371,7 @@ class OrderServiceTest {
                 "Nguyen Van An",
                 "0901234567",
                 "123 Nguyen Trai",
-                "Quan 5",
+                "Phường Chợ Quán",
                 null,
                 List.of(new OrderItemRequest(101L, 2)),
                 "Guest order test");
@@ -411,7 +411,7 @@ class OrderServiceTest {
                 "Nguyen Van An",
                 "0901234567",
                 "123 Nguyen Trai",
-                "Quan 5",
+                "Phường Chợ Quán",
                 null,
                 List.of(new OrderItemRequest(102L, 1)),
                 null);

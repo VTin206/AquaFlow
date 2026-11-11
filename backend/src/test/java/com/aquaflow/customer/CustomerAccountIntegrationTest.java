@@ -39,7 +39,7 @@ class CustomerAccountIntegrationTest {
     }
     private String address(boolean isDefault) throws Exception {
         return json.writeValueAsString(Map.of("recipientName", " Người nhận ", "recipientPhone", "090 123 4567",
-                "addressLine", " 12 Đường A ", "area", " Quận 1 ", "isDefault", isDefault));
+                "addressLine", " 12 Đường A ", "area", " Phường Bến Thành ", "isDefault", isDefault));
     }
     private long addAddress(String token, boolean isDefault) throws Exception {
         var result = mvc.perform(post(BASE + "/addresses").header("Authorization", token).contentType("application/json").content(address(isDefault)))

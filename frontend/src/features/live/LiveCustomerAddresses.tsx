@@ -146,11 +146,11 @@ export function LiveCustomerAddresses({
           >
             <Input />
           </Form.Item>
-          <Form.Item label="Địa chỉ" name="addressLine" rules={[{ required: true }, { max: 255 }]}>
-            <TextArea maxLength={255} />
-          </Form.Item>
           <Form.Item label="Phường/Xã" name="area" rules={[{ max: 150 }]}>
             <WardSelect />
+          </Form.Item>
+          <Form.Item label="Địa chỉ" name="addressLine" rules={[{ required: true }, { max: 255 }]}>
+            <TextArea maxLength={255} />
           </Form.Item>
           <Form.Item name="isDefault" valuePropName="checked">
             <Checkbox>Địa chỉ mặc định</Checkbox>

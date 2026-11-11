@@ -1,5 +1,6 @@
 package com.aquaflow.customer.order.api.dto;
 
+import com.aquaflow.shared.address.DeliveryWard;
 import com.aquaflow.customer.order.domain.FulfillmentType;
 import com.aquaflow.customer.order.domain.OrderChannel;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -37,6 +38,7 @@ public record OrderCreateRequest(
         String deliveryAddress,
 
         @Size(max = 150, message = "Delivery area must not exceed 150 characters")
+        @DeliveryWard
         String deliveryArea,
 
         OffsetDateTime requestedDeliveryAt,

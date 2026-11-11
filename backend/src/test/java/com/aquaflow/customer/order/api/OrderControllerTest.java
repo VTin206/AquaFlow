@@ -130,7 +130,7 @@ class OrderControllerTest {
                 "Nguyen Van An",
                 "0901234567",
                 "123 Nguyen Trai",
-                "Quan 5",
+                "Phường Chợ Quán",
                 OffsetDateTime.parse("2027-01-15T09:00:00+07:00"),
                 new BigDecimal("250.00"),
                 new BigDecimal("20.00"),

@@ -34,7 +34,7 @@ class OrderCreateRequestTest {
                 "Nguyen Van An",
                 "0901234567",
                 "123 Nguyen Trai",
-                "Quan 5",
+                "Phường Chợ Quán",
                 OffsetDateTime.parse("2027-01-15T09:00:00+07:00"),
                 List.of(),
                 "Test order");
@@ -54,7 +54,7 @@ class OrderCreateRequestTest {
                 "Nguyen Van An",
                 "0901234567",
                 "   ",
-                "Quan 5",
+                "Phường Chợ Quán",
                 OffsetDateTime.parse("2027-01-15T09:00:00+07:00"),
                 List.of(new OrderItemRequest(101L, 2)),
                 "Test order");
@@ -77,7 +77,7 @@ class OrderCreateRequestTest {
                 " ",
                 "0901234567",
                 "123 Nguyen Trai",
-                "Quan 5",
+                "Phường Chợ Quán",
                 OffsetDateTime.parse("2027-01-15T09:00:00+07:00"),
                 List.of(new OrderItemRequest(101L, 2)),
                 "Test order");
@@ -114,7 +114,7 @@ class OrderCreateRequestTest {
                 "Nguyen Van An",
                 "invalid-phone",
                 "123 Nguyen Trai",
-                "Quan 5",
+                "Phường Chợ Quán",
                 OffsetDateTime.parse("2027-01-15T09:00:00+07:00"),
                 List.of(new OrderItemRequest(101L, 2)),
                 "Test order");
@@ -138,7 +138,7 @@ class OrderCreateRequestTest {
                 "Nguyen Van An",
                 "0901234567",
                 "123 Nguyen Trai",
-                "Quan 5",
+                "Phường Chợ Quán",
                 OffsetDateTime.parse("2027-01-15T09:00:00+07:00"),
                 List.of(new OrderItemRequest(101L, 0)),
                 "Test order");
@@ -160,7 +160,7 @@ class OrderCreateRequestTest {
                 "Nguyen Van An",
                 "0901234567",
                 "123 Nguyen Trai",
-                "Quan 5",
+                "Phường Chợ Quán",
                 OffsetDateTime.parse("2027-01-15T09:00:00+07:00"),
                 List.of(new OrderItemRequest(101L, 2)),
                 "Test order");
