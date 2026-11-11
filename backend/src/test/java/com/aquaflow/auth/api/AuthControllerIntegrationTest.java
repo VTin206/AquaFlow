@@ -53,6 +53,7 @@ class AuthControllerIntegrationTest {
     @MockBean private com.aquaflow.delivery.repository.DeliveryRepository deliveryRepository;
     @MockBean private com.aquaflow.customer.order.repository.DispatchRepository dispatchRepository;
     @MockBean private com.aquaflow.customer.order.repository.OrderTrackingRepository orderTrackingRepository;
+    @MockBean private com.aquaflow.auth.repository.RefreshTokenRepository refreshTokenRepository;
     @MockBean private com.aquaflow.customer.order.repository.OrderQueryRepository orderQueryRepository;
     @MockBean private com.aquaflow.customer.repository.CustomerQueryRepository customerQueryRepository;
     @MockBean private com.aquaflow.inventory.application.StockDispatchService stockDispatchService;
@@ -124,6 +125,7 @@ class AuthControllerIntegrationTest {
                 "0900000000",
                 passwordEncoder.encode("correct-password"),
                 UserStatus.ACTIVE);
+        org.springframework.test.util.ReflectionTestUtils.setField(activeUser, "id", 1L);
     }
 
     @Test
@@ -137,7 +139,12 @@ class AuthControllerIntegrationTest {
                 .andExpect(jsonPath("$.accessToken").isNotEmpty())
                 .andExpect(jsonPath("$.tokenType").value("Bearer"))
                 .andExpect(jsonPath("$.user.email").value("an@example.com"))
-                .andExpect(jsonPath("$.user.role").value("CUSTOMER"));
+                .andExpect(jsonPath("$.user.role").value("CUSTOMER"))
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.startsWith("af_refresh="),
+                        org.hamcrest.Matchers.containsString("HttpOnly"),
+                        org.hamcrest.Matchers.containsString("SameSite=Strict"))))
+                .andExpect(jsonPath("$.refreshToken").doesNotExist());
     }
 
     @Test

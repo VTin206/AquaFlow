@@ -42,4 +42,9 @@ app:
     frontend-url: ${FRONTEND_URL:}
   jwt:
     secret: ${APP_JWT_SECRET:}
-    expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}
+    # Access token ngắn hạn; trình duyệt tự xin token mới bằng refresh token (cookie HttpOnly).
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:15}
+  refresh-token:
+    # Phiên tự kết thúc nếu không dùng trong chừng này ngày.
+    days: ${REFRESH_TOKEN_DAYS:14}
+    secure-cookie: ${REFRESH_COOKIE_SECURE:true}
