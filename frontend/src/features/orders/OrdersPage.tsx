@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ToneLabel } from '@/shared/components/ToneLabel'
 import { filterOn } from '@/shared/utils/filterOn'
 import { Button, Card, Grid, Input, Segmented, Select, Tooltip } from 'antd'
@@ -10,16 +10,17 @@ import { useFeature } from '@/shared/features'
 import { OrderDetails } from './components/OrderDetails'
 import { OrderIntakeModal } from './components/OrderIntakeModal'
 import { OrdersTable } from './components/OrdersTable'
-import { useOrderList } from './orderData'
+import { useOrderPage, useOrderStatusCounts } from './orderData'
 import { orderStatuses as statuses } from './orderStatus'
 import { inOrderGroup, orderGroups, statusesInGroup, type OrderGroupKey } from './orderGroups'
-import { amountDue } from './types'
+import type { OrderStatus } from './types'
 import { ALL_ORDERS as ALL, useOrderFilters } from './useOrderFilters'
-import { matchesSearch } from '@/shared/utils/search'
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
+import { tablePagination, type ServerPagination } from '@/shared/utils/table'
 
 export function OrdersPage() {
   const showPayments = useFeature('orderPayments')
-  const ordersQuery = useOrderList()
+  const countsQuery = useOrderStatusCounts()
   const {
     filters: { query, group, status, method, payment },
     updateFilters,
@@ -31,30 +32,39 @@ export function OrdersPage() {
   const extraActive = Number(status !== ALL) + Number(method !== ALL) + Number(payment !== ALL)
   const [created, setCreated] = useState<string | null>(null)
 
-  const orders = ordersQuery.data ?? []
-  const countGroup = (key: OrderGroupKey) => orders.filter((order) => inOrderGroup(key, order.status)).length
+  const counts = countsQuery.data ?? {}
+  const countOf = (value: OrderStatus) => counts[value] ?? 0
+  const countGroup = (key: OrderGroupKey) => statuses.filter((value) => inOrderGroup(key, value)).reduce((sum, value) => sum + countOf(value), 0)
   // Chưa chọn nhóm: mở thẳng việc cần làm; hết việc thì xem tất cả.
   const activeGroup: OrderGroupKey = group || (countGroup('need') > 0 ? 'need' : 'all')
   const groupStatuses = statusesInGroup(activeGroup, statuses)
   const statusValue = groupStatuses.includes(status as never) ? status : ALL
   const statusOptions = [
     { value: ALL, label: 'Mọi trạng thái' },
-    ...groupStatuses.map((value) => ({ value, label: `${value} (${orders.filter((order) => order.status === value).length})` })),
+    ...groupStatuses.map((value) => ({ value, label: `${value} (${countOf(value)})` })),
   ]
   // Bộ lọc thanh toán đã lưu từ bản dùng thử bị bỏ qua khi BE chưa có phiếu thu.
   const paymentFilter = showPayments ? payment : ALL
   const hasFilters = Boolean(query.trim() || statusValue !== ALL || method !== ALL || paymentFilter !== ALL)
   // Xóa bộ lọc giữ nguyên nhóm đang xem.
   const resetFilters = () => updateFilters({ query: '', status: ALL, method: ALL, payment: ALL })
-  const visible = orders.filter(
-    (order) =>
-      inOrderGroup(activeGroup, order.status) &&
-      (statusValue === ALL || order.status === statusValue) &&
-      (method === ALL || order.method === method) &&
-      (paymentFilter === ALL ||
-        (order.status !== 'Đã hủy' && (paymentFilter === 'Còn phải thu' ? amountDue(order) > 0 : amountDue(order) === 0))) &&
-      matchesSearch(query, `${order.code ?? order.id} ${order.customer} ${order.phone} ${order.items}`, order.phone),
+  // Nhóm lịch sử tìm ở BE: chờ ngừng gõ rồi mới gửi.
+  const searched = useDebouncedValue(query)
+  const listFilters = useMemo(
+    () => ({ query: searched, group: activeGroup, status: statusValue, method, payment: paymentFilter }),
+    [searched, activeGroup, statusValue, method, paymentFilter],
   )
+  const filterKey = JSON.stringify(listFilters)
+  // Đổi bộ lọc thì về trang đầu; cỡ trang giữ nguyên.
+  const [paging, setPaging] = useState({ filterKey, page: 0, size: tablePagination.defaultPageSize ?? 10 })
+  const page = paging.filterKey === filterKey ? paging.page : 0
+  const listQuery = useOrderPage(listFilters, page, paging.size)
+  const visible = listQuery.data?.orders ?? []
+  const server: ServerPagination | undefined = listQuery.data?.serverPaged
+    ? { page, size: paging.size, total: listQuery.data.total, onChange: (next, size) => setPaging({ filterKey, page: next, size }) }
+    : undefined
+  const failed = countsQuery.isError ? countsQuery : listQuery.isError ? listQuery : undefined
+  const loading = countsQuery.isPending || listQuery.isPending
 
   return (
     <Page
@@ -67,8 +77,8 @@ export function OrdersPage() {
       }
     >
       <Card className="af-card" styles={{ body: { padding: 0 } }}>
-        {ordersQuery.isError ? (
-          <QueryError error={ordersQuery.error} onRetry={ordersQuery.refetch} />
+        {failed ? (
+          <QueryError error={failed.error ?? new Error('Không tải được danh sách đơn hàng.')} onRetry={failed.refetch} />
         ) : (
           <>
             {/* 4 nhóm theo việc cần làm, cùng kiểu thanh lọc với các trang khác; trạng thái chi tiết lọc trong ô chọn. Điện thoại: 4 ô chia đều, số ở trên, tên ở dưới. */}
@@ -159,7 +169,7 @@ export function OrdersPage() {
             </div>
             <div className="af-filter-summary">
               <span role="status">
-                {ordersQuery.isPending ? 'Đang tải đơn hàng…' : `${visible.length} / ${countGroup(activeGroup)} đơn hàng`}
+                {loading ? 'Đang tải đơn hàng…' : `${listQuery.data?.total ?? 0} / ${countGroup(activeGroup)} đơn hàng`}
               </span>
               {hasFilters && (
                 <Button type="link" size="small" className="af-clear-filter" icon={<FunnelX size={14} />} onClick={resetFilters}>
@@ -168,9 +178,10 @@ export function OrdersPage() {
               )}
             </div>
             <OrdersTable
-              filterKey={JSON.stringify([query, activeGroup, statusValue, method, paymentFilter])}
+              filterKey={filterKey}
               orders={visible}
-              loading={ordersQuery.isPending}
+              loading={loading}
+              server={server}
               emptyText={
                 hasFilters
                   ? 'Không có đơn phù hợp. Thử đổi từ khóa hoặc xóa bộ lọc.'

@@ -3,8 +3,17 @@ package com.aquaflow.customer.application;
 import com.aquaflow.customer.api.dto.CustomerRequest;
 import com.aquaflow.customer.api.dto.CustomerResponse;
 import com.aquaflow.customer.domain.Customer;
+import com.aquaflow.customer.api.dto.CustomerPageResponse;
+import com.aquaflow.customer.api.dto.CustomerSummary;
+import com.aquaflow.customer.repository.CustomerQueryRepository;
 import com.aquaflow.customer.repository.CustomerRepository;
+import com.aquaflow.shared.api.BadRequestException;
 import com.aquaflow.shared.api.ConflictException;
+import com.aquaflow.shared.api.PageRequestParams;
+import com.aquaflow.shared.api.SearchKeyword;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,15 +26,56 @@ import java.util.Optional;
 @Transactional(readOnly = true)
 public class CustomerService {
 
+    /** Các mức của bộ lọc "lâu chưa mua" trên trang Khách hàng. */
+    public static final Set<Integer> IDLE_DAYS = Set.of(7, 14, 30);
+
     private final CustomerRepository customerRepository;
     private final CustomerAuditService customerAuditService;
+    private final CustomerQueryRepository customerQueryRepository;
+    private final Clock clock;
 
     public CustomerService(
             CustomerRepository customerRepository,
-            CustomerAuditService customerAuditService) {
+            CustomerAuditService customerAuditService,
+            CustomerQueryRepository customerQueryRepository,
+            Clock clock) {
 
         this.customerRepository = customerRepository;
         this.customerAuditService = customerAuditService;
+        this.customerQueryRepository = customerQueryRepository;
+        this.clock = clock;
+    }
+
+    /**
+     * Trang Khách hàng: tìm, lọc "lâu chưa mua" và phân trang ở SQL.
+     *
+     * @param idle {@code null}/"all": không lọc; "7"/"14"/"30": chưa mua quá số ngày đó; "never": chưa mua lần nào
+     * @param sort {@code null}: theo tên A → Z
+     */
+    public CustomerPageResponse search(String q, String idle, CustomerQueryRepository.Sort sort, PageRequestParams page) {
+        CustomerQueryRepository.SummaryPage result = customerQueryRepository.search(
+                SearchKeyword.of(q), idleFilter(idle), sort == null ? CustomerQueryRepository.Sort.DEFAULT : sort, page);
+        return new CustomerPageResponse(
+                result.items(), page.page(), page.size(), result.total(), page.totalPages(result.total()),
+                customerQueryRepository.totals());
+    }
+
+    public Optional<CustomerSummary> findSummary(Long id) {
+        return customerQueryRepository.findById(id);
+    }
+
+    private CustomerQueryRepository.IdleFilter idleFilter(String idle) {
+        if (idle == null || idle.isBlank() || idle.equals("all")) return null;
+        if (idle.equals("never")) return new CustomerQueryRepository.IdleFilter.Never();
+        try {
+            int days = Integer.parseInt(idle);
+            if (IDLE_DAYS.contains(days)) {
+                return new CustomerQueryRepository.IdleFilter.MoreThanDays(days, LocalDate.now(clock));
+            }
+        } catch (NumberFormatException ignored) {
+            // Rơi xuống lỗi bên dưới.
+        }
+        throw new BadRequestException("idle must be one of all, 7, 14, 30, never");
     }
 
     @Transactional
@@ -88,14 +138,6 @@ public class CustomerService {
                 customerRepository.save(customer);
 
         return toResponse(savedCustomer);
-    }
-
-    public List<CustomerResponse> findAll() {
-
-        return customerRepository.findAllByActiveTrue()
-                .stream()
-                .map(this::toResponse)
-                .toList();
     }
 
     public Optional<CustomerResponse> findById(Long id) {

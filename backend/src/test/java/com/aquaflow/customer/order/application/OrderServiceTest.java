@@ -25,9 +25,19 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.aquaflow.customer.order.api.dto.OrderPageResponse;
+import com.aquaflow.customer.order.repository.OrderQueryRepository;
+import com.aquaflow.shared.api.BadRequestException;
+import com.aquaflow.shared.api.PageRequestParams;
+import org.mockito.ArgumentCaptor;
+
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,12 +61,16 @@ class OrderServiceTest {
     @Mock
     private com.aquaflow.inventory.application.StockReservationService stockReservationService;
 
+    @Mock
+    private OrderQueryRepository orderQueryRepository;
+
     @InjectMocks
     private OrderService orderService;
 
     @Test
-    void findAllReturnsOrderResponsesWithItems() {
+    void searchLoadsPageInQueryOrderWithItemsAndBalancesInBatches() {
         Order order = createOrder(1L);
+        Order newer = createOrder(2L);
 
         OrderItem item = new OrderItem(
                 order,
@@ -66,17 +80,35 @@ class OrderServiceTest {
 
         ReflectionTestUtils.setField(item, "id", 11L);
 
-        when(orderRepository.findAll())
-                .thenReturn(List.of(order));
-
-        when(orderItemRepository.findAllByOrder_Id(1L))
+        OrderSearch search = new OrderSearch(null, null, null, null);
+        PageRequestParams page = new PageRequestParams(0, 20);
+        when(orderQueryRepository.search(search, page))
+                .thenReturn(new OrderQueryRepository.IdPage(List.of(2L, 1L), 2));
+        when(orderQueryRepository.statusCounts())
+                .thenReturn(Map.of(OrderStatus.PENDING, 2L));
+        // Repository trả không theo thứ tự: kết quả vẫn phải theo thứ tự id của câu truy vấn.
+        when(orderRepository.findAllById(List.of(2L, 1L)))
+                .thenReturn(List.of(order, newer));
+        when(orderItemRepository.findAllByOrder_IdIn(List.of(2L, 1L)))
                 .thenReturn(List.of(item));
+        when(orderQueryRepository.balances(List.of(2L, 1L)))
+                .thenReturn(Map.of(1L, new OrderQueryRepository.Balance(
+                        new BigDecimal("40.00"), new BigDecimal("200.00"), BigDecimal.ZERO)));
 
-        List<OrderResponse> responses = orderService.findAll();
+        OrderPageResponse result = orderService.search(search, page);
 
-        assertThat(responses).hasSize(1);
+        assertThat(result.total()).isEqualTo(2);
+        assertThat(result.totalPages()).isEqualTo(1);
+        assertThat(result.statusCounts()).containsEntry(OrderStatus.PENDING, 2L);
+        assertThat(result.items()).extracting(listItem -> listItem.order().id()).containsExactly(2L, 1L);
+        assertThat(result.items().get(0).order().items()).isEmpty();
+        assertThat(result.items().get(0).due()).isEqualByComparingTo("0");
+        assertThat(result.items().get(1).due()).isEqualByComparingTo("200.00");
+        assertThat(result.items().get(1).paid()).isEqualByComparingTo("40.00");
+        // Không còn truy vấn dòng hàng theo từng đơn (N+1).
+        verify(orderItemRepository, never()).findAllByOrder_Id(any());
 
-        OrderResponse response = responses.get(0);
+        OrderResponse response = result.items().get(1).order();
 
         assertThat(response.id()).isEqualTo(1L);
         assertThat(response.orderCode()).isEqualTo("AF-1001");
@@ -109,8 +141,27 @@ class OrderServiceTest {
 
         assertThat(itemResponse.lineTotal())
                 .isEqualByComparingTo("250.00");
+    }
 
-        verify(orderItemRepository).findAllByOrder_Id(1L);
+    @Test
+    void workingSetLooksBackRequestedDaysFromStoreClock() {
+        ReflectionTestUtils.setField(orderService, "clock",
+                Clock.fixed(Instant.parse("2026-11-11T03:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh")));
+        when(orderQueryRepository.workingSetIds(any())).thenReturn(List.of());
+
+        assertThat(orderService.workingSet(30)).isEmpty();
+
+        ArgumentCaptor<OffsetDateTime> since = ArgumentCaptor.forClass(OffsetDateTime.class);
+        verify(orderQueryRepository).workingSetIds(since.capture());
+        assertThat(since.getValue().toInstant()).isEqualTo(Instant.parse("2026-10-12T03:00:00Z"));
+        verify(orderRepository, never()).findAllById(any());
+    }
+
+    @Test
+    void workingSetRejectsOutOfRangeDays() {
+        assertThatThrownBy(() -> orderService.workingSet(0)).isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> orderService.workingSet(OrderService.MAX_WORKING_SET_DAYS + 1))
+                .isInstanceOf(BadRequestException.class);
     }
 
     @Test

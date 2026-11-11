@@ -58,6 +58,8 @@ class ProductControllerIntegrationTest {
     @MockitoBean private com.aquaflow.customer.order.repository.DispatchRepository dispatchRepository;
     @MockitoBean private com.aquaflow.customer.order.repository.OrderTrackingRepository orderTrackingRepository;
     @MockitoBean private com.aquaflow.auth.repository.RefreshTokenRepository refreshTokenRepository;
+    @MockitoBean private com.aquaflow.customer.order.repository.OrderQueryRepository orderQueryRepository;
+    @MockitoBean private com.aquaflow.customer.repository.CustomerQueryRepository customerQueryRepository;
     @MockitoBean private com.aquaflow.inventory.application.StockDispatchService stockDispatchService;
     @MockitoBean private com.aquaflow.workspace.repository.StoreSettingsRepository storeSettingsRepository;
     @MockitoBean private com.aquaflow.workspace.repository.NotificationRepository notificationRepository;
@@ -270,11 +272,13 @@ class ProductControllerIntegrationTest {
     @Test
     @WithMockUser(roles = "SALES_STAFF")
     void salesStaffCanReadOrderList() throws Exception {
-        when(orderService.findAll()).thenReturn(List.of());
+        when(orderService.search(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new com.aquaflow.customer.order.api.dto.OrderPageResponse(
+                        List.of(), 0, 20, 0, 0, java.util.Map.of()));
 
         mockMvc.perform(get("/api/v1/sales/orders"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
+                .andExpect(jsonPath("$.items").isArray());
     }
 
     private ProductResponse sampleProduct() {

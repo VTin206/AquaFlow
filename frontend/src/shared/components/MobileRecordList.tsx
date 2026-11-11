@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { fontSizes } from '@/app/typography'
 import { Card, ConfigProvider, Empty, Pagination, Skeleton } from 'antd'
+import type { ServerPagination } from '@/shared/utils/table'
 
 type MobileRecordListProps<T> = {
   items: T[]
@@ -11,6 +12,8 @@ type MobileRecordListProps<T> = {
   label: string
   paginate?: boolean
   controls?: ReactNode
+  /** BE đã phân trang: `items` là trang hiện tại, tổng số và đổi trang lấy từ đây. */
+  server?: ServerPagination
 }
 
 /** Danh sách thẻ có loading/empty/phân trang, dùng cho màn hình nhỏ. */
@@ -23,12 +26,15 @@ export function MobileRecordList<T>({
   label,
   paginate = true,
   controls,
+  server,
 }: MobileRecordListProps<T>) {
-  const [page, setPage] = useState(1)
-  const pageSize = 10
+  const [localPage, setLocalPage] = useState(1)
+  const pageSize = server?.size ?? 10
+  const total = server?.total ?? items.length
   // Dữ liệu có thể giảm sau khi lọc hoặc cập nhật; không để trang hiện tại trống giả.
-  const current = Math.min(page, Math.max(1, Math.ceil(items.length / pageSize)))
-  const visible = paginate ? items.slice((current - 1) * pageSize, current * pageSize) : items
+  const current = server ? server.page + 1 : Math.min(localPage, Math.max(1, Math.ceil(total / pageSize)))
+  const setPage = (next: number) => (server ? server.onChange(next - 1, server.size) : setLocalPage(next))
+  const visible = paginate && !server ? items.slice((current - 1) * pageSize, current * pageSize) : items
 
   return (
     <ConfigProvider theme={{ token: { controlHeight: 44, fontSizeSM: fontSizes.sm } }}>
@@ -52,9 +58,9 @@ export function MobileRecordList<T>({
             {paginate && (
               <div className="af-mobile-record-pagination">
                 <span>
-                  {(current - 1) * pageSize + 1}–{Math.min(current * pageSize, items.length)} / {items.length}
+                  {(current - 1) * pageSize + 1}–{Math.min(current * pageSize, total)} / {total}
                 </span>
-                <Pagination simple current={current} pageSize={pageSize} total={items.length} showSizeChanger={false} onChange={setPage} />
+                <Pagination simple current={current} pageSize={pageSize} total={total} showSizeChanger={false} onChange={setPage} />
               </div>
             )}
           </>

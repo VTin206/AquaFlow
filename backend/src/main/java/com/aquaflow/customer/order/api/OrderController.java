@@ -4,7 +4,15 @@ import com.aquaflow.customer.order.api.dto.OrderStatusUpdateRequest;
 import com.aquaflow.auth.security.AuthUserDetails;
 import com.aquaflow.customer.order.api.dto.OrderCreateRequest;
 import com.aquaflow.customer.order.api.dto.OrderResponse;
+import com.aquaflow.customer.order.api.dto.OrderListItem;
+import com.aquaflow.customer.order.api.dto.OrderPageResponse;
+import com.aquaflow.customer.order.application.OrderSearch;
 import com.aquaflow.customer.order.application.OrderService;
+import com.aquaflow.customer.order.domain.FulfillmentType;
+import com.aquaflow.customer.order.domain.OrderStatus;
+import com.aquaflow.shared.api.PageRequestParams;
+import com.aquaflow.shared.api.SearchKeyword;
+import java.util.Set;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -44,9 +52,26 @@ public class OrderController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all orders")
-    public List<OrderResponse> findAll() {
-        return orderService.findAll();
+    @Operation(summary = "Search orders, newest first",
+            description = "Filters combine with AND. status may repeat. q matches order code, recipient name/phone "
+                    + "and product names, ignoring Vietnamese accents. statusCounts covers all orders.")
+    public OrderPageResponse search(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) Set<OrderStatus> status,
+            @RequestParam(required = false) FulfillmentType fulfillment,
+            @RequestParam(required = false) OrderSearch.PaymentFilter payment,
+            @RequestParam(required = false) String q) {
+        return orderService.search(
+                new OrderSearch(status, fulfillment, payment, SearchKeyword.of(q)),
+                PageRequestParams.of(page, size));
+    }
+
+    @GetMapping("/working-set")
+    @Operation(summary = "Orders that still need work plus orders created in the last N days",
+            description = "Unpaged, for operational screens. days defaults to 30, max 90.")
+    public List<OrderListItem> workingSet(@RequestParam(defaultValue = "30") int days) {
+        return orderService.workingSet(days);
     }
 
     @GetMapping("/{id}")
