@@ -16,7 +16,6 @@ vi.mock('./customerAccountApi', async original => ({
 const mocks = vi.hoisted(() => ({
   user: null as null | { name: string; role: string; email?: string; phone?: string | null },
   profile: null as null | { customer: string; phone: string; address: string; area: string },
-  feeQuoted: false,
   mutateAsync: vi.fn(),
 }))
 
@@ -34,7 +33,6 @@ vi.mock('./cart', () => ({
 vi.mock('./shopService', () => ({
   useShopDemo: () => false,
   useShopContact: () => ({ openingHours: '6:00 – 21:00 hằng ngày' }),
-  useShopFeature: (name: string) => (name === 'deliveryQuote' ? mocks.feeQuoted : false),
   useShopProducts: () => ({ data: [{ id: '1', name: 'Nước 19L', price: 50000, unit: 'Bình', available: true }], isPending: false, isError: false }),
   usePlaceWebOrder: () => ({ mutateAsync: mocks.mutateAsync, isPending: false }),
 }))
@@ -75,7 +73,6 @@ beforeEach(() => {
   vi.mocked(deliveryQuoteApi.quote).mockReset().mockResolvedValue({ subtotal: 100000, baseFee: 15000, stairsFee: 0, deliveryFee: 15000, total: 115000 })
   vi.mocked(customerAccountApi.addresses).mockReset().mockResolvedValue([])
   mocks.profile = null
-  mocks.feeQuoted = false
   mocks.mutateAsync.mockReset()
   mocks.mutateAsync.mockResolvedValue({ id: 5, orderCode: 'AF-5' })
 })

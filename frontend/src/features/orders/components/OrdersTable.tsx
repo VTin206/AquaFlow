@@ -4,8 +4,7 @@ import { ViewButton } from '@/shared/components/ViewButton'
 import { Money } from '@/shared/components/Money'
 import { serverTablePagination, tablePagination, tableScrollHeight, type ServerPagination } from '@/shared/utils/table'
 import { useColumnSort } from '@/shared/components/sortableColumn'
-import { useFeature } from '@/shared/features'
-import { amountDue, compareDeliveryDue, deliveryTimingOf, paymentLabel, type Order } from '../types'
+import { amountDue, compareDeliveryDue, deliveryTimingOf, type Order } from '../types'
 import { LateTag } from './LateTag'
 import { OrderStatusTag } from './OrderStatusTag'
 import { OrderCards } from './OrderCards'
@@ -31,7 +30,6 @@ type OrdersTableProps = {
 export function OrdersTable({ orders, loading, compact = false, emptyText = 'Chưa có đơn hàng nào.', filterKey, server }: OrdersTableProps) {
   const screens = Grid.useBreakpoint()
   // Chưa có phiếu thu thì không tính "còn phải thu", dùng trạng thái thanh toán của BE.
-  const showPayments = useFeature('orderPayments')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   // Tích chọn nhiều đơn (chỉ bảng đầy đủ); chỉ tính các đơn còn hiện theo bộ lọc.
   const [checkedIds, setCheckedIds] = useState<string[]>([])
@@ -109,11 +107,7 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
           <Money value={total} />
           {!compact && order.status !== 'Đã hủy' && (
             <small>
-              {!showPayments ? (
-                <span className={paymentLabel(order) === 'Đã thanh toán' ? 'af-money is-paid' : 'af-money is-due'}>
-                  {paymentLabel(order)}
-                </span>
-              ) : amountDue(order) > 0 ? (
+              {amountDue(order) > 0 ? (
                 <Money value={amountDue(order)} tone="due" prefix="Còn " />
               ) : (
                 <span className="af-money is-paid">Đã thu đủ</span>

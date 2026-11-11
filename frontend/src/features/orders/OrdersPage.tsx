@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react'
 import { ToneLabel } from '@/shared/components/ToneLabel'
 import { filterOn } from '@/shared/utils/filterOn'
-import { Button, Card, Grid, Input, Segmented, Select, Tooltip } from 'antd'
+import { Button, Card, Grid, Input, Segmented, Select } from 'antd'
 import { FunnelX, Plus, Search, SlidersHorizontal } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
-import { useFeature } from '@/shared/features'
 import { OrderDetails } from './components/OrderDetails'
 import { OrderIntakeModal } from './components/OrderIntakeModal'
 import { OrdersTable } from './components/OrdersTable'
@@ -19,7 +18,6 @@ import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import { tablePagination, type ServerPagination } from '@/shared/utils/table'
 
 export function OrdersPage() {
-  const showPayments = useFeature('orderPayments')
   const countsQuery = useOrderStatusCounts()
   const {
     filters: { query, group, status, method, payment },
@@ -43,8 +41,7 @@ export function OrdersPage() {
     { value: ALL, label: 'Mọi trạng thái' },
     ...groupStatuses.map((value) => ({ value, label: `${value} (${countOf(value)})` })),
   ]
-  // Bộ lọc thanh toán đã lưu từ bản dùng thử bị bỏ qua khi BE chưa có phiếu thu.
-  const paymentFilter = showPayments ? payment : ALL
+  const paymentFilter = payment
   const hasFilters = Boolean(query.trim() || statusValue !== ALL || method !== ALL || paymentFilter !== ALL)
   // Xóa bộ lọc giữ nguyên nhóm đang xem.
   const resetFilters = () => updateFilters({ query: '', status: ALL, method: ALL, payment: ALL })
@@ -140,20 +137,17 @@ export function OrdersPage() {
                         ...['Tại quầy', 'Giao tận nơi'].map((value) => ({ value, label: value })),
                       ]}
                     />
-                    <Tooltip title={showPayments ? undefined : 'Backend chưa hỗ trợ phiếu thu'}>
-                      <Select
-                        aria-label="Lọc thanh toán"
-                        className={filterOn(paymentFilter !== ALL)}
-                        value={paymentFilter}
-                        disabled={!showPayments}
-                        onChange={(value) => updateFilters({ payment: value })}
-                        style={{ minWidth: 165 }}
-                        options={[
-                          { value: ALL, label: showPayments ? 'Mọi thanh toán' : 'Thanh toán (chưa hỗ trợ)' },
-                          ...['Còn phải thu', 'Đã thanh toán'].map((value) => ({ value, label: value })),
-                        ]}
-                      />
-                    </Tooltip>
+                    <Select
+                      aria-label="Lọc thanh toán"
+                      className={filterOn(paymentFilter !== ALL)}
+                      value={paymentFilter}
+                      onChange={(value) => updateFilters({ payment: value })}
+                      style={{ minWidth: 165 }}
+                      options={[
+                        { value: ALL, label: 'Mọi thanh toán' },
+                        ...['Còn phải thu', 'Đã thanh toán'].map((value) => ({ value, label: value })),
+                      ]}
+                    />
                   </>
                 )}
               </div>

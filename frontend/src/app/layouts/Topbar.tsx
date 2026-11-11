@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Avatar, Button, Dropdown, Tooltip } from 'antd'
-import { Bell, ChevronDown, Clock3, Menu as MenuIcon, ShoppingCart } from 'lucide-react'
+import { ChevronDown, Clock3, Menu as MenuIcon, ShoppingCart } from 'lucide-react'
 import { Link } from 'react-router'
 import { useHomeLink } from '@/app/useHomeLink'
 import { useStaff } from '@/features/auth/useStaff'
-import { useFeature } from '@/shared/features'
 import { GlobalSearch } from './GlobalSearch'
 import { NotificationPopover } from './NotificationPopover'
 import { ThemeToggle } from './ThemeToggle'
@@ -44,7 +43,6 @@ function TopbarClock() {
 export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
   const staff = useStaff()
   const menuItems = useAccountMenuItems()
-  const showNotifications = useFeature('notifications')
   const goHome = useHomeLink('/')
 
   return (
@@ -74,13 +72,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
             </Link>
           </Tooltip>
         )}
-        {showNotifications ? (
-          <NotificationPopover />
-        ) : (
-          <Tooltip title="Thông báo: backend chưa hỗ trợ">
-            <Button type="text" className="af-topbar-icon" aria-label="Thông báo (chưa hỗ trợ)" icon={<Bell size={19} />} disabled />
-          </Tooltip>
-        )}
+        <NotificationPopover />
         <ThemeToggle />
         <Dropdown trigger={['click']} menu={{ items: menuItems }}>
           <button type="button" className="af-topbar-user af-account-menu" aria-label="Menu tài khoản">

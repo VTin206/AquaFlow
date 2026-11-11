@@ -25,16 +25,13 @@ import { useLinkedQuery } from '@/shared/utils/useLinkedQuery'
 import { BulkBar } from '@/shared/components/BulkBar'
 import { Page } from '@/shared/components/Page'
 import { CountLabel } from '@/shared/components/CountLabel'
-import { ToneLabel } from '@/shared/components/ToneLabel'
 import { QueryError } from '@/shared/components/QueryError'
 import { useColumnSort } from '@/shared/components/sortableColumn'
 import { downloadExcel, type ExcelColumn } from '@/shared/utils/excel'
 import { currency } from '@/shared/utils/format'
 import { serverTablePagination, tablePagination, tableScrollHeight, type ServerPagination } from '@/shared/utils/table'
-import { useFeature } from '@/shared/features'
 import { LiveReceivables } from './LiveReceivables'
 import { LiveBottleOverview } from './LiveBottleOverview'
-import { Unsupported } from '@/shared/components/Unsupported'
 import { OrderIntakeModal } from '@/features/orders/components/OrderIntakeModal'
 import { CustomerDrawer } from './components/CustomerDrawer'
 import { CustomerFormModal } from './components/CustomerFormModal'
@@ -55,16 +52,12 @@ import { idleOptions, lastOrderLabel, type IdleFilter } from './lastOrder'
 
 export function CustomersPage() {
   const screens = Grid.useBreakpoint()
-  const showArea = useFeature('customerProfileExtras')
-  const showDebt = useFeature('customerDebt')
-  const showBottles = useFeature('bottleLedger')
   const { message } = App.useApp()
-  const canReactivate = useFeature('reactivate')
   const [exporting, setExporting] = useState(false)
   // Khách đã lưu trữ chỉ xem được khi BE có API (bản dùng thử thì luôn có).
   const [view, setView] = useState<'active' | 'archived'>('active')
   // Tải sẵn để hiện số đếm trên bộ lọc.
-  const archivedQuery = useArchivedCustomers(canReactivate)
+  const archivedQuery = useArchivedCustomers()
   const activate = useActivateCustomer()
   const [query, setQuery] = useLinkedQuery()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -123,7 +116,7 @@ export function CustomersPage() {
       { title: 'Tên khách', width: 26, value: (customer) => customer.name },
       { title: 'Số điện thoại', width: 15, value: (customer) => customer.phone },
       { title: 'Loại', width: 14, value: (customer) => customer.type },
-      ...(showArea ? [{ title: 'Khu vực', width: 20, value: (customer: Customer) => customer.area }] : []),
+      { title: 'Khu vực', width: 20, value: (customer) => customer.area },
       { title: 'Địa chỉ giao', width: 40, value: (customer) => customer.addresses.join('; ') },
       { title: 'Số đơn', width: 10, format: 'count', value: (customer) => customer.orders },
       {
@@ -131,13 +124,9 @@ export function CustomersPage() {
         width: 18,
         value: (customer) => (customer.lastOrderAt ? dayjs(customer.lastOrderAt).format('DD/MM/YYYY') : ''),
       },
-      ...(showBottles
-        ? [
-            { title: 'Vỏ đang giữ', width: 12, format: 'count', value: (customer: Customer) => customer.bottlesHeld } as const,
-            { title: 'Tiền cọc đang giữ', width: 18, format: 'money', value: (customer: Customer) => customer.depositHeld } as const,
-          ]
-        : []),
-      ...(showDebt ? [{ title: 'Còn phải thu', width: 16, format: 'money', value: (customer: Customer) => customer.debt } as const] : []),
+      { title: 'Vỏ đang giữ', width: 12, format: 'count', value: (customer) => customer.bottlesHeld },
+      { title: 'Tiền cọc đang giữ', width: 18, format: 'money', value: (customer) => customer.depositHeld },
+      { title: 'Còn phải thu', width: 16, format: 'money', value: (customer) => customer.debt },
       { title: 'Ghi chú', width: 30, value: (customer) => customer.note },
     ]
     try {
@@ -198,37 +187,32 @@ export function CustomersPage() {
     },
   ]
 
-  const unsupported = (title: string) => <Statistic title={title} valueRender={() => <Unsupported />} />
   const stats = [
     { key: 'count', node: <Statistic title="Khách hàng" value={totals?.customers ?? 0} /> },
     {
       key: 'debt',
-      node: showDebt ? (
+      node: (
         <Statistic
           className={totalDebt > 0 ? 'af-stat-due' : 'af-stat-paid'}
           title="Còn phải thu"
           value={totalDebt}
           formatter={(value) => currency(Number(value))}
         />
-      ) : (
-        unsupported('Còn phải thu')
       ),
     },
     {
       key: 'bottles',
-      node: showBottles ? <Statistic title="Vỏ khách đang giữ" value={totalBottles} suffix="vỏ" /> : unsupported('Vỏ khách đang giữ'),
+      node: <Statistic title="Vỏ khách đang giữ" value={totalBottles} suffix="vỏ" />,
     },
     {
       key: 'deposit',
-      node: showBottles ? (
+      node: (
         <Statistic
           className="af-stat-deposit"
           title="Tiền cọc đang giữ"
           value={totalDeposit}
           formatter={(value) => currency(Number(value))}
         />
-      ) : (
-        unsupported('Tiền cọc đang giữ')
       ),
     },
   ]
@@ -261,7 +245,7 @@ export function CustomersPage() {
       key: 'address',
       minWidth: 246,
       render: (_, customer) => {
-        const address = customer.mainAddress || (showArea ? customer.area : '')
+        const address = customer.mainAddress || customer.area
         return address ? (
           <span className="af-cell-clamp" title={address}>
             {address}
@@ -289,32 +273,28 @@ export function CustomersPage() {
         </div>
       ),
     },
-    showDebt
-      ? {
-          ...sort.column('Còn phải thu', 'debt', 'number'),
-          dataIndex: 'debt',
-          align: 'right',
-          width: 150,
-          sorter: (a, b) => a.debt - b.debt,
-          render: (debt: number, customer) => <CustomerDebt debt={debt} orders={customer.orders} />,
-        }
-      : { title: 'Còn phải thu', key: 'debt', align: 'right', width: 150, render: () => <Unsupported /> },
-    showBottles
-      ? {
-          ...sort.column('Vỏ đang giữ', 'bottlesHeld', 'number'),
-          dataIndex: 'bottlesHeld',
-          width: 145,
-          sorter: (a, b) => a.bottlesHeld - b.bottlesHeld,
-          render: (count: number, customer) => (
-            <div className="af-cell-stack">
-              <span>
-                <Tag color={count > 0 ? 'orange' : undefined}>{count} vỏ</Tag>
-              </span>
-              {customer.depositHeld > 0 && <small>Cọc {currency(customer.depositHeld)}</small>}
-            </div>
-          ),
-        }
-      : { title: 'Vỏ đang giữ', key: 'bottlesHeld', width: 145, render: () => <Unsupported /> },
+    {
+      ...sort.column('Còn phải thu', 'debt', 'number'),
+      dataIndex: 'debt',
+      align: 'right',
+      width: 150,
+      sorter: (a, b) => a.debt - b.debt,
+      render: (debt: number, customer) => <CustomerDebt debt={debt} orders={customer.orders} />,
+    },
+    {
+      ...sort.column('Vỏ đang giữ', 'bottlesHeld', 'number'),
+      dataIndex: 'bottlesHeld',
+      width: 145,
+      sorter: (a, b) => a.bottlesHeld - b.bottlesHeld,
+      render: (count: number, customer) => (
+        <div className="af-cell-stack">
+          <span>
+            <Tag color={count > 0 ? 'orange' : undefined}>{count} vỏ</Tag>
+          </span>
+          {customer.depositHeld > 0 && <small>Cọc {currency(customer.depositHeld)}</small>}
+        </div>
+      ),
+    },
     {
       title: 'Thao tác',
       key: 'action',
@@ -363,16 +343,7 @@ export function CustomersPage() {
                   { value: 'active', label: <CountLabel label="Đang hoạt động" count={totals?.customers ?? 0} tone="success" /> },
                   {
                     value: 'archived',
-                    label: canReactivate ? (
-                      <CountLabel label="Đã lưu trữ" count={archivedQuery.data?.length ?? 0} tone="danger" />
-                    ) : (
-                      <Tooltip title="Backend chưa hỗ trợ xem khách đã lưu trữ">
-                        <span>
-                          <ToneLabel tone="danger">Đã lưu trữ</ToneLabel>
-                        </span>
-                      </Tooltip>
-                    ),
-                    disabled: !canReactivate,
+                    label: <CountLabel label="Đã lưu trữ" count={archivedQuery.data?.length ?? 0} tone="danger" />,
                   },
                 ]}
               />

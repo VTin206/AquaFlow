@@ -229,7 +229,7 @@ export function useDeactivateCustomer() {
 }
 
 /** Khách đã lưu trữ (GET /sales/customers/archived). Bảng chỉ hiện tên, số điện thoại, khu vực nên không cần số đơn. */
-export function useArchivedCustomers(enabled: boolean) {
+export function useArchivedCustomers() {
   const demo = useIsDemo()
   const liveKey = useLiveKey()
   return useQuery({
@@ -238,7 +238,6 @@ export function useArchivedCustomers(enabled: boolean) {
       demo
         ? customerService.archived()
         : (await api.get<CustomerResponse[]>('/sales/customers/archived')).map((customer) => fromResponse(customer, 0)),
-    enabled,
   })
 }
 

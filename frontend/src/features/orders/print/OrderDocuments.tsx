@@ -1,7 +1,6 @@
 import { TransferQr } from '@/shared/payment/TransferQr'
 import { bankBinOf, transferNote } from '@/shared/payment/vietqr'
 import { PrintHeader } from '@/shared/print/PrintHeader'
-import { useFeature } from '@/shared/features'
 import { DEPOSIT_PER_BOTTLE } from '@/shared/policy'
 import { currency, printDate } from '@/shared/utils/format'
 import type { StoreSettings } from '@/features/settings/types'
@@ -125,7 +124,6 @@ export function DeliverySlipDocument({ order, settings }: DocumentProps) {
   const jugs = jugCount(order)
   const due = knownAmountDue(order)
   // Mức cọc cố định chỉ là chính sách của dữ liệu mẫu; chưa có sổ vỏ thì không in số này.
-  const showDeposit = useFeature('bottleLedger')
   return (
     <article className="af-doc">
       <PrintHeader settings={settings} title="PHIẾU GIAO HÀNG" code={order.code ?? order.id} date={printDate()} />
@@ -177,12 +175,10 @@ export function DeliverySlipDocument({ order, settings }: DocumentProps) {
               <span>Vỏ thực nhận</span>
               <strong className="af-doc-blank" />
             </div>
-            {showDeposit && (
-              <div>
-                <span>Cọc thu thêm ({currency(DEPOSIT_PER_BOTTLE)}/vỏ thiếu)</span>
-                <strong className="af-doc-blank" />
-              </div>
-            )}
+            <div>
+              <span>Cọc thu thêm ({currency(DEPOSIT_PER_BOTTLE)}/vỏ thiếu)</span>
+              <strong className="af-doc-blank" />
+            </div>
           </>
         )}
       </section>
