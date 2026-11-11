@@ -38,12 +38,25 @@ public class PaymentRepository {
             throw new NotFoundException("Không tìm thấy khách hàng");
         return jdbc.query("SELECT * FROM order_payment_balances WHERE customer_id=? AND status<>'PENDING' AND (due>0 OR refund_due>0) ORDER BY order_id",BALANCE,customerId);
     }
-    public List<CustomerBalance> customerBalances() {
-        return jdbc.query("""
-            SELECT c.id,c.full_name,c.active,COALESCE(SUM(b.due),0) AS due,COALESCE(SUM(b.refund_due),0) AS refund_due
-            FROM customers c LEFT JOIN order_payment_balances b ON b.customer_id=c.id AND b.status<>'PENDING'
-            GROUP BY c.id,c.full_name,c.active ORDER BY due DESC,c.id
-            """,(r,n)->new CustomerBalance(r.getLong("id"),r.getString("full_name"),r.getBoolean("active"),r.getBigDecimal("due"),r.getBigDecimal("refund_due")));
+    /**
+     * Khách còn phải thu hoặc cần hoàn tiền (kể cả hồ sơ đã lưu trữ), nhiều tiền nhất trước.
+     * Không tính đơn chờ xác nhận. {@code keyword}: tìm theo tên hoặc số điện thoại.
+     */
+    public PageResponse<CustomerBalance> customerBalances(SearchKeyword keyword, PageRequestParams page) {
+        var named = new org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate(jdbc);
+        var params = new org.springframework.jdbc.core.namedparam.MapSqlParameterSource();
+        String source = """
+            FROM (SELECT c.id,c.full_name,c.phone,c.active,SUM(b.due) AS due,SUM(b.refund_due) AS refund_due
+                  FROM customers c JOIN order_payment_balances b ON b.customer_id=c.id AND b.status<>'PENDING'
+                  GROUP BY c.id,c.full_name,c.phone,c.active
+                  HAVING SUM(b.due)>0 OR SUM(b.refund_due)>0) s
+            """ + (keyword == null ? "" : " WHERE " + keyword.condition("s.full_name", "s.phone", params));
+        long total = named.queryForObject("SELECT COUNT(*) " + source, params, Long.class);
+        if (total == 0 || page.offset() >= total) return PageResponse.of(List.of(), page, total);
+        params.addValue("limit", page.size()).addValue("offset", page.offset());
+        return PageResponse.of(named.query("SELECT s.* " + source + " ORDER BY s.due DESC,s.refund_due DESC,s.id LIMIT :limit OFFSET :offset",
+                params, (r,n)->new CustomerBalance(r.getLong("id"),r.getString("full_name"),r.getBoolean("active"),r.getBigDecimal("due"),r.getBigDecimal("refund_due"))),
+                page, total);
     }
     public List<Receipt> receipts(long id) {
         return jdbc.query(RECEIPTS+" WHERE p.order_id=? AND p.status='CONFIRMED' ORDER BY p.id DESC",RECEIPT,id);

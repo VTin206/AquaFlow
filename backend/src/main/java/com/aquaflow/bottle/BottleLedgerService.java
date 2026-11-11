@@ -12,7 +12,7 @@ import java.util.*;
 public class BottleLedgerService {
     private final BottleLedgerRepository repository;
     public BottleLedgerService(BottleLedgerRepository repository) { this.repository=repository; }
-    public List<Balance> balances() { return repository.balances(); }
+    public PageResponse<Balance> balances(String q, PageRequestParams page) { return repository.balances(SearchKeyword.of(q),page); }
     public Ledger ledger(long customer) { return new Ledger(repository.balance(customer),repository.types(customer),repository.entries(customer)); }
     public Entry detail(long customer,UUID id) { return repository.detail(customer,id); }
     @Transactional

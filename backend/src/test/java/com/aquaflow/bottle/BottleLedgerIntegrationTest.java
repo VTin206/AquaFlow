@@ -110,7 +110,7 @@ class BottleLedgerIntegrationTest {
         assertThatThrownBy(()->record(bottles("GIVE",1))).isInstanceOf(ConflictException.class);
         record(bottles("RECEIVE",1)); record(money("REFUND","50000"));
         assertThat(service.ledger(customer).balance().depositHeld()).isZero();
-        assertThat(service.balances().stream().filter(b->b.customerId()==customer).findFirst().orElseThrow().active()).isFalse();
+        assertThat(service.balances("Bottle customer",com.aquaflow.shared.api.PageRequestParams.of(0,100)).items().stream().filter(b->b.customerId()==customer).findFirst().orElseThrow().active()).isFalse();
     }
     @Test void restContractValidationAndRoles() throws Exception {
         String path="/api/v1/sales/customers/"+customer+"/bottle-transactions";

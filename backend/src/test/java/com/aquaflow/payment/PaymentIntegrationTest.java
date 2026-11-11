@@ -35,6 +35,14 @@ class PaymentIntegrationTest {
         customer=jdbc.queryForObject("INSERT INTO customers(full_name) VALUES ('Payment customer') RETURNING id",Long.class);
         order=jdbc.queryForObject("INSERT INTO orders(order_code,customer_id,created_by,channel,fulfillment_type,status,subtotal) VALUES (?,?,?,'COUNTER','COUNTER','PREPARING',100000) RETURNING id",Long.class,UUID.randomUUID().toString(),customer,actor);
     }
+    /** Dòng công nợ của khách trong test; duyệt các trang tìm theo tên. */
+    java.util.Optional<PaymentDtos.CustomerBalance> customerBalance() {
+        for (int page=0;;page++) {
+            var result=service.customers("Payment customer",PageRequestParams.of(page,100));
+            var found=result.items().stream().filter(c->c.customerId()==customer).findFirst();
+            if (found.isPresent() || page+1>=result.totalPages()) return found;
+        }
+    }
     Create input(String amount,String direction) { return new Create(UUID.randomUUID(),new BigDecimal(amount),direction,"CASH",null,direction.equals("OUT") ? "Customer refund" : null); }
     String paymentStatus() { return jdbc.queryForObject("SELECT payment_status FROM orders WHERE id=?",String.class,order); }
     @Test void partialPaymentFullPaymentAndReplayAreConsistent() {
@@ -46,7 +54,8 @@ class PaymentIntegrationTest {
         service.create(order,actor,input("75000","IN"));
         assertThat(paymentStatus()).isEqualTo("PAID");
         assertThat(service.payments(order).payments()).hasSize(2);
-        assertThat(service.customers().stream().filter(c->c.customerId()==customer).findFirst().orElseThrow().due()).isZero();
+        // Thu đủ thì khách ra khỏi danh sách công nợ.
+        assertThat(customerBalance()).isEmpty();
         assertThatThrownBy(()->service.create(order,actor,new Create(request.requestId(),new BigDecimal("26000"),"IN","CASH",null,null))).isInstanceOf(ConflictException.class);
     }
     @Test void blocksOverpaymentAndUnconfirmedOrdersWithoutWriting() {
@@ -93,7 +102,7 @@ class PaymentIntegrationTest {
         jdbc.update("UPDATE customers SET active=false WHERE id=?",customer);
         long deposit=jdbc.queryForObject("INSERT INTO payments(order_id,direction,method,amount,status,recorded_by) VALUES (?,'IN','CASH',999999,'CONFIRMED',?) RETURNING id",Long.class,order,actor);
         jdbc.update("INSERT INTO payment_allocations(payment_id,allocation_type,amount) VALUES (?,'DEPOSIT',999999)",deposit);
-        var summary=service.customers().stream().filter(c->c.customerId()==customer).findFirst().orElseThrow();
+        var summary=customerBalance().orElseThrow();
         assertThat(summary.active()).isFalse(); assertThat(summary.due()).isEqualByComparingTo("80000");
         assertThat(service.receivables(customer)).hasSize(1);
         assertThat(service.payments(order).payments()).hasSize(1);

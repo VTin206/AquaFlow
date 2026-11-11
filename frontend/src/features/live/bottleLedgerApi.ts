@@ -1,4 +1,5 @@
 import { api } from '@/shared/api/client'
+import { pageParams, type Page, type PageQuery } from '@/shared/api/page'
 
 export type BottleBalance = {
   customerId: number
@@ -30,7 +31,8 @@ export type BottleInput = {
   note?: string
 }
 export const bottleLedgerApi = {
-  balances: () => api.get<BottleBalance[]>('/sales/bottle-balances'),
+  /** Sổ vỏ theo khách (kể cả hồ sơ đã lưu trữ), khách mới nhất trước. */
+  balances: (query: PageQuery) => api.get<Page<BottleBalance>>('/sales/bottle-balances', { params: pageParams(query) }),
   ledger: (id: number) => api.get<BottleLedger>(`/sales/customers/${id}/bottle-ledger`),
   create: (id: number, input: BottleInput) => api.post<BottleLedgerEntry>(`/sales/customers/${id}/bottle-transactions`, input),
 }

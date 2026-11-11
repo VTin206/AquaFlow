@@ -21,7 +21,7 @@ import { ReceiveStockModal } from './components/ReceiveStockModal'
 import { useExpiryWarningDays } from '@/features/settings/settingsService'
 import { daysUntilExpiry, expiryStatus, isoToVnDate } from './expiry'
 import { matchesSearch } from '@/shared/utils/search'
-import { useReceiptViews, useStockItems, type ReceiptView, type StockItem } from './useInventory'
+import { useReceiptPage, useStockItems, type ReceiptView, type StockItem } from './useInventory'
 
 type Filter = 'all' | 'low' | 'expiring' | 'expired'
 type View = 'stock' | 'lots' | 'receipts' | 'returns' | 'movements'
@@ -32,7 +32,8 @@ const expiryText = (item: StockItem) => (item.nearestExpiry ? isoToVnDate(item.n
 
 export function InventoryPage() {
   const stockQuery = useStockItems()
-  const receiptsQuery = useReceiptViews()
+  // Chỉ cần số phiếu nháp: lấy trang nhỏ nhất, số đếm theo trạng thái tính trên toàn bộ phiếu.
+  const receiptsQuery = useReceiptPage({ page: 0, size: 1 })
   const warningDays = useExpiryWarningDays()
   const demo = useIsDemo()
   const demoReturns = (useOrders(demo).data ?? []).filter(awaitingReturnInspection).length
@@ -57,7 +58,7 @@ export function InventoryPage() {
   const expired = products.filter(
     (item) => item.expiredOnHand > 0 || (item.onHand > 0 && expiryStatus(expiryText(item), warningDays) === 'expired'),
   )
-  const drafts = (receiptsQuery.data ?? []).filter((receipt) => receipt.status === 'DRAFT').length
+  const drafts = receiptsQuery.data?.statusCounts.DRAFT ?? 0
   const lowLabel = hasThreshold ? 'Sắp hết' : 'Hết hàng'
   const visible = products
     .filter((item) =>

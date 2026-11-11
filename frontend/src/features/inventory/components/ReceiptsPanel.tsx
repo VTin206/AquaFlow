@@ -4,9 +4,9 @@ import { Pencil } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
-import { tablePagination } from '@/shared/utils/table'
+import { serverTablePagination, tablePagination } from '@/shared/utils/table'
 import { isoToVnDate } from '../expiry'
-import { useReceiptAction, useReceiptViews, type ReceiptLineView, type ReceiptStatus, type ReceiptView } from '../useInventory'
+import { useReceiptAction, useReceiptPage, type ReceiptLineView, type ReceiptStatus, type ReceiptView } from '../useInventory'
 import { ReceiptResult } from './ReceiveStockModal'
 import { modalWidth } from '@/shared/utils/modal'
 
@@ -21,15 +21,19 @@ const statusTags: Record<ReceiptStatus, { color: string; label: string }> = {
 /** Danh sách phiếu nhập; mở rộng một dòng để xem từng lô đã kiểm nhận. Phiếu nháp được sửa, nhập kho hoặc hủy tại đây. */
 export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => void }) {
   const { message } = App.useApp()
-  const receiptsQuery = useReceiptViews()
-  const action = useReceiptAction()
   const [filter, setFilter] = useState<ReceiptFilter>('all')
+  // Đổi bộ lọc thì về trang đầu, cỡ trang giữ nguyên.
+  const [paging, setPaging] = useState({ filter, page: 0, size: tablePagination.defaultPageSize ?? 10 })
+  const page = paging.filter === filter ? paging.page : 0
+  const receiptsQuery = useReceiptPage({ status: filter === 'all' ? undefined : filter, page, size: paging.size })
+  const action = useReceiptAction()
   const [result, setResult] = useState<ReceiptView>()
   if (receiptsQuery.isError) return <QueryError error={receiptsQuery.error} onRetry={receiptsQuery.refetch} />
 
-  const receipts = receiptsQuery.data ?? []
-  const count = (status: ReceiptStatus) => receipts.filter((receipt) => receipt.status === status).length
-  const visible = filter === 'all' ? receipts : receipts.filter((receipt) => receipt.status === filter)
+  const counts = receiptsQuery.data?.statusCounts
+  const count = (status: ReceiptStatus) => counts?.[status] ?? 0
+  const totalReceipts = count('DRAFT') + count('CONFIRMED') + count('CANCELLED')
+  const visible = receiptsQuery.data?.items ?? []
   const run = (receipt: ReceiptView, kind: 'confirm' | 'cancel') =>
     action.mutate(
       { id: receipt.id, action: kind },
@@ -46,7 +50,7 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
           value={filter}
           onChange={setFilter}
           options={[
-            { value: 'all', label: <CountLabel label="Tất cả" count={receipts.length} /> },
+            { value: 'all', label: <CountLabel label="Tất cả" count={totalReceipts} /> },
             { value: 'DRAFT', label: <CountLabel label="Nháp" count={count('DRAFT')} urgent tone="warning" /> },
             { value: 'CONFIRMED', label: <CountLabel label="Đã nhập kho" count={count('CONFIRMED')} tone="success" /> },
             { value: 'CANCELLED', label: <CountLabel label="Đã hủy" count={count('CANCELLED')} tone="danger" /> },
@@ -54,15 +58,19 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
         />
       </div>
       <Table<ReceiptView>
-        key={filter}
         className="af-data-table af-table-flush"
         size="middle"
         rowKey="id"
-        loading={receiptsQuery.isPending}
+        loading={receiptsQuery.isPending || (receiptsQuery.isFetching && receiptsQuery.isPlaceholderData)}
         dataSource={visible}
-        pagination={tablePagination}
+        pagination={serverTablePagination({
+          page,
+          size: paging.size,
+          total: receiptsQuery.data?.total ?? 0,
+          onChange: (next, size) => setPaging({ filter, page: next, size }),
+        })}
         scroll={{ x: 1170 }}
-        locale={{ emptyText: receipts.length ? 'Không có phiếu phù hợp.' : 'Chưa có phiếu nhập.' }}
+        locale={{ emptyText: totalReceipts ? 'Không có phiếu phù hợp.' : 'Chưa có phiếu nhập.' }}
         expandable={{
           expandedRowRender: (receipt) => (
             <>
