@@ -7,6 +7,7 @@ import com.aquaflow.shared.api.NotFoundException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 
 @Repository
 public class ActivityRepository {
@@ -18,7 +19,7 @@ public class ActivityRepository {
     public record Page(List<Entry> content, int page, int size, long totalElements) {}
     private static final String SOURCE = """
         FROM (SELECT a.*, CASE
-          WHEN entity_type IN ('ORDER') THEN 'ORDERS'
+          WHEN entity_type IN ('ORDER','ORDER_RETURN') THEN 'ORDERS'
           WHEN entity_type IN ('DELIVERY_TRIP','DELIVERY_ASSIGNMENT') THEN 'DELIVERY'
           WHEN entity_type IN ('CUSTOMER','CUSTOMER_ADDRESS') THEN 'CUSTOMERS'
           WHEN entity_type = 'SUPPLIER' THEN 'SUPPLIERS'
@@ -61,7 +62,41 @@ public class ActivityRepository {
             new MapSqlParameterSource(),(rs,n)->new Actor(rs.getLong(1),rs.getString(2)));
     }
     public void append(Long actor, String action, String entity, Long id, String reason) {
-        jdbc.update("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,reason) VALUES (:actor,:action,:entity,:id,:reason)",
-            new MapSqlParameterSource("actor",actor).addValue("action",action).addValue("entity",entity).addValue("id",id).addValue("reason",reason));
+        append(actor,action,entity,id,reason,null);
+    }
+    public void append(Long actor, String action, String entity, Long id, String reason, Long orderId) {
+        jdbc.update("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,reason,order_id) VALUES (:actor,:action,:entity,:id,:reason,:order)",
+            new MapSqlParameterSource("actor",actor).addValue("action",action).addValue("entity",entity).addValue("id",id)
+                .addValue("reason",reason).addValue("order",orderId));
+    }
+
+    /** Một mốc trong nhật ký của đơn: thao tác nghiệp vụ (ACTION) hoặc phiếu thu/hoàn tiền (PAYMENT). */
+    public record OrderEntry(String kind, Instant at, Long actorId, String actorName, String action,
+                             String description, String entityType, Long entityId) {}
+
+    /** Nhật ký theo đơn, cũ trước mới sau; null khi không có đơn. Tối đa 500 mốc gần nhất. */
+    public List<OrderEntry> forOrder(long orderId) {
+        if(jdbc.queryForList("SELECT id FROM orders WHERE id=:id",new MapSqlParameterSource("id",orderId),Long.class).isEmpty())
+            throw new NotFoundException("Không tìm thấy đơn hàng");
+        return jdbc.query("""
+            SELECT * FROM (
+              SELECT 'ACTION' AS kind, a.created_at AS at, a.actor_id, u.full_name AS actor_name, a.action, a.reason AS description,
+                     a.entity_type, a.entity_id, a.id AS seq
+              FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id WHERE a.order_id=:id
+              UNION ALL
+              SELECT 'PAYMENT', COALESCE(p.confirmed_at,p.created_at), p.recorded_by, u.full_name,
+                     CASE WHEN p.direction='IN' THEN 'paymentIn' ELSE 'paymentOut' END,
+                     concat_ws(' · ', CASE WHEN p.direction='IN' THEN 'Thu tiền' ELSE 'Hoàn tiền' END,
+                       to_char(sale.amount,'FM999G999G999G990') || ' ₫',
+                       CASE WHEN p.method='CASH' THEN 'Tiền mặt' ELSE 'Chuyển khoản' END, p.external_reference, p.note),
+                     'PAYMENT', p.id, p.id
+              FROM payments p JOIN users u ON u.id=p.recorded_by
+              JOIN LATERAL (SELECT SUM(x.amount) AS amount FROM payment_allocations x WHERE x.payment_id=p.id AND x.allocation_type='SALE') sale ON sale.amount>0
+              WHERE p.order_id=:id AND p.status='CONFIRMED'
+            ) e ORDER BY e.at DESC, e.kind, e.seq DESC LIMIT 500
+            """,new MapSqlParameterSource("id",orderId),(rs,n)->new OrderEntry(rs.getString("kind"),rs.getTimestamp("at").toInstant(),
+                rs.getObject("actor_id",Long.class),Objects.requireNonNullElse(rs.getString("actor_name"),"Hệ thống / khách vãng lai"),
+                rs.getString("action"),rs.getString("description"),rs.getString("entity_type"),rs.getObject("entity_id",Long.class)))
+            .reversed();
     }
 }

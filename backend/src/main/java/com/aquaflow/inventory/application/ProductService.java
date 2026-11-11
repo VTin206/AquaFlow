@@ -38,6 +38,7 @@ public class ProductService {
                 request.unitsPerCase(), bottleType, request.salePrice());
         product.setImage(request.image());
         product.setLowStockThreshold(request.lowStockThreshold()!=null?request.lowStockThreshold():settings.defaultLowStock());
+        product.updateCatalogDetails(request.waterType(), request.volumeMl());
         return toResponse(productRepository.save(product));
     }
 
@@ -65,7 +66,8 @@ public class ProductService {
                 bottleType == null ? null : bottleType.getName(),
                 product.getSalePrice(),
                 product.isActive(),
-                product.getCreatedAt(), product.getImage(), product.getLowStockThreshold());
+                product.getCreatedAt(), product.getImage(), product.getLowStockThreshold(),
+                product.getWaterType(), product.getVolumeMl());
     }
 
     @Transactional(readOnly = true)
@@ -90,12 +92,25 @@ public class ProductService {
         // Older clients may omit image; preserve the existing photo in that case.
         if (request.image() != null) product.setImage(request.image().isBlank() ? null : request.image());
         if (request.lowStockThreshold() != null) product.setLowStockThreshold(request.lowStockThreshold());
+        product.updateCatalogDetails(request.waterType(), request.volumeMl());
         return toResponse(product);
     }
 
     @Transactional
     public void delete(Long id) {
         getProduct(id).deactivate();
+    }
+
+    /** Bán lại sản phẩm đã ngừng. Loại vỏ đi kèm phải còn lưu hành, nếu không đơn mới sẽ không tính được cọc vỏ. */
+    @Transactional
+    public ProductResponse reactivate(Long id) {
+        Product product = getProduct(id);
+        BottleType bottleType = product.getBottleType();
+        if (!product.isActive() && bottleType != null && !bottleType.isActive()) {
+            throw new ConflictException("Loại vỏ " + bottleType.getName() + " đã ngừng lưu hành. Lưu hành lại loại vỏ hoặc đổi loại vỏ trước khi bán lại.");
+        }
+        product.activate();
+        return toResponse(product);
     }
 
     private Product getProduct(Long id) {

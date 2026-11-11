@@ -40,9 +40,22 @@ public record CreateProductRequest(
         String image,
 
         @PositiveOrZero(message = "Low stock threshold must be greater than or equal to 0")
-        Integer lowStockThreshold
+        Integer lowStockThreshold,
+
+        /** Thiếu: giữ nguyên khi sửa. UNSPECIFIED: chưa phân loại. */
+        com.aquaflow.inventory.domain.WaterType waterType,
+
+        /** Dung tích một chai/bình (ml). Thiếu: giữ nguyên khi sửa. 0: chưa có dung tích. */
+        @jakarta.validation.constraints.PositiveOrZero(message = "Volume must be greater than or equal to 0")
+        @jakarta.validation.constraints.Max(value = 100000, message = "Volume must not exceed 100000 ml")
+        Integer volumeMl
 ) {
     public CreateProductRequest(String sku, String name, String brand, String unit, Integer unitsPerCase, Long bottleTypeId, BigDecimal salePrice, String image) {
         this(sku, name, brand, unit, unitsPerCase, bottleTypeId, salePrice, image, null);
+    }
+
+    public CreateProductRequest(String sku, String name, String brand, String unit, Integer unitsPerCase, Long bottleTypeId,
+                                BigDecimal salePrice, String image, Integer lowStockThreshold) {
+        this(sku, name, brand, unit, unitsPerCase, bottleTypeId, salePrice, image, lowStockThreshold, null, null);
     }
 }

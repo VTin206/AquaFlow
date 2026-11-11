@@ -9,7 +9,7 @@ import { catalogApi, type CatalogProduct } from '@/features/live/catalogApi'
 import { guestOrderApi, type GuestOrderInput } from '@/features/live/guestOrderApi'
 import { orderTrackingApi } from '@/features/live/orderTrackingApi'
 import { daysUntilExpiry } from '@/features/inventory/expiry'
-import { inferCatalog } from '@/features/inventory/catalogGroups'
+import { catalogFromApi } from '@/features/inventory/catalogGroups'
 import type { Product } from '@/features/inventory/types'
 import { resolveProductImage } from '@/features/inventory/productImages'
 import { orderService } from '@/features/orders/orderService'
@@ -64,7 +64,7 @@ export const toShopProduct = (product: CatalogProduct): ShopProduct => ({
   bottleTypeName: product.bottleTypeName,
   bottleTypeId: product.bottleTypeId,
   image: resolveProductImage(product),
-  catalog: inferCatalog(product.name, product.unit),
+  catalog: catalogFromApi(product),
 })
 
 export const shopService = {

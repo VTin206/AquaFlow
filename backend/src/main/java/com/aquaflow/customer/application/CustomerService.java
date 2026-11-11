@@ -195,6 +195,38 @@ public class CustomerService {
                 .orElse(false);
     }
 
+    /** Hồ sơ đã lưu trữ, theo tên. */
+    public List<CustomerResponse> findArchived() {
+        return customerRepository.findAllByActiveFalseOrderByFullNameAscIdAsc().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    /**
+     * Khôi phục hồ sơ đã lưu trữ; gọi lại khi đang hoạt động không đổi gì.
+     * Số điện thoại đã thuộc khách đang hoạt động khác thì từ chối (mỗi số chỉ một khách đang hoạt động).
+     */
+    @Transactional
+    public Optional<CustomerResponse> reactivate(Long id) {
+        return customerRepository.findById(id)
+                .map(customer -> {
+                    if (!customer.isActive()) {
+                        if (customer.getPhone() != null
+                                && customerRepository.existsByPhoneAndActiveTrueAndIdNot(customer.getPhone(), id)) {
+                            throw new ConflictException("Số điện thoại " + customer.getPhone()
+                                    + " đã thuộc một khách đang hoạt động. Đổi số của khách đó hoặc gộp hồ sơ trước khi khôi phục.");
+                        }
+                        // Tài khoản khách chỉ gắn với một hồ sơ đang hoạt động.
+                        if (customer.getUserId() != null && customerRepository.findByUserIdAndActiveTrue(customer.getUserId()).isPresent()) {
+                            throw new ConflictException("Tài khoản của khách này đã có hồ sơ khác đang hoạt động.");
+                        }
+                        customer.activate();
+                        customerRepository.save(customer);
+                    }
+                    return toResponse(customer);
+                });
+    }
+
     private Map<String, Object> snapshot(Customer customer) {
 
         Map<String, Object> data = new LinkedHashMap<>();

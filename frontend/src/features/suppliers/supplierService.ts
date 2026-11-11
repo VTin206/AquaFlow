@@ -100,4 +100,5 @@ export const supplierApi = {
   create: async (draft: SupplierDraft) => fromResponse(await api.post<SupplierResponse>('/suppliers', toRequest(draft))),
   update: async (id: string, draft: SupplierDraft) => fromResponse(await api.put<SupplierResponse>(`/suppliers/${id}`, toRequest(draft))),
   deactivate: (id: string) => api.delete<void>(`/suppliers/${id}`),
+  activate: async (id: string) => fromResponse(await api.post<SupplierResponse>(`/suppliers/${id}/reactivate`)),
 }

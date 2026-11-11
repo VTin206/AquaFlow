@@ -96,6 +96,14 @@ public class ProductController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{id}/reactivate")
+    @Operation(summary = "Resume selling a discontinued product",
+            description = "Idempotent. 409 when its bottle type is no longer in circulation.")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<ProductResponse> reactivateProduct(@PathVariable Long id) {
+        return ResponseEntity.ok(productService.reactivate(id));
+    }
+
     private boolean canManage(Authentication authentication) {
         return authentication != null && authentication.getAuthorities().stream()
                 .anyMatch(authority -> ("ROLE_ADMIN".equals(authority.getAuthority()) || "ROLE_SALES_STAFF".equals(authority.getAuthority())));

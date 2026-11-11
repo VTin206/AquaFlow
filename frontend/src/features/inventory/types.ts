@@ -22,6 +22,7 @@ export type ProductDraft = {
   price: number
   stock: number
   image?: string
+  catalog?: Product['catalog']
 }
 
 export const isLowStock = (product: Product) => product.stock <= product.threshold

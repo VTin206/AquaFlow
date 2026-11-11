@@ -46,10 +46,15 @@ export function useSaveSupplier() {
   })
 }
 
-/** BE chưa có API bật lại nên chỉ bản dùng thử (cờ `reactivate`). */
 export function useActivateSupplier() {
+  const demo = useDemo()
   const invalidate = useInvalidateSuppliers()
-  return useMutation({ mutationFn: supplierService.activate, onSuccess: () => void invalidate() })
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await (demo ? supplierService : supplierApi).activate(id)
+    },
+    onSuccess: () => void invalidate(),
+  })
 }
 
 export function useDeactivateSupplier() {

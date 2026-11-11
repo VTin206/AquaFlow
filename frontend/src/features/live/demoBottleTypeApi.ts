@@ -36,4 +36,5 @@ export const demoBottleTypeApi = {
     mockRequest(() => {
       change(id, { active: false })
     }),
+  reactivate: (id: number) => mockRequest(() => change(id, { active: true })),
 }

@@ -10,11 +10,12 @@ import { productService } from './productService'
 import { resolveProductImage } from './productImages'
 import { isLowStock, type Product } from './types'
 import { productKeys } from './useProducts'
+import { catalogFromApi, demoCatalog, waterTypeOf, type WaterTypeCode } from './catalogGroups'
 import { sortByName } from '@/shared/utils/table'
 
 /**
  * Danh mục cho trang Sản phẩm: bản dùng thử đọc mock, tài khoản thật gọi ProductController (BE2)
- * và lấy số khả dụng từ tồn kho. Field BE chưa có (loại nước, dung tích) ẩn qua `useFeature`.
+ * và lấy số khả dụng từ tồn kho. Loại nước, dung tích chưa nhập thì đoán từ tên (`catalogFromApi`).
  */
 export type CatalogItem = Pick<Product, 'id' | 'sku' | 'name' | 'brand' | 'unit' | 'price' | 'image' | 'catalog'> & {
   active: boolean
@@ -26,6 +27,9 @@ export type CatalogItem = Pick<Product, 'id' | 'sku' | 'name' | 'brand' | 'unit'
   unitsPerCase?: number
   bottleTypeId?: number
   bottleTypeName?: string
+  /** Giá trị đã lưu (không phải phần đoán từ tên); undefined khi chưa nhập. */
+  waterType?: WaterTypeCode
+  volumeMl?: number
 }
 export type ProductStatus = 'active' | 'inactive' | 'all'
 export type ProductForm = {
@@ -38,6 +42,8 @@ export type ProductForm = {
   unitsPerCase?: number
   bottleTypeId?: number
   threshold?: number
+  waterType?: WaterTypeCode
+  volumeMl?: number
 }
 
 type ProductResponse = {
@@ -53,6 +59,8 @@ type ProductResponse = {
   salePrice: number
   active: boolean
   lowStockThreshold?: number
+  waterType?: WaterTypeCode | null
+  volumeMl?: number | null
 }
 
 const fromDemo = (product: Product): CatalogItem => ({
@@ -68,6 +76,8 @@ const fromDemo = (product: Product): CatalogItem => ({
   stock: product.stock,
   threshold: product.threshold,
   lowStock: isLowStock(product),
+  waterType: waterTypeOf(product.catalog?.category),
+  volumeMl: product.catalog?.volumeMl || undefined,
 })
 
 const fromResponse = (product: ProductResponse, available?: number): CatalogItem => ({
@@ -85,6 +95,9 @@ const fromResponse = (product: ProductResponse, available?: number): CatalogItem
   unitsPerCase: product.unitsPerCase ?? undefined,
   bottleTypeId: product.bottleTypeId ?? undefined,
   bottleTypeName: product.bottleTypeName ?? undefined,
+  catalog: catalogFromApi(product),
+  waterType: product.waterType ?? undefined,
+  volumeMl: product.volumeMl ?? undefined,
 })
 
 const toRequest = (form: ProductForm) => ({
@@ -96,6 +109,9 @@ const toRequest = (form: ProductForm) => ({
   bottleTypeId: form.bottleTypeId ?? null,
   image: form.image ?? null,
   lowStockThreshold: form.threshold ?? null,
+  // Bỏ trống thì xóa giá trị đã lưu (BE coi thiếu field là giữ nguyên).
+  waterType: form.waterType ?? 'UNSPECIFIED',
+  volumeMl: form.volumeMl ?? 0,
 })
 
 /** Nhân viên chưa xem được tồn kho thì danh mục vẫn hiện, chỉ thiếu số tồn. */
@@ -150,7 +166,14 @@ export function useSaveProduct() {
   return useMutation({
     mutationFn: async ({ id, form }: { id?: string; form: ProductForm }): Promise<{ name: string }> => {
       if (demo) {
-        const draft = { name: form.name, brand: form.brand, unit: form.unit, price: form.price, image: form.image }
+        const draft = {
+          name: form.name,
+          brand: form.brand,
+          unit: form.unit,
+          price: form.price,
+          image: form.image,
+          catalog: demoCatalog(form.name, form.unit, form.waterType, form.volumeMl),
+        }
         // Như BE: sản phẩm mới có tồn 0, tồn chỉ tăng qua phiếu nhập.
         return id ? productService.update(id, draft) : productService.create({ ...draft, sku: form.sku, stock: 0 })
       }
@@ -162,10 +185,17 @@ export function useSaveProduct() {
   })
 }
 
-/** BE chưa có API bán lại nên chỉ bản dùng thử (cờ `reactivate`). */
+/** Bán lại sản phẩm đã ngừng. BE từ chối (409) khi loại vỏ đi kèm còn ngừng lưu hành. */
 export function useActivateProduct() {
+  const demo = useIsDemo()
   const invalidate = useInvalidateProducts()
-  return useMutation({ mutationFn: productService.activate, onSuccess: () => void invalidate() })
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (demo) await productService.activate(id)
+      else await api.post<ProductResponse>(`/products/${id}/reactivate`)
+    },
+    onSuccess: () => void invalidate(),
+  })
 }
 
 export function useDeactivateProduct() {

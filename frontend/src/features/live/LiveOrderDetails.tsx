@@ -1,10 +1,10 @@
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { Alert, App, Button, Descriptions, Popconfirm, Skeleton, Table, Tag, Timeline, Typography, type CollapseProps, type MenuProps } from 'antd'
 import { Money } from '@/shared/components/Money'
 import { OrderTotals } from '@/shared/components/OrderTotals'
 import { QueryError } from '@/shared/components/QueryError'
-import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 import { currency } from '@/shared/utils/format'
 import { dueTone } from '@/shared/utils/money'
 import { useStaff } from '@/features/auth/useStaff'
@@ -32,6 +32,8 @@ import { useSettings } from '@/features/settings/settingsService'
 import { usePrinter } from '@/shared/print/usePrinter'
 import { LiveOrderPayments } from './LiveOrderPayments'
 import { useOrderPayments } from './paymentApi'
+import { LiveOrderReturnModal } from './LiveOrderReturnModal'
+import { describeActivity, useOrderActivity, useOrderReturns } from './orderReturnApi'
 
 const dateTime = (value: string | null) => (value ? new Date(value).toLocaleString('vi-VN') : '—')
 /** Màu trạng thái thanh toán theo quy ước tiền: cam còn phải thu, xanh đã thu, đỏ đang hoàn. */
@@ -50,6 +52,11 @@ const paymentTagColors: Record<keyof typeof paymentStatusLabels, string> = {
 export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => void }) {
   const staff = useStaff()
   const canManage = staff?.role === 'ADMIN' || staff?.role === 'SALES_STAFF'
+  // Nhận trả hàng làm giảm doanh thu và có thể hoàn tiền nên chỉ chủ cửa hàng (BE cũng chặn).
+  const canTakeReturns = staff?.role === 'ADMIN'
+  const [returning, setReturning] = useState(false)
+  const returns = useOrderReturns(id)
+  const activity = useOrderActivity(id, canManage)
   const { message } = App.useApp()
   const queryClient = useQueryClient()
   const payments = useOrderPayments(id)
@@ -133,7 +140,17 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
                 },
               ]
             : []),
-          ...(['Đã giao', 'Đã hoàn tất'].includes(viewOrder.status) ? [{ key: 'return', label: 'Nhận trả hàng (chưa hỗ trợ)', disabled: true }] : []),
+          ...(order && ['DELIVERED', 'COMPLETED'].includes(order.status)
+            ? [
+                {
+                  key: 'return',
+                  label: 'Nhận trả hàng',
+                  disabled: !canTakeReturns,
+                  extra: canTakeReturns ? undefined : 'Chủ cửa hàng',
+                  onClick: () => setReturning(true),
+                },
+              ]
+            : []),
         ]
       : []
 
@@ -215,6 +232,16 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
         ...(order.cancelledAt ? [{ at: order.cancelledAt, message: 'Hủy đơn' }] : []),
       ]
     : []
+  // Có nhật ký chi tiết thì dùng nhật ký (kèm người làm); chưa có (đơn cũ, lỗi tải) thì dùng các mốc chính của đơn.
+  const timeline: { key: string; at: string; message: string; actor?: string }[] = activity.data?.length
+    ? activity.data.map((entry, index) => ({
+        key: `${entry.kind}-${entry.entityId ?? index}-${entry.at}`,
+        at: entry.at,
+        message: describeActivity(entry),
+        actor: entry.actorName,
+      }))
+    : historyEvents.map((event) => ({ ...event, key: event.message }))
+  const returnedTotal = (returns.data?.returns ?? []).reduce((sum, entry) => sum + Number(entry.value), 0)
   const moreSections: CollapseProps['items'] = order
     ? [
         { key: 'payments', label: 'Thanh toán', extra: payments.data ? `Còn phải thu ${currency(payments.data.balance.due)}` : undefined, children: <LiveOrderPayments orderId={id} /> },
@@ -270,27 +297,65 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
         {
           key: 'returns',
           label: 'Hàng trả lại',
-          extra: 'Chưa hỗ trợ',
-          children: <p className="af-order-more-empty">{UNSUPPORTED_HINT}</p>,
+          extra: returns.data ? (returns.data.returns.length ? `${returns.data.returns.length} lần · ${currency(returnedTotal)}` : 'Chưa có') : undefined,
+          children: returns.isError ? (
+            <QueryError error={returns.error} onRetry={returns.refetch} />
+          ) : returns.isPending ? (
+            <Skeleton active />
+          ) : !returns.data.returns.length ? (
+            <p className="af-order-more-empty">Khách chưa trả lại hàng của đơn này.</p>
+          ) : (
+            returns.data.returns.map((entry) => (
+              <div key={entry.id} className="af-order-receipt">
+                <p>
+                  <strong>{dateTime(entry.createdAt)}</strong> · {entry.performedByName} · {entry.reason}
+                  <br />
+                  <Typography.Text type="secondary">
+                    {entry.restocked ? 'Đã nhập lại tồn bán được' : 'Hàng hỏng, loại khỏi kho'}
+                    {Number(entry.refunded) > 0 ? ` · Đã hoàn ${currency(entry.refunded)}` : ''}
+                  </Typography.Text>
+                </p>
+                <Table
+                  rowKey="orderItemId"
+                  size="small"
+                  dataSource={entry.lines}
+                  pagination={false}
+                  scroll={{ x: 450 }}
+                  columns={[
+                    { title: 'Sản phẩm', dataIndex: 'productName' },
+                    { title: 'Số lượng', dataIndex: 'quantity', align: 'right' },
+                    { title: 'Giá trị', dataIndex: 'value', align: 'right', render: currency },
+                  ]}
+                />
+              </div>
+            ))
+          ),
         },
         {
           key: 'history',
           label: 'Lịch sử xử lý',
-          extra: `${historyEvents.length} mốc`,
+          extra: `${activity.data?.length || historyEvents.length} mốc`,
           children: (
             <>
               <Timeline
-                items={[...historyEvents].reverse().map((event) => ({
-                  key: event.message,
+                items={[...timeline].reverse().map((event) => ({
+                  key: event.key,
                   content: (
                     <>
                       <div>{event.message}</div>
-                      <Typography.Text type="secondary">{dateTime(event.at)}</Typography.Text>
+                      <Typography.Text type="secondary">
+                        {dateTime(event.at)}
+                        {event.actor ? ` · ${event.actor}` : ''}
+                      </Typography.Text>
                     </>
                   ),
                 }))}
               />
-              <p className="af-form-hint">Nhật ký chi tiết từng thao tác: chưa hỗ trợ.</p>
+              {activity.isError ? (
+                <p className="af-form-hint">Không tải được nhật ký chi tiết; đang hiện các mốc chính của đơn.</p>
+              ) : (
+                <p className="af-form-hint">Thao tác trước khi bật nhật ký chỉ có các mốc chính.</p>
+              )}
             </>
           ),
         },
@@ -359,9 +424,15 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
             after={
               order.status !== 'CANCELLED' && (
                 <>
+                  {returnedTotal > 0 && (
+                    <div className="is-after-total">
+                      <dt>Hàng trả lại</dt>
+                      <dd>−{currency(returnedTotal)}</dd>
+                    </div>
+                  )}
                   {balance && (
                     <>
-                      <div className="is-after-total">
+                      <div className={returnedTotal > 0 ? undefined : 'is-after-total'}>
                         <dt>Đã thu</dt>
                         <dd>
                           <Money value={Number(balance.paid)} tone={Number(balance.paid) > 0 ? 'paid' : 'neutral'} />
@@ -388,6 +459,13 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
       }
     >
       {printer.portal}
+      {returning && order && (
+        <LiveOrderReturnModal
+          order={{ id: order.id, orderCode: order.orderCode, subtotal: Number(order.subtotal), discountAmount: Number(order.discountAmount) }}
+          balance={balance}
+          onClose={() => setReturning(false)}
+        />
+      )}
     </OrderDetailsFrame>
   )
 }
