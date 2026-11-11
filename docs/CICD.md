@@ -77,6 +77,10 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
 
 Compose yêu cầu `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD` và `APP_JWT_SECRET`; không có credentials production trong repository.
 
+Backend trong compose chạy profile `prod` (`application-prod.yml`): không có giá trị mặc định cho kết nối DB, tắt Swagger/OpenAPI, không trả thông báo lỗi nội bộ. Số kết nối DB chỉnh bằng `DB_POOL_SIZE` (mặc định 10).
+
+Backend lấy IP khách từ `X-Forwarded-For` do Nginx gửi (`server.forward-headers-strategy: native`, chỉ tin proxy trong mạng nội bộ). Giới hạn số lần đăng nhập sai, tra cứu đơn và quên mật khẩu tính theo IP này. Nếu đặt thêm load balancer/CDN phía trước Nginx, cần cấu hình để IP khách thật vẫn được chuyển tiếp; nếu không, mọi khách sẽ dùng chung một bộ đếm. Bộ đếm nằm trong bộ nhớ một tiến trình: chạy nhiều bản backend thì phải chuyển sang kho dùng chung.
+
 ## GitHub Rulesets / Branch Protection
 
 Chưa tự động thay đổi repository settings. Sau khi các workflow chạy thành công ít nhất một lần, cấu hình thủ công tại **Settings → Rules → Rulesets**:

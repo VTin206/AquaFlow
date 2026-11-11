@@ -10,9 +10,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.core.task.TaskRejectedException;
+import com.aquaflow.shared.api.RateLimiter;
 import java.util.Map;
-import java.util.HashMap;
 import java.time.Clock;
+import java.time.Duration;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -22,26 +23,17 @@ public class PasswordResetController {
     }
     public record Reset(@NotBlank @Pattern(regexp="[A-Za-z0-9_-]{43}") String token,
                         @NotBlank @Size(min=8, max=128) String password) {}
-    private record Window(long until, int count) {}
-    private final Map<String, Window> windows = new HashMap<>();
     private final PasswordResetService service;
     private final PasswordResetMail mail;
     private final ThreadPoolTaskExecutor executor;
-    private final Clock clock;
+    private final RateLimiter limiter;
     public PasswordResetController(PasswordResetService service, PasswordResetMail mail,
             @Qualifier("passwordResetExecutor") ThreadPoolTaskExecutor executor, Clock clock) {
-        this.service = service; this.mail = mail; this.executor = executor; this.clock = clock;
+        this.service = service; this.mail = mail; this.executor = executor;
+        this.limiter = new RateLimiter(clock, Duration.ofMinutes(15), 10_000);
     }
-    private synchronized boolean allow(String key, int limit) {
-        long now = clock.millis();
-        windows.entrySet().removeIf(entry -> entry.getValue().until() <= now);
-        var window = windows.get(key);
-        if (window == null) {
-            if (windows.size() >= 10000) return false;
-            windows.put(key, new Window(now + 900000, 1)); return true;
-        }
-        if (window.count() >= limit) return false;
-        windows.put(key, new Window(window.until(), window.count()+1)); return true;
+    private boolean allow(String key, int limit) {
+        return limiter.tryAcquire(key, limit);
     }
     @PostMapping("/password-reset-requests")
     public ResponseEntity<?> request(@Valid @RequestBody Request body, HttpServletRequest request) {

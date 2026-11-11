@@ -14,8 +14,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.aquaflow.shared.api.RateLimiter;
+
 import java.time.Clock;
-import java.util.HashMap;
+import java.time.Duration;
 import java.util.Map;
 
 /** API công khai (không cần đăng nhập) cho trang "Tra cứu đơn" của khách. */
@@ -28,19 +30,13 @@ public class OrderTrackingController {
     static final int LOOKUP_LIMIT = 10;
     /** Trang theo dõi tự làm mới mỗi 20 giây, nên giới hạn rộng hơn. */
     static final int TOKEN_LIMIT = 240;
-    private static final long WINDOW_MILLIS = 15 * 60 * 1000;
-    private static final int MAX_KEYS = 10_000;
 
-    private record Window(long until, int count) {
-    }
-
-    private final Map<String, Window> windows = new HashMap<>();
     private final OrderTrackingService service;
-    private final Clock clock;
+    private final RateLimiter limiter;
 
     public OrderTrackingController(OrderTrackingService service, Clock clock) {
         this.service = service;
-        this.clock = clock;
+        this.limiter = new RateLimiter(clock, Duration.ofMinutes(15), 10_000);
     }
 
     @PostMapping("/lookups")
@@ -57,22 +53,12 @@ public class OrderTrackingController {
         return ResponseEntity.ok(service.byToken(token));
     }
 
-    private synchronized boolean allow(String key, int limit) {
-        long now = clock.millis();
-        windows.entrySet().removeIf(entry -> entry.getValue().until() <= now);
-        Window window = windows.get(key);
-        if (window == null) {
-            if (windows.size() >= MAX_KEYS) return false;
-            windows.put(key, new Window(now + WINDOW_MILLIS, 1));
-            return true;
-        }
-        if (window.count() >= limit) return false;
-        windows.put(key, new Window(window.until(), window.count() + 1));
-        return true;
+    private boolean allow(String key, int limit) {
+        return limiter.tryAcquire(key, limit);
     }
 
     private ResponseEntity<?> limited() {
-        return ResponseEntity.status(429).header("Retry-After", "900")
+        return ResponseEntity.status(429).header("Retry-After", String.valueOf(limiter.windowSeconds()))
                 .body(Map.of("message", "Bạn đã tra cứu quá nhiều lần. Vui lòng thử lại sau 15 phút."));
     }
 }

@@ -29,6 +29,9 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+  # Backend chạy sau nginx: lấy IP khách từ X-Forwarded-For (chỉ tin proxy trong mạng nội bộ)
+  # để giới hạn đăng nhập/tra cứu đơn tính theo từng khách, không dồn chung IP của nginx.
+  forward-headers-strategy: native
   error:
     include-message: always
 

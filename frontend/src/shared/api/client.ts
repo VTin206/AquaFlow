@@ -70,6 +70,7 @@ const defaultMessage = (status: number) => {
   if (status === 401) return 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.'
   if (status === 403) return 'Bạn không có quyền thực hiện thao tác này.'
   if (status === 404) return 'Không tìm thấy dữ liệu.'
+  if (status === 429) return 'Bạn đã thử quá nhiều lần, vui lòng đợi ít phút rồi thử lại.'
   if (status >= 500) return 'Máy chủ đang gặp sự cố, vui lòng thử lại sau.'
   return `Yêu cầu thất bại (mã ${status}).`
 }
