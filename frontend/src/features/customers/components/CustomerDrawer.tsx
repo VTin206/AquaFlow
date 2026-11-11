@@ -9,12 +9,12 @@ import { Unsupported } from '@/shared/components/Unsupported'
 import { currency } from '@/shared/utils/format'
 import { OrderDetails } from '@/features/orders/components/OrderDetails'
 import { OrderStatusTag } from '@/features/orders/components/OrderStatusTag'
-import { useOrderList } from '@/features/orders/orderData'
-import { amountDue, createdAtOf, paymentLabel, type Order } from '@/features/orders/types'
+import { useCustomerOrders } from '@/features/orders/orderData'
+import { amountDue, paymentLabel, type Order } from '@/features/orders/types'
 import { useIntakeAddresses } from '@/features/orders/useOrderIntake'
 import { LiveCustomerAddresses } from '@/features/live/LiveCustomerAddresses'
 import { customerCode, type Customer } from '../types'
-import { useCustomers, useDeactivateCustomer } from '../useCustomers'
+import { useCustomer, useDeactivateCustomer } from '../useCustomers'
 import { LiveBottleLedger } from '../LiveBottleLedger'
 
 type CustomerDrawerProps = {
@@ -32,18 +32,13 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
   const showExtras = useFeature('customerProfileExtras')
   const showDebt = useFeature('customerDebt')
   const showBottles = useFeature('bottleLedger')
-  const { data: customers = [] } = useCustomers()
-  const { data: orders = [], isPending: loadingOrders } = useOrderList()
+  const { data: customer } = useCustomer(customerId)
+  const { data: customerOrders = [], isPending: loadingOrders } = useCustomerOrders(customerId)
   const deactivate = useDeactivateCustomer()
   const [managingAddresses, setManagingAddresses] = useState(false)
   const [orderId, setOrderId] = useState<string | null>(null)
-  const customer = customers.find((item) => item.id === customerId)
   const { addresses, isError: addressesFailed } = useIntakeAddresses(customer)
   if (!customer) return null
-
-  const customerOrders = orders
-    .filter((order) => order.customerId === customer.id)
-    .sort((a, b) => (createdAtOf(b) ?? '').localeCompare(createdAtOf(a) ?? ''))
 
   const summary = [
     { label: 'Đơn đã mua', value: String(customer.orders), show: true },

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Button, Grid, Space, Table, type TableColumnsType } from 'antd'
 import { ViewButton } from '@/shared/components/ViewButton'
 import { Money } from '@/shared/components/Money'
-import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
+import { serverTablePagination, tablePagination, tableScrollHeight, type ServerPagination } from '@/shared/utils/table'
 import { useColumnSort } from '@/shared/components/sortableColumn'
 import { useFeature } from '@/shared/features'
 import { amountDue, compareDeliveryDue, deliveryTimingOf, paymentLabel, type Order } from '../types'
@@ -21,9 +21,14 @@ type OrdersTableProps = {
   emptyText?: string
   /** Đổi bộ lọc chỉ đặt lại phân trang, giữ lựa chọn sắp xếp. */
   filterKey?: string
+  /**
+   * BE đã phân trang (lịch sử đơn, mới nhất trước): bảng chỉ hiện trang hiện tại và tắt sắp xếp theo cột,
+   * vì sắp xếp trong một trang dễ bị hiểu nhầm là sắp xếp toàn bộ.
+   */
+  server?: ServerPagination
 }
 
-export function OrdersTable({ orders, loading, compact = false, emptyText = 'Chưa có đơn hàng nào.', filterKey }: OrdersTableProps) {
+export function OrdersTable({ orders, loading, compact = false, emptyText = 'Chưa có đơn hàng nào.', filterKey, server }: OrdersTableProps) {
   const screens = Grid.useBreakpoint()
   // Chưa có phiếu thu thì không tính "còn phải thu", dùng trạng thái thanh toán của BE.
   const showPayments = useFeature('orderPayments')
@@ -32,8 +37,9 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
   const [checkedIds, setCheckedIds] = useState<string[]>([])
   const checked = compact ? [] : orders.filter((order) => checkedIds.includes(order.id))
   const [pageSize, setPageSize] = useState(tablePagination.defaultPageSize ?? 10)
+  const sortable = !compact && !server
   // Mặc định đưa đơn cần giao sớm nhất lên đầu.
-  const sort = useColumnSort<Order>(compact ? null : { key: 'due', order: 'ascend' })
+  const sort = useColumnSort<Order>(sortable ? { key: 'due', order: 'ascend' } : null)
   // Mã của BE (AF- + 20 ký tự) dài hơn mã mẫu nhiều, nên cột rộng theo mã dài nhất để không bị cắt.
   const longestCode = Math.max(0, ...orders.map((order) => (order.code ?? order.id).length))
   const codeWidth = Math.max(compact ? 110 : 150, longestCode * 9 + (compact ? 24 : 64))
@@ -73,10 +79,10 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
       ? []
       : [
           {
-            ...sort.column('Hẹn giao', 'due', 'time'),
+            ...(sortable ? sort.column('Hẹn giao', 'due', 'time') : { title: 'Hẹn giao', key: 'due' }),
             dataIndex: 'appointment',
             width: 170,
-            sorter: compareDeliveryDue,
+            sorter: sortable ? compareDeliveryDue : undefined,
             render: (_: string, order: Order) => {
               const { main, sub } = deliveryTimingOf(order)
               return (
@@ -92,11 +98,11 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
         ]),
     {
       title: 'Tổng tiền',
-      ...(!compact && sort.column('Tổng tiền', 'total', 'number')),
+      ...(sortable && sort.column('Tổng tiền', 'total', 'number')),
       dataIndex: 'total',
       align: 'right',
       width: compact ? 150 : 160,
-      sorter: compact ? undefined : (a, b) => a.total - b.total,
+      sorter: sortable ? (a, b) => a.total - b.total : undefined,
       // Gộp thanh toán vào đây: dòng dưới là số còn phải thu, hoặc trạng thái thanh toán của BE khi chưa có phiếu thu.
       render: (total: number, order) => (
         <div className="af-cell-stack af-money-stack">
@@ -152,6 +158,7 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
           emptyText={emptyText}
           onDetails={setSelectedId}
           filterKey={filterKey}
+          server={server}
         />
       ) : (
         <>
@@ -164,7 +171,13 @@ export function OrdersTable({ orders, loading, compact = false, emptyText = 'Ch�
             dataSource={orders}
             loading={loading}
             size="middle"
-            pagination={compact ? false : { ...tablePagination, pageSize, onShowSizeChange: (_, size) => setPageSize(size) }}
+            pagination={
+              compact
+                ? false
+                : server
+                  ? serverTablePagination(server)
+                  : { ...tablePagination, pageSize, onShowSizeChange: (_, size) => setPageSize(size) }
+            }
             locale={{ emptyText }}
             scroll={{ x: tableMinWidth, ...(!compact && { y: tableScrollHeight }) }}
             rowSelection={

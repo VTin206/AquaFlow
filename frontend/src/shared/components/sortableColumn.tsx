@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 type SortKind = 'text' | 'number' | 'time' | 'stockRatio'
 type Order = 'ascend' | 'descend'
-type SortState = { key: string; order: Order } | null
+export type SortState = { key: string; order: Order } | null
 
 const labels: Record<SortKind, [string, string]> = {
   text: ['A → Z', 'Z → A'],
@@ -58,5 +58,6 @@ export function useColumnSort<T>(initial: SortState = null) {
     }
   }
 
-  return { column }
+  // `state` cho danh sách BE phân trang: gửi cột và chiều sắp xếp lên server.
+  return { column, state: sort }
 }

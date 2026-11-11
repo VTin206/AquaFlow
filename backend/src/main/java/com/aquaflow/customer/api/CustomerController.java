@@ -18,6 +18,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.aquaflow.customer.api.dto.CustomerPageResponse;
+import com.aquaflow.customer.api.dto.CustomerSummary;
+import com.aquaflow.customer.order.api.dto.OrderListItem;
+import com.aquaflow.customer.order.application.OrderService;
+import com.aquaflow.customer.repository.CustomerQueryRepository;
+import com.aquaflow.shared.api.PageRequestParams;
+import org.springframework.data.domain.Sort;
+import org.springframework.web.bind.annotation.RequestParam;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -28,9 +37,11 @@ import java.util.Optional;
 public class CustomerController {
 
     private final CustomerService customerService;
+    private final OrderService orderService;
 
-    public CustomerController(CustomerService customerService) {
+    public CustomerController(CustomerService customerService, OrderService orderService) {
         this.customerService = customerService;
+        this.orderService = orderService;
     }
 
     @PostMapping
@@ -46,24 +57,40 @@ public class CustomerController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all customers")
-    public List<CustomerResponse> findAll() {
-        return customerService.findAll();
+    @Operation(summary = "Search active customers",
+            description = "q matches code KH-xxx, name, phone, area and latest delivery address, ignoring Vietnamese accents. "
+                    + "idle: all | 7 | 14 | 30 (no order for more than N days) | never. "
+                    + "sort: NAME (default) | ORDERS | LAST_ORDER | DEBT | BOTTLES, direction: ASC (default) | DESC. "
+                    + "totals covers all active customers.")
+    public CustomerPageResponse search(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String idle,
+            @RequestParam(required = false) CustomerQueryRepository.SortField sort,
+            @RequestParam(required = false) Sort.Direction direction) {
+        CustomerQueryRepository.Sort order = sort == null ? null
+                : new CustomerQueryRepository.Sort(sort, direction == Sort.Direction.DESC);
+        return customerService.search(q, idle, order, PageRequestParams.of(page, size));
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get a customer by ID")
-    public ResponseEntity<CustomerResponse> findById(
+    @Operation(summary = "Get a customer with order count, latest order, debt and bottle balances")
+    public ResponseEntity<CustomerSummary> findById(
             @PathVariable Long id) {
 
-        Optional<CustomerResponse> customer =
-                customerService.findById(id);
+        return customerService.findSummary(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
 
-        if (customer.isEmpty()) {
+    @GetMapping("/{id}/orders")
+    @Operation(summary = "Order history of a customer, newest first")
+    public ResponseEntity<List<OrderListItem>> orders(@PathVariable Long id) {
+        if (customerService.findSummary(id).isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-
-        return ResponseEntity.ok(customer.get());
+        return ResponseEntity.ok(orderService.customerOrders(id));
     }
 
     @PutMapping("/{id}")

@@ -3,7 +3,8 @@ import { Alert, App, AutoComplete, Button, Col, DatePicker, Form, Input, InputNu
 import dayjs, { type Dayjs } from 'dayjs'
 import { Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { customerCode, type Customer } from '@/features/customers/types'
-import { useCustomers } from '@/features/customers/useCustomers'
+import { useCustomer, useCustomerSearch } from '@/features/customers/useCustomers'
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import { QueryError } from '@/shared/components/QueryError'
 import { useFeature } from '@/shared/features'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
@@ -50,17 +51,20 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
   const showBottles = useFeature('bottleLedger')
   const showDebt = useFeature('customerDebt')
   const { products, isPending: loadingProducts, error: productsError, refetch: refetchProducts } = useIntakeProducts()
-  const customersQuery = useCustomers()
   const { data: orders = [] } = useOrderList()
   const submit = useSubmitIntake()
 
-  const customers = customersQuery.data ?? []
   // Khách theo số đang gõ; mở từ hồ sơ thì giữ đúng khách đó cho đến khi nhân viên đổi số.
   const [typedPhone, setTypedPhone] = useState(defaultCustomer?.phone ?? '')
   const [pinned, setPinned] = useState(defaultCustomer)
-  const customer = pinned
-    ? (customers.find((item) => item.id === pinned.id) ?? pinned)
-    : customers.find((item) => samePhone(item.phone, typedPhone))
+  const typed = typedPhone.trim()
+  // Tìm khách ở BE theo tên/số đang gõ (từ 2 ký tự), chờ ngừng gõ rồi mới gửi.
+  const searched = useDebouncedValue(typed.length >= 2 ? typed : '')
+  const customersQuery = useCustomerSearch(searched)
+  const customers = customersQuery.data?.customers ?? []
+  // Khách mở từ hồ sơ: đọc lại để số đơn, công nợ, vỏ luôn mới nhất.
+  const { data: pinnedFresh } = useCustomer(pinned?.id)
+  const customer = pinned ? (pinnedFresh ?? pinned) : customers.find((item) => samePhone(item.phone, typedPhone))
   const { addresses, isError: addressesFailed, refetch: refetchAddresses } = useIntakeAddresses(customer)
   const lastOrder = lastOrderOf(orders, customer?.id, typedPhone)
 
@@ -154,7 +158,6 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
     else message.success(`Đã điền theo đơn ${order.code ?? order.id}. Kiểm tra lại rồi tạo đơn.`)
   }
 
-  const typed = typedPhone.trim()
   const suggestions = !customer && typed.length >= 2 ? contactSuggestions(customers, orders, typed) : []
   const isNewPhone = !customer && !lastOrder && phoneDigits(typed).length >= 10
   const customerFacts = customer

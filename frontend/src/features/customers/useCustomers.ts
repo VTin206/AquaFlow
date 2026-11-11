@@ -1,15 +1,15 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/shared/api/client'
 import { useIsDemo } from '@/shared/features'
 import { useStaff } from '@/features/auth/useStaff'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
-import { orderApi } from '@/features/live/orderApi'
-import { paymentApi } from '@/features/live/paymentApi'
-import { bottleLedgerApi } from '@/features/live/bottleLedgerApi'
+import { customerApi, type CustomerSortField, type LiveCustomerSummary } from '@/features/live/customerApi'
 import { customerService } from './customerService'
-import { initialsOf, type Customer, type CustomerDraft } from './types'
-import { latest } from './lastOrder'
+import { customerCode, initialsOf, type Customer, type CustomerDraft } from './types'
+import { matchesIdle, type IdleFilter } from './lastOrder'
 import { sortByName } from '@/shared/utils/table'
+import { matchesSearch } from '@/shared/utils/search'
 
 export const customerKeys = {
   all: ['customers'] as const,
@@ -45,43 +45,148 @@ const fromResponse = (customer: CustomerResponse, orders: number, debt = 0): Cus
 })
 
 /**
- * Số đơn, lần mua gần nhất và địa chỉ tính từ đơn thật (không tính đơn đã hủy).
- * BE chưa trả địa chỉ mặc định trong danh sách khách nên tạm lấy địa chỉ giao của đơn gần nhất.
+ * Số đơn (không tính đơn hủy), lần mua gần nhất, địa chỉ giao của đơn gần nhất, công nợ, vỏ và cọc
+ * đều do BE tính trong GET /sales/customers. BE chưa trả địa chỉ mặc định nên dùng địa chỉ đơn gần nhất.
  */
-async function liveCustomers() {
-  const [customers, orders, balances, bottles] = await Promise.all([api.get<CustomerResponse[]>('/sales/customers'), orderApi.list(), paymentApi.customers(), bottleLedgerApi.balances()])
-  const bottleBalances = new Map(bottles.map(balance => [balance.customerId, balance]))
-  const due = new Map(balances.map(balance => [balance.customerId, Number(balance.due)]))
-  const byCustomer = new Map<number, typeof orders>()
-  for (const order of orders)
-    if (order.customerId !== null && order.status !== 'CANCELLED') byCustomer.set(order.customerId, [...(byCustomer.get(order.customerId) ?? []), order])
-  return customers.map((customer) => {
-    const own = byCustomer.get(customer.id) ?? []
-    const lastOrderAt = latest(own.map((order) => order.createdAt))
-    const lastOrder = own.find((order) => order.createdAt === lastOrderAt)
-    return {
-      ...fromResponse(customer, own.length, due.get(customer.id) ?? 0),
-      lastOrderAt,
-      mainAddress: lastOrder?.deliveryAddress ?? undefined,
-      bottlesHeld: bottleBalances.get(customer.id)?.bottlesHeld ?? 0,
-      depositHeld: Number(bottleBalances.get(customer.id)?.depositHeld ?? 0),
-    }
-  })
-}
+export const fromSummary = (summary: LiveCustomerSummary): Customer => ({
+  ...fromResponse({ ...summary, customerType: summary.customerType as Customer['type'] | null }, summary.orderCount, Number(summary.due)),
+  lastOrderAt: summary.lastOrderAt ?? undefined,
+  mainAddress: summary.lastDeliveryAddress ?? undefined,
+  bottlesHeld: summary.bottlesHeld,
+  depositHeld: Number(summary.depositHeld),
+})
 
 const useLiveKey = () => {
   const staff = useStaff()
   return [staff?.name, staff?.role] as const
 }
 
-export function useCustomers() {
+/** Cột sắp xếp của bảng khách (khóa cột trong bảng) và cột tương ứng ở BE. */
+export const customerSortFields = {
+  name: 'NAME',
+  orders: 'ORDERS',
+  lastOrderAt: 'LAST_ORDER',
+  debt: 'DEBT',
+  bottlesHeld: 'BOTTLES',
+} as const satisfies Record<string, CustomerSortField>
+
+export type CustomerSortKey = keyof typeof customerSortFields
+export type CustomerSort = { key: CustomerSortKey; order: 'ascend' | 'descend' } | null
+
+/** Lựa chọn sắp xếp của thẻ khách trên điện thoại, ứng với cột sắp xếp gửi lên BE. */
+export type CustomerCardSort = 'recent' | 'idle' | 'name' | 'debt' | 'bottles'
+export const cardSortOrder: Record<CustomerCardSort, NonNullable<CustomerSort>> = {
+  recent: { key: 'lastOrderAt', order: 'descend' },
+  idle: { key: 'lastOrderAt', order: 'ascend' },
+  name: { key: 'name', order: 'ascend' },
+  debt: { key: 'debt', order: 'descend' },
+  bottles: { key: 'bottlesHeld', order: 'descend' },
+}
+
+/** `sort` rỗng: theo tên A → Z như trước khi có sắp xếp theo cột. */
+export type CustomerPageFilters = { query: string; idle: IdleFilter; sort?: CustomerSort }
+
+/** Một trang khách đã chuyển về kiểu giao diện; `totals` cộng trên mọi khách, không theo bộ lọc. */
+export type CustomerPageView = {
+  customers: Customer[]
+  total: number
+  totals: { customers: number; due: number; bottlesHeld: number; depositHeld: number }
+}
+
+const matchesCustomer = (customer: Customer, { query, idle }: CustomerPageFilters) =>
+  matchesIdle(customer.lastOrderAt, idle) &&
+  matchesSearch(query, `${customerCode(customer)} ${customer.name} ${customer.phone} ${customer.area} ${customer.mainAddress ?? ''}`, customer.phone)
+
+/** Cùng thứ tự với BE: "chưa mua lần nào" nhỏ nhất; trùng giá trị thì theo tên. */
+const compareBy: Record<CustomerSortKey, (a: Customer, b: Customer) => number> = {
+  name: (a, b) => a.name.localeCompare(b.name, 'vi', { sensitivity: 'base' }),
+  orders: (a, b) => a.orders - b.orders,
+  lastOrderAt: (a, b) => (a.lastOrderAt ?? '').localeCompare(b.lastOrderAt ?? ''),
+  debt: (a, b) => a.debt - b.debt,
+  bottlesHeld: (a, b) => a.bottlesHeld - b.bottlesHeld,
+}
+
+/** Phân trang khách mẫu trong trình duyệt theo đúng hình dạng và thứ tự trang BE trả về. */
+export function pageDemoCustomers(customers: Customer[], filters: CustomerPageFilters, page: number, size: number): CustomerPageView {
+  const sort = filters.sort
+  const byName = sortByName(customers.filter((customer) => matchesCustomer(customer, filters)))
+  const visible = sort
+    ? [...byName].sort((a, b) => (sort.order === 'descend' ? -1 : 1) * compareBy[sort.key](a, b))
+    : byName
+  const sum = (pick: (customer: Customer) => number) => customers.reduce((total, customer) => total + pick(customer), 0)
+  return {
+    customers: visible.slice(page * size, (page + 1) * size),
+    total: visible.length,
+    totals: {
+      customers: customers.length,
+      due: sum((customer) => customer.debt),
+      bottlesHeld: sum((customer) => customer.bottlesHeld),
+      depositHeld: sum((customer) => customer.depositHeld),
+    },
+  }
+}
+
+async function liveCustomerPage(filters: CustomerPageFilters, page: number, size: number): Promise<CustomerPageView> {
+  const sort = filters.sort
+    ? { field: customerSortFields[filters.sort.key], direction: filters.sort.order === 'descend' ? ('DESC' as const) : ('ASC' as const) }
+    : undefined
+  const result = await customerApi.page({ page, size, q: filters.query, idle: filters.idle, sort })
+  return {
+    customers: result.items.map(fromSummary),
+    total: result.total,
+    totals: {
+      customers: result.totals.customers,
+      due: Number(result.totals.due),
+      bottlesHeld: result.totals.bottlesHeld,
+      depositHeld: Number(result.totals.depositHeld),
+    },
+  }
+}
+
+/** Danh sách khách mẫu (chỉ bản dùng thử) để lọc/phân trang trong trình duyệt. */
+const useDemoCustomers = (enabled: boolean) => useQuery({ queryKey: customerKeys.all, queryFn: customerService.list, enabled })
+
+/**
+ * Trang Khách hàng: tài khoản thật tìm/lọc/phân trang ở BE (giữ trang cũ trong lúc tải trang mới);
+ * bản dùng thử lọc khách mẫu trong trình duyệt. Hai nguồn trả cùng một hình dạng.
+ */
+export function useCustomerPage(filters: CustomerPageFilters, page: number, size: number) {
   const demo = useIsDemo()
   const who = useLiveKey()
-  return useQuery({
-    queryKey: demo ? customerKeys.all : ['live', 'customers', ...who],
-    queryFn: demo ? customerService.list : liveCustomers,
-    select: sortByName,
+  const demoQuery = useDemoCustomers(demo)
+  const liveQuery = useQuery({
+    queryKey: ['live', 'customers', ...who, 'page', filters, page, size],
+    queryFn: () => liveCustomerPage(filters, page, size),
+    enabled: !demo,
+    placeholderData: keepPreviousData,
   })
+  const demoPage = useMemo(
+    () => (demoQuery.data ? pageDemoCustomers(demoQuery.data, filters, page, size) : undefined),
+    [demoQuery.data, filters, page, size],
+  )
+  if (!demo) return liveQuery
+  return { ...demoQuery, data: demoPage, isPlaceholderData: false }
+}
+
+/** Tìm khách theo tên, mã, số điện thoại (ô tìm kiếm chung, gợi ý khi nhận đơn). Từ khóa rỗng thì không tải. */
+export function useCustomerSearch(query: string, size = 8) {
+  const keyword = query.trim()
+  const page = useCustomerPage({ query: keyword, idle: 'all' }, 0, size)
+  return keyword ? page : { ...page, data: undefined, isPending: false, isError: false }
+}
+
+/** Một khách theo id (hồ sơ khách). */
+export function useCustomer(id: string | undefined) {
+  const demo = useIsDemo()
+  const who = useLiveKey()
+  const demoQuery = useDemoCustomers(demo && Boolean(id))
+  const liveQuery = useQuery({
+    queryKey: ['live', 'customers', ...who, 'summary', id],
+    queryFn: () => customerApi.summary(Number(id)).then(fromSummary),
+    enabled: !demo && Boolean(id),
+  })
+  if (!demo) return liveQuery
+  return { ...demoQuery, data: demoQuery.data?.find((customer) => customer.id === id) }
 }
 
 const useInvalidateCustomers = () => {

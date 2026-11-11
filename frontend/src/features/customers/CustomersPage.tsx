@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { filterOn } from '@/shared/utils/filterOn'
 import { useSearchParams } from 'react-router'
 import {
@@ -30,7 +30,7 @@ import { QueryError } from '@/shared/components/QueryError'
 import { useColumnSort } from '@/shared/components/sortableColumn'
 import { downloadExcel, type ExcelColumn } from '@/shared/utils/excel'
 import { currency } from '@/shared/utils/format'
-import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
+import { serverTablePagination, tablePagination, tableScrollHeight, type ServerPagination } from '@/shared/utils/table'
 import { useFeature } from '@/shared/features'
 import { LiveReceivables } from './LiveReceivables'
 import { LiveBottleOverview } from './LiveBottleOverview'
@@ -40,20 +40,26 @@ import { CustomerDrawer } from './components/CustomerDrawer'
 import { CustomerFormModal } from './components/CustomerFormModal'
 import { CustomerCards } from './components/CustomerCards'
 import { customerCode, type Customer } from './types'
-import { useActivateCustomer, useArchivedCustomers, useCustomers } from './useCustomers'
+import {
+  cardSortOrder,
+  useActivateCustomer,
+  useArchivedCustomers,
+  useCustomerPage,
+  type CustomerCardSort,
+  type CustomerSort,
+} from './useCustomers'
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import { matchesSearch } from '@/shared/utils/search'
 import { CustomerDebt } from './components/CustomerDebt'
-import { idleOptions, lastOrderLabel, matchesIdle, type IdleFilter } from './lastOrder'
+import { idleOptions, lastOrderLabel, type IdleFilter } from './lastOrder'
 
 export function CustomersPage() {
   const screens = Grid.useBreakpoint()
   const showArea = useFeature('customerProfileExtras')
   const showDebt = useFeature('customerDebt')
   const showBottles = useFeature('bottleLedger')
-  const customersQuery = useCustomers()
   const { message } = App.useApp()
   const canReactivate = useFeature('reactivate')
-  const [checkedIds, setCheckedIds] = useState<string[]>([])
   const [exporting, setExporting] = useState(false)
   // Khách đã lưu trữ chỉ xem được khi BE có API (bản dùng thử thì luôn có).
   const [view, setView] = useState<'active' | 'archived'>('active')
@@ -78,20 +84,38 @@ export function CustomersPage() {
   const [orderFor, setOrderFor] = useState<Customer | null>(null)
   // Lọc khách lâu chưa mua để gọi mời đặt nước.
   const [idle, setIdle] = useState<IdleFilter>('all')
-
-  const customers = customersQuery.data ?? []
-  const visible = customers.filter(
-    (customer) =>
-      matchesIdle(customer.lastOrderAt, idle) &&
-      matchesSearch(
-        query,
-        `${customerCode(customer)} ${customer.name} ${customer.phone} ${customer.area} ${customer.mainAddress ?? ''}`,
-        customer.phone,
-      ),
-  )
+  // Bảng sắp xếp theo cột (mặc định nhiều đơn trước), thẻ trên điện thoại có ô chọn riêng; BE sắp xếp trên toàn bộ khách.
+  const sort = useColumnSort<Customer>({ key: 'orders', order: 'descend' })
+  const [cardSort, setCardSort] = useState<CustomerCardSort>('recent')
+  const narrow = screens.md === false
+  const sortOrder = narrow ? cardSortOrder[cardSort] : (sort.state as CustomerSort)
+  // Tìm ở BE: chờ ngừng gõ rồi mới gửi.
+  const searched = useDebouncedValue(query)
+  const pageFilters = useMemo(() => ({ query: searched, idle, sort: sortOrder }), [searched, idle, sortOrder])
+  const filterKey = JSON.stringify(pageFilters)
+  // Đổi bộ lọc hoặc cách sắp xếp thì về trang đầu và bỏ các khách đã tích; cỡ trang giữ nguyên.
+  const [paging, setPaging] = useState({ filterKey, page: 0, size: tablePagination.defaultPageSize ?? 10 })
+  const page = paging.filterKey === filterKey ? paging.page : 0
+  const customersQuery = useCustomerPage(pageFilters, page, paging.size)
+  const visible = customersQuery.data?.customers ?? []
+  const totals = customersQuery.data?.totals
+  const server: ServerPagination = {
+    page,
+    size: paging.size,
+    total: customersQuery.data?.total ?? 0,
+    onChange: (next, size) => setPaging({ filterKey, page: next, size }),
+  }
   const filtered = Boolean(query.trim()) || idle !== 'all'
-  // Chỉ tính các khách còn hiện theo ô tìm kiếm.
-  const checked = visible.filter((customer) => checkedIds.includes(customer.id))
+  // Khách đã tích được giữ khi lật trang (lưu cả hồ sơ để xuất Excel), xóa khi đổi bộ lọc.
+  const [checkedState, setCheckedState] = useState<{ filterKey: string; customers: Customer[] }>({ filterKey, customers: [] })
+  const checked = checkedState.filterKey === filterKey ? checkedState.customers : []
+  const setCheckedIds = (ids: string[]) => {
+    const onPage = new Set(visible.map((customer) => customer.id))
+    setCheckedState({
+      filterKey,
+      customers: [...checked.filter((customer) => !onPage.has(customer.id)), ...visible.filter((customer) => ids.includes(customer.id))],
+    })
+  }
   const exportChecked = async () => {
     setExporting(true)
     const columns: ExcelColumn<Customer>[] = [
@@ -124,9 +148,9 @@ export function CustomersPage() {
       setExporting(false)
     }
   }
-  const totalBottles = customers.reduce((sum, customer) => sum + customer.bottlesHeld, 0)
-  const totalDeposit = customers.reduce((sum, customer) => sum + customer.depositHeld, 0)
-  const totalDebt = customers.reduce((sum, customer) => sum + customer.debt, 0)
+  const totalBottles = totals?.bottlesHeld ?? 0
+  const totalDeposit = totals?.depositHeld ?? 0
+  const totalDebt = totals?.due ?? 0
 
   const archived = (archivedQuery.data ?? []).filter((customer) =>
     matchesSearch(query, `${customerCode(customer)} ${customer.name} ${customer.phone} ${customer.area}`, customer.phone),
@@ -174,10 +198,9 @@ export function CustomersPage() {
     },
   ]
 
-  const sort = useColumnSort<Customer>({ key: 'orders', order: 'descend' })
   const unsupported = (title: string) => <Statistic title={title} valueRender={() => <Unsupported />} />
   const stats = [
-    { key: 'count', node: <Statistic title="Khách hàng" value={customers.length} /> },
+    { key: 'count', node: <Statistic title="Khách hàng" value={totals?.customers ?? 0} /> },
     {
       key: 'debt',
       node: showDebt ? (
@@ -337,7 +360,7 @@ export function CustomersPage() {
                 value={view}
                 onChange={setView}
                 options={[
-                  { value: 'active', label: <CountLabel label="Đang hoạt động" count={customers.length} tone="success" /> },
+                  { value: 'active', label: <CountLabel label="Đang hoạt động" count={totals?.customers ?? 0} tone="success" /> },
                   {
                     value: 'archived',
                     label: canReactivate ? (
@@ -388,35 +411,37 @@ export function CustomersPage() {
                   scroll={{ x: 670 }}
                 />
               )
-            ) : screens.md === false ? (
+            ) : narrow ? (
               <CustomerCards
-                key={query + idle}
                 customers={visible}
                 loading={customersQuery.isPending}
                 emptyText={filtered ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.'}
                 onProfile={setProfileId}
                 onCreateOrder={setOrderFor}
+                sort={cardSort}
+                onSortChange={setCardSort}
+                server={server}
               />
             ) : (
               <>
-                <BulkBar count={checked.length} noun="khách" onClear={() => setCheckedIds([])}>
+                <BulkBar count={checked.length} noun="khách" onClear={() => setCheckedState({ filterKey, customers: [] })}>
                   <Button icon={<FileSpreadsheet size={16} />} loading={exporting} onClick={() => void exportChecked()}>
                     Xuất Excel
                   </Button>
                 </BulkBar>
                 <Table<Customer>
-                  key={query + idle}
                   className="af-data-table af-table-flush"
                   size="middle"
                   rowKey="id"
                   columns={columns}
                   dataSource={visible}
                   loading={customersQuery.isPending}
-                  pagination={tablePagination}
+                  pagination={serverTablePagination(server)}
                   locale={{ emptyText: filtered ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.' }}
                   scroll={{ x: 1074, y: tableScrollHeight }}
                   rowSelection={{
                     selectedRowKeys: checked.map((customer) => customer.id),
+                    preserveSelectedRowKeys: true,
                     onChange: (keys) => setCheckedIds(keys.map(String)),
                     fixed: 'left',
                     columnWidth: 44,

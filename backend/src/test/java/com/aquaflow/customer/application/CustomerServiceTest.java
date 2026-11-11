@@ -13,6 +13,18 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.aquaflow.customer.api.dto.CustomerPageResponse;
+import com.aquaflow.customer.api.dto.CustomerSummary;
+import com.aquaflow.customer.repository.CustomerQueryRepository;
+import com.aquaflow.shared.api.BadRequestException;
+import com.aquaflow.shared.api.PageRequestParams;
+import com.aquaflow.shared.api.SearchKeyword;
+
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,6 +45,9 @@ class CustomerServiceTest {
 
     @Mock
     private CustomerAuditService customerAuditService;
+
+    @Mock
+    private CustomerQueryRepository customerQueryRepository;
 
     @InjectMocks
     private CustomerService customerService;
@@ -78,19 +93,43 @@ class CustomerServiceTest {
     }
 
     @Test
-    void findAllReturnsCustomerResponses() {
-        Customer customer =
-                customer(1L, "Nguyen Van An", "0901234567");
+    void searchPassesKeywordIdleFilterAndTotals() {
+        ReflectionTestUtils.setField(customerService, "clock",
+                Clock.fixed(Instant.parse("2026-11-10T20:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh")));
+        CustomerSummary summary = new CustomerSummary(1L, "Nguyen Van An", "0901234567", null, "Cá nhân", null, null,
+                3, null, null, BigDecimal.ZERO, 0, BigDecimal.ZERO);
+        CustomerPageResponse.Totals totals = new CustomerPageResponse.Totals(1, BigDecimal.TEN, 2, BigDecimal.ONE);
+        when(customerQueryRepository.search(any(), any(), any(), any()))
+                .thenReturn(new CustomerQueryRepository.SummaryPage(List.of(summary), 21));
+        when(customerQueryRepository.totals()).thenReturn(totals);
 
-        when(customerRepository.findAllByActiveTrue())
-                .thenReturn(List.of(customer));
+        CustomerPageResponse page = customerService.search(" An ", "14", null, new PageRequestParams(1, 20));
 
-        List<CustomerResponse> responses = customerService.findAll();
+        assertThat(page.items()).containsExactly(summary);
+        assertThat(page.total()).isEqualTo(21);
+        assertThat(page.totalPages()).isEqualTo(2);
+        assertThat(page.totals()).isEqualTo(totals);
+        ArgumentCaptor<SearchKeyword> keyword = ArgumentCaptor.forClass(SearchKeyword.class);
+        ArgumentCaptor<CustomerQueryRepository.IdleFilter> idle = ArgumentCaptor.forClass(CustomerQueryRepository.IdleFilter.class);
+        verify(customerQueryRepository).search(keyword.capture(), idle.capture(), eq(CustomerQueryRepository.Sort.DEFAULT), any());
+        assertThat(keyword.getValue().text()).isEqualTo("An");
+        // 03:00 ngày 11/11 giờ Việt Nam, dù UTC vẫn là ngày 10/11.
+        assertThat(idle.getValue()).isEqualTo(
+                new CustomerQueryRepository.IdleFilter.MoreThanDays(14, LocalDate.of(2026, 11, 11)));
+    }
 
-        assertThat(responses).hasSize(1);
-        assertThat(responses.get(0).id()).isEqualTo(1L);
-        assertThat(responses.get(0).fullName())
-                .isEqualTo("Nguyen Van An");
+    @Test
+    void searchAcceptsAllAndNeverAndRejectsOtherIdleValues() {
+        when(customerQueryRepository.search(any(), any(), any(), any()))
+                .thenReturn(new CustomerQueryRepository.SummaryPage(List.of(), 0));
+
+        customerService.search(null, "all", null, new PageRequestParams(0, 20));
+        customerService.search(null, "never", null, new PageRequestParams(0, 20));
+        verify(customerQueryRepository).search(null, null, CustomerQueryRepository.Sort.DEFAULT, new PageRequestParams(0, 20));
+        verify(customerQueryRepository).search(null, new CustomerQueryRepository.IdleFilter.Never(), CustomerQueryRepository.Sort.DEFAULT, new PageRequestParams(0, 20));
+
+        assertThatThrownBy(() -> customerService.search(null, "3", null, new PageRequestParams(0, 20)))
+                .isInstanceOf(BadRequestException.class);
     }
 
     @Test

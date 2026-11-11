@@ -1,5 +1,17 @@
 import type { TablePaginationConfig } from 'antd'
 
+/** Danh sách đã được BE phân trang: bảng chỉ hiện trang hiện tại và báo đổi trang ra ngoài. `page` tính từ 0. */
+export type ServerPagination = { page: number; size: number; total: number; onChange: (page: number, size: number) => void }
+
+/** Cấu hình AntD Table cho danh sách BE phân trang. */
+export const serverTablePagination = ({ page, size, total, onChange }: ServerPagination): TablePaginationConfig => ({
+  ...tablePagination,
+  current: page + 1,
+  pageSize: size,
+  total,
+  onChange: (next, nextSize) => onChange(nextSize !== size ? 0 : next - 1, nextSize),
+})
+
 export const tablePagination: TablePaginationConfig = {
   defaultPageSize: 10,
   pageSizeOptions: [10, 20, 50],
