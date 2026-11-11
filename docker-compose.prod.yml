@@ -22,6 +22,9 @@ services:
       DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
       APP_JWT_SECRET: ${APP_JWT_SECRET:?Set APP_JWT_SECRET}
+      # Cookie refresh token chỉ gửi qua HTTPS. Chạy prod bằng HTTP trơn (không qua HTTPS) thì phải đặt false,
+      # nếu không người dùng bị đăng xuất sau mỗi lần access token hết hạn (15 phút).
+      REFRESH_COOKIE_SECURE: ${REFRESH_COOKIE_SECURE:-true}
       SPRING_PROFILES_ACTIVE: prod
       PASSWORD_RESET_ENABLED: ${PASSWORD_RESET_ENABLED:-false}
       FRONTEND_URL: ${FRONTEND_URL:-}

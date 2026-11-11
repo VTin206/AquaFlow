@@ -64,4 +64,6 @@ export const authService = {
     }
   },
   me: () => api.get<CurrentUser>('/auth/me'),
+  /** Thu hồi refresh token của phiên này trên máy chủ và xóa cookie. */
+  logout: () => api.post<void>('/auth/logout', undefined, { withCredentials: true }),
 }

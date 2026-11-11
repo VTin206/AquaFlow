@@ -1,4 +1,4 @@
-import axios, { AxiosError, type AxiosRequestConfig } from 'axios'
+import axios, { AxiosError, type AxiosRequestConfig, type InternalAxiosRequestConfig } from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
 const TOKEN_KEY = 'aquaflow.auth.token'
@@ -46,8 +46,12 @@ const writeStorage = (key: string, value: string | null) => {
   }
 }
 
+/** Các API tự xác thực bằng mật khẩu hoặc cookie refresh: không gắn access token, không tự làm mới khi bị 401. */
+const SESSION_PATHS = ['/auth/login', '/auth/refresh', '/auth/logout']
+const isSessionCall = (url?: string) => SESSION_PATHS.some((path) => url?.startsWith(path))
+
 httpClient.interceptors.request.use((config) => {
-  const token = readStorage(TOKEN_KEY)
+  const token = isSessionCall(config.url) ? null : readStorage(TOKEN_KEY)
   if (token) config.headers.Authorization = `Bearer ${token}`
   else delete config.headers.Authorization
   return config
@@ -55,14 +59,79 @@ httpClient.interceptors.request.use((config) => {
 
 let onUnauthorized: (() => void) | null = null
 
-/** Gọi khi request có JWT bị backend trả 401 (token hết hạn, tài khoản bị khóa). */
+/** Gọi khi phiên đã kết thúc: không làm mới được access token (refresh token hết hạn, bị thu hồi, tài khoản bị khóa). */
 export const setUnauthorizedHandler = (handler: (() => void) | null) => {
   onUnauthorized = handler
 }
 
-httpClient.interceptors.response.use(undefined, (error) => {
-  if (axios.isAxiosError(error) && error.response?.status === 401 && error.config?.headers?.Authorization) onUnauthorized?.()
-  return Promise.reject(error)
+/** Phản hồi /auth/refresh: cùng dạng với đăng nhập, kèm thông tin người dùng mới nhất. */
+export type RefreshedSession = {
+  accessToken: string
+  expiresIn: number
+  user?: { fullName: string; email: string; phone?: string | null; role: string }
+}
+let onRefreshed: ((session: RefreshedSession) => void) | null = null
+
+/** Báo cho AuthProvider khi có access token mới để cập nhật hạn phiên. */
+export const setSessionRefreshedHandler = (handler: ((session: RefreshedSession) => void) | null) => {
+  onRefreshed = handler
+}
+
+/** `ended`: phải đăng nhập lại. `unavailable`: lỗi mạng/máy chủ, giữ phiên để thử lại sau. */
+export type RefreshResult = { token: string } | 'ended' | 'unavailable'
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+/** Chờ tab khác đang làm mới cùng lúc ghi xong token mới trước khi kết luận phiên đã hết. */
+export const REFRESH_RACE_WAIT_MS = 800
+
+async function requestRefresh(): Promise<RefreshResult> {
+  const before = readStorage(TOKEN_KEY)
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      // Cookie refresh HttpOnly đi kèm tự động (cùng origin qua proxy /api).
+      const { data } = await httpClient.post<RefreshedSession>('/auth/refresh', undefined, { withCredentials: true })
+      writeStorage(TOKEN_KEY, data.accessToken)
+      onRefreshed?.(data)
+      return { token: data.accessToken }
+    } catch (error) {
+      if (!axios.isAxiosError(error) || error.response?.status !== 401) return 'unavailable'
+      // Tab khác có thể vừa đổi token trước: dùng token nó lưu, hoặc thử lại với cookie mới nó nhận.
+      await wait(REFRESH_RACE_WAIT_MS)
+      const latest = readStorage(TOKEN_KEY)
+      if (latest && latest !== before) return { token: latest }
+    }
+  }
+  return 'ended'
+}
+
+let refreshing: Promise<RefreshResult> | null = null
+
+/** Xin access token mới bằng cookie refresh. Nhiều request cùng bị 401 dùng chung một lần làm mới. */
+export function refreshAccessToken(): Promise<RefreshResult> {
+  refreshing ??= requestRefresh().finally(() => {
+    refreshing = null
+  })
+  return refreshing
+}
+
+type RetriableConfig = InternalAxiosRequestConfig & { _afRetried?: boolean }
+
+// Access token hết hạn (401): làm mới một lần rồi gửi lại request; không làm mới được mới coi là hết phiên.
+httpClient.interceptors.response.use(undefined, async (error) => {
+  if (!axios.isAxiosError(error) || error.response?.status !== 401) return Promise.reject(error)
+  const config = error.config as RetriableConfig | undefined
+  if (!config?.headers?.Authorization || config._afRetried || isSessionCall(config.url)) {
+    if (config?.headers?.Authorization && config._afRetried) onUnauthorized?.()
+    return Promise.reject(error)
+  }
+  const result = await refreshAccessToken()
+  if (result === 'unavailable') return Promise.reject(error)
+  if (result === 'ended') {
+    onUnauthorized?.()
+    return Promise.reject(error)
+  }
+  config._afRetried = true
+  return httpClient.request(config)
 })
 
 const defaultMessage = (status: number) => {
