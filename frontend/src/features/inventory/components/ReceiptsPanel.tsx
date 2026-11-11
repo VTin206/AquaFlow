@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Unsupported } from '@/shared/components/Unsupported'
 import { App, Button, Modal, Popconfirm, Segmented, Space, Table, Tag, Tooltip, Typography } from 'antd'
 import { Pencil } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
@@ -7,14 +6,7 @@ import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { tablePagination } from '@/shared/utils/table'
 import { isoToVnDate } from '../expiry'
-import {
-  useInventoryCaps,
-  useReceiptAction,
-  useReceiptViews,
-  type ReceiptLineView,
-  type ReceiptStatus,
-  type ReceiptView,
-} from '../useInventory'
+import { useReceiptAction, useReceiptViews, type ReceiptLineView, type ReceiptStatus, type ReceiptView } from '../useInventory'
 import { ReceiptResult } from './ReceiveStockModal'
 import { modalWidth } from '@/shared/utils/modal'
 
@@ -29,7 +21,6 @@ const statusTags: Record<ReceiptStatus, { color: string; label: string }> = {
 /** Danh sách phiếu nhập; mở rộng một dòng để xem từng lô đã kiểm nhận. Phiếu nháp được sửa, nhập kho hoặc hủy tại đây. */
 export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => void }) {
   const { message } = App.useApp()
-  const caps = useInventoryCaps()
   const receiptsQuery = useReceiptViews()
   const action = useReceiptAction()
   const [filter, setFilter] = useState<ReceiptFilter>('all')
@@ -136,7 +127,7 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
             title: 'Người nhận',
             dataIndex: 'receiver',
             width: 105,
-            render: (receiver?: string) => (caps.receiver ? receiver : <Unsupported />),
+            render: (receiver?: string) => receiver ?? '—',
           },
           {
             title: 'Thao tác',
