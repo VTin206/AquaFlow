@@ -42,8 +42,6 @@ export type DeliveryStop = {
   note?: string | null
   latestAttempt: DeliveryAttempt | null
   items: { productId: number; productName: string; unit: string; lotCode: string; quantity: number }[]
-  /** Chỉ dữ liệu mẫu: mã đơn dạng chữ, vì `orderId` của API là số. */
-  orderRef?: string
 }
 export type AvailableOrder = {
   id: number
@@ -52,8 +50,6 @@ export type AvailableOrder = {
   deliveryAddress: string | null
   deliveryFailed: boolean
   redeliveryEligible: boolean
-  /** Chỉ dữ liệu mẫu: mã đơn dạng chữ. */
-  orderRef?: string
 }
 export type SettlementInput = {
   cashReported: number
@@ -74,8 +70,6 @@ export type DeliveryTrip = {
   createdBy: number
   orders: DeliveryStop[]
   settlement: (SettlementInput & { id: number; receivedBy: number; handedOverAt: string }) | null
-  /** Chỉ dữ liệu mẫu: mã chuyến dạng chữ. */
-  tripRef?: string
 }
 export type ResultInput = { outcome: 'SUCCESS' | 'FAILED'; recipientName?: string; failureReason?: string; note?: string }
 export const tripLabels = { CREATED: 'Chờ khởi hành', IN_PROGRESS: 'Đang giao', COMPLETED: 'Đã đối soát', CANCELLED: 'Đã hủy' }

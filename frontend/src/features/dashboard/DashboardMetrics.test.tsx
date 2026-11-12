@@ -8,7 +8,7 @@ import { DashboardMetrics } from './DashboardMetrics'
 import { reportApi, type LiveReport } from '@/features/reports/reportApi'
 
 const auth = vi.hoisted(() => ({ role: 'ADMIN' }))
-vi.mock('@/features/auth/useStaff', () => ({ useStaff: () => ({ role: auth.role, isDemo: false }) }))
+vi.mock('@/features/auth/useStaff', () => ({ useStaff: () => ({ role: auth.role }) }))
 vi.mock('@/features/reports/reportApi', () => ({ reportApi: { summary: vi.fn(), section: vi.fn() } }))
 vi.mock('@/shared/components/BarChart', () => ({ BarChart: () => <div>Biểu đồ doanh thu</div> }))
 vi.mock('antd', async original => {

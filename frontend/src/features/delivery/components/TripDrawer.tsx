@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Collapse, Descriptions, Dropdown, Modal, Popconfirm, Skeleton, Tag, type MenuProps } from 'antd'
 import { Ellipsis, MapPin, Phone, Truck } from 'lucide-react'
@@ -9,7 +9,6 @@ import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
 import { currency } from '@/shared/utils/format'
 import { dueTone } from '@/shared/utils/money'
 import { useStaff } from '@/features/auth/useStaff'
-import { AdvanceStatusButton } from '@/features/orders/components/AdvanceStatusButton'
 import { LateTag } from '@/features/orders/components/LateTag'
 import { OrderDetails } from '@/features/orders/components/OrderDetails'
 import { OrderFocusBanner } from '@/features/orders/components/OrderSheet'
@@ -43,7 +42,7 @@ export function TripDrawer({ tripId, onClose }: { tripId: number; onClose: () =>
   const { message } = App.useApp()
   const client = useQueryClient()
   const backend = useTripBackend()
-  const { ops, demo } = backend
+  const { ops } = backend
   const detail = backend.useDetail(tripId)
   const collections = backend.useCollections(tripId)
   const drivers = backend.useDrivers(canManage)
@@ -72,12 +71,6 @@ export function TripDrawer({ tripId, onClose }: { tripId: number; onClose: () =>
   })
   const execute = (operation: () => Promise<unknown>) => change.mutate(operation)
   const trip = detail.data
-  const gone = demo && detail.isError
-
-  // Dữ liệu mẫu xóa hẳn chuyến khi hủy hoặc bỏ hết đơn.
-  useEffect(() => {
-    if (gone) onClose()
-  }, [gone, onClose])
 
   if (!trip) {
     return (
@@ -119,8 +112,7 @@ export function TripDrawer({ tripId, onClose }: { tripId: number; onClose: () =>
       ? [
           {
             key: 'driver',
-            label: `${trip.driverId ? 'Đổi tài xế' : 'Phân tài xế'}${ops.assignDriver ? '' : ' (chưa hỗ trợ)'}`,
-            disabled: !ops.assignDriver,
+            label: trip.driverId ? 'Đổi tài xế' : 'Phân tài xế',
             onClick: () => setAction({ kind: 'driver', tripId: trip.id }),
           },
         ]
@@ -134,7 +126,7 @@ export function TripDrawer({ tripId, onClose }: { tripId: number; onClose: () =>
         Thêm đơn
       </Button>
     ) : next === 'assignDriver' ? (
-      <Button type="primary" disabled={change.isPending || !ops.assignDriver} onClick={() => setAction({ kind: 'driver', tripId: trip.id })}>
+      <Button type="primary" disabled={change.isPending} onClick={() => setAction({ kind: 'driver', tripId: trip.id })}>
         Phân tài xế
       </Button>
     ) : next === 'dispatch' ? (
@@ -293,26 +285,17 @@ export function TripDrawer({ tripId, onClose }: { tripId: number; onClose: () =>
                           </Button>
                         </Popconfirm>
                       )}
-                      {canRecord &&
-                        (ops.recordResult ? (
-                          <Button
-                            size="small"
-                            type={stop === firstPending ? 'primary' : 'default'}
-                            disabled={change.isPending}
-                            onClick={() => setAction({ kind: 'result', tripId: trip.id, order: stop })}
-                          >
-                            Ghi kết quả
-                          </Button>
-                        ) : (
-                          order && <AdvanceStatusButton order={order} />
-                        ))}
-                      {demo ? (
-                        <Button size="small" disabled>
-                          Vỏ của đơn (chưa hỗ trợ)
+                      {canRecord && (
+                        <Button
+                          size="small"
+                          type={stop === firstPending ? 'primary' : 'default'}
+                          disabled={change.isPending}
+                          onClick={() => setAction({ kind: 'result', tripId: trip.id, order: stop })}
+                        >
+                          Ghi kết quả
                         </Button>
-                      ) : (
-                        <DeliveryBottlesButton assignmentId={stop.id} orderCode={stop.orderCode} />
                       )}
+                      <DeliveryBottlesButton assignmentId={stop.id} orderCode={stop.orderCode} />
                     </div>
                   </div>
                 </div>
@@ -344,7 +327,7 @@ export function TripDrawer({ tripId, onClose }: { tripId: number; onClose: () =>
                     ))}
                   </ul>
                 ) : (
-                  <p className="af-order-more-empty">{demo ? 'Chi tiết từng khoản thu chưa hỗ trợ trong bản dùng thử.' : 'Tài xế chưa ghi khoản thu nào.'}</p>
+                  <p className="af-order-more-empty">Tài xế chưa ghi khoản thu nào.</p>
                 ),
               },
             ]}
@@ -357,7 +340,7 @@ export function TripDrawer({ tripId, onClose }: { tripId: number; onClose: () =>
           key={`${action.kind}-${action.kind === 'result' ? action.order.id : ''}`}
           action={action}
           expected={
-            action.kind === 'settle' && collections.data && (demo || collections.data.receipts.length)
+            action.kind === 'settle' && collections.data && collections.data.receipts.length
               ? { cash: collections.data.cashExpected, bottles: collections.data.bottlesExpected }
               : undefined
           }
@@ -373,14 +356,14 @@ export function TripDrawer({ tripId, onClose }: { tripId: number; onClose: () =>
           onSubmit={async (values) => {
             try {
               await change.mutateAsync(async () => {
-                if (action.kind === 'driver') return ops.assignDriver?.(trip, values.driverId!)
+                if (action.kind === 'driver') return ops.assignDriver(trip, values.driverId!)
                 if (action.kind === 'add') {
                   const selected = available.data?.find((order) => order.id === values.orderId)
                   if (!selected) throw new Error('Đơn không còn trong danh sách chờ xếp chuyến.')
                   return ops.addOrder(trip, selected)
                 }
                 if (action.kind === 'result') {
-                  return ops.recordResult?.(action.order, {
+                  return ops.recordResult(action.order, {
                     outcome: values.outcome!,
                     recipientName: values.outcome === 'SUCCESS' ? values.recipientName : undefined,
                     failureReason: values.outcome === 'FAILED' ? values.failureReason : undefined,

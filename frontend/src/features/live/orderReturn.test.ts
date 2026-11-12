@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { catalogFromApi, demoCatalog } from '@/features/inventory/catalogGroups'
+import { catalogFromApi } from '@/features/inventory/catalogGroups'
 import { describeActivity, refundAfterReturn, returnValue } from './orderReturnApi'
 
 describe('nhận trả hàng', () => {
@@ -42,10 +42,5 @@ describe('loại nước và dung tích', () => {
       capacity: '390–520ml',
       volumeMl: 500,
     })
-  })
-
-  it('bản dùng thử lưu đúng hai ô trên form, bỏ trống là chưa phân loại', () => {
-    expect(demoCatalog('Nước khoáng 1,5L', 'Thùng')).toMatchObject({ category: 'Chưa phân loại', capacity: 'Chưa có dung tích' })
-    expect(demoCatalog('Bình', 'Bình', 'MINERAL', 19000)).toMatchObject({ category: 'Nước khoáng', capacity: '18,5–20L' })
   })
 })

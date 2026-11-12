@@ -4,11 +4,11 @@ import { useAuth } from '@/features/auth/useAuth'
 import { useStaff } from '@/features/auth/useStaff'
 import { orderDeliveryHistory } from './orderDeliveryApi'
 
-/** Các chuyến của đơn; chỉ nhân viên văn phòng trên tài khoản thật mới được gọi. */
+/** Các chuyến của đơn; chỉ nhân viên văn phòng mới được gọi. */
 export function useOrderDeliveryHistory(orderId: number) {
   const { user } = useAuth()
   const staff = useStaff()
-  const allowed = isStaff(user) && !user?.isDemo && (staff?.role === 'ADMIN' || staff?.role === 'SALES_STAFF')
+  const allowed = isStaff(user) && (staff?.role === 'ADMIN' || staff?.role === 'SALES_STAFF')
   const query = useQuery({
     queryKey: ['live', 'order-delivery-history', user?.email, staff?.role, orderId],
     queryFn: () => orderDeliveryHistory(orderId),

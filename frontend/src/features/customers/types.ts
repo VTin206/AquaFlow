@@ -36,46 +36,16 @@ export type Customer = CustomerRecord & {
 
 export type CustomerDraft = Pick<CustomerRecord, 'name' | 'phone' | 'type' | 'area' | 'addresses' | 'note'>
 
-export type BottleEntryKind = 'Số dư đầu kỳ' | 'Giao kèm đơn' | 'Thu vỏ' | 'Phí thu hồi' | 'Báo mất/vỡ' | 'Thu cọc' | 'Hoàn cọc'
-
-/** Một dòng sổ vỏ. `bottles` và `deposit` là thay đổi có dấu của số dư khách đang giữ. */
-export type BottleEntry = {
-  id: string
-  customerId: string
-  at: string
-  kind: BottleEntryKind
-  bottles: number
-  deposit: number
-  orderId?: string
-  note?: string
-  /** Nhân viên ghi sổ. */
-  by?: string
-}
-
-export type BottleAction = {
-  kind: 'Giao vỏ' | 'Thu vỏ' | 'Báo mất/vỡ' | 'Thu cọc' | 'Hoàn cọc'
-  bottles?: number
-  deposit?: number
-  note?: string
-  /** Thu vỏ: cửa hàng đến thu hồi tận nơi (có thể tính phí). */
-  pickup?: boolean
-}
-
 export { DEPOSIT_PER_BOTTLE }
 
 /** Mã hiển thị: bản dùng thử đã có dạng KH-001, tài khoản thật là số. */
 export const customerCode = (customer: Pick<Customer, 'id'>) =>
   customer.id.startsWith('KH-') ? customer.id : `KH-${customer.id.padStart(3, '0')}`
 
-export const normalizePhone = (phone: string) => phone.replace(/\D/g, '')
-
 export const initialsOf = (name: string) => {
   const words = name.trim().split(/\s+/)
   return (words.length > 1 ? words.at(-2)![0] + words.at(-1)![0] : words[0].slice(0, 2)).toUpperCase()
 }
-
-export const guessCustomerType = (name: string): CustomerType =>
-  /^(công ty|văn phòng|cửa hàng|nhà hàng|quán|tiệm|trung tâm|trường)/i.test(name.trim()) ? 'Doanh nghiệp' : 'Cá nhân'
 
 /** Phần cọc vượt quá số vỏ khách còn giữ, có thể hoàn lại. */
 export const refundableOf = (customer: Pick<Customer, 'bottlesHeld' | 'depositHeld'>) =>

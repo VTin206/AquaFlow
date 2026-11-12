@@ -2,9 +2,9 @@ import type { Dayjs } from 'dayjs'
 import type { OrderInput } from '@/features/live/orderApi'
 import type { Customer } from '@/features/customers/types'
 import { matchesSearch, phoneDigits } from '@/shared/utils/search'
-import { createdAtOf, walkInName, type Order, type OrderDraft } from './types'
+import { createdAtOf, walkInName, type Order } from './types'
 
-/** Giá trị của form nhận đơn, dùng chung cho bản dùng thử và tài khoản thật. */
+/** Giá trị của form nhận đơn. */
 export type IntakeLine = { productId?: string; quantity?: number }
 export type IntakeValues = {
   phone?: string
@@ -95,17 +95,3 @@ export function toLiveOrderInput(values: IntakeValues, customerId: string | unde
     note: text(values.note),
   }
 }
-
-/** Dữ liệu mẫu tính phí giao thay cho hệ thống, như backend khi tạo đơn. */
-export const toDemoOrderDraft = (values: IntakeValues, deliveryFee: number): OrderDraft => ({
-  customer: values.customer,
-  phone: values.phone,
-  address: values.address,
-  area: values.area,
-  method: values.method,
-  channel: values.channel,
-  lines: submittedLines(values),
-  deliveryFee,
-  appointment: values.appointment?.toISOString(),
-  note: values.note,
-})

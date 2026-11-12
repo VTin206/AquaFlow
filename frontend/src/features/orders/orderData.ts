@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useIsDemo } from '@/shared/features'
 import { useStaff } from '@/features/auth/useStaff'
 import { catalogApi, type CatalogProduct } from '@/features/live/catalogApi'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
@@ -14,15 +13,14 @@ import {
   type OrderPageQuery,
 } from '@/features/live/orderApi'
 import { matchesSearch } from '@/shared/utils/search'
-import { amountDue, createdAtOf, walkInName, type Order, type OrderStatus } from './types'
-import { useAdvanceOrderStatus, useOrders } from './useOrders'
+import { amountDue, walkInName, type Order, type OrderStatus } from './types'
 import type { OrderBalance } from '@/features/live/paymentApi'
 import { inOrderGroup, statusesInGroup, type OrderGroupKey } from './orderGroups'
 import { orderStatuses } from './orderStatus'
 import { ALL_ORDERS } from './useOrderFilters'
 
 /**
- * Danh sách đơn cho trang Đơn hàng: bản dùng thử đọc mock, tài khoản thật đọc OrderController
+ * Danh sách đơn cho trang Đơn hàng: đọc OrderController
  * và chuyển về kiểu `Order` của giao diện. Lịch sử giao và Dispatch tải riêng trong chi tiết đơn.
  */
 const statusOf: Record<LiveOrder['status'], OrderStatus> = {
@@ -96,7 +94,7 @@ const statusOfLabel = Object.fromEntries(Object.entries(statusOf).map(([live, la
 /** Bộ lọc trang Đơn hàng sau khi đã chọn nhóm (không còn nhóm rỗng). */
 export type OrderListFilters = { query: string; group: OrderGroupKey; status: string; method: string; payment: string }
 
-/** Cùng quy tắc với BE; dùng cho bản dùng thử, nơi đơn mẫu được lọc ngay trong trình duyệt. */
+/** Cùng quy tắc với BE; dùng cho các nhóm đơn được lọc ngay trong trình duyệt. */
 export function matchesOrderFilters(order: Order, { query, group, status, method, payment }: OrderListFilters) {
   return (
     inOrderGroup(group, order.status) &&
@@ -140,32 +138,24 @@ export type OrderPageView = { orders: Order[]; total: number; serverPaged: boole
  */
 export const isServerPagedGroup = (group: OrderGroupKey) => group === 'done' || group === 'all'
 
-const countByStatus = (orders: Order[]) =>
-  orders.reduce<Partial<Record<OrderStatus, number>>>((counts, order) => ({ ...counts, [order.status]: (counts[order.status] ?? 0) + 1 }), {})
 
 const toStatusCounts = (counts: OrderPage['statusCounts']) =>
   Object.fromEntries(
     Object.entries(counts).map(([live, count]) => [statusOf[live as LiveOrder['status']], count]),
   ) as Partial<Record<OrderStatus, number>>
 
-type StatusCounts = Partial<Record<OrderStatus, number>>
 
 /**
  * Số đơn theo trạng thái trên mọi đơn, cho nhãn nhóm và ô chọn trạng thái của trang Đơn hàng.
- * Tài khoản thật lấy từ BE (một trang 1 đơn kèm `statusCounts`); bản dùng thử đếm đơn mẫu.
+ * Lấy từ BE (một trang 1 đơn kèm `statusCounts`).
  */
 export function useOrderStatusCounts() {
-  const demo = useIsDemo()
   const staff = useStaff()
-  const demoOrders = useOrders(demo)
-  const live = useQuery({
+  return useQuery({
     queryKey: ['live', 'orders-page', staff?.name, staff?.role, 'status-counts'],
     queryFn: () => orderApi.page({ page: 0, size: 1 }).then((result) => toStatusCounts(result.statusCounts)),
-    enabled: !demo,
     refetchInterval: 30_000,
   })
-  const demoCounts = useMemo(() => demoOrders.data && countByStatus(demoOrders.data), [demoOrders.data])
-  return demo ? { ...demoOrders, data: demoCounts as StatusCounts | undefined } : live
 }
 
 /** Một trang đơn từ BE; `null` khi bộ lọc chắc chắn rỗng. */
@@ -184,13 +174,12 @@ export type OrderPageResult = {
 }
 
 /**
- * Danh sách trên trang Đơn hàng. Tài khoản thật: nhóm lịch sử lọc/tìm/phân trang ở BE (giữ trang cũ trong lúc
- * tải trang mới); nhóm việc cần làm lọc trên tập đơn đang xử lý. Bản dùng thử lọc toàn bộ đơn mẫu trong trình duyệt.
+ * Danh sách trên trang Đơn hàng: nhóm lịch sử lọc/tìm/phân trang ở BE (giữ trang cũ trong lúc
+ * tải trang mới); nhóm việc cần làm lọc trên tập đơn đang xử lý.
  */
 export function useOrderPage(filters: OrderListFilters, page: number, size: number): OrderPageResult {
-  const demo = useIsDemo()
   const staff = useStaff()
-  const serverPaged = !demo && isServerPagedGroup(filters.group)
+  const serverPaged = isServerPagedGroup(filters.group)
   const working = useOrderList(!serverPaged)
   const query = toOrderPageQuery(filters, page, size)
   const live = useQuery({
@@ -225,48 +214,30 @@ export function useOrderPage(filters: OrderListFilters, page: number, size: numb
 
 /** Toàn bộ lịch sử đơn của một khách (hồ sơ khách), mới nhất trước. */
 export function useCustomerOrders(customerId: string | undefined) {
-  const demo = useIsDemo()
   const staff = useStaff()
-  const demoOrders = useOrders(demo && Boolean(customerId))
-  const live = useQuery({
+  return useQuery({
     queryKey: ['live', 'orders-view', staff?.name, staff?.role, 'customer', customerId],
     queryFn: () => toOrders(orderApi.byCustomer(Number(customerId))),
-    enabled: !demo && Boolean(customerId),
+    enabled: Boolean(customerId),
   })
-  const demoData = useMemo(
-    () =>
-      demoOrders.data
-        ?.filter((order) => order.customerId === customerId)
-        .sort((a, b) => (createdAtOf(b) ?? '').localeCompare(createdAtOf(a) ?? '')),
-    [demoOrders.data, customerId],
-  )
-  return demo ? { ...demoOrders, data: demoData } : live
 }
 
-/** Xác nhận đơn theo nguồn dữ liệu; `refresh` làm mới danh sách sau khi xác nhận xong một loạt. */
+/** Xác nhận đơn; `refresh` làm mới danh sách sau khi xác nhận xong một loạt. */
 export function useConfirmOrderRequest() {
-  const demo = useIsDemo()
   const queryClient = useQueryClient()
-  const advance = useAdvanceOrderStatus()
   return {
-    confirm: (order: Order): Promise<unknown> =>
-      demo ? advance.mutateAsync(order.id) : orderApi.updateStatus(Number(order.id), 'CONFIRMED'),
-    refresh: () => {
-      if (!demo) void invalidateLiveData(queryClient)
-    },
+    confirm: (order: Order): Promise<unknown> => orderApi.updateStatus(Number(order.id), 'CONFIRMED'),
+    refresh: () => void invalidateLiveData(queryClient),
   }
 }
 
 export function useOrderList(enabled = true) {
-  const demo = useIsDemo()
   const staff = useStaff()
-  const demoQuery = useOrders(demo && enabled)
   // Đơn mới có thể đến từ website bất cứ lúc nào nên tải lại định kỳ; thẻ trình duyệt ẩn thì tạm dừng.
-  const liveQuery = useQuery({
+  return useQuery({
     queryKey: ['live', 'orders-view', staff?.name, staff?.role],
     queryFn: liveOrders,
-    enabled: !demo && enabled,
+    enabled,
     refetchInterval: 30_000,
   })
-  return demo ? demoQuery : liveQuery
 }

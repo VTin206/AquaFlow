@@ -9,7 +9,7 @@ import { CartDrawer } from './components/CartDrawer'
 import { UkFlag, VietnamFlag } from './components/Flags'
 import { ShopEnter } from './components/ShopEnter'
 import { ShopFooter } from './components/ShopFooter'
-import { shopKeys, useShopContact, useShopDemo } from './shopService'
+import { shopKeys, useShopContact } from './shopService'
 import { useHomeLink, type FreshState } from '@/app/useHomeLink'
 import './shop.css'
 
@@ -60,11 +60,9 @@ const drinkMenuHref = (filter: DrinkMenuFilter) => {
 
 /**
  * Khung trang công khai cho khách, cũng là trang chủ khi chưa đăng nhập.
- * Bấm icon tài khoản để đăng nhập vào trang quản lý; dùng chung dữ liệu mẫu với trang quản lý trong cùng tab.
+ * Bấm icon tài khoản để đăng nhập vào trang quản lý.
  */
 export function ShopLayout() {
-  // Chỉ dùng cho nhãn báo đang xem dữ liệu mẫu.
-  const demo = useShopDemo()
   const settings = useShopContact()
   const navigate = useNavigate()
   const location = useLocation()
@@ -189,7 +187,7 @@ export function ShopLayout() {
           </ShopEnter>
         </ErrorBoundary>
       </main>
-      <ShopFooter demo={demo} contact={settings} />
+      <ShopFooter contact={settings} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </div>
   )

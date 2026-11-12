@@ -41,7 +41,6 @@ const customerColumns = columnsOf(sections.customers.columns).map((column) => co
     : <Link to={`/customers?customerId=${encodeURIComponent(String(row.key))}`}>{name}</Link>,
 })
 
-type ReportSource = Pick<typeof reportApi, 'summary' | 'section'>
 const kpis = [
   { title: 'Doanh thu sau giảm giá / hàng trả', key: 'revenue', money: true },
   { title: 'Thanh toán ròng đã xác nhận', key: 'netPayments', money: true },
@@ -67,12 +66,12 @@ function Delta({ current, previous }: { current: number; previous?: number }) {
   )
 }
 
-export function LiveReportsPage({ source = reportApi, scope = 'live' }: { source?: ReportSource; scope?: string }) {
+export function LiveReportsPage() {
   const staff = useStaff()
-  return staff?.role === 'ADMIN' ? <LiveReportContent source={source} scope={scope} /> : <Alert type="warning" showIcon title="Chỉ ADMIN được xem báo cáo." />
+  return staff?.role === 'ADMIN' ? <LiveReportContent /> : <Alert type="warning" showIcon title="Chỉ ADMIN được xem báo cáo." />
 }
 
-function LiveReportContent({ source, scope }: { source: ReportSource; scope: string }) {
+function LiveReportContent() {
   const { message } = App.useApp()
   const [granularity, setGranularity] = useState<Granularity>()
   const today = dayjs(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()))
@@ -87,10 +86,10 @@ function LiveReportContent({ source, scope }: { source: ReportSource; scope: str
   const selected = search.get('tab') ?? 'overview'
   const tab = selected in sections ? selected as ReportSection : 'overview'
   const query: ReportQuery = { from: dates[0].format('YYYY-MM-DD'), to: dates[1].format('YYYY-MM-DD'), channel, method }
-  const summary = useQuery({ queryKey: [scope, 'reports', 'summary', query], queryFn: () => source.summary(query) })
+  const summary = useQuery({ queryKey: ['live', 'reports', 'summary', query], queryFn: () => reportApi.summary(query) })
   const priorQuery = { ...query, ...previousRange(query) }
-  const previous = useQuery({ queryKey: [scope, 'reports', 'summary', priorQuery], queryFn: () => source.summary(priorQuery) })
-  const details = useQuery({ queryKey: [scope, 'reports', tab, query, page, size], queryFn: () => source.section(tab as ReportSection, query, page, size), enabled: tab !== 'overview' })
+  const previous = useQuery({ queryKey: ['live', 'reports', 'summary', priorQuery], queryFn: () => reportApi.summary(priorQuery) })
+  const details = useQuery({ queryKey: ['live', 'reports', tab, query, page, size], queryFn: () => reportApi.section(tab as ReportSection, query, page, size), enabled: tab !== 'overview' })
   const unit = granularity ?? autoGranularity(query)
   const detailRows = details.data?.content ?? []
   const num = (value: string | number | null) => Number(value ?? 0)

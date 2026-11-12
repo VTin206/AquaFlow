@@ -1,19 +1,13 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useAuth } from '@/features/auth/useAuth'
 import { useStaff } from '@/features/auth/useStaff'
 import { catalogApi } from '@/features/live/catalogApi'
 import { inventoryApi, receiptCode, type ProductStock, type PurchaseReceipt, type ReceiptInput } from '@/features/live/inventoryApi'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
-import { supplierService } from '@/features/suppliers/supplierService'
-import { demoReceiptDrafts } from './demoReceiptDrafts'
-import { localToday, vnToIsoDate } from './expiry'
-import { productService } from './productService'
-import type { Lot, Receipt, ReceiptDraft } from './types'
-import { productKeys } from './useProducts'
+import { localToday } from './expiry'
+import type { ReceiptDraft } from './types'
 
 /**
- * Một nguồn dữ liệu cho trang Kho: bản dùng thử đọc mock, tài khoản thật gọi API BE2.
- * Giao diện chỉ dùng các kiểu bên dưới; phần BE chưa cung cấp thì để trống và `caps` báo để ẩn.
+ * Nguồn dữ liệu cho trang Kho: gọi API BE2 và chuyển về các kiểu bên dưới để giao diện dùng.
  */
 export type StockItem = {
   id: string
@@ -73,81 +67,6 @@ export type ReceiptView = {
 }
 export type ReceiptForm = Omit<ReceiptDraft, 'receiver'> & { receiver?: string }
 export type ReceiptOption = { id: string; name: string; sku: string; unit?: string; onHand: number }
-
-export type InventoryCaps = {
-  /** BE bắt buộc mã lô và hạn dùng cho mọi dòng, kể cả vỏ bình. */
-  lotAlwaysRequired: boolean
-}
-
-const useDemo = () => useAuth().user?.isDemo ?? false
-
-export const useInventoryCaps = (): InventoryCaps => {
-  const demo = useDemo()
-  return { lotAlwaysRequired: !demo }
-}
-
-// ---- Bản dùng thử: chuyển dữ liệu mock sang kiểu chung ----
-
-const demoLot = (lot: Lot, productName: string): LotItem => {
-  const expired = Boolean(lot.expiryDate && lot.expiryDate < localToday())
-  return {
-    id: lot.id,
-    productId: lot.productId,
-    productName,
-    lotCode: lot.lotCode,
-    mfgDate: lot.mfgDate,
-    expiryDate: lot.expiryDate,
-    onHand: lot.remaining,
-    reserved: 0,
-    available: expired ? 0 : lot.remaining,
-    received: lot.received,
-    costPrice: lot.costPrice,
-    receiptCode: lot.receiptId,
-    receivedAt: lot.receivedAt,
-  }
-}
-
-const demoReceipt = (receipt: Receipt): ReceiptView => ({
-  id: receipt.id,
-  code: receipt.id,
-  status: 'CONFIRMED',
-  supplierId: receipt.supplierId,
-  supplierName: receipt.supplierName,
-  receivedAt: receipt.receivedAt,
-  receiver: receipt.receiver,
-  note: receipt.note,
-  total: receipt.total,
-  lines: receipt.lines.map((line) => ({ ...line })),
-})
-
-async function demoStock(): Promise<StockItem[]> {
-  const [products, lots] = await Promise.all([productService.list(), productService.lots()])
-  return products.map((product) => {
-    const own = lots.filter((lot) => lot.productId === product.id).map((lot) => demoLot(lot, product.name))
-    const expiredOnHand = own.filter((lot) => lot.onHand > 0 && lot.available === 0).reduce((sum, lot) => sum + lot.onHand, 0)
-    return {
-      id: product.id,
-      name: product.name,
-      sku: product.sku,
-      brand: product.brand,
-      unit: product.unit,
-      onHand: product.stock,
-      reserved: 0,
-      available: Math.max(0, product.stock - expiredOnHand),
-      expiredOnHand,
-      threshold: product.threshold,
-      nearestExpiry: vnToIsoDate(product.expiry),
-      salePrice: product.price,
-    }
-  })
-}
-
-async function demoLots(): Promise<LotItem[]> {
-  const [products, lots] = await Promise.all([productService.list(), productService.lots()])
-  return lots.map((lot) => demoLot(lot, products.find((product) => product.id === lot.productId)?.name ?? lot.productId))
-}
-
-// ---- Tài khoản thật: API BE2 ----
 
 const isoDate = (instant: string) => localToday(new Date(instant))
 /** Ngày nhận hôm nay gửi giờ hiện tại; ngày trước đó gửi giữa trưa để không lệch ngày khi đổi múi giờ. */
@@ -270,21 +189,19 @@ const useLiveKey = () => {
 }
 
 export function useStockItems(enabled = true) {
-  const demo = useDemo()
   const who = useLiveKey()
   return useQuery({
-    queryKey: demo ? [...productKeys.all, 'stock-view'] : ['live', 'inventory-stock', ...who],
-    queryFn: demo ? demoStock : liveStock,
+    queryKey: ['live', 'inventory-stock', ...who],
+    queryFn: liveStock,
     enabled,
   })
 }
 
 export function useLotItems() {
-  const demo = useDemo()
   const who = useLiveKey()
   return useQuery({
-    queryKey: demo ? [...productKeys.lots, 'view'] : ['live', 'inventory-lots', ...who],
-    queryFn: demo ? demoLots : liveLots,
+    queryKey: ['live', 'inventory-lots', ...who],
+    queryFn: liveLots,
   })
 }
 
@@ -292,26 +209,11 @@ export function useLotItems() {
 export type ReceiptPageView = { items: ReceiptView[]; total: number; statusCounts: Record<ReceiptStatus, number> }
 export type ReceiptPageQuery = { status?: ReceiptStatus; page: number; size: number }
 
-async function demoReceiptPage({ status, page, size }: ReceiptPageQuery): Promise<ReceiptPageView> {
-  const all = [...(await demoReceiptDrafts.list()), ...(await productService.receipts()).map(demoReceipt)].sort(
-    (a, b) => b.receivedAt.localeCompare(a.receivedAt) || b.id.localeCompare(a.id),
-  )
-  const matched = status ? all.filter((receipt) => receipt.status === status) : all
-  const count = (value: ReceiptStatus) => all.filter((receipt) => receipt.status === value).length
-  return {
-    items: matched.slice(page * size, page * size + size),
-    total: matched.length,
-    statusCounts: { DRAFT: count('DRAFT'), CONFIRMED: count('CONFIRMED'), CANCELLED: count('CANCELLED') },
-  }
-}
-
 export function useReceiptPage(query: ReceiptPageQuery) {
-  const demo = useDemo()
   const who = useLiveKey()
   return useQuery({
-    queryKey: demo ? [...productKeys.receipts, 'view', query] : ['live', 'receipts', ...who, query],
+    queryKey: ['live', 'receipts', ...who, query],
     queryFn: async (): Promise<ReceiptPageView> => {
-      if (demo) return demoReceiptPage(query)
       const page = await inventoryApi.receipts(query)
       return { items: page.items.map(liveReceipt), total: page.total, statusCounts: page.statusCounts }
     },
@@ -320,17 +222,11 @@ export function useReceiptPage(query: ReceiptPageQuery) {
 }
 
 export function useReceiptOptions() {
-  const demo = useDemo()
   const who = useLiveKey()
   const stock = useStockItems()
   const suppliers = useQuery({
-    queryKey: demo ? ['suppliers', 'receipt-options'] : ['live', 'receipt-suppliers', ...who],
-    queryFn: async () =>
-      demo
-        ? (await supplierService.list())
-            .filter((supplier) => supplier.active)
-            .map((supplier) => ({ id: supplier.id, name: `${supplier.name} (${supplier.id})` }))
-        : (await catalogApi.suppliers()).map((supplier) => ({ id: String(supplier.id), name: supplier.name })),
+    queryKey: ['live', 'receipt-suppliers', ...who],
+    queryFn: async () => (await catalogApi.suppliers()).map((supplier) => ({ id: String(supplier.id), name: supplier.name })),
   })
   const products: ReceiptOption[] = (stock.data ?? []).map((item) => ({
     id: item.id,
@@ -354,12 +250,11 @@ export function useReceiptOptions() {
 
 const useInvalidateInventory = () => {
   const queryClient = useQueryClient()
-  return () => Promise.all([invalidateLiveData(queryClient), queryClient.invalidateQueries({ queryKey: productKeys.all })])
+  return () => invalidateLiveData(queryClient)
 }
 
 /** Lưu nháp, và nhập kho luôn nếu `confirm`. */
 export function useSaveReceipt() {
-  const demo = useDemo()
   const invalidate = useInvalidateInventory()
   return useMutation({
     mutationFn: async ({
@@ -373,16 +268,6 @@ export function useSaveReceipt() {
       confirm: boolean
       onSaved?: (id: string) => void
     }): Promise<ReceiptView> => {
-      if (demo) {
-        if (!confirm) {
-          const draft = await demoReceiptDrafts.save(form, id)
-          onSaved?.(draft.id)
-          return draft
-        }
-        const confirmed = demoReceipt(await productService.createReceipt({ ...form, receiver: form.receiver ?? '' }))
-        if (id !== undefined) demoReceiptDrafts.remove(id)
-        return confirmed
-      }
       const input = liveInput(form)
       const saved = id === undefined ? await inventoryApi.createReceipt(input) : await inventoryApi.updateReceipt(Number(id), input)
       onSaved?.(String(saved.id))
@@ -394,18 +279,9 @@ export function useSaveReceipt() {
 
 /** Xác nhận nhập kho hoặc hủy một phiếu nháp. */
 export function useReceiptAction() {
-  const demo = useDemo()
   const invalidate = useInvalidateInventory()
   return useMutation({
     mutationFn: async ({ id, action }: { id: string; action: 'confirm' | 'cancel' }) => {
-      if (demo) {
-        if (action === 'cancel') return demoReceiptDrafts.cancel(id)
-        const draft = demoReceiptDrafts.get(id)
-        if (!draft) throw new Error('Không tìm thấy phiếu nháp.')
-        const confirmed = demoReceipt(await productService.createReceipt({ ...receiptToForm(draft), receiver: draft.receiver ?? '' }))
-        demoReceiptDrafts.remove(id)
-        return confirmed
-      }
       return liveReceipt(
         action === 'confirm' ? await inventoryApi.confirmReceipt(Number(id)) : await inventoryApi.cancelReceipt(Number(id)),
       )

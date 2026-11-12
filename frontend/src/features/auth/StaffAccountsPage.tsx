@@ -6,22 +6,18 @@ import { ViewButton } from '@/shared/components/ViewButton'
 import { modalWidth } from '@/shared/utils/modal'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
-import { useIsDemo } from '@/shared/features'
 import { useAuth } from './useAuth'
-import { demoStaffApi } from './demoStaffApi'
 import { staffApi, type StaffAccount, type StaffCreate, type StaffUpdate } from './staffApi'
 import { roleLabel } from './roles'
 
 type Action = { kind: 'create' } | { kind: 'edit' | 'password'; account: StaffAccount }
 export function StaffAccountsPage() {
-  const demo = useIsDemo()
-  const source = demo ? demoStaffApi : staffApi
   const { user } = useAuth()
   const client = useQueryClient()
   const { message } = App.useApp()
   const [action, setAction] = useState<Action | null>(null)
   const [viewingId, setViewingId] = useState<number>()
-  const query = useQuery({ queryKey: ['live', 'staff-accounts', user?.email, demo], queryFn: source.list })
+  const query = useQuery({ queryKey: ['live', 'staff-accounts', user?.email], queryFn: staffApi.list })
   const save = useMutation({
     mutationFn: (operation: () => Promise<unknown>) => operation(),
     onSuccess: async () => {
@@ -86,10 +82,10 @@ export function StaffAccountsPage() {
           onSave={(values) =>
             save.mutate(() =>
               action.kind === 'create'
-                ? source.create(values as StaffCreate)
+                ? staffApi.create(values as StaffCreate)
                 : action.kind === 'edit'
-                  ? source.update(action.account.id, values as StaffUpdate)
-                  : source.password(action.account.id, values.password!),
+                  ? staffApi.update(action.account.id, values as StaffUpdate)
+                  : staffApi.password(action.account.id, values.password!),
             )
           }
         />

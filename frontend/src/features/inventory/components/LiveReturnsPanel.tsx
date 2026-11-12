@@ -61,17 +61,15 @@ const toHistoryRow = (row: ReturnInspection): ReturnHistoryRow => ({
 
 export type InspectionInput = { requestId: string; note?: string; lines: { loadItemId: number; quantity: number; sellable: number }[] }
 
-/** Form kiểm hàng hoàn dùng chung; `partial={false}` khi nơi lưu chỉ nhận đủ toàn bộ hàng trong một đợt. */
+/** Form kiểm hàng hoàn; nhận được từng đợt, lô chưa mang về thì để 0. */
 export function InspectionModal({
   order,
   onSave,
   onClose,
-  partial = true,
 }: {
   order: Pick<PendingReturn, 'orderCode' | 'lines'>
   onSave: (input: InspectionInput) => Promise<unknown>
   onClose: () => void
-  partial?: boolean
 }) {
   const { message } = App.useApp()
   const client = useQueryClient()
@@ -122,14 +120,14 @@ export function InspectionModal({
         focus={{
           tone: outstanding > 0 ? 'action' : 'done',
           title: `Còn chờ sau đợt này: ${Math.max(0, outstanding)}`,
-          description: partial ? 'Lô chưa mang về thì để 0, đợt sau kiểm tiếp. Phiếu đã lưu không sửa được.' : 'Nhận từng đợt: chưa hỗ trợ ở bản dùng thử. Phiếu đã lưu không sửa được.',
+          description: 'Lô chưa mang về thì để 0, đợt sau kiểm tiếp. Phiếu đã lưu không sửa được.',
         }}
       />
       <Form
         form={form}
         layout="vertical"
         disabled={mutation.isPending}
-        initialValues={{ lines: order.lines.map((line) => (partial ? { quantity: 0, sellable: 0 } : { quantity: line.quantity, sellable: expired(line.expiresOn) ? 0 : line.quantity })) }}
+        initialValues={{ lines: order.lines.map(() => ({ quantity: 0, sellable: 0 })) }}
         onFinish={(input) => {
           const lines = order.lines
             .map((line, i) => ({ loadItemId: line.loadItemId, quantity: input.lines[i].quantity, sellable: input.lines[i].sellable }))
@@ -176,7 +174,7 @@ export function InspectionModal({
                   noStyle
                   rules={[{ required: true }, { type: 'integer', min: 0, max: row.quantity }]}
                 >
-                  <InputNumber aria-label={`Thực nhận ${row.lotCode}`} min={0} max={row.quantity} precision={0} disabled={!partial} />
+                  <InputNumber aria-label={`Thực nhận ${row.lotCode}`} min={0} max={row.quantity} precision={0} />
                 </Form.Item>
               ),
             },

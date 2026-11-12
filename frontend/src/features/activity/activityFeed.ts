@@ -1,8 +1,7 @@
 import dayjs, { type Dayjs } from 'dayjs'
-import type { ActivityEntry } from './activityService'
 import { activityAreas, activityDescription, activityTarget, type ActivityLog } from './activityApi'
 
-/** Một dòng nhật ký đã chuẩn hóa, dùng chung cho bản dùng thử và tài khoản thật. */
+/** Một dòng nhật ký đã chuẩn hóa, lấy từ máy chủ. */
 export type ActivityItem = {
   id: string
   at: string
@@ -48,19 +47,6 @@ export function fromLive(entry: ActivityLog): ActivityItem {
     target: activityTarget(entry),
     entity: entry.entityId === null ? undefined : { type: entry.entityType, id: String(entry.entityId) },
     important: isImportantActivity(description, entry.action, entry.entityType),
-  }
-}
-
-export function fromDemo(entry: ActivityEntry, orderIds: ReadonlySet<string>): ActivityItem {
-  return {
-    id: entry.id,
-    at: entry.at,
-    actor: entry.by,
-    area: entry.area,
-    description: entry.action,
-    target: entry.target,
-    entity: orderIds.has(entry.target) ? { type: 'ORDER', id: entry.target } : undefined,
-    important: isImportantActivity(entry.action),
   }
 }
 

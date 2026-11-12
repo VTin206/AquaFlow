@@ -1,6 +1,5 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { setTimeout } from 'node:timers'
 import ExcelJS from 'exceljs'
 
 const sample = {
@@ -183,48 +182,4 @@ test('report Excel export: sheets, values, SKUs and empty data survive an XLSX r
   }
   assert.doesNotMatch(emptyWorkbook.getWorksheet('Tổng quan').getCell('A2').value, /Lọc:/)
   // empty detail sheets still produce a readable workbook with headings; no filter note without filters
-
-  // Đi qua service thật để phát hiện nhầm ID nội bộ với SKU trong dữ liệu xuất.
-  globalThis.window = { setTimeout: (callback) => setTimeout(callback, 0) }
-  const { db } = await import('/src/mocks/db.ts')
-  const { reportService } = await import('/src/features/reports/reportService.ts')
-  const deliveredAt = '2026-09-30T05:00:00.000Z'
-  const line = (productId, name) => ({ productId, name, unit: 'Bình', quantity: 1, unitPrice: 20000 })
-  db.orders = [
-    {
-      id: 'DH-T1',
-      customer: 'Khách kiểm thử',
-      phone: '0901000009',
-      address: '',
-      channel: 'Tại quầy',
-      method: 'Tại quầy',
-      status: 'Đã giao',
-      deliveryFee: 0,
-      deliveredAt,
-      payments: [],
-      returns: [],
-      lines: [line('P-INTERNAL', 'Nước kiểm thử'), line('P-REMOVED', 'Sản phẩm cũ')],
-      history: [{ at: deliveredAt, by: 'Kiểm thử', message: 'Tạo đơn' }],
-    },
-  ]
-  db.archivedOrders = []
-  db.lots = []
-  db.receipts = []
-  db.bottleLedger = []
-  db.trips = []
-  db.products = [{ id: 'P-INTERNAL', sku: '0012', name: 'Nước kiểm thử', unit: 'Bình', price: 20000, stock: 2 }]
-  const report = await reportService.summary(sample.range)
-  assert.equal(report.products.find((row) => row.productId === 'P-INTERNAL').sku, '0012')
-  assert.equal(report.products.find((row) => row.productId === 'P-REMOVED').sku, null)
-  const serviceWorkbook = new ExcelJS.Workbook()
-  await serviceWorkbook.xlsx.load(await buildReportWorkbook(report).xlsx.writeBuffer())
-  const serviceProducts = serviceWorkbook.getWorksheet('Bán hàng')
-  const codes = [5, 6].map((row) => serviceProducts.getCell(row, 1).value)
-  assert.ok(codes.includes('0012'), 'Catalog SKU is exported')
-  assert.ok(
-    codes.some((value) => [null, ''].includes(value)),
-    'Unknown SKU stays blank instead of exporting an internal ID',
-  )
-  assert.ok(!codes.includes('P-INTERNAL') && !codes.includes('P-REMOVED'))
-  // report service exports catalog SKU, preserves leading zero and leaves missing SKU blank
 })

@@ -1,6 +1,8 @@
 // Giỏ hàng lưu trên trình duyệt của khách; mất cũng không sao vì chưa phải đơn.
 // Module này không phụ thuộc React hay dịch vụ nào để AuthProvider gọi được khi kết thúc phiên.
-const CART_KEY = 'aquaflow.shop.cart'
+const CART_KEY = 'aquaflow.shop.cart.live'
+/** Giỏ của bản dùng thử đã bỏ; xóa để không còn sót trên máy. */
+const LEGACY_DEMO_CART_KEY = 'aquaflow.shop.cart'
 const PROFILE_KEY = 'aquaflow.shop.profile'
 
 export type CartLine = { productId: string; quantity: number }
@@ -64,8 +66,8 @@ function createCart(key: string) {
   }
 }
 
-// Các mã sản phẩm demo và thật không bao giờ dùng chung một giỏ.
-export const carts = { demo: createCart(CART_KEY), live: createCart(`${CART_KEY}.live`) }
+write(LEGACY_DEMO_CART_KEY, null)
+export const shopCart = createCart(CART_KEY)
 
 export const readProfile = () => read<ShopProfile | null>(PROFILE_KEY, null)
 export const saveProfile = (profile: ShopProfile | null) => write(PROFILE_KEY, profile)
@@ -76,6 +78,5 @@ export const forgetSavedProfile = () => saveProfile(null)
 /** Khách chủ động đăng xuất: không để lại gì của họ trên máy. */
 export const clearShopData = () => {
   forgetSavedProfile()
-  carts.demo.actions.clear()
-  carts.live.actions.clear()
+  shopCart.actions.clear()
 }

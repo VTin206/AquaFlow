@@ -15,7 +15,7 @@ type TripCardProps = {
   onOpen: () => void
 }
 
-/** Thẻ chuyến dùng chung cho bản dùng thử và tài khoản thật. */
+/** Thẻ một chuyến giao. */
 export function TripCard({ code, status, driver, vehicle, finished, total, dueLabel, onOpen }: TripCardProps) {
   const needsSettling = status === 'Chờ đối soát'
   return (

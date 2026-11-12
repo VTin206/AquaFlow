@@ -7,7 +7,7 @@ import { DriverPage } from './DriverPage'
 import type { DeliveryStop, DeliveryTrip, TripCollections } from './deliveryApi'
 
 vi.mock('@/features/auth/useAuth', () => ({ useAuth: () => ({ user: { email: 'driver@test', role: 'DELIVERY_STAFF' } }) }))
-vi.mock('@/features/auth/useStaff', () => ({ useStaff: () => ({ name: 'Tài xế A', role: 'DELIVERY_STAFF', isDemo: false }) }))
+vi.mock('@/features/auth/useStaff', () => ({ useStaff: () => ({ name: 'Tài xế A', role: 'DELIVERY_STAFF' }) }))
 
 const stop = (id: number, extra: Partial<DeliveryStop> = {}): DeliveryStop => ({
   id,

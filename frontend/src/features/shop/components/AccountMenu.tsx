@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { App, Avatar, Button, Popover } from 'antd'
 import { useQueryClient } from '@tanstack/react-query'
-import { LayoutDashboard, LogOut, ShoppingBag, UserRound } from 'lucide-react'
+import { LayoutDashboard, LogOut, UserRound } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { devAccounts, type DevAccount } from '@/features/auth/devAccounts'
 import { useAuth } from '@/features/auth/useAuth'
@@ -13,7 +13,7 @@ import { accountDestination, isCustomer } from '@/features/auth/accountAccess'
  * Chưa đăng nhập thì bấm sang trang tài khoản, đã đăng nhập thì mở thông tin tài khoản.
  */
 export function AccountMenu({ variant = 'icon' }: { variant?: 'icon' | 'text' }) {
-  const { isAuthenticated, user, logout, login, enterDemo, enterDemoGuest } = useAuth()
+  const { isAuthenticated, user, logout, login } = useAuth()
   const { message } = App.useApp()
   const queryClient = useQueryClient()
   // Tên vai trò lấy giống thanh trên của trang quản lý.
@@ -41,7 +41,7 @@ export function AccountMenu({ variant = 'icon' }: { variant?: 'icon' | 'text' })
     )
   }
 
-  // Dev: đổi tài khoản mà vẫn ở trang đang xem, để so cửa hàng dữ liệu thật với bản dùng thử; xóa cache để không lẫn dữ liệu.
+  // Dev: đổi tài khoản mà vẫn ở trang đang xem; xóa cache để không lẫn dữ liệu.
   const switchTo = async (account: DevAccount) => {
     setOpen(false)
     try {
@@ -52,18 +52,8 @@ export function AccountMenu({ variant = 'icon' }: { variant?: 'icon' | 'text' })
       message.error(error instanceof Error ? error.message : 'Đăng nhập thất bại.')
     }
   }
-  const switchToDemo = () => {
-    setOpen(false)
-    enterDemo()
-    queryClient.clear()
-  }
-  const switchToDemoGuest = () => {
-    setOpen(false)
-    enterDemoGuest()
-    queryClient.clear()
-  }
   const otherAccounts = devAccounts.filter((account) => account.email.toLowerCase() !== user.email?.toLowerCase())
-  const showSwitch = import.meta.env.DEV
+  const showSwitch = import.meta.env.DEV && otherAccounts.length > 0
 
   const content = (
     <div className="af-shop-account">
@@ -74,28 +64,15 @@ export function AccountMenu({ variant = 'icon' }: { variant?: 'icon' | 'text' })
         <div>
           <strong>{user.name}</strong>
           {user.email && <small>{user.email}</small>}
-          <small>{staff ? `${staff.roleName}${staff.isDemo ? ' · dùng thử' : ''}` : user.role}</small>
+          <small>{staff?.roleName ?? user.role}</small>
         </div>
       </div>
       <Button block type="primary" icon={<LayoutDashboard size={16} />} onClick={() => go(accountDestination(user))}>
         {isCustomer(user) ? 'Đơn hàng của tôi' : 'Trang quản lý'}
       </Button>
-      {user.isDemo && (
-        <Button block icon={<ShoppingBag size={16} />} onClick={() => go('/shop/orders')}>
-          Đơn hàng của tôi
-        </Button>
-      )}
       {showSwitch && (
         <div className="af-shop-account-switch">
           <small>Đổi tài khoản (dev)</small>
-          {!user.isDemo && (
-            <Button block size="small" onClick={switchToDemo}>
-              Bản dùng thử
-            </Button>
-          )}
-          <Button block size="small" title="Dữ liệu mẫu, chưa đăng nhập" onClick={switchToDemoGuest}>
-            Xem như khách (dữ liệu mẫu)
-          </Button>
           {otherAccounts.map((account) => (
             <Button key={account.email} block size="small" title={account.email} onClick={() => void switchTo(account)}>
               {account.label}

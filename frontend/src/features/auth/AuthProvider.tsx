@@ -14,7 +14,6 @@ import { roleLabel, STAFF_ROLES } from './roles'
 import { clearShopData, forgetSavedProfile } from '@/features/shop/cartStore'
 const USER_KEY = 'aquaflow.auth.user'
 const EXPIRES_KEY = 'aquaflow.auth.expires-at'
-const DEMO_GUEST_KEY = 'aquaflow.auth.demo-guest'
 const EXPIRED_MESSAGE = 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.'
 
 const readExpiry = () => {
@@ -54,10 +53,19 @@ const readStoredSession = () => {
 /** Làm mới trước khi access token hết hạn chừng này, để request đang gửi không bị 401. */
 const REFRESH_AHEAD_MS = 60_000
 
+// Khóa của bản dùng thử đã bỏ; xóa để máy từng mở bản dùng thử không giữ người dùng mẫu.
+const LEGACY_DEMO_KEYS = ['aquaflow.auth.demo-guest', 'aquaflow.demo-role']
+
 const readStoredUser = (): AuthUser | null => {
   try {
+    LEGACY_DEMO_KEYS.forEach((key) => localStorage.removeItem(key))
     const user = localStorage.getItem(USER_KEY)
-    return user ? (JSON.parse(user) as AuthUser) : null
+    const parsed = user ? (JSON.parse(user) as AuthUser & { isDemo?: boolean }) : null
+    if (parsed?.isDemo) {
+      localStorage.removeItem(USER_KEY)
+      return null
+    }
+    return parsed
   } catch {
     try {
       localStorage.removeItem(USER_KEY)
@@ -72,25 +80,6 @@ const saveUser = (user: AuthUser | null) => {
   try {
     if (user) localStorage.setItem(USER_KEY, JSON.stringify(user))
     else localStorage.removeItem(USER_KEY)
-  } catch {
-    // Bỏ qua.
-  }
-}
-
-// Chế độ "khách dùng thử" chỉ có khi dev, bản build bỏ qua cờ này.
-const readDemoGuest = () => {
-  if (!import.meta.env.DEV) return false
-  try {
-    return localStorage.getItem(DEMO_GUEST_KEY) === '1'
-  } catch {
-    return false
-  }
-}
-
-const writeDemoGuest = (on: boolean) => {
-  try {
-    if (on) localStorage.setItem(DEMO_GUEST_KEY, '1')
-    else localStorage.removeItem(DEMO_GUEST_KEY)
   } catch {
     // Bỏ qua.
   }
@@ -111,7 +100,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [restoring, setRestoring] = useState(initial.restoring)
   const [user, setUser] = useState<AuthUser | null>(readStoredUser)
   const [expiresAt, setExpiresAt] = useState(readExpiry)
-  const [demoGuest, setDemoGuest] = useState(readDemoGuest)
   // Token có được do làm mới (không phải đăng nhập/mở lại app): không cần hỏi lại /auth/me.
   const refreshedToken = useRef<string | null>(null)
 
@@ -120,11 +108,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     storeAuthToken(null)
     writeExpiry(null)
     saveUser(null)
-    writeDemoGuest(false)
     setToken(null)
     setExpiresAt(null)
     setUser(null)
-    setDemoGuest(false)
   }, [queryClient])
 
   // Hết phiên thì xóa dữ liệu đăng nhập; RequireAuth tự đưa về trang đăng nhập.
@@ -220,33 +206,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       storeAuthToken(response.accessToken)
       writeExpiry(nextExpiry)
       saveUser(nextUser)
-      writeDemoGuest(false)
-      setDemoGuest(false)
       setToken(response.accessToken)
       setExpiresAt(nextExpiry)
       setUser(nextUser)
     },
     [queryClient],
   )
-
-  const enterDemo = useCallback(() => {
-    queryClient.clear()
-    storeAuthToken(null)
-    writeExpiry(null)
-    const demoUser = { name: 'Nguyễn An', role: 'Bản dùng thử', isDemo: true }
-    saveUser(demoUser)
-    writeDemoGuest(false)
-    setDemoGuest(false)
-    setToken(null)
-    setExpiresAt(null)
-    setUser(demoUser)
-  }, [queryClient])
-
-  const enterDemoGuest = useCallback(() => {
-    clearSession()
-    writeDemoGuest(true)
-    setDemoGuest(true)
-  }, [clearSession])
 
   const updateProfile = useCallback((profile: { fullName: string; email: string; phone: string | null }) => {
     setUser(current => {
@@ -260,16 +225,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
-      isAuthenticated: Boolean(user && (token || user.isDemo)),
+      isAuthenticated: Boolean(user && token),
       restoring,
       login,
-      enterDemo,
-      demoGuest,
-      enterDemoGuest,
       logout,
       updateProfile,
     }),
-    [token, user, restoring, demoGuest, logout, enterDemoGuest, login, enterDemo, updateProfile],
+    [token, user, restoring, logout, login, updateProfile],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

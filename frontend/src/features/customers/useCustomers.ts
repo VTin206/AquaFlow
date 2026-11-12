@@ -1,15 +1,10 @@
-import { useMemo } from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/shared/api/client'
-import { useIsDemo } from '@/shared/features'
 import { useStaff } from '@/features/auth/useStaff'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { customerApi, type CustomerSortField, type LiveCustomerSummary } from '@/features/live/customerApi'
-import { customerService } from './customerService'
-import { customerCode, initialsOf, type Customer, type CustomerDraft } from './types'
-import { matchesIdle, type IdleFilter } from './lastOrder'
-import { sortByName } from '@/shared/utils/table'
-import { matchesSearch } from '@/shared/utils/search'
+import { initialsOf, type Customer, type CustomerDraft } from './types'
+import type { IdleFilter } from './lastOrder'
 
 export const customerKeys = {
   all: ['customers'] as const,
@@ -93,39 +88,6 @@ export type CustomerPageView = {
   totals: { customers: number; due: number; bottlesHeld: number; depositHeld: number }
 }
 
-const matchesCustomer = (customer: Customer, { query, idle }: CustomerPageFilters) =>
-  matchesIdle(customer.lastOrderAt, idle) &&
-  matchesSearch(query, `${customerCode(customer)} ${customer.name} ${customer.phone} ${customer.area} ${customer.mainAddress ?? ''}`, customer.phone)
-
-/** Cùng thứ tự với BE: "chưa mua lần nào" nhỏ nhất; trùng giá trị thì theo tên. */
-const compareBy: Record<CustomerSortKey, (a: Customer, b: Customer) => number> = {
-  name: (a, b) => a.name.localeCompare(b.name, 'vi', { sensitivity: 'base' }),
-  orders: (a, b) => a.orders - b.orders,
-  lastOrderAt: (a, b) => (a.lastOrderAt ?? '').localeCompare(b.lastOrderAt ?? ''),
-  debt: (a, b) => a.debt - b.debt,
-  bottlesHeld: (a, b) => a.bottlesHeld - b.bottlesHeld,
-}
-
-/** Phân trang khách mẫu trong trình duyệt theo đúng hình dạng và thứ tự trang BE trả về. */
-export function pageDemoCustomers(customers: Customer[], filters: CustomerPageFilters, page: number, size: number): CustomerPageView {
-  const sort = filters.sort
-  const byName = sortByName(customers.filter((customer) => matchesCustomer(customer, filters)))
-  const visible = sort
-    ? [...byName].sort((a, b) => (sort.order === 'descend' ? -1 : 1) * compareBy[sort.key](a, b))
-    : byName
-  const sum = (pick: (customer: Customer) => number) => customers.reduce((total, customer) => total + pick(customer), 0)
-  return {
-    customers: visible.slice(page * size, (page + 1) * size),
-    total: visible.length,
-    totals: {
-      customers: customers.length,
-      due: sum((customer) => customer.debt),
-      bottlesHeld: sum((customer) => customer.bottlesHeld),
-      depositHeld: sum((customer) => customer.depositHeld),
-    },
-  }
-}
-
 async function liveCustomerPage(filters: CustomerPageFilters, page: number, size: number): Promise<CustomerPageView> {
   const sort = filters.sort
     ? { field: customerSortFields[filters.sort.key], direction: filters.sort.order === 'descend' ? ('DESC' as const) : ('ASC' as const) }
@@ -143,29 +105,14 @@ async function liveCustomerPage(filters: CustomerPageFilters, page: number, size
   }
 }
 
-/** Danh sách khách mẫu (chỉ bản dùng thử) để lọc/phân trang trong trình duyệt. */
-const useDemoCustomers = (enabled: boolean) => useQuery({ queryKey: customerKeys.all, queryFn: customerService.list, enabled })
-
-/**
- * Trang Khách hàng: tài khoản thật tìm/lọc/phân trang ở BE (giữ trang cũ trong lúc tải trang mới);
- * bản dùng thử lọc khách mẫu trong trình duyệt. Hai nguồn trả cùng một hình dạng.
- */
+/** Trang Khách hàng: tìm/lọc/phân trang ở BE, giữ trang cũ trong lúc tải trang mới. */
 export function useCustomerPage(filters: CustomerPageFilters, page: number, size: number) {
-  const demo = useIsDemo()
   const who = useLiveKey()
-  const demoQuery = useDemoCustomers(demo)
-  const liveQuery = useQuery({
+  return useQuery({
     queryKey: ['live', 'customers', ...who, 'page', filters, page, size],
     queryFn: () => liveCustomerPage(filters, page, size),
-    enabled: !demo,
     placeholderData: keepPreviousData,
   })
-  const demoPage = useMemo(
-    () => (demoQuery.data ? pageDemoCustomers(demoQuery.data, filters, page, size) : undefined),
-    [demoQuery.data, filters, page, size],
-  )
-  if (!demo) return liveQuery
-  return { ...demoQuery, data: demoPage, isPlaceholderData: false }
 }
 
 /** Tìm khách theo tên, mã, số điện thoại (ô tìm kiếm chung, gợi ý khi nhận đơn). Từ khóa rỗng thì không tải. */
@@ -177,16 +124,12 @@ export function useCustomerSearch(query: string, size = 8) {
 
 /** Một khách theo id (hồ sơ khách). */
 export function useCustomer(id: string | undefined) {
-  const demo = useIsDemo()
   const who = useLiveKey()
-  const demoQuery = useDemoCustomers(demo && Boolean(id))
-  const liveQuery = useQuery({
+  return useQuery({
     queryKey: ['live', 'customers', ...who, 'summary', id],
     queryFn: () => customerApi.summary(Number(id)).then(fromSummary),
-    enabled: !demo && Boolean(id),
+    enabled: Boolean(id),
   })
-  if (!demo) return liveQuery
-  return { ...demoQuery, data: demoQuery.data?.find((customer) => customer.id === id) }
 }
 
 const useInvalidateCustomers = () => {
@@ -205,11 +148,9 @@ const toRequest = (draft: CustomerDraft) => ({
 
 /** Thêm mới khi không có `id`, cập nhật khi có. */
 export function useSaveCustomer() {
-  const demo = useIsDemo()
   const invalidate = useInvalidateCustomers()
   return useMutation({
     mutationFn: async ({ id, draft }: { id?: string; draft: CustomerDraft }): Promise<Customer> => {
-      if (demo) return id ? customerService.update(id, draft) : customerService.create(draft)
       const saved = id
         ? await api.put<CustomerResponse>(`/sales/customers/${id}`, toRequest(draft))
         : await api.post<CustomerResponse>('/sales/customers', toRequest(draft))
@@ -220,35 +161,29 @@ export function useSaveCustomer() {
 }
 
 export function useDeactivateCustomer() {
-  const demo = useIsDemo()
   const invalidate = useInvalidateCustomers()
   return useMutation({
-    mutationFn: (id: string) => (demo ? customerService.deactivate(id) : api.delete<void>(`/sales/customers/${id}`)),
+    mutationFn: (id: string) => api.delete<void>(`/sales/customers/${id}`),
     onSuccess: () => void invalidate(),
   })
 }
 
 /** Khách đã lưu trữ (GET /sales/customers/archived). Bảng chỉ hiện tên, số điện thoại, khu vực nên không cần số đơn. */
 export function useArchivedCustomers() {
-  const demo = useIsDemo()
   const liveKey = useLiveKey()
   return useQuery({
-    queryKey: [...customerKeys.all, 'archived', demo ? 'demo' : liveKey],
+    queryKey: [...customerKeys.all, 'archived', liveKey],
     queryFn: async () =>
-      demo
-        ? customerService.archived()
-        : (await api.get<CustomerResponse[]>('/sales/customers/archived')).map((customer) => fromResponse(customer, 0)),
+      (await api.get<CustomerResponse[]>('/sales/customers/archived')).map((customer) => fromResponse(customer, 0)),
   })
 }
 
 /** Khôi phục hồ sơ. BE từ chối (409) khi số điện thoại đã thuộc một khách đang hoạt động. */
 export function useActivateCustomer() {
-  const demo = useIsDemo()
   const invalidate = useInvalidateCustomers()
   return useMutation({
     mutationFn: async (id: string) => {
-      if (demo) await customerService.activate(id)
-      else await api.post<CustomerResponse>(`/sales/customers/${id}/reactivate`)
+      await api.post<CustomerResponse>(`/sales/customers/${id}/reactivate`)
     },
     onSuccess: () => void invalidate(),
   })

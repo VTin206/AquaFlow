@@ -5,7 +5,7 @@ import { App } from 'antd'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { act } from '@testing-library/react'
 import { AxiosError } from 'axios'
-import { carts, readProfile, saveProfile } from '@/features/shop/cartStore'
+import { readProfile, saveProfile, shopCart } from '@/features/shop/cartStore'
 import { getStoredAuthToken, httpClient } from '@/shared/api/client'
 import { AuthProvider } from './AuthProvider'
 import { authService } from './authService'
@@ -51,7 +51,7 @@ const signedInAs = (expiresAt: number) => {
   localStorage.setItem('aquaflow.auth.user', JSON.stringify({ name: 'Khách A', role: 'Khách hàng', phone: '0900000001' }))
   localStorage.setItem('aquaflow.auth.expires-at', String(expiresAt))
   saveProfile({ customer: 'Khách A', phone: '0900000001', address: '99 Nhà A' })
-  carts.live.actions.add('1', 2)
+  shopCart.actions.add('1', 2)
 }
 
 beforeEach(() => {
@@ -68,7 +68,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   localStorage.clear()
-  carts.live.actions.clear()
+  shopCart.actions.clear()
 })
 
 test('đăng xuất không để lại thông tin giao hàng và giỏ của khách trên máy', () => {
@@ -77,7 +77,7 @@ test('đăng xuất không để lại thông tin giao hàng và giỏ của kh�
   fireEvent.click(screen.getByRole('button', { name: 'Khách A' }))
   expect(screen.getByRole('button', { name: 'Chưa đăng nhập' })).toBeTruthy()
   expect(readProfile()).toBeNull()
-  expect(carts.live.getSnapshot()).toEqual([])
+  expect(shopCart.getSnapshot()).toEqual([])
   expect(JSON.stringify({ ...localStorage })).not.toContain('Khách A')
 })
 
@@ -87,7 +87,7 @@ test('mở lại khi phiên đã hết hạn thì người sau không thấy th�
   expect(screen.getByRole('button', { name: 'Chưa đăng nhập' })).toBeTruthy()
   expect(readProfile()).toBeNull()
   expect(JSON.stringify({ ...localStorage })).not.toContain('Khách A')
-  expect(carts.live.getSnapshot()).toEqual([{ productId: '1', quantity: 2 }])
+  expect(shopCart.getSnapshot()).toEqual([{ productId: '1', quantity: 2 }])
 })
 
 test('mở lại khi access token hết hạn nhưng cookie refresh còn hạn thì khôi phục phiên với người dùng mới nhất', async () => {

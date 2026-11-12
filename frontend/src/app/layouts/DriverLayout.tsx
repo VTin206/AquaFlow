@@ -5,7 +5,7 @@ import { Navigate, Outlet, useLocation } from 'react-router'
 import { canOpen, homeOf } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/useStaff'
 import { ThemeToggle } from './ThemeToggle'
-import { initialsOf, useAccountMenuItems, useMockSession } from './useAccountMenu'
+import { initialsOf, useAccountMenuItems } from './useAccountMenu'
 import '@/features/delivery/driver.css'
 import { ErrorBoundary } from '../ErrorBoundary'
 
@@ -17,7 +17,6 @@ export function DriverLayout() {
   const staff = useStaff()
   const { pathname } = useLocation()
   const menuItems = useAccountMenuItems()
-  useMockSession(staff)
 
   if (staff && !canOpen(staff.role, pathname)) return <Navigate to={homeOf(staff.role)} replace />
 
@@ -29,7 +28,6 @@ export function DriverLayout() {
           <small>Giao hàng</small>
         </span>
         <div className="af-driver-bar-right">
-          {staff?.isDemo && <span className="af-demo-label">Dữ liệu mẫu</span>}
           <ThemeToggle />
           <Dropdown trigger={['click']} menu={{ items: menuItems }}>
             <button type="button" className="af-account-menu af-driver-account" aria-label="Menu tài khoản">

@@ -4,16 +4,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { isoToVnDate, localToday } from '../expiry'
-import { tracksExpiry } from '../types'
-import {
-  receiptToForm,
-  useInventoryCaps,
-  useReceiptOptions,
-  useSaveReceipt,
-  type ReceiptForm,
-  type ReceiptLineView,
-  type ReceiptView,
-} from '../useInventory'
+import { receiptToForm, useReceiptOptions, useSaveReceipt, type ReceiptForm, type ReceiptLineView, type ReceiptView } from '../useInventory'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { FormSection } from '@/shared/components/FormSection'
 import { useAuth } from '@/features/auth/useAuth'
@@ -95,7 +86,6 @@ export function ReceiptResult({ receipt, onClose }: { receipt: ReceiptView; onCl
 
 function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt }: ReceiveStockModalProps) {
   const { message } = App.useApp()
-  const caps = useInventoryCaps()
   const currentUser = useAuth().user?.name
   const [form] = Form.useForm<ReceiptForm>()
   const discard = useConfirmDiscard(form, onClose)
@@ -238,7 +228,6 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                   {fields.map((field, index) => {
                     const line = lines[field.name]
                     const product = productOf(line?.productId)
-                    const needsLot = caps.lotAlwaysRequired || !product?.unit || tracksExpiry({ unit: product.unit })
                     return (
                       <div className="af-receipt-line" key={field.key}>
                         <div className="af-receipt-line-head">
@@ -276,8 +265,8 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                               name={[field.name, 'lotCode']}
                               label="Mã lô"
                               rules={[
-                                { required: needsLot, whitespace: true, message: 'Nhập mã lô in trên bao bì.' },
-                                { max: caps.lotAlwaysRequired ? 100 : 40 },
+                                { required: true, whitespace: true, message: 'Nhập mã lô in trên bao bì.' },
+                                { max: 100 },
                                 {
                                   validator: (_, value?: string) =>
                                     !value ||
@@ -292,51 +281,47 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                                 },
                               ]}
                             >
-                              <Input placeholder={needsLot ? 'Ví dụ: LV2610-19L' : 'Không bắt buộc với vỏ bình'} />
+                              <Input placeholder="Ví dụ: LV2610-19L" />
                             </Form.Item>
                           </Col>
-                          {needsLot && (
-                            <>
-                              <Col xs={12} md={6}>
-                                <Form.Item
-                                  name={[field.name, 'mfgDate']}
-                                  label="Ngày sản xuất"
-                                  rules={[
-                                    {
-                                      validator: (_, value) =>
-                                        !value || !receivedAt || value <= receivedAt
-                                          ? Promise.resolve()
-                                          : Promise.reject(new Error('Sau ngày nhận.')),
-                                    },
-                                  ]}
-                                >
-                                  <Input type="date" max={receivedAt} />
-                                </Form.Item>
-                              </Col>
-                              <Col xs={12} md={6}>
-                                <Form.Item
-                                  name={[field.name, 'expiryDate']}
-                                  label="Hạn sử dụng"
-                                  dependencies={[['lines', field.name, 'mfgDate']]}
-                                  rules={[
-                                    { required: true, message: 'Nhập hạn dùng.' },
-                                    {
-                                      validator: (_, value) =>
-                                        !value || value > today ? Promise.resolve() : Promise.reject(new Error('Lô đã hết hạn.')),
-                                    },
-                                    {
-                                      validator: (_, value) =>
-                                        !value || !line?.mfgDate || value > line.mfgDate
-                                          ? Promise.resolve()
-                                          : Promise.reject(new Error('Phải sau ngày sản xuất.')),
-                                    },
-                                  ]}
-                                >
-                                  <Input type="date" min={today} />
-                                </Form.Item>
-                              </Col>
-                            </>
-                          )}
+                          <Col xs={12} md={6}>
+                            <Form.Item
+                              name={[field.name, 'mfgDate']}
+                              label="Ngày sản xuất"
+                              rules={[
+                                {
+                                  validator: (_, value) =>
+                                    !value || !receivedAt || value <= receivedAt
+                                      ? Promise.resolve()
+                                      : Promise.reject(new Error('Sau ngày nhận.')),
+                                },
+                              ]}
+                            >
+                              <Input type="date" max={receivedAt} />
+                            </Form.Item>
+                          </Col>
+                          <Col xs={12} md={6}>
+                            <Form.Item
+                              name={[field.name, 'expiryDate']}
+                              label="Hạn sử dụng"
+                              dependencies={[['lines', field.name, 'mfgDate']]}
+                              rules={[
+                                { required: true, message: 'Nhập hạn dùng.' },
+                                {
+                                  validator: (_, value) =>
+                                    !value || value > today ? Promise.resolve() : Promise.reject(new Error('Lô đã hết hạn.')),
+                                },
+                                {
+                                  validator: (_, value) =>
+                                    !value || !line?.mfgDate || value > line.mfgDate
+                                      ? Promise.resolve()
+                                      : Promise.reject(new Error('Phải sau ngày sản xuất.')),
+                                },
+                              ]}
+                            >
+                              <Input type="date" min={today} />
+                            </Form.Item>
+                          </Col>
                           <Col xs={8} md={4}>
                             <Form.Item
                               name={[field.name, 'received']}
@@ -365,7 +350,7 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                               <InputNumber min={0} precision={0} style={{ width: '100%' }} />
                             </Form.Item>
                           </Col>
-                          <Col xs={8} md={needsLot ? 5 : 17}>
+                          <Col xs={8} md={5}>
                             <Form.Item
                               name={[field.name, 'costPrice']}
                               label="Giá vốn / đơn vị"

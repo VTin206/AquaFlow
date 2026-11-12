@@ -1,12 +1,7 @@
 import { useSyncExternalStore } from 'react'
-import { carts } from './cartStore'
-import { useShopDemo } from './shopService'
+import { shopCart } from './cartStore'
 
 export { readProfile, saveProfile, type CartLine, type ShopProfile } from './cartStore'
 
-const useCartStore = () => carts[useShopDemo() ? 'demo' : 'live']
-export const useCartActions = () => useCartStore().actions
-export const useCart = () => {
-  const store = useCartStore()
-  return useSyncExternalStore(store.subscribe, store.getSnapshot)
-}
+export const useCartActions = () => shopCart.actions
+export const useCart = () => useSyncExternalStore(shopCart.subscribe, shopCart.getSnapshot)

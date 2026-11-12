@@ -27,7 +27,7 @@ type WaitingOrdersCardProps = {
   error?: ReactNode
 }
 
-/** Đơn chờ xếp chuyến: chọn đơn rồi tạo chuyến. Dùng chung cho bản dùng thử và tài khoản thật. */
+/** Đơn chờ xếp chuyến: chọn đơn rồi tạo chuyến. */
 export function WaitingOrdersCard({ orders, loading, selected, onSelect, onCreate, error }: WaitingOrdersCardProps) {
   const chosen = orders.filter((order) => selected.includes(order.id))
   return (

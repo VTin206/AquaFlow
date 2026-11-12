@@ -86,9 +86,6 @@ function Providers({ children, user = customer, path = '/shop/orders' }: { child
             isAuthenticated: !!user,
             login: vi.fn(),
             logout: vi.fn(),
-            enterDemo: vi.fn(),
-            demoGuest: false,
-            enterDemoGuest: vi.fn(),
             updateProfile: vi.fn(),
           }}
         >

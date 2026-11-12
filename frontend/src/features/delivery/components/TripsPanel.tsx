@@ -16,7 +16,7 @@ import { WaitingOrdersCard, type WaitingOrder } from './WaitingOrdersCard'
 // Việc cần làm lên trước, chuyến đã xong xuống cuối.
 const statusRank: Record<TripViewStatus, number> = { 'Chờ đối soát': 0, 'Chờ xuất phát': 1, 'Đang giao': 2, 'Đã đối soát': 3, 'Đã hủy': 4 }
 
-/** Xếp đơn chờ giao vào chuyến và theo dõi các chuyến; dùng chung cho bản dùng thử và tài khoản thật. */
+/** Xếp đơn chờ giao vào chuyến và theo dõi các chuyến. */
 export function TripsPanel() {
   const [searchParams] = useSearchParams()
   const { message, modal } = App.useApp()
@@ -34,7 +34,7 @@ export function TripsPanel() {
   const orders = ordersQuery.data ?? []
   const orderOf = (id: string) => orders.find((order) => order.id === id)
   const waiting: WaitingOrder[] = (availableQuery.data ?? []).map((item) => {
-    const id = item.orderRef ?? String(item.id)
+    const id = String(item.id)
     const order = orderOf(id)
     return {
       id,

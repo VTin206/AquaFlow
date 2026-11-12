@@ -1,13 +1,10 @@
 import { useState } from 'react'
 import { Segmented } from 'antd'
 import { Page } from '@/shared/components/Page'
-import { useIsDemo } from '@/shared/features'
 import { DeliveryBoard } from './components/DeliveryBoard'
 import { TripsPanel } from './components/TripsPanel'
 
-/** Một giao diện cho cả bản dùng thử và tài khoản thật; `key` tải lại phần chuyến khi đổi nguồn dữ liệu. */
 export function DeliveryPage() {
-  const demo = useIsDemo()
   const [view, setView] = useState<'trips' | 'board'>('trips')
   return (
     <Page
@@ -24,7 +21,7 @@ export function DeliveryPage() {
         />
       }
     >
-      {view === 'board' ? <DeliveryBoard /> : <TripsPanel key={demo ? 'demo' : 'live'} />}
+      {view === 'board' ? <DeliveryBoard /> : <TripsPanel />}
     </Page>
   )
 }

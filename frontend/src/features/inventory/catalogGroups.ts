@@ -123,16 +123,5 @@ export function catalogFromApi(product: { name: string; unit: string; waterType?
   }
 }
 
-/** Dạng lưu của bản dùng thử từ hai ô trên form. */
-export const demoCatalog = (name: string, unit: string, waterType?: WaterTypeCode, volumeMl?: number): CatalogDetails => {
-  const guess = inferCatalog(name, unit)
-  const ml = volumeMl ?? 0
-  return {
-    category: waterType ? waterTypeLabels[waterType] : 'Chưa phân loại',
-    packaging: guess.packaging,
-    capacity: capacityOf(ml),
-    volumeMl: ml,
-  }
-}
 
 export { normalizeSearch } from '@/shared/utils/search'

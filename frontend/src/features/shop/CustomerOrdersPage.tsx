@@ -4,14 +4,13 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useAuth } from '@/features/auth/useAuth'
 import { isCustomer } from '@/features/auth/accountAccess'
-import { orderStatusLabels } from '@/features/live/orderApi'
+import { orderStatusLabels, type LiveOrder } from '@/features/live/orderApi'
 import { catalogApi } from '@/features/live/catalogApi'
 import { ApiError } from '@/shared/api/client'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { OrderProgress } from '@/features/orders/OrderProgress'
 import { customerOrderApi } from './customerOrderApi'
-import { demoCustomerOrderApi, type CustomerOrder } from './demoCustomerData'
 const time = (value: string | null) => (value ? new Date(value).toLocaleString('vi-VN') : '—')
 
 export function CustomerOrdersPage() {
@@ -19,8 +18,8 @@ export function CustomerOrdersPage() {
   const [status, setStatus] = useState<string>('ALL')
   const query = useQuery({
     queryKey: ['live', 'customer-orders', user?.email],
-    queryFn: (): Promise<CustomerOrder[]> => (user?.isDemo ? demoCustomerOrderApi.list() : customerOrderApi.list()),
-    enabled: isCustomer(user) || Boolean(user?.isDemo),
+    queryFn: customerOrderApi.list,
+    enabled: isCustomer(user),
     refetchInterval: 30000,
   })
   const orders = [...(query.data ?? [])]
@@ -86,15 +85,15 @@ export function CustomerOrderPage() {
   const { user } = useAuth()
   const query = useQuery({
     queryKey: ['live', 'customer-order', user?.email, id],
-    queryFn: (): Promise<CustomerOrder> => (user?.isDemo ? demoCustomerOrderApi.detail(id) : customerOrderApi.detail(id)),
-    enabled: valid && (isCustomer(user) || Boolean(user?.isDemo)),
+    queryFn: () => customerOrderApi.detail(id),
+    enabled: valid && isCustomer(user),
     retry: false,
     refetchInterval: 15000,
   })
   const catalog = useQuery({
     queryKey: ['shop', 'order-products', 'live'],
     queryFn: catalogApi.products,
-    enabled: valid && isCustomer(user) && !user?.isDemo,
+    enabled: valid && isCustomer(user),
   })
   const notFound = !valid || (query.error instanceof ApiError && [403, 404].includes(query.error.status))
   if (notFound)
@@ -138,7 +137,7 @@ export function CustomerOrderPage() {
   )
 }
 
-function CustomerOrderContent({ order, products }: { order: CustomerOrder; products: Awaited<ReturnType<typeof catalogApi.products>> }) {
+function CustomerOrderContent({ order, products }: { order: LiveOrder; products: Awaited<ReturnType<typeof catalogApi.products>> }) {
   return (
     <Card title={`Đơn ${order.orderCode}`}>
       <OrderProgress order={order} />
@@ -163,7 +162,7 @@ function CustomerOrderContent({ order, products }: { order: CustomerOrder; produ
           {
             title: 'Sản phẩm',
             dataIndex: 'productId',
-            render: (id: number, row) => row.productName ?? products.find((p) => p.id === id)?.name ?? `Sản phẩm #${id}`,
+            render: (id: number) => products.find((p) => p.id === id)?.name ?? `Sản phẩm #${id}`,
           },
           { title: 'Số lượng', dataIndex: 'quantity' },
           { title: 'Đơn giá', dataIndex: 'unitPrice', render: currency },

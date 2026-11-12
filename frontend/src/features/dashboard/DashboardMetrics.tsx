@@ -6,7 +6,6 @@ import { Info } from 'lucide-react'
 import dayjs, { type Dayjs } from 'dayjs'
 import { Link } from 'react-router'
 import { reportApi } from '@/features/reports/reportApi'
-import { reportService } from '@/features/reports/reportService'
 import { autoGranularity, groupRevenue, reportPresets } from '@/features/reports/periods'
 import { useStaff } from '@/features/auth/useStaff'
 import { canOpen } from '@/features/auth/permissions'
@@ -17,23 +16,17 @@ import { currency, compactCurrency } from '@/shared/utils/format'
 /** Do not mount report queries for roles without access, including cached admin data. */
 export function DashboardMetrics() {
   const staff = useStaff()
-  return staff && canOpen(staff.role, '/reports') ? <Metrics demo={staff.isDemo} /> : null
+  return staff && canOpen(staff.role, '/reports') ? <Metrics /> : null
 }
 
-function Metrics({ demo }: { demo: boolean }) {
+function Metrics() {
   const today = dayjs(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()))
   const [dates, setDates] = useState<[Dayjs, Dayjs]>([today.startOf('month'), today])
   const [rangeError, setRangeError] = useState<string>()
   const range = { from: dates[0].format('YYYY-MM-DD'), to: dates[1].format('YYYY-MM-DD') }
   const summary = useQuery({
-    queryKey: ['dashboard', demo ? 'demo' : 'live', 'summary', range],
-    queryFn: async () => {
-      if (!demo) return reportApi.summary(range)
-      const report = await reportService.summary(range)
-      return { sales: { ordersCreated: report.sales.orders, ordersDelivered: report.sales.delivered,
-        ordersCancelled: report.sales.cancelled, revenue: report.sales.net, averageOrderValue: report.sales.delivered ? report.sales.net / report.sales.delivered : 0,
-        newCustomers: report.customers.new, netPayments: report.cash.collected }, days: report.days }
-    },
+    queryKey: ['dashboard', 'live', 'summary', range],
+    queryFn: () => reportApi.summary(range),
   })
   const sales = summary.data?.sales
   const metrics = [
@@ -48,7 +41,7 @@ function Metrics({ demo }: { demo: boolean }) {
     <Space wrap style={{ marginBottom: 16 }}>
       <Typography.Title level={3} style={{ margin: 0 }}>Kết quả kinh doanh</Typography.Title>
       <Tooltip title={<>Số liệu theo giờ Việt Nam. AOV = doanh thu / số đơn đã giao; không có đơn thì bằng 0.
-      {demo ? ' Dữ liệu Demo: khách mới tính theo lần mua đầu tiên.' : ' Doanh thu không gồm phí giao và tiền cọc. Khách mới tính theo ngày tạo hồ sơ, không gồm khách vãng lai.'} Tổng đơn tính theo ngày tạo; đơn đã giao và hủy tính theo ngày giao hoặc hủy trong kỳ.</>}>
+       Doanh thu không gồm phí giao và tiền cọc. Khách mới tính theo ngày tạo hồ sơ, không gồm khách vãng lai. Tổng đơn tính theo ngày tạo; đơn đã giao và hủy tính theo ngày giao hoặc hủy trong kỳ.</>}>
         <Info size={16} aria-label="Cách tính số liệu" tabIndex={0} />
       </Tooltip>
       <DatePicker.RangePicker aria-label="Kỳ thống kê" value={dates} allowClear={false} format="DD/MM/YYYY"

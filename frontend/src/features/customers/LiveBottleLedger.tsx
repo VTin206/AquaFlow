@@ -6,7 +6,6 @@ import { bottleLedgerApi, type BottleInput, type BottleLedger } from '@/features
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
-import { demoBottleApi } from './demoBottleLedger'
 import { customerKeys } from './useCustomers'
 import { TextArea } from '@/shared/components/TextArea'
 
@@ -157,14 +156,13 @@ function BottleForm({
   )
 }
 
-/** Sổ vỏ và tiền cọc của một khách; dùng chung cho bản dùng thử và tài khoản thật. */
+/** Sổ vỏ và tiền cọc của một khách. */
 export function LiveBottleLedger({ customerId }: { customerId: number | string }) {
   const staff = useStaff()
-  const demo = staff?.isDemo ?? false
   const [kind, setKind] = useState<BottleInput['kind']>()
   const query = useQuery({
-    queryKey: ['live', 'bottle-ledger', demo, staff?.name, staff?.role, customerId],
-    queryFn: () => (demo ? demoBottleApi.ledger(String(customerId)) : bottleLedgerApi.ledger(Number(customerId))),
+    queryKey: ['live', 'bottle-ledger', staff?.name, staff?.role, customerId],
+    queryFn: () => bottleLedgerApi.ledger(Number(customerId)),
     refetchInterval: 15000,
   })
   const data = query.data
@@ -257,7 +255,7 @@ export function LiveBottleLedger({ customerId }: { customerId: number | string }
           key={kind}
           kind={kind}
           ledger={data}
-          record={(input) => (demo ? demoBottleApi.create(String(customerId), input) : bottleLedgerApi.create(Number(customerId), input))}
+          record={(input) => bottleLedgerApi.create(Number(customerId), input)}
           onClose={() => setKind(undefined)}
         />
       )}

@@ -1,22 +1,18 @@
 import { useQuery } from '@tanstack/react-query'
-import { useIsDemo } from '@/shared/features'
-import { DEPOSIT_PER_BOTTLE } from '@/shared/policy'
 import { currency } from '@/shared/utils/format'
 import type { Order } from '@/features/orders/types'
 import { bottleTypeApi } from './bottleTypeApi'
 import { catalogApi } from './catalogApi'
-import { demoBottleTypeApi } from './demoBottleTypeApi'
 
 /** Tiền cọc mỗi vỏ của một loại vỏ đang lưu hành (BottleTypeController). */
 export type DepositRate = { bottleTypeId: number; name: string; amount: number }
 
-/** Mức cọc theo loại vỏ; bản dùng thử lấy danh mục loại vỏ mẫu. */
+/** Mức cọc theo loại vỏ đang lưu hành. */
 export function useBottleDepositRates() {
-  const demo = useIsDemo()
   return useQuery({
-    queryKey: ['live', 'bottle-deposit-rates', demo],
+    queryKey: ['live', 'bottle-deposit-rates'],
     queryFn: async (): Promise<DepositRate[]> =>
-      (await (demo ? demoBottleTypeApi : bottleTypeApi).list(true)).map((type) => ({
+      (await bottleTypeApi.list(true)).map((type) => ({
         bottleTypeId: type.id,
         name: type.name,
         amount: Number(type.depositUnitAmount),
@@ -34,12 +30,9 @@ export const depositRatesLabel = (rates: Pick<DepositRate, 'name' | 'amount'>[])
  * Gọi trước khi in để dữ liệu đã có sẵn; chưa xác định được loại vỏ thì trả `undefined` (phiếu để trống số tiền).
  */
 export function useOrderDepositLabel() {
-  const demo = useIsDemo()
   const rates = useBottleDepositRates()
-  const catalog = useQuery({ queryKey: ['live', 'catalog'], queryFn: catalogApi.products, enabled: !demo })
+  const catalog = useQuery({ queryKey: ['live', 'catalog'], queryFn: catalogApi.products })
   return (order: Pick<Order, 'lines'>): string | undefined => {
-    // Bản dùng thử chưa gắn loại vỏ cho sản phẩm mẫu: dùng mức cọc mẫu.
-    if (demo) return `${currency(DEPOSIT_PER_BOTTLE)}/vỏ thiếu`
     const typeIds = new Set(
       order.lines
         .filter((line) => line.unit === 'Bình')
