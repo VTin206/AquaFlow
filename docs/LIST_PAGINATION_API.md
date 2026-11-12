@@ -26,7 +26,17 @@ Hai API này nay lọc, tìm và phân trang ở PostgreSQL. Quyền giữ nguy�
 | `payment` | `DUE`: còn phải thu; `SETTLED`: đã thu đủ. Đơn hủy không thuộc cả hai. |
 | `q` | Mã đơn, tên/số điện thoại người nhận, tên sản phẩm trong đơn |
 
-Sắp xếp: mới tạo trước (`created_at DESC, id DESC`).
+Sắp xếp theo mức ưu tiên xử lý, giống bảng Đơn hàng ở frontend (`compareOrderPriority`):
+
+1. Giao thất bại: đơn chưa xong, lần giao gần nhất của phân công đang hiệu lực có `outcome = FAILED`.
+2. Quá giờ hẹn: đơn giao chưa xong, `requested_delivery_at` đã qua.
+3. Chờ xác nhận (`PENDING`).
+4. Đang xử lý (`CONFIRMED`, `PREPARING`, `OUT_FOR_DELIVERY`).
+5. Đã giao còn nợ (`DELIVERED`, `due > 0`).
+6. Còn lại (đã xong, đã hủy).
+
+Trong mức 1–5: việc cần làm sớm nhất trước, theo `requested_delivery_at`, không hẹn giờ thì theo `created_at`
+(đơn "giao sớm nhất" cần làm ngay từ lúc đặt). Mức 6: mới tạo trước.
 
 ```json
 {
@@ -38,7 +48,8 @@ Sắp xếp: mới tạo trước (`created_at DESC, id DESC`).
 ```
 
 Mỗi dòng có đủ trường `OrderResponse` (trải phẳng) cộng `paid`, `due`, `refundDue` từ view `order_payment_balances`,
-nên không cần gọi `/sales/order-balances` để ghép công nợ. `statusCounts` đếm trên **toàn bộ** đơn, không theo bộ lọc.
+nên không cần gọi `/sales/order-balances` để ghép công nợ. `lastAttemptFailed`: `true` khi đơn thuộc mức "Giao thất bại"
+ở trên (trạng thái đơn vẫn là trạng thái cũ, thường là `OUT_FOR_DELIVERY`). `statusCounts` đếm trên **toàn bộ** đơn, không theo bộ lọc.
 
 ### `GET /api/v1/sales/orders/working-set?days=30`
 

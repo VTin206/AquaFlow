@@ -22,6 +22,7 @@ import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import com.aquaflow.inventory.application.ReservationLine;
@@ -242,12 +243,13 @@ public class OrderService {
                 .collect(Collectors.toMap(Order::getId, Function.identity()));
         Map<Long, List<OrderItem>> items = itemsByOrder(ids);
         Map<Long, OrderQueryRepository.Balance> balances = orderQueryRepository.balances(ids);
+        Set<Long> failed = orderQueryRepository.lastAttemptFailed(ids);
         return ids.stream()
                 .filter(orders::containsKey)
                 .map(id -> {
                     OrderQueryRepository.Balance balance = balances.getOrDefault(id, OrderQueryRepository.Balance.ZERO);
                     return new OrderListItem(toResponse(orders.get(id), items.getOrDefault(id, List.of())),
-                            balance.paid(), balance.due(), balance.refundDue(), balance.returned());
+                            balance.paid(), balance.due(), balance.refundDue(), balance.returned(), failed.contains(id));
                 })
                 .toList();
     }

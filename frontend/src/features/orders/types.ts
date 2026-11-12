@@ -70,6 +70,8 @@ export type Order = {
   bottles?: OrderBottles
   /** Thời điểm khách nhận hàng (giao thành công hoặc nhận tại quầy). */
   deliveredAt?: string
+  /** Đơn chưa xong và lần giao gần nhất thất bại (BE: lastAttemptFailed); trạng thái vẫn là trạng thái cũ, ví dụ Đang giao. */
+  lastAttemptFailed?: boolean
   returns?: OrderReturn[]
   dispatches?: StockDispatch[]
   returnInspections?: ReturnInspection[]
@@ -194,7 +196,7 @@ export function deliveryTimingOf(order: Order, now = Date.now()) {
  * 0 giao thất bại, 1 quá giờ hẹn, 2 chờ xác nhận, 3 đang xử lý, 4 đã giao còn nợ, 5 xong/hủy.
  */
 export function orderPriority(order: Order, now = Date.now()) {
-  if (order.status === 'Giao thất bại') return 0
+  if (order.status === 'Giao thất bại' || order.lastAttemptFailed) return 0
   if (isOverdue(order, now)) return 1
   if (order.status === 'Chờ xác nhận') return 2
   if (OPEN_DELIVERY.includes(order.status)) return 3
@@ -203,8 +205,8 @@ export function orderPriority(order: Order, now = Date.now()) {
 }
 
 /**
- * Thứ tự mặc định của bảng Đơn hàng: mức ưu tiên trước; trong mức, việc chờ/trễ lâu nhất trước (giờ hẹn, không hẹn
- * thì lúc đặt). Mức đang xử lý xếp theo giờ hẹn gần nhất, đơn không hẹn giờ sau cùng. Đơn đã xong/hủy mới nhất trước.
+ * Thứ tự mặc định của bảng Đơn hàng: mức ưu tiên trước; trong mức, việc cần làm sớm nhất trước, tính theo giờ hẹn
+ * hoặc lúc đặt nếu không hẹn (đơn "giao sớm nhất" cần làm ngay từ lúc đặt). Đơn đã xong/hủy mới nhất trước.
  */
 export function compareOrderPriority(a: Order, b: Order, now = Date.now()) {
   const rankA = orderPriority(a, now)
@@ -213,7 +215,6 @@ export function compareOrderPriority(a: Order, b: Order, now = Date.now()) {
   const createdA = createdAtOf(a) ?? a.time
   const createdB = createdAtOf(b) ?? b.time
   if (rankA === 5) return createdB.localeCompare(createdA)
-  if (rankA === 3 && Boolean(a.appointment) !== Boolean(b.appointment)) return a.appointment ? -1 : 1
   return (a.appointment ?? createdA).localeCompare(b.appointment ?? createdB) || createdA.localeCompare(createdB)
 }
 
