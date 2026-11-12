@@ -1633,6 +1633,11 @@
 .af-shop-card-cover-link {
   display: block;
 }
+/* Ảnh nằm trong link thì là phần tử dòng, chừa khe dưới chân lộ nền khung ảnh; cho ảnh thành khối để liền với thân thẻ. */
+.af-shop-card-cover-link > .af-product-image,
+.af-shop-card-cover-link > .af-product-placeholder {
+  display: block;
+}
 .af-shop-card .af-product-image,
 .af-shop-card .af-product-placeholder {
   aspect-ratio: 4 / 3;
