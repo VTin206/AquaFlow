@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Alert, App, Avatar, Button, Checkbox, Divider, Form, Input, Modal } from 'antd'
 import {
   ArrowRight,
-  FlaskConical,
   Headphones,
   LayoutDashboard,
   LockKeyhole,
@@ -30,7 +29,7 @@ type LoginFormValues = LoginCredentials & { rememberMe?: boolean }
  * Khách vào đơn của mình, nhân viên vào không gian quản lý; bị chặn ở trang nào thì đăng nhập xong quay lại trang đó.
  */
 export function ShopAccountPage() {
-  const { login, logout, enterDemo, isAuthenticated, user } = useAuth()
+  const { login, logout, isAuthenticated, user } = useAuth()
   const staff = useStaff()
   const { message } = App.useApp()
   const navigate = useNavigate()
@@ -78,23 +77,18 @@ export function ShopAccountPage() {
           <div>
             <strong>{user.name}</strong>
             {user.email && <small>{user.email}</small>}
-            <small>{staff ? `${staff.roleName}${staff.isDemo ? ' · dùng thử' : ''}` : user.role}</small>
+            <small>{staff?.roleName ?? user.role}</small>
           </div>
           <div className="af-shop-account-actions">
             <Button type="primary" icon={<LayoutDashboard size={16} />} onClick={() => navigate(accountDestination(user))}>
               {isCustomer(user) ? 'Đơn hàng của tôi' : 'Trang quản lý'}
             </Button>
-            {user.isDemo && (
-              <Button icon={<ShoppingBag size={16} />} onClick={() => navigate('/shop/orders')}>
-                Đơn hàng của tôi
-              </Button>
-            )}
             <Button danger icon={<LogOut size={16} />} onClick={() => logout()}>
               Đăng xuất
             </Button>
           </div>
         </section>
-        {(isCustomer(user) || user.isDemo) && <CustomerAccountPanel />}
+        {isCustomer(user) && <CustomerAccountPanel />}
       </div>
     )
   }
@@ -198,18 +192,6 @@ export function ShopAccountPage() {
               <Link to="/track">
                 <PackageSearch size={16} aria-hidden /> Tra cứu đơn
               </Link>
-            </li>
-            <li>
-              <Button
-                type="link"
-                icon={<FlaskConical size={16} />}
-                onClick={() => {
-                  enterDemo()
-                  navigate(returnTo, { replace: true })
-                }}
-              >
-                Xem bản dùng thử
-              </Button>
             </li>
             <li>
               <Button type="link" icon={<Headphones size={16} />} onClick={() => setHelpOpen(true)}>

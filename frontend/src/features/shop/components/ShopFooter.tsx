@@ -3,12 +3,11 @@ import { Link } from 'react-router'
 import { shopArticles, shopPolicies } from '../shopNews'
 
 type Props = {
-  demo: boolean
-  /** Thông tin liên hệ công khai (tài khoản thật lấy từ /store-profile); thiếu thì ẩn phần liên hệ. */
+  /** Thông tin liên hệ công khai (lấy từ /store-profile); thiếu thì ẩn phần liên hệ. */
   contact?: { storeName?: string; phone?: string; address?: string; email?: string; openingHours?: string }
 }
 
-export function ShopFooter({ demo, contact }: Props) {
+export function ShopFooter({ contact }: Props) {
   const tel = contact?.phone?.replace(/\s/g, '')
   const hasContact = Boolean(contact?.phone || contact?.address || contact?.email)
   const latest = shopArticles[0]
@@ -110,7 +109,6 @@ export function ShopFooter({ demo, contact }: Props) {
           <Link to="/shop/policy/giao-hang">Giao hàng</Link>
           <Link to="/shop/policy/thanh-toan">Thanh toán</Link>
         </span>
-        {demo && <small>Bản dùng thử: đơn chỉ lưu trong tab hiện tại và mất khi tải lại trang.</small>}
       </div>
     </footer>
   )

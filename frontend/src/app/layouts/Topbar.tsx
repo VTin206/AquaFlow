@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Avatar, Button, Dropdown, Tooltip } from 'antd'
-import { ChevronDown, Clock3, Menu as MenuIcon, ShoppingCart } from 'lucide-react'
+import { Avatar, Button, Dropdown } from 'antd'
+import { ChevronDown, Clock3, Menu as MenuIcon } from 'lucide-react'
 import { Link } from 'react-router'
 import { useHomeLink } from '@/app/useHomeLink'
 import { useStaff } from '@/features/auth/useStaff'
@@ -62,16 +62,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
         <TopbarClock />
       </div>
       <div className="af-topbar-right">
-        {staff?.isDemo && <span className="af-demo-label">Dữ liệu mẫu</span>}
         <GlobalSearch />
-        {/* Chỉ bản dùng thử mới có lối sang trang khách (cùng dữ liệu mẫu trong tab); tài khoản thật không cần. */}
-        {staff?.isDemo && (
-          <Tooltip title="Trang khách đặt hàng (dùng chung dữ liệu mẫu trong tab này)">
-            <Link to="/shop" className="af-notification-link" aria-label="Mở trang khách đặt hàng">
-              <ShoppingCart size={19} aria-hidden />
-            </Link>
-          </Tooltip>
-        )}
         <NotificationPopover />
         <ThemeToggle />
         <Dropdown trigger={['click']} menu={{ items: menuItems }}>
@@ -79,7 +70,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
             <Avatar className="af-avatar">{initialsOf(staff?.name ?? 'A')}</Avatar>
             <div className="af-topbar-user-text">
               <strong>{staff?.name ?? 'Quản trị viên'}</strong>
-              <small>{staff ? `${staff.roleName}${staff.isDemo ? ' · dùng thử' : ''}` : 'Quản trị viên'}</small>
+              <small>{staff?.roleName ?? 'Quản trị viên'}</small>
             </div>
             <ChevronDown size={14} aria-hidden />
           </button>

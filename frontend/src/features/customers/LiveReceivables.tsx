@@ -4,24 +4,17 @@ import { Button, Collapse, Input, Modal, Skeleton, Table, Tag } from 'antd'
 import { useStaff } from '@/features/auth/useStaff'
 import { paymentApi, type CustomerBalance } from '@/features/live/paymentApi'
 import { OrderDetails } from '@/features/orders/components/OrderDetails'
-import { useIsDemo } from '@/shared/features'
-import { demoReceivablesApi } from './demoReceivables'
 import { QueryError } from '@/shared/components/QueryError'
 import { ViewButton } from '@/shared/components/ViewButton'
 import { modalWidth } from '@/shared/utils/modal'
 import { currency } from '@/shared/utils/format'
-import { pageLocally, type Page } from '@/shared/api/page'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import { serverTablePagination } from '@/shared/utils/table'
 
-type CustomerRow = Omit<CustomerBalance, 'customerId'> & { customerId: number | string }
-type OrderRow = { orderId: number | string; orderCode: string; paid: number; due: number; refundDue: number }
-
 export function LiveReceivables() {
-  const demo = useIsDemo()
   const staff = useStaff()
-  const [customer, setCustomer] = useState<CustomerRow>()
-  const [orderId, setOrderId] = useState<number | string>()
+  const [customer, setCustomer] = useState<CustomerBalance>()
+  const [orderId, setOrderId] = useState<number>()
   const allowed = staff?.role === 'ADMIN' || staff?.role === 'SALES_STAFF'
   const [search, setSearch] = useState('')
   const q = useDebouncedValue(search)
@@ -30,23 +23,15 @@ export function LiveReceivables() {
   const page = paging.q === q ? paging.page : 0
   const query = { page, size: paging.size, q }
   const customers = useQuery({
-    queryKey: ['live', 'customer-balances', demo, staff?.name, staff?.role, query],
-    queryFn: async (): Promise<Page<CustomerRow>> =>
-      demo
-        ? pageLocally(
-            (await demoReceivablesApi.customers()).filter((item) => item.due > 0 || item.refundDue > 0),
-            query,
-            (item) => item.name,
-          )
-        : paymentApi.customers(query),
+    queryKey: ['live', 'customer-balances', staff?.name, staff?.role, query],
+    queryFn: () => paymentApi.customers(query),
     enabled: allowed,
     refetchInterval: 30000,
     placeholderData: keepPreviousData,
   })
   const orders = useQuery({
-    queryKey: ['live', 'receivables', demo, staff?.name, staff?.role, customer?.customerId],
-    queryFn: (): Promise<OrderRow[]> =>
-      demo ? demoReceivablesApi.receivables(String(customer!.customerId)) : paymentApi.receivables(Number(customer!.customerId)),
+    queryKey: ['live', 'receivables', staff?.name, staff?.role, customer?.customerId],
+    queryFn: () => paymentApi.receivables(customer!.customerId),
     enabled: allowed && !!customer,
   })
   return (

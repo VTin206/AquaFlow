@@ -20,13 +20,8 @@ import {
 import { useAuth } from '@/features/auth/useAuth'
 import { Link, useNavigate } from 'react-router'
 import { OrderDetails } from '@/features/orders/components/OrderDetails'
-import { isOverdue, type Order } from '@/features/orders/types'
-import { useOrders } from '@/features/orders/useOrders'
-import { useIsDemo } from '@/shared/features'
 import { notificationService, type Notification } from './notificationService'
 import { groupNotifications, notificationTime, notificationView } from './notificationView'
-
-type Item = Notification & { orderRef?: string }
 
 const kindIcons: Record<Notification['kind'], LucideIcon> = {
   DELIVERY_FAILED: TriangleAlert,
@@ -38,34 +33,9 @@ const kindIcons: Record<Notification['kind'], LucideIcon> = {
   MANUAL: Bell,
 }
 
-/** Bản dùng thử: thông báo suy từ đơn mẫu cần xử lý; trạng thái đã đọc chỉ giữ trong phiên. */
-const demoItems = (orders: Order[], read: ReadonlySet<string>): Item[] =>
-  orders
-    .filter((order) => ['Chờ xác nhận', 'Giao thất bại'].includes(order.status) || isOverdue(order))
-    .map((order, index) => ({
-      id: index + 1,
-      title:
-        order.status === 'Giao thất bại'
-          ? 'Đơn giao thất bại'
-          : order.status === 'Chờ xác nhận'
-            ? 'Đơn hàng chờ xác nhận'
-            : 'Đơn đã quá giờ hẹn',
-      message: `${order.code ?? order.id} · ${order.customer}`,
-      createdAt: order.history[0]?.at ?? new Date().toISOString(),
-      readAt: read.has(order.id) ? new Date().toISOString() : null,
-      resolvedAt: null,
-      kind: order.status === 'Giao thất bại' ? 'DELIVERY_FAILED' : order.status === 'Chờ xác nhận' ? 'ORDER_PENDING' : 'ORDER_OVERDUE',
-      entityType: 'ORDER',
-      entityId: index + 1,
-      orderRef: order.id,
-    }))
-
-/** Hộp thông báo dùng chung cho bản dùng thử và tài khoản thật. */
+/** Hộp thông báo của nhân viên. */
 export function LiveNotificationPopover() {
   const { user } = useAuth()
-  const demo = useIsDemo()
-  const demoOrders = useOrders(demo)
-  const [demoRead, setDemoRead] = useState<ReadonlySet<string>>(new Set())
   const [open, setOpen] = useState(false)
   const [page, setPage] = useState(0)
   const [orderId, setOrderId] = useState<string | null>(null)
@@ -78,43 +48,38 @@ export function LiveNotificationPopover() {
   const list = useQuery({
     queryKey: [...key, 'list', page],
     queryFn: () => notificationService.list(page),
-    enabled: !demo && open && !!user,
+    enabled: open && !!user,
     refetchInterval: 30_000,
   })
   const unread = useQuery({
     queryKey: [...key, 'unread'],
     queryFn: notificationService.unreadCount,
-    enabled: !demo && !!user,
+    enabled: !!user,
     refetchInterval: 30_000,
   })
-  const items: Item[] = demo ? demoItems(demoOrders.data ?? [], demoRead) : (list.data ?? [])
-  const loading = demo ? demoOrders.isPending : list.isPending
-  const failed = demo ? demoOrders.isError : list.isError || unread.isError
+  const items = list.data ?? []
+  const loading = list.isPending
+  const failed = list.isError || unread.isError
   const read = useMutation({
     mutationFn: async (id: number | null) => {
-      if (demo) {
-        const refs = items.filter((item) => id === null || item.id === id).flatMap((item) => (item.orderRef ? [item.orderRef] : []))
-        setDemoRead((current) => new Set([...current, ...refs]))
-        return
-      }
       if (id === null) await notificationService.markAllRead()
       else await notificationService.markRead(id)
     },
     onSuccess: () => client.invalidateQueries({ queryKey: key }),
   })
-  /** Server trả đủ 20 dòng thì có thể còn trang sau; bản dùng thử chỉ có một trang. */
-  const hasNextPage = !demo && !list.isError && (list.data?.length ?? 0) >= 20
-  const count = demo ? items.filter((item) => !item.readAt).length : (unread.data?.count ?? 0)
+  /** Server trả đủ 20 dòng thì có thể còn trang sau. */
+  const hasNextPage = !list.isError && (list.data?.length ?? 0) >= 20
+  const count = unread.data?.count ?? 0
   const close = () => {
     setOpen(false)
     trigger.current?.focus()
   }
   /** Mở đúng chỗ xử lý: chi tiết đơn hoặc trang kho; mở rồi thì tính là đã đọc. */
-  const openItem = (item: Item) => {
+  const openItem = (item: Notification) => {
     if (!item.readAt) read.mutate(item.id)
     if (item.entityType === 'ORDER' && item.entityId) {
       close()
-      setOrderId(item.orderRef ?? String(item.entityId))
+      setOrderId(String(item.entityId))
     } else if (item.entityType === 'PRODUCT' || item.entityType === 'BATCH') {
       close()
       navigate('/inventory')
@@ -145,7 +110,7 @@ export function LiveNotificationPopover() {
             <div className="af-notifications-header">
               <strong>
                 Thông báo
-                {(demo || unread.isSuccess) && count > 0 && (
+                {unread.isSuccess && count > 0 && (
                   <span className="af-count is-urgent" aria-label={`${count} chưa đọc`}>
                     {count}
                   </span>
@@ -177,10 +142,6 @@ export function LiveNotificationPopover() {
                   <Button
                     size="small"
                     onClick={() => {
-                      if (demo) {
-                        void demoOrders.refetch()
-                        return
-                      }
                       void list.refetch()
                       void unread.refetch()
                     }}

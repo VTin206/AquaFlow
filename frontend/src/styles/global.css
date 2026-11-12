@@ -133,14 +133,6 @@ body {
 .af-nav-toggle {
   display: none !important;
 }
-.af-demo-label {
-  background: var(--af-primary-soft);
-  border-radius: 6px;
-  color: var(--af-primary);
-  font-size: var(--af-fs-sm);
-  padding: 5px 10px;
-  white-space: nowrap;
-}
 .af-notification-link {
   background: transparent;
   border: 0;
@@ -1877,9 +1869,6 @@ body {
   }
 }
 @media (max-width: 575px) {
-  .af-demo-label {
-    display: none;
-  }
   .af-page-actions {
     width: 100%;
   }

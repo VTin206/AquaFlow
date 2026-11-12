@@ -1,20 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/shared/api/client'
-import { useIsDemo } from '@/shared/features'
 import { bottleTypeApi } from '@/features/live/bottleTypeApi'
-import { demoBottleTypeApi } from '@/features/live/demoBottleTypeApi'
 import { useStaff } from '@/features/auth/useStaff'
 import { inventoryApi } from '@/features/live/inventoryApi'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
-import { productService } from './productService'
 import { resolveProductImage } from './productImages'
-import { isLowStock, type Product } from './types'
+import type { Product } from './types'
 import { productKeys } from './useProducts'
-import { catalogFromApi, demoCatalog, waterTypeOf, type WaterTypeCode } from './catalogGroups'
+import { catalogFromApi, type WaterTypeCode } from './catalogGroups'
 import { sortByName } from '@/shared/utils/table'
 
 /**
- * Danh mục cho trang Sản phẩm: bản dùng thử đọc mock, tài khoản thật gọi ProductController (BE2)
+ * Danh mục cho trang Sản phẩm: gọi ProductController (BE2)
  * và lấy số khả dụng từ tồn kho. Loại nước, dung tích chưa nhập thì đoán từ tên (`catalogFromApi`).
  */
 export type CatalogItem = Pick<Product, 'id' | 'sku' | 'name' | 'brand' | 'unit' | 'price' | 'image' | 'catalog'> & {
@@ -63,23 +60,6 @@ type ProductResponse = {
   volumeMl?: number | null
 }
 
-const fromDemo = (product: Product): CatalogItem => ({
-  id: product.id,
-  sku: product.sku,
-  name: product.name,
-  brand: product.brand,
-  unit: product.unit,
-  price: product.price,
-  image: product.image,
-  catalog: product.catalog,
-  active: product.active !== false,
-  stock: product.stock,
-  threshold: product.threshold,
-  lowStock: isLowStock(product),
-  waterType: waterTypeOf(product.catalog?.category),
-  volumeMl: product.catalog?.volumeMl || undefined,
-})
-
 const fromResponse = (product: ProductResponse, available?: number): CatalogItem => ({
   id: String(product.id),
   sku: product.sku,
@@ -124,21 +104,17 @@ async function liveCatalog(status: ProductStatus) {
   return products.map((product) => fromResponse(product, stock ? (available.get(product.id) ?? 0) : undefined))
 }
 
-/** Store staff manage the catalog in both demo and live mode. */
+/** Store staff manage the catalog. */
 export function useCanManageProducts() {
   const role = useStaff()?.role
   return role === 'ADMIN' || role === 'SALES_STAFF'
 }
 
 export function useCatalog(status: ProductStatus) {
-  const demo = useIsDemo()
   const staff = useStaff()
   return useQuery({
-    queryKey: demo ? [...productKeys.all, 'catalog', status] : ['live', 'products', staff?.name, staff?.role, status],
-    queryFn: async () =>
-      demo
-        ? (await productService.listAll()).map(fromDemo).filter((item) => status === 'all' || item.active === (status === 'active'))
-        : liveCatalog(status),
+    queryKey: ['live', 'products', staff?.name, staff?.role, status],
+    queryFn: () => liveCatalog(status),
     select: sortByName,
   })
 }
@@ -150,10 +126,9 @@ const useInvalidateProducts = () => {
 
 /** Loại vỏ cho form sản phẩm, cùng nguồn với danh mục loại vỏ. */
 export function useBottleTypeOptions(enabled: boolean) {
-  const demo = useIsDemo()
   const query = useQuery({
-    queryKey: ['live', 'bottle-types', 'product-form', demo],
-    queryFn: () => (demo ? demoBottleTypeApi : bottleTypeApi).list(),
+    queryKey: ['live', 'bottle-types', 'product-form'],
+    queryFn: () => bottleTypeApi.list(),
     enabled,
   })
   return { types: query.data ?? [], isPending: query.isPending }
@@ -161,22 +136,9 @@ export function useBottleTypeOptions(enabled: boolean) {
 
 /** Thêm mới khi không có `id`; khi sửa, mã sản phẩm và tồn kho không đổi (tồn chỉ tăng qua phiếu nhập). */
 export function useSaveProduct() {
-  const demo = useIsDemo()
   const invalidate = useInvalidateProducts()
   return useMutation({
     mutationFn: async ({ id, form }: { id?: string; form: ProductForm }): Promise<{ name: string }> => {
-      if (demo) {
-        const draft = {
-          name: form.name,
-          brand: form.brand,
-          unit: form.unit,
-          price: form.price,
-          image: form.image,
-          catalog: demoCatalog(form.name, form.unit, form.waterType, form.volumeMl),
-        }
-        // Như BE: sản phẩm mới có tồn 0, tồn chỉ tăng qua phiếu nhập.
-        return id ? productService.update(id, draft) : productService.create({ ...draft, sku: form.sku, stock: 0 })
-      }
       return id
         ? api.put<ProductResponse>(`/products/${id}`, toRequest(form))
         : api.post<ProductResponse>('/products', { sku: form.sku.trim(), ...toRequest(form) })
@@ -187,22 +149,19 @@ export function useSaveProduct() {
 
 /** Bán lại sản phẩm đã ngừng. BE từ chối (409) khi loại vỏ đi kèm còn ngừng lưu hành. */
 export function useActivateProduct() {
-  const demo = useIsDemo()
   const invalidate = useInvalidateProducts()
   return useMutation({
     mutationFn: async (id: string) => {
-      if (demo) await productService.activate(id)
-      else await api.post<ProductResponse>(`/products/${id}/reactivate`)
+      await api.post<ProductResponse>(`/products/${id}/reactivate`)
     },
     onSuccess: () => void invalidate(),
   })
 }
 
 export function useDeactivateProduct() {
-  const demo = useIsDemo()
   const invalidate = useInvalidateProducts()
   return useMutation({
-    mutationFn: (id: string) => (demo ? productService.deactivate(id) : api.delete<void>(`/products/${id}`)),
+    mutationFn: (id: string) => api.delete<void>(`/products/${id}`),
     onSuccess: () => void invalidate(),
   })
 }

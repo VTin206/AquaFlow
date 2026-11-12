@@ -54,7 +54,7 @@ export function CustomersPage() {
   const screens = Grid.useBreakpoint()
   const { message } = App.useApp()
   const [exporting, setExporting] = useState(false)
-  // Khách đã lưu trữ chỉ xem được khi BE có API (bản dùng thử thì luôn có).
+  // Khách đã lưu trữ chỉ xem được khi BE có API.
   const [view, setView] = useState<'active' | 'archived'>('active')
   // Tải sẵn để hiện số đếm trên bộ lọc.
   const archivedQuery = useArchivedCustomers()

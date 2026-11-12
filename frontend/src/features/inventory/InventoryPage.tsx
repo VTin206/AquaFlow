@@ -7,15 +7,12 @@ import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
 import { Unsupported } from '@/shared/components/Unsupported'
 import { usePendingReturns } from '@/features/live/returnApi'
-import { useIsDemo } from '@/shared/features'
-import { awaitingReturnInspection } from '@/features/orders/types'
-import { useOrders } from '@/features/orders/useOrders'
 import { useColumnSort } from '@/shared/components/sortableColumn'
 import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
 import { LotsPanel, type LotFilter } from './components/LotsPanel'
 import { InventoryAttention, type AttentionItem } from './components/InventoryAttention'
 import { MovementsPanel } from './components/MovementsPanel'
-import { ReturnsPanel } from './components/ReturnsPanel'
+import { LiveReturnsPanel } from './components/LiveReturnsPanel'
 import { ReceiptsPanel } from './components/ReceiptsPanel'
 import { ReceiveStockModal } from './components/ReceiveStockModal'
 import { useExpiryWarningDays } from '@/features/settings/settingsService'
@@ -35,10 +32,7 @@ export function InventoryPage() {
   // Chỉ cần số phiếu nháp: lấy trang nhỏ nhất, số đếm theo trạng thái tính trên toàn bộ phiếu.
   const receiptsQuery = useReceiptPage({ page: 0, size: 1 })
   const warningDays = useExpiryWarningDays()
-  const demo = useIsDemo()
-  const demoReturns = (useOrders(demo).data ?? []).filter(awaitingReturnInspection).length
-  const liveReturns = usePendingReturns(!demo)
-  const returnsCount = demo ? demoReturns : (liveReturns.data?.length ?? 0)
+  const returnsCount = usePendingReturns().data?.length ?? 0
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const [view, setView] = useState<View>('stock')
@@ -286,7 +280,7 @@ export function InventoryPage() {
             ]}
           >
             {view === 'returns' ? (
-              <ReturnsPanel />
+              <LiveReturnsPanel />
             ) : view === 'movements' ? (
               <MovementsPanel />
             ) : view === 'lots' ? (

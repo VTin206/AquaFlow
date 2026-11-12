@@ -5,10 +5,7 @@ import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
 import { TransferQr } from '@/shared/payment/TransferQr'
 import { vietQrBanks } from '@/shared/payment/vietqr'
-import { EXCHANGEABLE_BRANDS, PICKUP_FEE, PICKUP_FEE_BELOW } from '@/shared/policy'
-import { currency } from '@/shared/utils/format'
 import { useSettings, useUpdateSettings } from './settingsService'
-import { useIsDemo } from '@/shared/features'
 import { Unsupported } from '@/shared/components/Unsupported'
 import { ApiError } from '@/shared/api/client'
 import { type SettingsSnapshot } from './settingsApi'
@@ -44,7 +41,6 @@ export function SettingsPage() {
 
 function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload: () => Promise<SettingsSnapshot> }) {
   const { message, modal } = App.useApp()
-  const demo = useIsDemo()
   const [version, setVersion] = useState(settings.version)
   const [conflict, setConflict] = useState(false)
   const [form] = Form.useForm<StoreSettings>()
@@ -326,13 +322,13 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
                         ? depositRatesLabel(depositRates.data)
                         : 'Chưa có loại vỏ đang lưu hành.',
                 },
-                { key: 'brands', label: 'Đổi bù vỏ', children: demo ? EXCHANGEABLE_BRANDS.join(', ') : <Unsupported /> },
-                { key: 'pickup', label: 'Thu hồi tận nơi', children: demo ? `${currency(PICKUP_FEE)}/lần khi dưới ${PICKUP_FEE_BELOW} vỏ` : <Unsupported /> },
+                { key: 'brands', label: 'Đổi bù vỏ', children: <Unsupported /> },
+                { key: 'pickup', label: 'Thu hồi tận nơi', children: <Unsupported /> },
               ]}
             />
             <Typography.Paragraph type="secondary" className="af-form-hint">
               Tiền cọc sửa ở Danh mục loại vỏ (trang Khách hàng › Vỏ bình), áp dụng theo loại vỏ của sản phẩm.{' '}
-              {demo ? 'Đổi bù vỏ và thu hồi tận nơi là mức mẫu tham khảo.' : 'Đổi bù vỏ và thu hồi tận nơi chưa áp dụng.'}
+              Đổi bù vỏ và thu hồi tận nơi chưa áp dụng.
             </Typography.Paragraph>
           </Card>
         </Col>

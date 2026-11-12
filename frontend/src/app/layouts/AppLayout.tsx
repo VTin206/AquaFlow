@@ -5,7 +5,6 @@ import { canOpen, homeOf } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/useStaff'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
-import { useMockSession } from './useAccountMenu'
 import { ErrorBoundary } from '../ErrorBoundary'
 
 // Ghi nhớ sidebar thu gọn giữa các lần mở app.
@@ -34,9 +33,7 @@ export function AppLayout() {
   const staff = useStaff()
   const { pathname } = useLocation()
 
-  useMockSession(staff)
-
-  // Mở trang không thuộc vai trò (gõ đường dẫn, đổi vai trò) thì về trang chính của vai trò đó.
+  // Mở trang không thuộc vai trò (gõ đường dẫn) thì về trang chính của vai trò đó.
   if (staff && !canOpen(staff.role, pathname)) return <Navigate to={homeOf(staff.role)} replace />
 
   return (

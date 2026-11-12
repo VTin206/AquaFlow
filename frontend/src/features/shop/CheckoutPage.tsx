@@ -10,13 +10,12 @@ import type { LiveOrder } from '@/features/live/orderApi'
 import { Money } from '@/shared/components/Money'
 import { QueryError } from '@/shared/components/QueryError'
 import { focusNextOnEnter } from '@/shared/utils/forms'
-import { smallOrderFee, stairsSurcharge, suggestedDeliveryFee } from '@/shared/policy'
 import { readProfile, saveProfile, useCart, useCartActions } from './cart'
 import { submitCheckoutOnce } from './checkoutSubmit'
 import { CheckoutReview } from './components/CheckoutReview'
 import { CheckoutDeposit } from './components/CheckoutDeposit'
 import { disabledOutsideHours, formatOpeningHours, isWithinOpeningHours, parseOpeningHours } from './openingHours'
-import { usePlaceWebOrder, useShopContact, useShopDemo, useShopProducts } from './shopService'
+import { usePlaceWebOrder, useShopContact, useShopProducts } from './shopService'
 import { useAuth } from '@/features/auth/useAuth'
 import { isCustomer } from '@/features/auth/accountAccess'
 import { SavedAddressPicker } from './SavedAddressPicker'
@@ -49,7 +48,6 @@ function handleFormKeys(event: KeyboardEvent<HTMLElement>) {
 
 export function CheckoutPage() {
   const { user } = useAuth()
-  const demo = useShopDemo()
   const cart = useCart()
   const actions = useCartActions()
   const products = useShopProducts()
@@ -74,19 +72,18 @@ export function CheckoutPage() {
   const invalid = invalidCartLine || lines.some((line) => !line.product || line.product.available === false)
   const subtotal = lines.reduce((sum, line) => sum + (line.product?.price ?? 0) * line.quantity, 0)
   const units = lines.reduce((sum, line) => sum + line.quantity, 0)
-  const jugs = lines.filter((line) => line.product?.unit === 'Bình').reduce((sum, line) => sum + line.quantity, 0)
 
   const validFloor = Number.isInteger(floor) && floor >= 0 && floor <= 30
   const quote = useQuery({
     queryKey: ['shop', 'delivery-quote', cart, floor],
     queryFn: () => deliveryQuoteApi.quote(cart.map(line => ({ productId: Number(line.productId), quantity: line.quantity })), floor),
-    enabled: !demo && !invalid && cart.length > 0 && validFloor,
+    enabled: !invalid && cart.length > 0 && validFloor,
     retry: false,
     staleTime: 0,
   })
-  const quoteBlocked = !validFloor || (!demo && (!quote.data || quote.isError || quote.isFetching))
-  const fee = demo ? suggestedDeliveryFee({ units, jugs, floor }) : quoteBlocked ? null : quote.data!.deliveryFee
-  const quotedSubtotal = !demo && !quoteBlocked ? quote.data!.subtotal : subtotal
+  const quoteBlocked = !validFloor || !quote.data || quote.isError || quote.isFetching
+  const fee = quoteBlocked ? null : quote.data!.deliveryFee
+  const quotedSubtotal = quoteBlocked ? subtotal : quote.data!.subtotal
   const total = quotedSubtotal + (fee ?? 0)
 
   const depositHint = <CheckoutDeposit lines={lines} />
@@ -103,7 +100,7 @@ export function CheckoutPage() {
       note: values.note?.trim(),
       lines: cart,
       floor: values.floor ?? 0,
-      ...(!demo ? { expectedTotal: quote.data!.total } : {}),
+      expectedTotal: quote.data!.total,
     }
     void submitCheckoutOnce(
       submitLock,
@@ -125,7 +122,7 @@ export function CheckoutPage() {
         else setPlacedLiveOrder(order as LiveOrder)
       },
       (error) => {
-        if (!demo) void quote.refetch()
+        void quote.refetch()
         setSubmitError(error.message)
         message.error(error.message)
       },
@@ -245,7 +242,7 @@ export function CheckoutPage() {
                 </div>
               </Card>
               <Card title="Giao đến">
-                {(isCustomer(user) || user?.isDemo) && <SavedAddressPicker onSelect={address => form.setFieldsValue({ customer: address.recipientName, phone: address.recipientPhone, address: address.addressLine, area: address.area })} />}
+                {isCustomer(user) && <SavedAddressPicker onSelect={address => form.setFieldsValue({ customer: address.recipientName, phone: address.recipientPhone, address: address.addressLine, area: address.area })} />}
                 <Form.Item
                   name="area"
                   label="Phường/Xã"
@@ -268,17 +265,9 @@ export function CheckoutPage() {
                 </div>
                 <DeliveryFeeSummary
                   fee={fee}
-                  quote={
-                    demo
-                      ? validFloor
-                        ? { subtotal, baseFee: smallOrderFee(units), stairsFee: stairsSurcharge(floor, jugs), deliveryFee: fee ?? 0, total }
-                        : undefined
-                      : !quoteBlocked
-                        ? quote.data
-                        : undefined
-                  }
-                  loading={!demo && quoteBlocked}
-                  error={!demo && quote.isError ? <QueryError error={quote.error} onRetry={quote.refetch} /> : undefined}
+                  quote={quoteBlocked ? undefined : quote.data}
+                  loading={quoteBlocked}
+                  error={quote.isError ? <QueryError error={quote.error} onRetry={quote.refetch} /> : undefined}
                 />
                 <Form.Item name="when" label="Giờ nhận hàng">
                   <Radio.Group

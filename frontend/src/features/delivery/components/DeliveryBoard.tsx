@@ -5,14 +5,13 @@ import { MapLink } from '@/shared/address/MapLink'
 import { ViewButton } from '@/shared/components/ViewButton'
 import { Money } from '@/shared/components/Money'
 import { QueryError } from '@/shared/components/QueryError'
-import { useIsDemo } from '@/shared/features'
 import { dueTone } from '@/shared/utils/money'
 import { OrderDetails } from '@/features/orders/components/OrderDetails'
 import { useOrderList } from '@/features/orders/orderData'
 import { knownAmountDue, type Order, type OrderStatus } from '@/features/orders/types'
 import { useLiveTrips } from '../useLiveTrips'
 
-// Mỗi cột là một bước, đơn đi từ trái sang phải. Bản dùng thử xác nhận là chuyển thẳng sang chuẩn bị nên cột "Đã xác nhận" luôn trống.
+// Mỗi cột là một bước, đơn đi từ trái sang phải.
 const columns: { status: OrderStatus; title: string; hint: string; color: string }[] = [
   { status: 'Chờ xác nhận', title: 'Chờ xác nhận', hint: 'Gọi lại cho khách để xác nhận', color: '#f59f00' },
   { status: 'Đã xác nhận', title: 'Đã xác nhận', hint: 'Đã giữ hàng, chuyển sang soạn hàng', color: '#4263eb' },
@@ -76,9 +75,8 @@ function DeliveryCard({ order, failureReason, orphan, onDetails }: CardProps) {
 
 /** Bảng theo dõi mọi đơn giao, kể cả đơn chưa thuộc chuyến nào. */
 export function DeliveryBoard() {
-  const demo = useIsDemo()
   const ordersQuery = useOrderList()
-  const trips = useLiveTrips(!demo)
+  const trips = useLiveTrips()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const deliveries = (ordersQuery.data ?? []).filter((order) => order.method === 'Giao tận nơi')
 
@@ -89,12 +87,7 @@ export function DeliveryBoard() {
   )
   const inTrip = new Set(stops.map((stop) => String(stop.orderId)))
   const columnOf = (order: Order): OrderStatus => (order.status === 'Đang giao' && failures.has(order.id) ? 'Giao thất bại' : order.status)
-  const failureOf = (order: Order) =>
-    demo
-      ? order.status === 'Giao thất bại'
-        ? order.history.filter((event) => event.message.startsWith('Giao thất bại')).at(-1)?.message
-        : undefined
-      : failures.get(order.id)
+  const failureOf = (order: Order) => failures.get(order.id)
 
   if (ordersQuery.isError) {
     return (
@@ -129,7 +122,7 @@ export function DeliveryBoard() {
                         key={order.id}
                         order={order}
                         failureReason={failureOf(order)}
-                        orphan={!demo && trips.isSuccess && order.status === 'Đang giao' && !inTrip.has(order.id)}
+                        orphan={trips.isSuccess && order.status === 'Đang giao' && !inTrip.has(order.id)}
                         onDetails={() => setSelectedId(order.id)}
                       />
                     ))

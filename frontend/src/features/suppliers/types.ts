@@ -1,4 +1,4 @@
-// Kiểu dùng chung cho giao diện; bản dùng thử đọc mock, tài khoản thật chuyển từ SupplierResponse.
+// Kiểu dùng chung cho giao diện, chuyển từ SupplierResponse.
 export type SupplierDraft = {
   name: string
   contactName?: string

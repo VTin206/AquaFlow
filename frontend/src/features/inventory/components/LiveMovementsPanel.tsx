@@ -7,30 +7,26 @@ import { movementApi, movementLabels, type InventoryMovement, type MovementFilte
 import { OrderDetails } from '@/features/orders/components/OrderDetails'
 import { QueryError } from '@/shared/components/QueryError'
 import { ViewButton } from '@/shared/components/ViewButton'
-import { useIsDemo } from '@/shared/features'
 import { tableScrollHeight } from '@/shared/utils/table'
-import { demoMovementApi } from '../demoMovementApi'
 import { isoToVnDate } from '../expiry'
 
 const timestamp = (value: string) => new Date(value).toLocaleString('vi-VN')
 const signed = (row: InventoryMovement) => `${row.signedQuantity > 0 ? '+' : ''}${row.signedQuantity} ${row.unit}`
 
-/** Lịch sử xuất nhập kho; dùng chung cho bản dùng thử và tài khoản thật. */
+/** Lịch sử xuất nhập kho. */
 export function LiveMovementsPanel() {
   const { user } = useAuth()
-  const demo = useIsDemo()
-  const source = demo ? demoMovementApi : movementApi
   const [filter, setFilter] = useState<MovementFilter>({ page: 0, size: 20 })
   const [selected, setSelected] = useState<number | null>(null)
   const [orderId, setOrderId] = useState<string | null>(null)
   const query = useQuery({
-    queryKey: ['live', 'inventory-movements', demo, user?.email, user?.role, filter],
-    queryFn: () => source.list(filter),
+    queryKey: ['live', 'inventory-movements', user?.email, user?.role, filter],
+    queryFn: () => movementApi.list(filter),
     refetchInterval: 15000,
   })
   const detail = useQuery({
-    queryKey: ['live', 'inventory-movement', demo, user?.email, user?.role, selected],
-    queryFn: () => source.detail(selected!),
+    queryKey: ['live', 'inventory-movement', user?.email, user?.role, selected],
+    queryFn: () => movementApi.detail(selected!),
     enabled: selected !== null,
   })
   const update = (values: Partial<MovementFilter>) => setFilter((previous) => ({ ...previous, ...values, page: 0 }))
@@ -165,7 +161,7 @@ export function LiveMovementsPanel() {
             {row?.referenceType === 'ORDER' && (
               <Button
                 onClick={() => {
-                  setOrderId(row.orderRef ?? String(row.referenceId))
+                  setOrderId(String(row.referenceId))
                   setSelected(null)
                 }}
               >

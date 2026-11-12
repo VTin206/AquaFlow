@@ -26,7 +26,7 @@ type Props = {
   children?: ReactNode
 }
 
-/** Hàng hoàn về: đơn chờ kiểm và các phiếu đã kiểm; dùng chung cho bản dùng thử và tài khoản thật. */
+/** Hàng hoàn về: đơn chờ kiểm và các phiếu đã kiểm. */
 export function ReturnsView({ pending, pendingLoading, pendingError, onInspect, history, historyLoading, historyError, paging, children }: Props) {
   const [detail, setDetail] = useState<ReturnHistoryRow | null>(null)
   const waiting = pending.length

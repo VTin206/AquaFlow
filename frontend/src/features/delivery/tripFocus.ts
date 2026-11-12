@@ -68,7 +68,7 @@ type DriverFocusInput = {
   nextCustomer?: string
 }
 
-/** Việc tiếp theo của tài xế; dùng chung cho bản dùng thử và tài khoản thật. */
+/** Việc tiếp theo của tài xế. */
 export function driverTripFocus({ stage, total, pending, waitingDispatch, nextCustomer }: DriverFocusInput): OrderFocus {
   if (stage === 'cancelled') return { tone: 'muted', title: 'Chuyến đã hủy' }
   if (stage === 'settled') return { tone: 'done', title: 'Chuyến đã đối soát xong' }

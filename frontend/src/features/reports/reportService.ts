@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
 import { db } from '@/mocks/db'
-import { useIsDemo } from '@/shared/features'
 import { DEPOSIT_PER_BOTTLE } from '@/shared/policy'
 import { mockError, mockRequest } from '@/mocks/mockRequest'
 import { expectedHandover, tripStatus } from '@/features/delivery/tripService'
@@ -512,22 +511,18 @@ export const useReport = (range: ReportRange, filters?: ReportFilters, enabled =
 
 /** Doanh thu 14 ngày gần nhất cho trang tổng quan; ngày cuối danh sách là hôm nay. */
 export function useDailyRevenue(enabled = true) {
-  const demo = useIsDemo()
   const range = { from: dayFromToday(-13), to: dayFromToday() }
-  const demoQuery = useReport(range, undefined, enabled && demo)
-  const liveQuery = useQuery({
+  const query = useQuery({
     queryKey: ['live', 'reports', 'summary', range],
     queryFn: () => reportApi.summary(range),
-    enabled: enabled && !demo,
+    enabled,
   })
-  return demo
-    ? { ...demoQuery, data: demoQuery.data?.days }
-    : {
-        ...liveQuery,
-        data: liveQuery.data?.days.map((day) => ({
-          ...day,
-          revenue: Number(day.revenue),
-          collected: Number(day.collected),
-        })),
-      }
+  return {
+    ...query,
+    data: query.data?.days.map((day) => ({
+      ...day,
+      revenue: Number(day.revenue),
+      collected: Number(day.collected),
+    })),
+  }
 }

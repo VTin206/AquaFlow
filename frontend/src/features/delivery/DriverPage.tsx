@@ -9,25 +9,19 @@ import { useAuth } from '@/features/auth/useAuth'
 import { useStaff } from '@/features/auth/useStaff'
 import { Money } from '@/shared/components/Money'
 import { QueryError } from '@/shared/components/QueryError'
-import { useIsDemo } from '@/shared/features'
 import { currency } from '@/shared/utils/format'
 import { dueTone } from '@/shared/utils/money'
 import { modalWidth } from '@/shared/utils/modal'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
-import { AdvanceStatusButton } from '@/features/orders/components/AdvanceStatusButton'
-import { OrderDetailsModal } from '@/features/orders/components/OrderDetailsModal'
 import { OrderFocusBanner } from '@/features/orders/components/OrderSheet'
-import type { Order } from '@/features/orders/types'
-import { useOrders } from '@/features/orders/useOrders'
 import {
   collectionApi,
   deliveryApi,
   RECENT_TRIP_DAYS,
   type CollectionInput,
-  type DeliveryAttempt,
   type DeliveryStop,
-  type DeliveryTrip,
   type TripCollections,
+  type DeliveryTrip,
 } from './deliveryApi'
 import { DeliveryBottlesButton } from './components/DeliveryBottlesButton'
 import { AttemptsTimeline } from './components/AttemptsTimeline'
@@ -35,24 +29,10 @@ import { DeliveryActionModal } from './components/DeliveryActionModal'
 import { TripRouteButton } from './components/TripRouteButton'
 import { TripStatusTag } from './components/TripStatusTag'
 import { DriverDue, driverToday } from './driverParts'
-import { demoAttempts, demoCollections, toDriverTrip } from './demoDriverData'
 import { driverTripFocus, liveTripStatus } from './tripFocus'
-import { useTrips } from './useTrips'
 
-/** Nguồn dữ liệu mẫu cho một màn hình tài xế; không có thì màn hình gọi API thật. */
-type DemoTools = {
-  collections: (tripId: number) => TripCollections | undefined
-  attempts: (stop: DeliveryStop) => DeliveryAttempt[]
-  orderOf: (stop: DeliveryStop) => Order | undefined
-  collect: (stop: DeliveryStop) => void
-}
-
-/** Màn hình tài xế dùng chung: chỗ này chỉ chọn nguồn dữ liệu, giao diện nằm ở DriverScreen. */
+/** Màn hình tài xế: lấy chuyến của tài xế đang đăng nhập, giao diện nằm ở DriverScreen. */
 export function DriverPage() {
-  return useIsDemo() ? <DemoDriver /> : <LiveDriver />
-}
-
-function LiveDriver() {
   const { user } = useAuth()
   // BE chỉ trả chuyến của tài xế đang đăng nhập; chuyến xong quá 30 ngày không cần hiện.
   const trips = useQuery({
@@ -71,47 +51,6 @@ function LiveDriver() {
   )
 }
 
-function DemoDriver() {
-  const staff = useStaff()
-  const tripsQuery = useTrips()
-  const ordersQuery = useOrders()
-  const [payingId, setPayingId] = useState<string | null>(null)
-  const orders = ordersQuery.data ?? []
-  const records = (tripsQuery.data ?? []).filter((trip) => trip.driver === staff?.name)
-  const stopsOf = (ids: string[]) => ids.map((id) => orders.find((order) => order.id === id)).filter((order) => order !== undefined)
-  const trips = records.map((trip, index) => toDriverTrip(trip, stopsOf(trip.orderIds), index))
-  const orderOf = (stop: DeliveryStop) => orders.find((order) => (order.code ?? order.id) === stop.orderCode)
-  const tools: DemoTools = {
-    collections: (tripId) => {
-      const index = trips.findIndex((trip) => trip.id === tripId)
-      return index < 0 ? undefined : demoCollections(records[index], stopsOf(records[index].orderIds))
-    },
-    attempts: (stop) => {
-      const order = orderOf(stop)
-      return order ? demoAttempts(order) : []
-    },
-    orderOf,
-    collect: (stop) => setPayingId(orderOf(stop)?.id ?? null),
-  }
-  const error = tripsQuery.error ?? ordersQuery.error
-  return (
-    <>
-      <DriverScreen
-        trips={tripsQuery.data && ordersQuery.data ? trips : undefined}
-        loading={tripsQuery.isPending || ordersQuery.isPending}
-        fetching={tripsQuery.isFetching || ordersQuery.isFetching}
-        error={error}
-        onRetry={() => {
-          void tripsQuery.refetch()
-          void ordersQuery.refetch()
-        }}
-        demo={tools}
-      />
-      {payingId && <OrderDetailsModal key={payingId} orderId={payingId} payOnly onClose={() => setPayingId(null)} />}
-    </>
-  )
-}
-
 /** Màn hình điện thoại cho tài xế: mỗi chuyến nói rõ việc tiếp theo, điểm chưa giao lên trước. */
 function DriverScreen({
   trips,
@@ -119,14 +58,12 @@ function DriverScreen({
   fetching,
   error,
   onRetry,
-  demo,
 }: {
   trips?: DeliveryTrip[]
   loading: boolean
   fetching: boolean
   error: Error | null
   onRetry: () => void
-  demo?: DemoTools
 }) {
   const staff = useStaff()
   const [showHistory, setShowHistory] = useState(false)
@@ -162,7 +99,7 @@ function DriverScreen({
           <Empty description="Chưa có chuyến nào được giao cho bạn." />
         </Card>
       ) : (
-        visible.map((trip) => <DriverTrip key={trip.id} trip={trip} demo={demo} />)
+        visible.map((trip) => <DriverTrip key={trip.id} trip={trip} />)
       )}
       {hiddenCount > 0 && (
         <Button type="link" block onClick={() => setShowHistory(!showHistory)}>
@@ -173,7 +110,7 @@ function DriverScreen({
   )
 }
 
-function DriverTrip({ trip, demo }: { trip: DeliveryTrip; demo?: DemoTools }) {
+function DriverTrip({ trip }: { trip: DeliveryTrip }) {
   const { user } = useAuth()
   const { message } = App.useApp()
   const client = useQueryClient()
@@ -184,15 +121,14 @@ function DriverTrip({ trip, demo }: { trip: DeliveryTrip; demo?: DemoTools }) {
     queryKey: ['live', 'trip-collections', user?.email, trip.id],
     queryFn: () => collectionApi.get(trip.id),
     refetchInterval: 15000,
-    enabled: !demo,
   })
   const liveAttempts = useQuery({
     queryKey: ['live', 'driver-attempts', user?.email, trip.id, history?.orderId],
     queryFn: () => deliveryApi.assignmentAttempts(history!.id),
-    enabled: !demo && !!history,
+    enabled: !!history,
   })
-  const receipts = demo ? demo.collections(trip.id) : liveReceipts.data
-  const attempts = demo && history ? demo.attempts(history) : liveAttempts.data
+  const receipts = liveReceipts.data
+  const attempts = liveAttempts.data
   const change = useMutation({
     mutationFn: (fn: () => Promise<unknown>) => fn(),
     onSuccess: async () => {
@@ -219,7 +155,6 @@ function DriverTrip({ trip, demo }: { trip: DeliveryTrip; demo?: DemoTools }) {
   const stop = (order: DeliveryStop, index: number, list: DeliveryStop[]) => {
     const balance = receipts?.balances.find((b) => b.orderId === order.orderId)
     const returned = receipts?.receipts.filter((r) => r.orderId === order.orderId).reduce((sum, r) => sum + r.bottlesReturned, 0) ?? 0
-    const demoOrder = demo?.orderOf(order)
     const onTheWay = active && order.orderStatus !== 'PREPARING'
     return (
       <li className="af-driver-stop" key={order.id}>
@@ -298,7 +233,7 @@ function DriverTrip({ trip, demo }: { trip: DeliveryTrip; demo?: DemoTools }) {
               size="large"
               icon={<Wallet size={18} />}
               disabled={!balance || balance.due <= 0 || change.isPending}
-              onClick={() => (demo ? demo.collect(order) : setCollect(order))}
+              onClick={() => setCollect(order)}
             >
               Thu tiền
             </Button>
@@ -309,25 +244,11 @@ function DriverTrip({ trip, demo }: { trip: DeliveryTrip; demo?: DemoTools }) {
             </Button>
           )}
           <DeliveryBottlesButton assignmentId={order.id} orderCode={order.orderCode} />
-          {active &&
-            !order.latestAttempt &&
-            (demoOrder ? (
-              demoOrder.status === 'Đang giao' && (
-                <span className="af-driver-result">
-                  <AdvanceStatusButton order={demoOrder} size="large" primary />
-                </span>
-              )
-            ) : (
-              <Button
-                size="large"
-                type="primary"
-                className="af-driver-primary"
-                disabled={change.isPending}
-                onClick={() => setResult(order)}
-              >
-                Kết quả giao
-              </Button>
-            ))}
+          {active && !order.latestAttempt && (
+            <Button size="large" type="primary" className="af-driver-primary" disabled={change.isPending} onClick={() => setResult(order)}>
+              Kết quả giao
+            </Button>
+          )}
         </div>
       </li>
     )
@@ -359,7 +280,7 @@ function DriverTrip({ trip, demo }: { trip: DeliveryTrip; demo?: DemoTools }) {
             )}
           </div>
         )}
-        {!demo && liveReceipts.isError && <QueryError error={liveReceipts.error} onRetry={liveReceipts.refetch} />}
+        {liveReceipts.isError && <QueryError error={liveReceipts.error} onRetry={liveReceipts.refetch} />}
         <OrderFocusBanner
           focus={driverTripFocus({
             stage,
@@ -438,7 +359,7 @@ function DriverTrip({ trip, demo }: { trip: DeliveryTrip; demo?: DemoTools }) {
         />
       )}
       <Modal open={!!history} centered title={`Lịch sử ${history?.orderCode ?? ''}`} onCancel={() => setHistory(null)} footer={null}>
-        {!demo && liveAttempts.isError ? (
+        {liveAttempts.isError ? (
           <QueryError error={liveAttempts.error} onRetry={liveAttempts.refetch} />
         ) : attempts ? (
           <AttemptsTimeline attempts={attempts} />

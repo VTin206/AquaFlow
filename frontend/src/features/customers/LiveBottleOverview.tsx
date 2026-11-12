@@ -8,20 +8,14 @@ import { bottleLedgerApi, type BottleBalance } from '@/features/live/bottleLedge
 import { LiveBottleTypes } from '@/features/live/LiveBottleTypes'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
-import { pageLocally, type Page } from '@/shared/api/page'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import { serverTablePagination } from '@/shared/utils/table'
-import { useIsDemo } from '@/shared/features'
-import { demoBottleApi } from './demoBottleLedger'
 import { LiveBottleLedger } from './LiveBottleLedger'
-
-type BalanceRow = Omit<BottleBalance, 'customerId'> & { customerId: number | string }
 
 export function LiveBottleOverview() {
   const staff = useStaff()
-  const demo = useIsDemo()
   const [search, setSearch] = useState('')
-  const [customer, setCustomer] = useState<BalanceRow>()
+  const [customer, setCustomer] = useState<BottleBalance>()
   const [types, setTypes] = useState(false)
   // Tìm ở BE: chờ ngừng gõ rồi mới gửi; đổi từ khóa thì về trang đầu.
   const q = useDebouncedValue(search)
@@ -29,9 +23,8 @@ export function LiveBottleOverview() {
   const page = paging.q === q ? paging.page : 0
   const filters = { page, size: paging.size, q }
   const query = useQuery({
-    queryKey: ['live', 'bottle-balances', demo, staff?.name, staff?.role, filters],
-    queryFn: async (): Promise<Page<BalanceRow>> =>
-      demo ? pageLocally(await demoBottleApi.balances(), filters, (row) => row.name) : bottleLedgerApi.balances(filters),
+    queryKey: ['live', 'bottle-balances', staff?.name, staff?.role, filters],
+    queryFn: () => bottleLedgerApi.balances(filters),
     placeholderData: keepPreviousData,
   })
   return (

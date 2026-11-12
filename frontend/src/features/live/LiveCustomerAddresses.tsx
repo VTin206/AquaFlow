@@ -2,10 +2,8 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Checkbox, Form, Input, Modal, Popconfirm, Table, Tag, Tooltip } from 'antd'
 import { Pencil } from 'lucide-react'
-import { demoAddressApi } from '@/features/customers/demoAddressApi'
 import { customerKeys } from '@/features/customers/useCustomers'
 import { api } from '@/shared/api/client'
-import { useIsDemo } from '@/shared/features'
 import { QueryError } from '@/shared/components/QueryError'
 import { invalidateLiveData } from './invalidateLiveData'
 import { modalWidth } from '@/shared/utils/modal'
@@ -36,16 +34,13 @@ export function LiveCustomerAddresses({
   const queryClient = useQueryClient()
   const [form] = Form.useForm<AddressDraft>()
   const [editing, setEditing] = useState<Address | null | undefined>()
-  const demo = useIsDemo()
   const path = `/sales/customers/${customerId}/addresses`
-  const source = demo
-    ? demoAddressApi(String(customerId))
-    : {
-        list: () => api.get<Address[]>(path),
-        create: (input: AddressDraft) => api.post<Address>(path, input),
-        update: (id: number, input: AddressDraft) => api.put<Address>(`${path}/${id}`, input),
-        remove: (id: number) => api.delete<void>(`${path}/${id}`),
-      }
+  const source = {
+    list: () => api.get<Address[]>(path),
+    create: (input: AddressDraft) => api.post<Address>(path, input),
+    update: (id: number, input: AddressDraft) => api.put<Address>(`${path}/${id}`, input),
+    remove: (id: number) => api.delete<void>(`${path}/${id}`),
+  }
   const key = ['live', 'customer-addresses', customerId]
   const addresses = useQuery({ queryKey: key, queryFn: () => source.list() })
   const save = useMutation({

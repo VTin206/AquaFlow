@@ -53,7 +53,7 @@ const rangeText: Record<ActivityRange, string> = {
   custom: 'trong khoảng ngày đã chọn',
 }
 
-/** Nhật ký hoạt động: một giao diện cho bản dùng thử và tài khoản thật, chỉ khác nguồn dữ liệu. */
+/** Nhật ký hoạt động của cửa hàng. */
 export function ActivityPage() {
   const { message } = App.useApp()
   const navigate = useNavigate()
