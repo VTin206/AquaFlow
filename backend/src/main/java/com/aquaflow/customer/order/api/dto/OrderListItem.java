@@ -9,15 +9,17 @@ import java.math.BigDecimal;
  * cùng số tiền đã thu/còn thu từ view order_payment_balances, để frontend không phải tải toàn bộ bảng công nợ.
  *
  * @param returned giá trị hàng khách đã trả lại (đã trừ vào số phải trả của đơn)
+ * @param lastAttemptFailed đơn chưa xong và lần giao gần nhất (phân công đang hiệu lực) thất bại; bảng Đơn hàng đưa lên đầu
  */
 public record OrderListItem(
         @JsonUnwrapped OrderResponse order,
         BigDecimal paid,
         BigDecimal due,
         BigDecimal refundDue,
-        BigDecimal returned
+        BigDecimal returned,
+        boolean lastAttemptFailed
 ) {
     public OrderListItem(OrderResponse order, BigDecimal paid, BigDecimal due, BigDecimal refundDue) {
-        this(order, paid, due, refundDue, BigDecimal.ZERO);
+        this(order, paid, due, refundDue, BigDecimal.ZERO, false);
     }
 }

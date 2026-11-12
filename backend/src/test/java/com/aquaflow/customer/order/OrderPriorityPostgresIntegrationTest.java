@@ -1,5 +1,6 @@
 package com.aquaflow.customer.order;
 
+import com.aquaflow.customer.order.api.dto.OrderListItem;
 import com.aquaflow.customer.order.application.OrderSearch;
 import com.aquaflow.customer.order.application.OrderService;
 import com.aquaflow.shared.api.PageRequestParams;
@@ -14,7 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -55,11 +58,16 @@ class OrderPriorityPostgresIntegrationTest {
         long failed = order("OUT_FOR_DELIVERY", "DELIVERY", now.minusMinutes(5), now.minusHours(5));
         failAttempt(failed);
 
+        // Đơn "giao sớm nhất" (không hẹn giờ) cần làm từ lúc đặt, nên đứng trước đơn hẹn giờ muộn hơn.
         assertThat(ids(0, 20)).containsExactly(failed, overdueLong, overdueShort, pendingOld, pendingNew,
-                activeSoon, activeLater, activeNoTime, deliveredDue, cancelledNew, cancelledOld);
+                activeNoTime, activeSoon, activeLater, deliveredDue, cancelledNew, cancelledOld);
         // Phân trang cắt đúng theo thứ tự ưu tiên.
         assertThat(ids(0, 3)).containsExactly(failed, overdueLong, overdueShort);
-        assertThat(ids(1, 3)).containsExactly(pendingOld, pendingNew, activeSoon);
+        assertThat(ids(1, 3)).containsExactly(pendingOld, pendingNew, activeNoTime);
+        // Danh sách trả cờ giao thất bại để frontend xếp nhóm Cần xử lý/Đang thực hiện cùng thứ tự.
+        assertThat(failedFlags()).containsOnlyKeys(ids(0, 20)).containsEntry(failed, true)
+                .containsEntry(overdueLong, false).containsEntry(activeNoTime, false);
+        assertThat(workingSetFailedFlags()).containsEntry(failed, true).containsEntry(overdueLong, false);
     }
 
     @Test
@@ -71,11 +79,33 @@ class OrderPriorityPostgresIntegrationTest {
 
         // Lần thất bại của phân công cũ không còn tính: đơn trở lại mức đang xử lý, sau đơn chờ xác nhận.
         assertThat(ids(0, 20)).containsExactly(pending, reassigned);
+        assertThat(failedFlags()).containsEntry(reassigned, false);
+        assertThat(workingSetFailedFlags()).containsEntry(reassigned, false);
+    }
+
+    @Test
+    void failedFlagIsClearedOnceTheOrderIsNoLongerOpen() {
+        long cancelled = order("CANCELLED", "DELIVERY", now.minusHours(2), null);
+        failAttempt(cancelled);
+
+        assertThat(failedFlags()).containsEntry(cancelled, false);
     }
 
     private List<Long> ids(int page, int size) {
         return orders.search(new OrderSearch(null, null, null, SearchKeyword.of(tag)), new PageRequestParams(page, size))
                 .items().stream().map(item -> item.order().id()).toList();
+    }
+
+    private Map<Long, Boolean> failedFlags() {
+        return orders.search(new OrderSearch(null, null, null, SearchKeyword.of(tag)), new PageRequestParams(0, 50))
+                .items().stream().collect(Collectors.toMap(item -> item.order().id(), OrderListItem::lastAttemptFailed));
+    }
+
+    /** Working set gồm cả đơn của bài test khác trong DB, nên chỉ giữ đơn của bài test này. */
+    private Map<Long, Boolean> workingSetFailedFlags() {
+        return orders.workingSet(30).stream()
+                .filter(item -> String.valueOf(item.order().recipientName()).endsWith(tag))
+                .collect(Collectors.toMap(item -> item.order().id(), OrderListItem::lastAttemptFailed));
     }
 
     private long order(String status, String fulfillment, OffsetDateTime createdAt, OffsetDateTime requestedAt) {

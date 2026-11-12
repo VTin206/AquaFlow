@@ -15,8 +15,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Truy vấn danh sách đơn có lọc/tìm/phân trang bằng SQL. Chỉ trả id theo đúng thứ tự;
@@ -39,37 +41,43 @@ public class OrderQueryRepository {
     /** Đơn còn việc phải làm: chưa hoàn tất và chưa hủy (đơn đã giao nhưng chưa thu đủ vẫn thuộc nhóm này). */
     private static final String ACTIVE = "o.status NOT IN ('COMPLETED', 'CANCELLED')";
 
-    /**
-     * Mức ưu tiên xử lý, giống bảng Đơn hàng ở frontend (compareOrderPriority):
-     * 0 giao thất bại, 1 quá giờ hẹn, 2 chờ xác nhận, 3 đang xử lý, 4 đã giao còn nợ, 5 xong/hủy.
-     * Đơn quá giờ dùng cùng điều kiện với cảnh báo ORDER_OVERDUE.
-     */
-    private static final String PRIORITY_JOINS = """
+    /** Lần giao gần nhất của phân công đang hiệu lực (phân công cũ đã thay thì không tính). */
+    private static final String LAST_ATTEMPT_JOIN = """
              LEFT JOIN LATERAL (
                 SELECT a.outcome FROM delivery_attempts a
                 JOIN delivery_assignments da ON da.id = a.assignment_id
                 WHERE da.order_id = o.id AND da.active
                 ORDER BY a.attempted_at DESC, a.id DESC LIMIT 1
-             ) last_attempt ON true
+             ) last_attempt ON true""";
+
+    /** Đơn chưa xong có lần giao gần nhất thất bại: mức 0, và cờ {@code lastAttemptFailed} trong danh sách đơn. */
+    private static final String LAST_ATTEMPT_FAILED =
+            "o.status IN ('PENDING', 'CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY') AND last_attempt.outcome = 'FAILED'";
+
+    /**
+     * Mức ưu tiên xử lý, giống bảng Đơn hàng ở frontend (compareOrderPriority):
+     * 0 giao thất bại, 1 quá giờ hẹn, 2 chờ xác nhận, 3 đang xử lý, 4 đã giao còn nợ, 5 xong/hủy.
+     * Đơn quá giờ dùng cùng điều kiện với cảnh báo ORDER_OVERDUE.
+     */
+    private static final String PRIORITY_JOINS = LAST_ATTEMPT_JOIN + "\n" + """
              CROSS JOIN LATERAL (
                 SELECT CASE
-                    WHEN o.status IN ('PENDING', 'CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY') AND last_attempt.outcome = 'FAILED' THEN 0
+                    WHEN %s THEN 0
                     WHEN o.status IN ('PENDING', 'CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY') AND o.fulfillment_type = 'DELIVERY'
                         AND o.requested_delivery_at < CURRENT_TIMESTAMP THEN 1
                     WHEN o.status = 'PENDING' THEN 2
                     WHEN o.status IN ('CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY') THEN 3
                     WHEN o.status = 'DELIVERED' AND b.due > 0 THEN 4
                     ELSE 5 END AS rank
-             ) priority""";
+             ) priority""".formatted(LAST_ATTEMPT_FAILED);
 
     /**
-     * Trong từng mức: việc chờ lâu/trễ lâu trước (giờ hẹn, không hẹn thì lúc đặt); mức đang xử lý xếp theo giờ hẹn
-     * gần nhất, đơn không hẹn giờ sau cùng; đơn đã xong/hủy mới nhất trước.
+     * Trong từng mức: việc cần làm sớm nhất trước, tính theo giờ hẹn hoặc lúc đặt nếu không hẹn (đơn "giao sớm nhất"
+     * cần làm ngay từ lúc đặt, nên không xếp sau đơn hẹn giờ muộn hơn); đơn đã xong/hủy mới nhất trước.
      */
     private static final String PRIORITY_ORDER = """
              ORDER BY priority.rank,
-                CASE WHEN priority.rank = 3 THEN o.requested_delivery_at
-                     WHEN priority.rank < 5 THEN COALESCE(o.requested_delivery_at, o.created_at) END ASC NULLS LAST,
+                CASE WHEN priority.rank < 5 THEN COALESCE(o.requested_delivery_at, o.created_at) END ASC NULLS LAST,
                 CASE WHEN priority.rank < 5 THEN o.created_at END ASC,
                 o.created_at DESC, o.id DESC""";
 
@@ -118,6 +126,14 @@ public class OrderQueryRepository {
         return jdbc.queryForList(
                 "SELECT o.id FROM orders o WHERE o.customer_id = :customerId ORDER BY o.created_at DESC, o.id DESC",
                 new MapSqlParameterSource("customerId", customerId), Long.class);
+    }
+
+    /** Trong các đơn cho trước, những đơn chưa xong có lần giao gần nhất thất bại (cùng điều kiện với mức ưu tiên 0). */
+    public Set<Long> lastAttemptFailed(Collection<Long> orderIds) {
+        if (orderIds.isEmpty()) return Set.of();
+        return new HashSet<>(jdbc.queryForList(
+                "SELECT o.id FROM orders o " + LAST_ATTEMPT_JOIN + " WHERE o.id IN (:ids) AND " + LAST_ATTEMPT_FAILED,
+                new MapSqlParameterSource("ids", orderIds), Long.class));
     }
 
     public Map<Long, Balance> balances(Collection<Long> orderIds) {

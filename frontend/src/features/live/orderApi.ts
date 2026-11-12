@@ -66,8 +66,11 @@ export const canConfirm = (order: Pick<LiveOrder, 'status'>) => order.status ===
 export const canPrepare = (order: Pick<LiveOrder, 'status'>) => order.status === 'CONFIRMED'
 export const canCancel = (order: Pick<LiveOrder, 'status'>) => ['PENDING', 'CONFIRMED', 'PREPARING'].includes(order.status)
 
-/** Một dòng trong danh sách đơn: đơn kèm số đã thu/còn thu từ sổ thanh toán. */
-export type LiveOrderListItem = LiveOrder & { paid: number; due: number; refundDue: number }
+/**
+ * Một dòng trong danh sách đơn: đơn kèm số đã thu/còn thu từ sổ thanh toán, và cờ lần giao gần nhất thất bại
+ * (đơn chưa xong, phân công đang hiệu lực).
+ */
+export type LiveOrderListItem = LiveOrder & { paid: number; due: number; refundDue: number; lastAttemptFailed?: boolean }
 
 /** Bộ lọc GET /sales/orders; trường bỏ trống là không lọc. */
 export type OrderPageQuery = {

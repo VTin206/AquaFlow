@@ -81,7 +81,7 @@ export function fromLiveOrder(
 /** Tên sản phẩm lấy từ danh mục; không tải được thì vẫn hiện đơn với mã sản phẩm. BE trả sẵn thứ tự mới nhất trước và số dư từng đơn. */
 async function toOrders(load: Promise<LiveOrderListItem[]>) {
   const [orders, products] = await Promise.all([load, catalogApi.products().catch(() => [])])
-  return orders.map((order) => fromLiveOrder(order, products, order))
+  return orders.map((order) => ({ ...fromLiveOrder(order, products, order), lastAttemptFailed: order.lastAttemptFailed }))
 }
 
 /** Đơn còn việc phải làm cộng đơn tạo trong 30 ngày gần nhất: đủ cho các màn hình vận hành, không phụ thuộc số đơn lịch sử. */
