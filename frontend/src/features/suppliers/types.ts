@@ -7,9 +7,6 @@ export type SupplierDraft = {
   address: string
 }
 
-/** Bản ghi lưu trong mock; thiếu `active` nghĩa là đang dùng. */
-export type SupplierRecord = SupplierDraft & { id: string; active?: boolean }
-
 export type Supplier = Omit<SupplierDraft, 'phone' | 'address'> & {
   id: string
   /** Mã hiển thị, ví dụ NCC-001. */

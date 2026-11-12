@@ -5,8 +5,6 @@ import { supplierApi, type SupplierStatus } from './supplierService'
 import type { SupplierDraft } from './types'
 import { sortByName } from '@/shared/utils/table'
 
-export const supplierKeys = { all: ['suppliers'] as const }
-
 /** Store staff manage the catalog. */
 export function useCanManageSuppliers() {
   const role = useStaff()?.role
@@ -24,7 +22,7 @@ export function useSuppliers(status: SupplierStatus = 'active') {
 
 const useInvalidateSuppliers = () => {
   const queryClient = useQueryClient()
-  return () => Promise.all([invalidateLiveData(queryClient), queryClient.invalidateQueries({ queryKey: supplierKeys.all })])
+  return () => invalidateLiveData(queryClient)
 }
 
 export function useSaveSupplier() {

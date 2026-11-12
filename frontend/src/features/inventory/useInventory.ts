@@ -5,7 +5,6 @@ import { inventoryApi, receiptCode, type ProductStock, type PurchaseReceipt, typ
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { localToday } from './expiry'
 import type { ReceiptDraft } from './types'
-import { productKeys } from './useProducts'
 
 /**
  * Nguồn dữ liệu cho trang Kho: gọi API BE2 và chuyển về các kiểu bên dưới để giao diện dùng.
@@ -251,7 +250,7 @@ export function useReceiptOptions() {
 
 const useInvalidateInventory = () => {
   const queryClient = useQueryClient()
-  return () => Promise.all([invalidateLiveData(queryClient), queryClient.invalidateQueries({ queryKey: productKeys.all })])
+  return () => invalidateLiveData(queryClient)
 }
 
 /** Lưu nháp, và nhập kho luôn nếu `confirm`. */

@@ -6,7 +6,6 @@ import { inventoryApi } from '@/features/live/inventoryApi'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { resolveProductImage } from './productImages'
 import type { Product } from './types'
-import { productKeys } from './useProducts'
 import { catalogFromApi, type WaterTypeCode } from './catalogGroups'
 import { sortByName } from '@/shared/utils/table'
 
@@ -121,7 +120,7 @@ export function useCatalog(status: ProductStatus) {
 
 const useInvalidateProducts = () => {
   const queryClient = useQueryClient()
-  return () => Promise.all([invalidateLiveData(queryClient), queryClient.invalidateQueries({ queryKey: productKeys.all })])
+  return () => invalidateLiveData(queryClient)
 }
 
 /** Loại vỏ cho form sản phẩm, cùng nguồn với danh mục loại vỏ. */
