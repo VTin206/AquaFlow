@@ -27,12 +27,9 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
   const save = useSaveProduct()
   const bottleTypes = useBottleTypeOptions(open)
   const categories = useProductCategories(open)
-  // Các ô vừa được điền gợi ý từ tên, để nhắc nhân viên kiểm tra lại.
-  const [suggested, setSuggested] = useState<string[]>([])
 
   const close = () => {
     setImage(undefined)
-    setSuggested([])
     onClose()
   }
 
@@ -41,22 +38,11 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
     const name: string | undefined = form.getFieldValue('name')
     if (!name?.trim()) return
     const hint = suggestFromName(name, form.getFieldValue('unit') ?? '')
-    const filled: string[] = []
-    if (hint.brand && !form.getFieldValue('brand')?.trim()) {
-      form.setFieldValue('brand', hint.brand)
-      filled.push('thương hiệu')
-    }
-    if (hint.volumeMl && !form.getFieldValue('volumeMl')) {
-      form.setFieldValue('volumeMl', hint.volumeMl)
-      filled.push('dung tích')
-    }
+    if (hint.brand && !form.getFieldValue('brand')?.trim()) form.setFieldValue('brand', hint.brand)
+    if (hint.volumeMl && !form.getFieldValue('volumeMl')) form.setFieldValue('volumeMl', hint.volumeMl)
     const category =
       hint.category && categories.data?.find((item) => item.active && item.name.toLowerCase() === hint.category?.toLowerCase())
-    if (category && !form.getFieldValue('categoryId')) {
-      form.setFieldValue('categoryId', category.id)
-      filled.push('loại sản phẩm')
-    }
-    setSuggested(filled)
+    if (category && !form.getFieldValue('categoryId')) form.setFieldValue('categoryId', category.id)
   }
   const cancel = useConfirmDiscard(form, close)
 
@@ -109,7 +95,6 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
         initialValues={
           product
             ? {
-                sku: product.sku,
                 name: product.name,
                 brand: product.brand === 'Chưa có thương hiệu' ? undefined : product.brand,
                 unit: product.unit,
@@ -151,58 +136,9 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
                     { required: true, whitespace: true, message: 'Nhập tên sản phẩm.' },
                     { max: 200, message: 'Tên tối đa 200 ký tự.' },
                   ]}
-                  extra={suggested.length ? `Đã điền ${suggested.join(', ')} theo tên. Kiểm tra lại trước khi lưu.` : undefined}
                 >
                   <Input autoFocus placeholder="Ví dụ: Nước tinh khiết LaVie 19L" onBlur={fillFromName} />
                 </Form.Item>
-                <Form.Item
-                  name="sku"
-                  label="Mã sản phẩm"
-                  extra={product ? 'Không đổi sau khi tạo.' : 'Để trống để hệ thống tự tạo mã (SP00001, SP00002...).'}
-                  rules={[
-                    { pattern: /^[A-Za-z0-9-]+$/, message: 'Chỉ dùng chữ, số và dấu gạch ngang.' },
-                    { max: 64, message: 'Mã tối đa 64 ký tự.' },
-                  ]}
-                >
-                  <Input placeholder={product ? undefined : 'Tự tạo nếu để trống'} disabled={Boolean(product)} />
-                </Form.Item>
-                <Form.Item name="brand" label="Thương hiệu" rules={[{ max: 150, message: 'Tối đa 150 ký tự.' }]}>
-                  <Input placeholder="Ví dụ: LaVie, Aquafina..." />
-                </Form.Item>
-              </FormSection>
-            </div>
-          </div>
-          <p className="af-form-hint af-product-form-hint">PNG, JPG hoặc WEBP, tối đa {MAX_IMAGE_MB} MB. Bấm vào ảnh để đổi.</p>
-
-          <FormSection title="Bán hàng">
-            <Row gutter={12}>
-              <Col xs={12} sm={8}>
-                <Form.Item name="unit" label="Đơn vị" rules={[{ required: true }]}>
-                  <Select options={units.map((unit) => ({ value: unit, label: unit }))} />
-                </Form.Item>
-              </Col>
-              <Col xs={12} sm={8}>
-                <Form.Item name="price" label="Giá bán (₫)" rules={[{ required: true, message: 'Nhập giá bán.' }]}>
-                  <InputNumber<number>
-                    min={0}
-                    step={1000}
-                    style={{ width: '100%' }}
-                    formatter={(value) => `${value ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
-                    parser={(value) => Number((value ?? '').replace(/\./g, ''))}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={8}>
-                <Form.Item name="unitsPerCase" label="Số đơn vị / thùng">
-                  <InputNumber min={1} precision={0} style={{ width: '100%' }} placeholder="Không bắt buộc" />
-                </Form.Item>
-              </Col>
-            </Row>
-          </FormSection>
-
-          <FormSection title="Phân loại">
-            <Row gutter={12}>
-              <Col xs={24} sm={12}>
                 <Form.Item
                   name="categoryId"
                   label="Loại sản phẩm"
@@ -223,28 +159,50 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
                       }))}
                   />
                 </Form.Item>
+                <Form.Item name="brand" label="Thương hiệu" rules={[{ max: 150, message: 'Tối đa 150 ký tự.' }]}>
+                  <Input placeholder="Ví dụ: LaVie, Aquafina..." />
+                </Form.Item>
+              </FormSection>
+            </div>
+          </div>
+          <p className="af-form-hint af-product-form-hint">PNG, JPG hoặc WEBP, tối đa {MAX_IMAGE_MB} MB. Bấm vào ảnh để đổi.</p>
+
+          {/* Sản phẩm là gì: đơn vị bán, dung tích, số đơn vị một thùng. */}
+          <FormSection title="Quy cách">
+            <Row gutter={12}>
+              <Col xs={12} sm={8}>
+                <Form.Item name="unit" label="Đơn vị" rules={[{ required: true }]}>
+                  <Select options={units.map((unit) => ({ value: unit, label: unit }))} />
+                </Form.Item>
               </Col>
-              <Col xs={24} sm={12}>
-                <Form.Item name="volumeMl" label="Dung tích mỗi chai/bình (ml)">
+              <Col xs={12} sm={8}>
+                <Form.Item name="volumeMl" label="Dung tích (ml)" tooltip="Dung tích mỗi chai/bình.">
                   <InputNumber min={1} max={100000} precision={0} style={{ width: '100%' }} placeholder="Ví dụ: 500 hoặc 19000" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Form.Item name="unitsPerCase" label="Số đơn vị / thùng">
+                  <InputNumber min={1} precision={0} style={{ width: '100%' }} placeholder="Không bắt buộc" />
                 </Form.Item>
               </Col>
             </Row>
           </FormSection>
 
-          <FormSection title="Kho">
+          {/* Tiền và tồn: giá bán, vỏ có cọc đi kèm, mức cảnh báo sắp hết. */}
+          <FormSection title="Giá & kho">
             <Row gutter={12}>
-              <Col xs={24} sm={8}>
-                <Form.Item
-                  name="threshold"
-                  label="Tồn tối thiểu"
-                  tooltip="Khả dụng từ mức này trở xuống được cảnh báo sắp hết."
-                  rules={[{ required: true, message: 'Nhập tồn tối thiểu.' }]}
-                >
-                  <InputNumber min={0} precision={0} style={{ width: '100%' }} />
+              <Col xs={12} sm={8}>
+                <Form.Item name="price" label="Giá bán (₫)" rules={[{ required: true, message: 'Nhập giá bán.' }]}>
+                  <InputNumber<number>
+                    min={0}
+                    step={1000}
+                    style={{ width: '100%' }}
+                    formatter={(value) => `${value ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
+                    parser={(value) => Number((value ?? '').replace(/\./g, ''))}
+                  />
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={16}>
+              <Col xs={12} sm={8}>
                 <Form.Item name="bottleTypeId" label="Loại vỏ" tooltip="Chọn khi sản phẩm bán kèm vỏ bình có cọc.">
                   <Select
                     allowClear
@@ -258,6 +216,16 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
                         disabled: !type.active,
                       }))}
                   />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Form.Item
+                  name="threshold"
+                  label="Tồn tối thiểu"
+                  tooltip="Khả dụng từ mức này trở xuống được cảnh báo sắp hết."
+                  rules={[{ required: true, message: 'Nhập tồn tối thiểu.' }]}
+                >
+                  <InputNumber min={0} precision={0} style={{ width: '100%' }} />
                 </Form.Item>
               </Col>
             </Row>
