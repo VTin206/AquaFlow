@@ -77,10 +77,12 @@ class OwnerAlertPostgresIntegrationTest {
                 """, Long.class, recipient, kind, entity, activeOnly);
     }
 
-    @Test void pendingAlertsOnlyReachActiveOwnersAndDoNotRepeatAfterRead() {
+    @Test void pendingAlertsReachActiveAdminsAndSalesStaffAndDoNotRepeatAfterRead() {
         long otherAdmin = account("ADMIN", "ACTIVE");
         long inactive = account("ADMIN", "INACTIVE");
         long sales = account("SALES_STAFF", "ACTIVE");
+        long inactiveSales = account("SALES_STAFF", "INACTIVE");
+        long driver = account("DELIVERY_STAFF", "ACTIVE");
         long customer = account("CUSTOMER", "ACTIVE");
         long id = order("PENDING", "DELIVERY", null);
         alerts.refresh();
@@ -89,7 +91,10 @@ class OwnerAlertPostgresIntegrationTest {
         assertThat(count(admin, "ORDER_PENDING", id, true)).isEqualTo(1);
         assertThat(count(otherAdmin, "ORDER_PENDING", id, true)).isEqualTo(1);
         assertThat(count(inactive, "ORDER_PENDING", id, false)).isZero();
-        assertThat(count(sales, "ORDER_PENDING", id, false)).isZero();
+        // Nhân viên bán hàng xử lý đơn và kho nên nhận cùng cảnh báo vận hành; tài xế và khách thì không.
+        assertThat(count(sales, "ORDER_PENDING", id, true)).isEqualTo(1);
+        assertThat(count(inactiveSales, "ORDER_PENDING", id, false)).isZero();
+        assertThat(count(driver, "ORDER_PENDING", id, false)).isZero();
         assertThat(count(customer, "ORDER_PENDING", id, false)).isZero();
         assertThat(notifications.unreadCount(admin)).isZero();
         assertThat(notifications.unreadCount(otherAdmin)).isGreaterThanOrEqualTo(1);
@@ -198,11 +203,61 @@ class OwnerAlertPostgresIntegrationTest {
         order("PENDING", "DELIVERY", null);
         alerts.refresh();
         long notificationId = notifications.list(admin, true, 0, 100).getFirst().id();
-        jdbc.update("INSERT INTO roles(code, name) VALUES ('SALES_STAFF', 'Sales') ON CONFLICT (code) DO NOTHING");
-        jdbc.update("UPDATE users SET role_id = (SELECT id FROM roles WHERE code = 'SALES_STAFF') WHERE id = ?", admin);
+        // Chuyển sang vai trò không nhận cảnh báo vận hành (tài xế): không còn đọc được cảnh báo cũ.
+        jdbc.update("INSERT INTO roles(code, name) VALUES ('DELIVERY_STAFF', 'Driver') ON CONFLICT (code) DO NOTHING");
+        jdbc.update("UPDATE users SET role_id = (SELECT id FROM roles WHERE code = 'DELIVERY_STAFF') WHERE id = ?", admin);
         assertThat(repository.find(notificationId, admin)).isEmpty();
         assertThat(notifications.list(admin, false, 0, 100)).isEmpty();
         assertThat(notifications.unreadCount(admin)).isZero();
+    }
+
+    private long trip(long driver) {
+        return jdbc.queryForObject("INSERT INTO delivery_trips(driver_id, created_by) VALUES (?, ?) RETURNING id", Long.class, driver, admin);
+    }
+
+    private void assign(long trip, long order) {
+        jdbc.update("INSERT INTO delivery_assignments(trip_id, order_id) VALUES (?, ?)", trip, order);
+    }
+
+    @Test void driverOnlyGetsAlertsForOwnTripsAndNewTripResolvesOnDeparture() {
+        long driver = account("DELIVERY_STAFF", "ACTIVE");
+        long otherDriver = account("DELIVERY_STAFF", "ACTIVE");
+        long sales = account("SALES_STAFF", "ACTIVE");
+        long late = order("PREPARING", "DELIVERY", NOW.minusSeconds(60));
+        long onTime = order("PREPARING", "DELIVERY", NOW.plusSeconds(3600));
+        long mine = trip(driver);
+        assign(mine, late);
+        assign(mine, onTime);
+        alerts.refresh();
+
+        assertThat(count(driver, "TRIP_ASSIGNED", mine, true)).isEqualTo(1);
+        assertThat(count(driver, "TRIP_ORDER_OVERDUE", mine, true)).isEqualTo(1);
+        assertThat(notifications.list(driver, true, 0, 100)).extracting(n -> n.message())
+                .anyMatch(message -> message.contains("Chuyến #" + mine) && message.contains("2 đơn"))
+                .anyMatch(message -> message.contains("chuyến #" + mine) && message.contains("quá giờ hẹn"));
+        // Không lẫn sang tài xế khác; tài xế không nhận cảnh báo vận hành; nhân viên bán hàng không nhận cảnh báo chuyến.
+        assertThat(count(otherDriver, "TRIP_ASSIGNED", mine, false)).isZero();
+        assertThat(count(driver, "ORDER_OVERDUE", late, false)).isZero();
+        assertThat(count(sales, "TRIP_ASSIGNED", mine, false)).isZero();
+        assertThat(count(admin, "TRIP_ASSIGNED", mine, false)).isZero();
+        assertThat(count(sales, "ORDER_OVERDUE", late, true)).isEqualTo(1);
+
+        jdbc.update("UPDATE delivery_trips SET status = 'IN_PROGRESS', started_at = ? WHERE id = ?", Timestamp.from(NOW), mine);
+        alerts.refresh();
+        assertThat(count(driver, "TRIP_ASSIGNED", mine, true)).isZero();
+        assertThat(count(driver, "TRIP_ASSIGNED", mine, false)).isEqualTo(1);
+        assertThat(count(driver, "TRIP_ORDER_OVERDUE", mine, true)).isEqualTo(1);
+    }
+
+    @Test void driverMovedToAnotherRoleNoLongerSeesTripAlerts() {
+        long driver = account("DELIVERY_STAFF", "ACTIVE");
+        assign(trip(driver), order("PREPARING", "DELIVERY", null));
+        alerts.refresh();
+        assertThat(notifications.unreadCount(driver)).isEqualTo(1);
+        jdbc.update("INSERT INTO roles(code, name) VALUES ('CUSTOMER', 'Customer') ON CONFLICT (code) DO NOTHING");
+        jdbc.update("UPDATE users SET role_id = (SELECT id FROM roles WHERE code = 'CUSTOMER') WHERE id = ?", driver);
+        assertThat(notifications.unreadCount(driver)).isZero();
+        assertThat(notifications.list(driver, false, 0, 100)).isEmpty();
     }
 
     @Test void anotherDatabaseConnectionHoldingScanLockPreventsOverlappingGeneration() throws Exception {

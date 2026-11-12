@@ -6,8 +6,18 @@ export type Notification = {
   message: string
   createdAt: string
   readAt: string | null
-  kind: 'MANUAL' | 'ORDER_PENDING' | 'ORDER_OVERDUE' | 'DELIVERY_FAILED' | 'LOW_STOCK' | 'BATCH_EXPIRING' | 'BATCH_EXPIRED'
-  entityType: 'ORDER' | 'PRODUCT' | 'BATCH' | null
+  kind:
+    | 'MANUAL'
+    | 'ORDER_PENDING'
+    | 'ORDER_OVERDUE'
+    | 'DELIVERY_FAILED'
+    | 'LOW_STOCK'
+    | 'BATCH_EXPIRING'
+    | 'BATCH_EXPIRED'
+    /** Chỉ nhân viên giao hàng: chuyến mới được giao, đơn trong chuyến của mình quá giờ hẹn. */
+    | 'TRIP_ASSIGNED'
+    | 'TRIP_ORDER_OVERDUE'
+  entityType: 'ORDER' | 'PRODUCT' | 'BATCH' | 'TRIP' | null
   entityId: number | null
   resolvedAt: string | null
 }

@@ -74,9 +74,11 @@ Read-all covers unread rows visible to that update, not notifications arriving l
 ## Automatic owner alerts
 
 After startup (10 seconds initial delay), a background job scans committed business data every 30
-seconds, even when no browser is open. Each active ADMIN account receives its own persistent alert.
-Other roles and inactive accounts do not receive these alerts. A user who loses ADMIN access can no
-longer read old business alerts, including before the next scan; personal manual messages are unaffected.
+seconds, even when no browser is open. Each active ADMIN and SALES_STAFF account receives its own
+persistent operational alert (table below). Each active DELIVERY_STAFF account receives only trip alerts
+for trips assigned to them (second table). Customers and inactive accounts receive no automatic alerts.
+Visibility follows the current role: a user moved to a role that no longer receives a kind can no longer
+read old alerts of that kind, including before the next scan; personal manual messages are unaffected.
 
 | Kind | Condition | Target |
 | --- | --- | --- |
@@ -86,6 +88,13 @@ longer read old business alerts, including before the next scan; personal manual
 | LOW_STOCK | Active product has available quantity <= its own lowStockThreshold | PRODUCT / product ID |
 | BATCH_EXPIRING | Active product's batch has physical stock > 0 and HSD is after today but within expiryWarningDays (inclusive) | BATCH / batch ID |
 | BATCH_EXPIRED | Active product's batch has physical stock > 0 and HSD <= today | BATCH / batch ID |
+
+Driver trip alerts (recipient = `delivery_trips.driver_id`, role DELIVERY_STAFF):
+
+| Kind | Condition | Target |
+| --- | --- | --- |
+| TRIP_ASSIGNED | Trip assigned to the driver is CREATED (not yet started); resolves when it starts or is cancelled | TRIP / trip ID |
+| TRIP_ORDER_OVERDUE | Open DELIVERY order on an active assignment of the driver's CREATED or IN_PROGRESS trip is past its requested time, without a latest failed attempt | TRIP / trip ID |
 
 Open orders: PENDING, CONFIRMED, PREPARING, OUT_FOR_DELIVERY. Delivered, completed and cancelled orders
 are excluded from late/failed alerts. Failure is read from real delivery_attempts, not the legacy
@@ -104,10 +113,10 @@ createdAt and readAt. Reading an alert never causes it to be generated again whi
 When the condition no longer holds, resolvedAt is set: history remains, but it no longer contributes
 to unread count/unreadOnly or read-all. If the condition returns on a later scan, a new unread alert is
 created. Changes that begin and end between scans are intentionally not an event history. No daily
-reminder spam for conditions that remain active. New ADMIN accounts receive currently active alerts.
+reminder spam for conditions that remain active. New ADMIN/SALES_STAFF accounts receive currently active alerts.
 
 Frontend polls every 30 seconds. Clicking an order alert opens live order details; stock/batch alerts
-open the inventory page. Resolved alerts display "Không còn cần xử lý". Generation plus UI polling may
+open the inventory page; trip alerts open the driver screen, where the bell is also shown. Resolved alerts display "Không còn cần xử lý". Generation plus UI polling may
 take roughly a minute; manual messages retain their previous behavior.
 
 Configuration: `app.notifications.owner-alerts.enabled` (default true), `initial-delay-ms` (10000),
@@ -117,7 +126,7 @@ Configuration: `app.notifications.owner-alerts.enabled` (default true), `initial
 
 Standard `ApiError`: 400 invalid body/query, 401 unauthenticated, 403 wrong role, 404 missing
 recipient/notification, 409 stale settings or database constraint conflict.
-Migrations: V7 settings/inbox, V8 owner alerts. Applied migrations are not modified.
+Migrations: V7 settings/inbox, V8 owner alerts, V30 driver trip alert kinds. Applied migrations are not modified.
 
 Run `mvn -B -ntp verify` in backend. If a running container mounts backend/target, pass
 `-Daquaflow.build.directory=<absolute separate build directory>` so verification cannot overwrite its JAR.

@@ -15,6 +15,15 @@ describe('notificationView', () => {
     expect(notificationView(item(5, 'ORDER_PENDING', '2026-11-11', { resolvedAt: '2026-11-11' })).action).toBeUndefined()
   })
 
+  it('sends driver trip alerts to the trip screen', () => {
+    expect(notificationView(item(6, 'TRIP_ASSIGNED', '2026-11-11', { entityType: 'TRIP' }))).toEqual({ tone: 'soon', action: 'Xem chuyến' })
+    expect(notificationView(item(7, 'TRIP_ORDER_OVERDUE', '2026-11-11', { entityType: 'TRIP' }))).toEqual({
+      tone: 'urgent',
+      action: 'Xem chuyến, báo khách',
+    })
+    expect(notificationView(item(8, 'MANUAL', '2026-11-11', { entityType: 'TRIP' })).action).toBe('Xem chuyến')
+  })
+
   it('puts urgent work first, then other news, then resolved', () => {
     const groups = groupNotifications([
       item(1, 'ORDER_PENDING', '2026-11-11T10:00:00'),
