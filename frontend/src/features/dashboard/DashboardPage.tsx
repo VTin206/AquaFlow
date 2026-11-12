@@ -2,19 +2,20 @@ import { useState, type ReactNode } from 'react'
 import { Button, Card, Col, Empty, Row, Space, Tag } from 'antd'
 import { ArrowRight, PackagePlus, Plus } from 'lucide-react'
 import { Link } from 'react-router'
-import { DashboardMetrics } from './DashboardMetrics'
+import { deliveryToday } from './dashboardData'
 import { Page } from '@/shared/components/Page'
 import { PanelHeading } from '@/shared/components/PanelHeading'
 import { QueryError } from '@/shared/components/QueryError'
+import { BarChart } from '@/shared/components/BarChart'
+import { ViewButton } from '@/shared/components/ViewButton'
 import { canOpen } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/useStaff'
-import { currency, shortDate } from '@/shared/utils/format'
+import { compactCurrency, currency, shortDate } from '@/shared/utils/format'
 import { ReceiveStockModal } from '@/features/inventory/components/ReceiveStockModal'
 import { useStockItems } from '@/features/inventory/useInventory'
 import { OrderDetails } from '@/features/orders/components/OrderDetails'
 import { OrderIntakeModal } from '@/features/orders/components/OrderIntakeModal'
 import { OrderNextAction } from '@/features/orders/components/OrderNextAction'
-import { OrdersTable } from '@/features/orders/components/OrdersTable'
 import { useOrderList } from '@/features/orders/orderData'
 import { ordersLink } from '@/features/orders/useOrderFilters'
 import { amountDue, createdAtOf, orderedAtOf, type Order } from '@/features/orders/types'
@@ -41,19 +42,27 @@ const appointmentLabel = (iso?: string) => {
   return localDay(iso) === dayFromToday() ? timeOfDay(iso) : `${shortDate(localDay(iso)).slice(3)} ${timeOfDay(iso)}`
 }
 
+type TaskKind = 'failed' | 'pending' | 'unpaid' | 'stock'
 type Task = {
   key: string
-  kind: 'failed' | 'pending' | 'unpaid' | 'stock'
+  kind: TaskKind
   title: ReactNode
   detail: ReactNode
   amount?: ReactNode
   action: ReactNode
 }
-const taskTags: Record<Task['kind'], { label: string; color: string }> = {
+const taskTags: Record<TaskKind, { label: string; color: string }> = {
   failed: { label: 'Giao thất bại', color: 'red' },
   pending: { label: 'Chờ xác nhận', color: 'gold' },
   unpaid: { label: 'Chưa thu đủ', color: 'orange' },
   stock: { label: 'Sắp hết', color: 'default' },
+}
+/** Trang xử lý đầy đủ của từng loại việc, cho dòng "Còn N việc khác". */
+const taskPages: Record<TaskKind, { label: string; to: string }> = {
+  failed: { label: 'Giao hàng', to: '/delivery' },
+  pending: { label: 'Đơn hàng', to: ordersLink({ status: 'Chờ xác nhận' }) },
+  unpaid: { label: 'Đơn hàng', to: ordersLink({ group: 'done', payment: 'Còn phải thu' }) },
+  stock: { label: 'Kho', to: '/inventory' },
 }
 const TASK_LIMIT = 8
 
@@ -66,17 +75,17 @@ export function DashboardPage() {
   const revenueQuery = useDailyRevenue(showRevenue)
   const revenueToday = revenueQuery.data?.at(-1)
   const revenueYesterday = revenueQuery.data?.at(-2)
+  const lastWeek = revenueQuery.data?.slice(-7) ?? []
   const [creatingOrder, setCreatingOrder] = useState(false)
   const [receiving, setReceiving] = useState<{ productId?: string } | null>(null)
   const [openedOrder, setOpenedOrder] = useState<string | null>(null)
+  const [taskFilter, setTaskFilter] = useState<TaskKind | 'all'>('all')
 
   const orders = ordersQuery.data ?? []
   const failed = orders.filter((order) => order.status === 'Giao thất bại')
   const pending = orders.filter((order) => order.status === 'Chờ xác nhận')
   const unpaid = orders.filter(isUnpaid)
-  const shipping = orders
-    .filter((order) => order.status === 'Đang giao')
-    .sort((a, b) => (a.appointment ?? '9').localeCompare(b.appointment ?? '9'))
+  const delivery = deliveryToday(orders)
   const lowStock = productsQuery.rows
   const todayOrders = orders.filter((order) => {
     const at = createdAtOf(order)
@@ -88,7 +97,7 @@ export function DashboardPage() {
       {label}
     </Button>
   )
-  const orderTask = (order: Order, kind: Task['kind'], detail: ReactNode, action: ReactNode): Task => ({
+  const orderTask = (order: Order, kind: TaskKind, detail: ReactNode, action: ReactNode): Task => ({
     key: `${kind}:${order.id}`,
     kind,
     title: (
@@ -153,16 +162,15 @@ export function DashboardPage() {
       ),
     })),
   ]
+  // Bộ lọc chỉ liệt kê loại đang có việc; loại đang chọn hết việc thì quay về "Tất cả".
+  const kinds = (Object.keys(taskTags) as TaskKind[])
+    .map((kind) => ({ kind, count: tasks.filter((task) => task.kind === kind).length }))
+    .filter((item) => item.count > 0)
+  const activeFilter = kinds.some((item) => item.kind === taskFilter) ? taskFilter : 'all'
+  const shownTasks = activeFilter === 'all' ? tasks : tasks.filter((task) => task.kind === activeFilter)
 
   const loadingTasks = ordersQuery.isPending || productsQuery.isPending
-  // Dòng tóm tắt: chỉ liệt kê việc đang có, mỗi mục dẫn tới trang xử lý.
-  const summary = [
-    { count: failed.length, label: 'giao thất bại', to: '/delivery', tone: 'danger' },
-    { count: pending.length, label: 'đơn chờ xác nhận', to: ordersLink({ status: 'Chờ xác nhận' }), tone: 'warning' },
-    { count: shipping.length, label: 'đang giao', to: '/delivery' },
-    { count: unpaid.length, label: 'đơn chưa thu đủ', to: ordersLink({ group: 'done', payment: 'Còn phải thu' }), tone: 'warning' },
-    { count: lowStock.length, label: 'sản phẩm sắp hết', to: '/inventory', tone: 'warning' },
-  ].filter((item) => item.count > 0)
+  const ordersValue = (value: ReactNode) => (ordersQuery.isPending ? 'Đang tải…' : ordersQuery.isError ? '—' : value)
 
   return (
     <Page
@@ -178,17 +186,37 @@ export function DashboardPage() {
         </>
       }
     >
-      {!loadingTasks && !ordersQuery.isError && !productsQuery.isError && (
-        <p className="af-dash-summary">
-          {summary.length === 0
-            ? 'Không có việc tồn đọng.'
-            : summary.map((item) => (
-                <Link key={item.label} to={item.to} className={item.tone ? `is-${item.tone}` : undefined}>
-                  <strong>{item.count}</strong> {item.label}
-                </Link>
-              ))}
-        </p>
-      )}
+      {/* Số trong ngày: dòng chữ, không đóng khung từng số. */}
+      <dl className="af-dash-today" aria-label="Hôm nay">
+        <div>
+          <dt>Đơn tạo hôm nay</dt>
+          <dd>{ordersValue(todayOrders)}</dd>
+        </div>
+        {showRevenue && (
+          <>
+            <div>
+              <dt>Doanh thu hôm nay</dt>
+              <dd>
+                {revenueQuery.isPending ? 'Đang tải…' : revenueToday ? currency(revenueToday.revenue) : '—'}
+                {revenueYesterday && <small>Hôm qua {currency(revenueYesterday.revenue)}</small>}
+              </dd>
+            </div>
+            <div>
+              <dt>Thu ròng hôm nay</dt>
+              <dd>{revenueQuery.isPending ? 'Đang tải…' : revenueToday ? currency(revenueToday.collected) : '—'}</dd>
+            </div>
+          </>
+        )}
+        {staff?.role === 'ADMIN' && (
+          <div>
+            <dt>Còn phải thu</dt>
+            <dd>
+              {ordersValue(currency(unpaid.reduce((sum, order) => sum + amountDue(order), 0)))}
+              {!ordersQuery.isPending && !ordersQuery.isError && <small>{unpaid.length} đơn</small>}
+            </dd>
+          </div>
+        )}
+      </dl>
 
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={16}>
@@ -212,25 +240,53 @@ export function DashboardPage() {
             ) : tasks.length === 0 ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Đã xử lý hết việc tồn đọng." />
             ) : (
-              <ul className="af-dash-tasks">
-                {tasks.slice(0, TASK_LIMIT).map((task) => (
-                  <li key={task.key}>
-                    <Tag color={taskTags[task.kind].color} variant="filled">
-                      {taskTags[task.kind].label}
-                    </Tag>
-                    <div className="af-cell-stack">
-                      <span>{task.title}</span>
-                      <small>{task.detail}</small>
-                    </div>
-                    <strong className="af-money">{task.amount}</strong>
-                    {task.action}
-                  </li>
-                ))}
-              </ul>
+              <>
+                {kinds.length > 1 && (
+                  <div className="af-dash-filter" role="group" aria-label="Lọc việc cần làm">
+                    {[
+                      { kind: 'all' as const, label: 'Tất cả', count: tasks.length },
+                      ...kinds.map((item) => ({ ...item, label: taskTags[item.kind].label })),
+                    ].map((item) => (
+                      <button
+                        key={item.kind}
+                        type="button"
+                        aria-pressed={activeFilter === item.kind}
+                        className={activeFilter === item.kind ? 'is-active' : undefined}
+                        onClick={() => setTaskFilter(item.kind)}
+                      >
+                        {item.label} <strong>{item.count}</strong>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <ul className="af-dash-tasks">
+                  {shownTasks.slice(0, TASK_LIMIT).map((task) => (
+                    <li key={task.key}>
+                      <Tag color={taskTags[task.kind].color} variant="filled">
+                        {taskTags[task.kind].label}
+                      </Tag>
+                      <div className="af-cell-stack">
+                        <span>{task.title}</span>
+                        <small>{task.detail}</small>
+                      </div>
+                      <strong className="af-money">{task.amount}</strong>
+                      {task.action}
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
-            {tasks.length > TASK_LIMIT && (
+            {shownTasks.length > TASK_LIMIT && (
               <p className="af-dash-more">
-                Còn {tasks.length - TASK_LIMIT} việc khác — xem ở <Link to="/orders">Đơn hàng</Link> và <Link to="/inventory">Kho</Link>.
+                Còn {shownTasks.length - TASK_LIMIT} việc khác — xem ở{' '}
+                {activeFilter === 'all' ? (
+                  <>
+                    <Link to="/orders">Đơn hàng</Link> và <Link to="/inventory">Kho</Link>
+                  </>
+                ) : (
+                  <Link to={taskPages[activeFilter].to}>{taskPages[activeFilter].label}</Link>
+                )}
+                .
               </p>
             )}
           </Card>
@@ -241,7 +297,7 @@ export function DashboardPage() {
               <PanelHeading
                 title={
                   <span className="af-panel-title">
-                    Đang giao <span className="af-count">{ordersQuery.isError ? '—' : shipping.length}</span>
+                    Giao hôm nay <span className="af-count">{ordersQuery.isError ? '—' : delivery.remaining.length}</span>
                   </span>
                 }
                 extra={
@@ -256,81 +312,72 @@ export function DashboardPage() {
           >
             {ordersQuery.isError ? (
               <QueryError error={ordersQuery.error} onRetry={ordersQuery.refetch} />
-            ) : shipping.length === 0 ? (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có đơn đang giao." />
             ) : (
-              <ul className="af-dash-shipping">
-                {shipping.slice(0, TASK_LIMIT).map((order) => (
-                  <li key={order.id}>
-                    <time>{appointmentLabel(order.appointment)}</time>
-                    <div className="af-cell-stack">
-                      <span>
-                        {order.customer} <small>{order.code ?? order.id}</small>
-                      </span>
-                      <small>{order.address || order.items}</small>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <p className="af-dash-progress">
+                  Đã giao <strong>{delivery.delivered}</strong> · còn <strong>{delivery.remaining.length}</strong>
+                  {delivery.late > 0 && (
+                    <>
+                      {' '}
+                      · <strong className="af-text-danger">trễ {delivery.late}</strong>
+                    </>
+                  )}
+                </p>
+                {delivery.remaining.length === 0 ? (
+                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không còn đơn phải giao hôm nay." />
+                ) : (
+                  <ul className="af-dash-shipping">
+                    {delivery.remaining.slice(0, TASK_LIMIT).map((order) => (
+                      <li key={order.id}>
+                        <time className={delivery.isLate(order) ? 'af-text-danger' : undefined}>{appointmentLabel(order.appointment)}</time>
+                        <div className="af-cell-stack">
+                          <span>
+                            {order.customer} <small>{order.code ?? order.id}</small>
+                          </span>
+                          <small>
+                            {order.status} · {order.address || order.items}
+                          </small>
+                        </div>
+                        <ViewButton subject={`đơn ${order.code ?? order.id}`} onClick={() => setOpenedOrder(order.id)} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {delivery.remaining.length > TASK_LIMIT && (
+                  <p className="af-dash-more">
+                    Còn {delivery.remaining.length - TASK_LIMIT} đơn khác — xem ở <Link to="/delivery">Giao hàng</Link>.
+                  </p>
+                )}
+              </>
             )}
           </Card>
         </Col>
       </Row>
 
-      {/* Số trong ngày, độc lập với kỳ báo cáo kinh doanh bên dưới. */}
-      <dl className="af-dash-today">
-        <div>
-          <dt>Đơn tạo hôm nay</dt>
-          <dd>{ordersQuery.isPending ? 'Đang tải…' : ordersQuery.isError ? '—' : todayOrders}</dd>
-        </div>
-        {showRevenue && (
-          <>
-            <div>
-              <dt>Doanh thu hôm nay</dt>
-              <dd>
-                {revenueQuery.isPending ? 'Đang tải…' : revenueToday ? currency(revenueToday.revenue) : '—'}
-                {revenueYesterday && <small>Hôm qua {currency(revenueYesterday.revenue)}</small>}
-              </dd>
-            </div>
-            <div>
-              <dt>Thu ròng hôm nay</dt>
-              <dd>{revenueQuery.isPending ? 'Đang tải…' : revenueToday ? currency(revenueToday.collected) : '—'}</dd>
-            </div>
-          </>
-        )}
-        {staff?.role === 'ADMIN' && (
-          <div>
-            <dt>Còn phải thu</dt>
-            <dd>
-              {ordersQuery.isPending ? 'Đang tải…' : ordersQuery.isError ? '—' : currency(unpaid.reduce((sum, order) => sum + amountDue(order), 0))}
-              {!ordersQuery.isPending && !ordersQuery.isError && <small>{unpaid.length} đơn</small>}
-            </dd>
-          </div>
-        )}
-      </dl>
-
-      <Row gutter={[16, 16]}>
-        <Col xs={24} xl={24}>
-          <Card
-            title="Đơn hàng gần đây"
-            className="af-card af-fill"
-            styles={{ body: { padding: 0 } }}
-            extra={
-              <Link to="/orders" className="af-text-link">
-                Xem tất cả <ArrowRight size={14} />
-              </Link>
-            }
-          >
-            {ordersQuery.isError ? (
-              <QueryError error={ordersQuery.error} onRetry={ordersQuery.refetch} />
-            ) : (
-              <OrdersTable orders={orders.slice(0, 5)} loading={ordersQuery.isPending} compact />
-            )}
-          </Card>
-        </Col>
-      </Row>
-
-      <DashboardMetrics />
+      {showRevenue && (
+        <Card
+          title="Doanh thu 7 ngày"
+          className="af-card af-dash-revenue"
+          loading={revenueQuery.isPending}
+          extra={
+            <Link to="/reports" className="af-text-link">
+              Xem báo cáo <ArrowRight size={14} />
+            </Link>
+          }
+        >
+          {revenueQuery.isError ? (
+            <QueryError error={revenueQuery.error} onRetry={revenueQuery.refetch} />
+          ) : !lastWeek.some((day) => day.revenue !== 0) ? (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có doanh thu 7 ngày qua." />
+          ) : (
+            <BarChart
+              data={lastWeek.map((day) => ({ label: shortDate(day.date), value: day.revenue }))}
+              formatValue={compactCurrency}
+              height={180}
+            />
+          )}
+        </Card>
+      )}
 
       {creatingOrder && <OrderIntakeModal onClose={() => setCreatingOrder(false)} onCreated={setOpenedOrder} />}
       {openedOrder !== null && <OrderDetails id={openedOrder} onClose={() => setOpenedOrder(null)} />}

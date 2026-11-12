@@ -1089,29 +1089,51 @@ body {
   font-size: var(--af-fs-sm);
 }
 /* ---------- Tổng quan ---------- */
-.af-dash-summary {
+/* Lọc việc cần làm bằng chữ, mục đang chọn gạch chân; không dùng nút viên thuốc. */
+.af-dash-filter {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 20px;
-  margin: 0 0 16px;
-  color: var(--af-text-secondary);
-  font-size: var(--af-fs-md);
+  margin: 0 0 12px;
+  border-bottom: 1px solid var(--af-border);
 }
-.af-dash-summary a {
+.af-dash-filter button {
+  padding: 0 0 8px;
+  margin-bottom: -1px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--af-text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+.af-dash-filter button:hover {
   color: var(--af-text);
 }
-.af-dash-summary a:hover {
-  color: var(--af-primary);
-}
-.af-dash-summary strong {
-  font-variant-numeric: tabular-nums;
+.af-dash-filter button.is-active {
   color: var(--af-text-strong);
+  border-bottom-color: var(--af-primary);
 }
-.af-dash-summary a.is-danger strong {
+.af-dash-filter button:focus-visible {
+  outline: 2px solid var(--af-primary);
+  outline-offset: 2px;
+}
+.af-dash-filter strong {
+  font-variant-numeric: tabular-nums;
+}
+.af-dash-progress {
+  margin: 0 0 12px;
+  color: var(--af-text-secondary);
+}
+.af-dash-progress strong {
+  color: var(--af-text-strong);
+  font-variant-numeric: tabular-nums;
+}
+.af-dash-progress strong.af-text-danger {
   color: var(--af-danger);
 }
-.af-dash-summary a.is-warning strong {
-  color: var(--af-warning);
+.af-dash-revenue {
+  margin-top: 16px;
 }
 .af-dash-tasks,
 .af-dash-shipping {
@@ -1165,8 +1187,8 @@ body {
 }
 .af-dash-shipping li {
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
-  align-items: baseline;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: center;
   gap: 12px;
   padding: 10px 0;
   border-bottom: 1px solid var(--af-border);
@@ -1191,9 +1213,8 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 12px 40px;
-  margin: 24px 0;
-  padding: 16px 0;
-  border-top: 1px solid var(--af-border);
+  margin: 0 0 16px;
+  padding: 0 0 16px;
   border-bottom: 1px solid var(--af-border);
 }
 .af-dash-today dt {
