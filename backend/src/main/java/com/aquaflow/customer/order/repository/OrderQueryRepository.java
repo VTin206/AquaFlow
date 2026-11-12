@@ -39,6 +39,40 @@ public class OrderQueryRepository {
     /** Đơn còn việc phải làm: chưa hoàn tất và chưa hủy (đơn đã giao nhưng chưa thu đủ vẫn thuộc nhóm này). */
     private static final String ACTIVE = "o.status NOT IN ('COMPLETED', 'CANCELLED')";
 
+    /**
+     * Mức ưu tiên xử lý, giống bảng Đơn hàng ở frontend (compareOrderPriority):
+     * 0 giao thất bại, 1 quá giờ hẹn, 2 chờ xác nhận, 3 đang xử lý, 4 đã giao còn nợ, 5 xong/hủy.
+     * Đơn quá giờ dùng cùng điều kiện với cảnh báo ORDER_OVERDUE.
+     */
+    private static final String PRIORITY_JOINS = """
+             LEFT JOIN LATERAL (
+                SELECT a.outcome FROM delivery_attempts a
+                JOIN delivery_assignments da ON da.id = a.assignment_id
+                WHERE da.order_id = o.id AND da.active
+                ORDER BY a.attempted_at DESC, a.id DESC LIMIT 1
+             ) last_attempt ON true
+             CROSS JOIN LATERAL (
+                SELECT CASE
+                    WHEN o.status IN ('PENDING', 'CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY') AND last_attempt.outcome = 'FAILED' THEN 0
+                    WHEN o.status IN ('PENDING', 'CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY') AND o.fulfillment_type = 'DELIVERY'
+                        AND o.requested_delivery_at < CURRENT_TIMESTAMP THEN 1
+                    WHEN o.status = 'PENDING' THEN 2
+                    WHEN o.status IN ('CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY') THEN 3
+                    WHEN o.status = 'DELIVERED' AND b.due > 0 THEN 4
+                    ELSE 5 END AS rank
+             ) priority""";
+
+    /**
+     * Trong từng mức: việc chờ lâu/trễ lâu trước (giờ hẹn, không hẹn thì lúc đặt); mức đang xử lý xếp theo giờ hẹn
+     * gần nhất, đơn không hẹn giờ sau cùng; đơn đã xong/hủy mới nhất trước.
+     */
+    private static final String PRIORITY_ORDER = """
+             ORDER BY priority.rank,
+                CASE WHEN priority.rank = 3 THEN o.requested_delivery_at
+                     WHEN priority.rank < 5 THEN COALESCE(o.requested_delivery_at, o.created_at) END ASC NULLS LAST,
+                CASE WHEN priority.rank < 5 THEN o.created_at END ASC,
+                o.created_at DESC, o.id DESC""";
+
     private final NamedParameterJdbcTemplate jdbc;
 
     public OrderQueryRepository(JdbcTemplate jdbc) {
@@ -54,8 +88,8 @@ public class OrderQueryRepository {
         if (total == 0 || page.offset() >= total) return new IdPage(List.of(), total);
         params.addValue("limit", page.size()).addValue("offset", page.offset());
         List<Long> ids = jdbc.queryForList(
-                "SELECT o.id FROM orders o JOIN order_payment_balances b ON b.order_id = o.id" + where
-                        + " ORDER BY o.created_at DESC, o.id DESC LIMIT :limit OFFSET :offset",
+                "SELECT o.id FROM orders o JOIN order_payment_balances b ON b.order_id = o.id " + PRIORITY_JOINS + where
+                        + " " + PRIORITY_ORDER + " LIMIT :limit OFFSET :offset",
                 params, Long.class);
         return new IdPage(ids, total);
     }

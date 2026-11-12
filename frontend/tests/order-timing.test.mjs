@@ -62,3 +62,37 @@ test('sorting puts open orders first by due time, then finished orders newest fi
   const sorted = [doneOld, soon, doneNew, asap, late].sort(compareDeliveryDue).map((item) => item.id)
   expect(sorted).toEqual(['late', 'asap', 'soon', 'done-new', 'done-old'])
 })
+
+test('bảng Đơn hàng mặc định sắp theo mức ưu tiên xử lý', async () => {
+  const { compareOrderPriority, orderPriority } = await import('/src/features/orders/types.ts')
+  const created = (hours, minutes = 0, dayOffset = 0) => [{ at: at(hours, minutes, dayOffset), by: 'NV', message: 'Tạo đơn' }]
+  const failed = order({ id: 'failed', status: 'Giao thất bại', history: created(9, 55) })
+  const lateLong = order({ id: 'late-long', appointment: at(7), history: created(6) })
+  const lateShort = order({ id: 'late-short', status: 'Đang chuẩn bị', appointment: at(9, 30), history: created(8) })
+  const pendingOld = order({ id: 'pending-old', status: 'Chờ xác nhận', method: 'Tại quầy', history: created(8) })
+  const pendingNew = order({ id: 'pending-new', status: 'Chờ xác nhận', method: 'Tại quầy', history: created(9, 50) })
+  const soon = order({ id: 'soon', appointment: at(11), history: created(9, 40) })
+  const later = order({ id: 'later', appointment: at(15), history: created(9) })
+  const noTime = order({ id: 'no-time', status: 'Đang giao', history: created(6) })
+  const owing = order({ id: 'owing', status: 'Đã giao', total: 100000, paymentBalance: { paid: 0, due: 100000, refundDue: 0 }, history: created(5) })
+  const paidNew = order({ id: 'paid-new', status: 'Đã giao', paymentBalance: { paid: 1, due: 0, refundDue: 0 }, history: created(8) })
+  const cancelledOld = order({ id: 'cancelled-old', status: 'Đã hủy', history: created(7, 0, -1) })
+
+  expect([lateShort, owing, pendingNew].map((item) => orderPriority(item, now))).toEqual([1, 4, 2])
+  const sorted = [cancelledOld, noTime, owing, later, pendingNew, failed, paidNew, soon, lateShort, pendingOld, lateLong]
+    .sort((a, b) => compareOrderPriority(a, b, now))
+    .map((item) => item.id)
+  expect(sorted).toEqual([
+    'failed',
+    'late-long',
+    'late-short',
+    'pending-old',
+    'pending-new',
+    'soon',
+    'later',
+    'no-time',
+    'owing',
+    'paid-new',
+    'cancelled-old',
+  ])
+})
