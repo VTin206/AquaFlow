@@ -126,11 +126,14 @@ export function ShopLayout() {
             <NavLink to="/shop" end className={({ isActive }) => `af-shop-nav-link${isActive ? ' is-active' : ''}`}>
               Trang chủ
             </NavLink>
-            {/* Menu mở khi rê chuột/focus; bấm thì đóng, rời chuột hoặc focus ra ngoài thì mở lại được. */}
+            {/*
+              Menu mở khi rê chuột/focus; bấm thì đóng. Chỉ mở lại khi chuột đi vào lại hoặc focus từ ngoài đi vào:
+              không dựa vào lúc chuột rời/mất focus, vì menu ẩn dưới con trỏ hay chuyển trang cũng gây ra hai sự kiện đó.
+            */}
             <div
               className={`af-shop-nav-menu${megaClosed ? ' is-closed' : ''}`}
-              onMouseLeave={() => setMegaClosed(false)}
-              onBlur={(event) => {
+              onMouseEnter={() => setMegaClosed(false)}
+              onFocus={(event) => {
                 if (!event.currentTarget.contains(event.relatedTarget)) setMegaClosed(false)
               }}
             >

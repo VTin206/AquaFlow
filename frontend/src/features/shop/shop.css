@@ -178,7 +178,7 @@
 .af-shop-nav-menu:focus-within .af-shop-mega {
   display: grid;
 }
-/* Vừa bấm "Nước uống" hoặc một mục trong menu: ẩn dù chuột/focus còn ở đó. */
+/* Vừa bấm "Nước uống" hoặc một mục trong menu: ẩn cho tới khi chuột/focus đi vào lại. */
 .af-shop-nav-menu.is-closed .af-shop-mega {
   display: none;
 }
