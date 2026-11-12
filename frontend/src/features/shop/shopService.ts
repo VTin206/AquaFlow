@@ -25,6 +25,18 @@ export type ShopProduct = Pick<Product, 'id' | 'name' | 'brand' | 'unit' | 'pric
 
 export type ShopContact = Partial<Pick<StoreSettings, 'storeName' | 'phone' | 'address' | 'email' | 'openingHours'>>
 
+/**
+ * Mã sản phẩm "Bán chạy" theo thứ hạng. Chỉ để sắp xếp và gắn nhãn: lỗi thì coi như không có,
+ * trang vẫn hiện đủ sản phẩm theo thứ tự thường.
+ */
+export const useBestSellerIds = (): string[] =>
+  useQuery({
+    queryKey: [...shopKeys.products, 'best-sellers'],
+    queryFn: () => catalogApi.bestSellers().then((ids) => ids.map(String)),
+    staleTime: 5 * 60_000,
+    retry: false,
+  }).data ?? []
+
 /** Thông tin liên hệ cửa hàng hiện trên trang khách. */
 export const useShopContact = (): ShopContact | undefined =>
   useQuery({ queryKey: ['live', 'store-profile'], queryFn: settingsApi.profile, staleTime: 60_000 }).data

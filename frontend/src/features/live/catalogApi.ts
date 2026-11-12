@@ -25,5 +25,7 @@ export type CatalogSupplier = { id: number; name: string; phone: string | null; 
 export const catalogApi = {
   products: () => api.get<CatalogProduct[]>('/products?active=true'),
   product: (id: string) => api.get<CatalogProduct>(`/products/${encodeURIComponent(id)}`),
+  /** Top 5 sản phẩm bán nhiều nhất 30 ngày qua, nhiều nhất trước; chỉ có mã, không có số lượng bán. */
+  bestSellers: () => api.get<number[]>('/products/best-sellers'),
   suppliers: () => api.get<CatalogSupplier[]>('/suppliers?active=true'),
 }

@@ -30,6 +30,7 @@ class HealthControllerTest {
     @MockBean private com.aquaflow.inventory.repository.InventoryReturnRepository inventoryReturnRepository;
     @MockBean private com.aquaflow.activity.ActivityRepository activityRepository;
     @MockBean private com.aquaflow.report.ReportRepository reportRepository;
+    @MockBean private com.aquaflow.inventory.repository.BestSellerRepository bestSellerRepository;
     @MockBean private com.aquaflow.delivery.repository.DeliveryRepository deliveryRepository;
     @MockBean private com.aquaflow.customer.order.repository.DispatchRepository dispatchRepository;
     @MockBean private com.aquaflow.customer.order.repository.OrderTrackingRepository orderTrackingRepository;
