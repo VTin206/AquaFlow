@@ -66,7 +66,6 @@ export function OrdersPage() {
   return (
     <Page
       title="Đơn hàng"
-      description="Tiếp nhận tại quầy, điện thoại hoặc tin nhắn; theo dõi giao nhận và thanh toán riêng."
       actions={
         <Button type="primary" icon={<Plus size={16} />} onClick={() => setCreating(true)}>
           Tạo đơn hàng

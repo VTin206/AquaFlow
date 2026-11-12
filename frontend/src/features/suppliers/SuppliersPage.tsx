@@ -148,7 +148,6 @@ export function SuppliersPage() {
   return (
     <Page
       title="Nhà cung cấp"
-      description="Quản lý thông tin và đầu mối liên hệ của các đơn vị cung cấp hàng."
       actions={
         canManage ? (
           <Button type="primary" icon={<Plus size={16} />} onClick={() => setEditing(null)}>

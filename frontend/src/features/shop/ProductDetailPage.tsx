@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Button, Card, Descriptions, Empty, InputNumber, Skeleton, Space, Tag, Typography } from 'antd'
 import { Minus, Plus, ShoppingCart, Zap } from 'lucide-react'
-import { Link, useNavigate, useOutletContext, useParams } from 'react-router'
+import { useNavigate, useOutletContext, useParams } from 'react-router'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { useCartActions } from './cart'
@@ -17,10 +17,7 @@ export function ProductDetailPage() {
   const product = query.data
   return (
     <div className="af-shop-page af-shop-narrow">
-      <Link to="/shop" className="af-text-link">
-        ← Danh sách sản phẩm
-      </Link>
-      <Card style={{ marginTop: 16 }}>
+      <Card>
         {query.isPending ? (
           <Skeleton active />
         ) : query.isError ? (

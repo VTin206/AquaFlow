@@ -729,11 +729,6 @@ body {
   flex-basis: 100%;
   min-width: 0;
 }
-.af-page-header p {
-  color: var(--af-text-secondary);
-  font-size: var(--af-fs-md);
-  margin: 2px 0 0;
-}
 .af-page-actions {
   align-items: center;
   display: flex;
@@ -2681,11 +2676,6 @@ body {
 .af-page-header h1 {
   font-size: clamp(24px, 2.5vw, 32px);
   letter-spacing: -0.04em;
-}
-.af-page-header p {
-  max-width: 720px;
-  font-size: var(--af-fs-base);
-  line-height: 1.6;
 }
 .af-page-actions {
   gap: 10px;

@@ -9,7 +9,6 @@ export function DeliveryPage() {
   return (
     <Page
       title="Giao hàng"
-      description="Xếp đơn vào chuyến, ghi kết quả từng điểm giao và đối soát tiền, vỏ khi tài xế về."
       actions={
         <Segmented
           value={view}

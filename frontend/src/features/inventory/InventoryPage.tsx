@@ -241,7 +241,6 @@ export function InventoryPage() {
   return (
     <Page
       title="Kho hàng"
-      description="Theo dõi tồn kho, tách lô đã hết hạn và kiểm nhận hàng từ nhà cung cấp."
       actions={
         <Button type="primary" icon={<FilePlus2 size={16} />} onClick={() => setReceiving({})}>
           Tạo phiếu nhập

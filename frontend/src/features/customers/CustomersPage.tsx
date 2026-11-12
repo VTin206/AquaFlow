@@ -314,7 +314,6 @@ export function CustomersPage() {
   return (
     <Page
       title="Khách hàng"
-      description="Hồ sơ liên hệ, lịch sử mua, công nợ và sổ vỏ bình của từng khách."
       actions={
         <Button type="primary" icon={<Plus size={16} />} onClick={() => setEditing(null)}>
           Thêm khách hàng

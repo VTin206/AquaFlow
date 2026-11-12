@@ -97,7 +97,7 @@ function LiveReportContent() {
   const selectedSection = tab === 'overview' ? undefined : sections[tab]
   const rows: ReportRow[] = tab === 'overview' ? report?.days ?? [] : details.data?.content ?? []
   const columns = selectedSection?.columns ?? dailyColumns
-  return <Page title="Báo cáo" description="Doanh thu, thanh toán, kho và giao hàng từ dữ liệu thực tế, theo ngày Việt Nam."
+  return <Page title="Báo cáo"
     actions={<Space wrap>
       <DatePicker.RangePicker allowClear={false} value={dates} format="DD/MM/YYYY" presets={reportPresets(today)} disabledDate={date => date.isAfter(today, 'day')}
         onChange={value => { if (value?.[0] && value[1]) { if (value[1].diff(value[0], 'day') > 365 || value[1].isAfter(today, 'day')) { setRangeError('Chọn tối đa 366 ngày và không vượt quá hôm nay.'); return }; setRangeError(undefined); setDates([value[0], value[1]]); setPage(0) } }} />

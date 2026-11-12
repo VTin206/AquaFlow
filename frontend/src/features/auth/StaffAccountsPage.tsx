@@ -30,7 +30,6 @@ export function StaffAccountsPage() {
   return (
     <Page
       title="Tài khoản nhân viên"
-      description="Tạo tài khoản bán hàng và giao hàng; mỗi người đăng nhập bằng email và mật khẩu riêng."
       actions={
         <Button type="primary" icon={<Plus size={16} />} onClick={() => setAction({ kind: 'create' })}>
           Thêm nhân viên

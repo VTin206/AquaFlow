@@ -110,7 +110,6 @@ export function ActivityPage() {
   return (
     <Page
       title="Nhật ký hoạt động"
-      description="Ai đã làm gì, lúc nào trên đơn hàng, kho, giao hàng và tài khoản. Nhật ký chỉ ghi thêm, không sửa hoặc xóa được."
       actions={
         <>
           <Button icon={<RefreshCw size={16} />} loading={feed.refreshing} onClick={feed.refetch}>
