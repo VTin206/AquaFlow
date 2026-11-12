@@ -74,6 +74,7 @@ export function ShopLayout() {
   const goBack = () => (location.key !== 'default' && !placed ? navigate(-1) : navigate('/shop'))
   const cart = useCart()
   const [cartOpen, setCartOpen] = useState(false)
+  const [megaClosed, setMegaClosed] = useState(false)
   const count = cart.reduce((sum, line) => sum + line.quantity, 0)
   const tel = settings?.phone?.replace(/\s/g, '')
   const hours = settings?.openingHours?.trim()
@@ -125,8 +126,23 @@ export function ShopLayout() {
             <NavLink to="/shop" end className={({ isActive }) => `af-shop-nav-link${isActive ? ' is-active' : ''}`}>
               Trang chủ
             </NavLink>
-            <div className="af-shop-nav-menu">
-              <NavLink to="/shop/drinks" className={({ isActive }) => `af-shop-nav-link${isActive ? ' is-active' : ''}`} aria-haspopup="true">
+            {/*
+              Menu mở khi rê chuột/focus; bấm thì đóng. Chỉ mở lại khi chuột đi vào lại hoặc focus từ ngoài đi vào:
+              không dựa vào lúc chuột rời/mất focus, vì menu ẩn dưới con trỏ hay chuyển trang cũng gây ra hai sự kiện đó.
+            */}
+            <div
+              className={`af-shop-nav-menu${megaClosed ? ' is-closed' : ''}`}
+              onMouseEnter={() => setMegaClosed(false)}
+              onFocus={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) setMegaClosed(false)
+              }}
+            >
+              <NavLink
+                to="/shop/drinks"
+                className={({ isActive }) => `af-shop-nav-link${isActive ? ' is-active' : ''}`}
+                aria-haspopup="true"
+                onClick={() => setMegaClosed(true)}
+              >
                 Nước uống
               </NavLink>
               <div className="af-shop-mega" role="menu" aria-label="Danh mục nước uống">
@@ -136,7 +152,7 @@ export function ShopLayout() {
                     <ul>
                       {column.items.map((item) => (
                         <li key={item.label}>
-                          <Link to={drinkMenuHref(item.filter)} role="menuitem">
+                          <Link to={drinkMenuHref(item.filter)} role="menuitem" onClick={() => setMegaClosed(true)}>
                             {item.label}
                           </Link>
                         </li>
