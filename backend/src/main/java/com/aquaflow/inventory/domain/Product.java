@@ -38,9 +38,10 @@ public class Product {
 
     public static final int DEFAULT_LOW_STOCK_THRESHOLD = 10;
 
-    @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
-    @Column(name = "water_type", length = 30)
-    private WaterType waterType;
+    /** null: chưa phân loại. */
+    @ManyToOne(optional = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private ProductCategory category;
 
     @Column(name = "volume_ml")
     private Integer volumeMl;
@@ -104,12 +105,12 @@ public class Product {
     public void setImage(String image) { this.image = image; }
     public int getLowStockThreshold() { return lowStockThreshold; }
     public void setLowStockThreshold(int lowStockThreshold) { this.lowStockThreshold = lowStockThreshold; }
-    public WaterType getWaterType() { return waterType; }
+    public ProductCategory getCategory() { return category; }
+    public void setCategory(ProductCategory category) { this.category = category; }
     public Integer getVolumeMl() { return volumeMl; }
 
-    /** null giữ nguyên giá trị đang lưu; {@link WaterType#UNSPECIFIED} và dung tích 0 xóa giá trị. */
-    public void updateCatalogDetails(WaterType waterType, Integer volumeMl) {
-        if (waterType != null) this.waterType = waterType.stored();
+    /** null giữ nguyên giá trị đang lưu; 0 xóa dung tích. */
+    public void updateVolume(Integer volumeMl) {
         if (volumeMl != null) this.volumeMl = volumeMl == 0 ? null : volumeMl;
     }
     public String getUnit() { return unit; }

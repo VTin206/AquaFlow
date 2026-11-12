@@ -34,6 +34,7 @@ class ProductServiceTest {
     @Mock
     private BottleTypeRepository bottleTypeRepository;
     @Mock private com.aquaflow.workspace.repository.StoreSettingsRepository settings;
+    @Mock private com.aquaflow.inventory.repository.ProductCategoryRepository categoryRepository;
 
     @InjectMocks
     private ProductService productService;
@@ -168,5 +169,59 @@ class ProductServiceTest {
                 "Water", "Aqua", "Bottle", null, null, BigDecimal.TEN, null, 25)).lowStockThreshold()).isEqualTo(25);
         assertThat(productService.update(6L, new UpdateProductRequest(
                 "Water", "Aqua", "Bottle", null, null, BigDecimal.TEN, null)).lowStockThreshold()).isEqualTo(25);
+    }
+
+    @Test
+    void blankSkuGetsTheNextGeneratedCodeSkippingCodesTypedByHand() {
+        when(productRepository.nextSkuNumber()).thenReturn(7L, 8L);
+        when(productRepository.existsBySku("SP00007")).thenReturn(true);
+        when(productRepository.existsBySku("SP00008")).thenReturn(false);
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertThat(productService.create(request("  ", null)).sku()).isEqualTo("SP00008");
+    }
+
+    @Test
+    void typedSkuIsTrimmedAndMustStillBeUnique() {
+        when(productRepository.existsBySku("NUOC-19L")).thenReturn(true);
+
+        assertThatThrownBy(() -> productService.create(request(" NUOC-19L ", null))).isInstanceOf(ConflictException.class);
+        verify(productRepository, never()).nextSkuNumber();
+    }
+
+    @Test
+    void categoryIsSetKeptWhenOmittedClearedWithZeroAndRetiredOnesCannotBeNewlyAssigned() {
+        Product product = new Product("CAT", "Water", "Aqua", "Bottle", null, null, BigDecimal.TEN);
+        when(productRepository.findById(9L)).thenReturn(Optional.of(product));
+        when(categoryRepository.findById(2L)).thenReturn(Optional.of(category(2L, "Nước khoáng", true)));
+        when(categoryRepository.findById(3L)).thenReturn(Optional.of(category(3L, "Nước có ga", false)));
+
+        assertThat(productService.update(9L, withCategory(2L)).categoryName()).isEqualTo("Nước khoáng");
+        assertThat(productService.update(9L, withCategory(null)).categoryId()).isEqualTo(2L);
+        assertThatThrownBy(() -> productService.update(9L, withCategory(3L)))
+                .isInstanceOf(ConflictException.class).hasMessageContaining("ngừng dùng");
+        assertThat(productService.update(9L, withCategory(0L)).categoryId()).isNull();
+        assertThatThrownBy(() -> productService.update(9L, withCategory(99L))).isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void productKeepsItsCategoryAfterTheCategoryIsRetired() {
+        Product product = new Product("GA", "Soda", "Aqua", "Lon", null, null, BigDecimal.TEN);
+        product.setCategory(category(3L, "Nước có ga", false));
+        when(productRepository.findById(10L)).thenReturn(Optional.of(product));
+
+        assertThat(productService.update(10L, withCategory(3L)).categoryName()).isEqualTo("Nước có ga");
+        verify(categoryRepository, never()).findById(any());
+    }
+
+    private static com.aquaflow.inventory.domain.ProductCategory category(long id, String name, boolean active) {
+        var category = new com.aquaflow.inventory.domain.ProductCategory(name);
+        org.springframework.test.util.ReflectionTestUtils.setField(category, "id", id);
+        category.setActive(active);
+        return category;
+    }
+
+    private static UpdateProductRequest withCategory(Long categoryId) {
+        return new UpdateProductRequest("Water", "Aqua", "Bottle", null, null, BigDecimal.TEN, null, null, categoryId, null);
     }
 }
