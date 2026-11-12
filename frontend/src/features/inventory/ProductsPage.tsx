@@ -292,7 +292,6 @@ export function ProductsPage() {
   return (
     <Page
       title="Sản phẩm"
-      description="Tra cứu theo thương hiệu, loại nước và quy cách đóng gói."
       actions={
         <Space wrap>
           <Button onClick={() => setBottlesOpen(true)}>Loại vỏ bình</Button>

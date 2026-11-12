@@ -16,7 +16,7 @@ import { TextArea } from '@/shared/components/TextArea'
 export function SettingsPage() {
   const settingsQuery = useSettings()
   return (
-    <Page title="Cài đặt cửa hàng" description="Thông tin in trên hóa đơn, phiếu giao và các ngưỡng cảnh báo kho.">
+    <Page title="Cài đặt cửa hàng">
       {settingsQuery.isError && !settingsQuery.data ? (
         <Card>
           <QueryError error={settingsQuery.error} onRetry={settingsQuery.refetch} />
