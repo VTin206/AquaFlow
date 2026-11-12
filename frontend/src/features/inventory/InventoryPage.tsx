@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Badge, Button, Card, Input, Progress, Segmented, Table, Tag, Typography, type TableColumnsType } from 'antd'
+import { Badge, Button, Card, Input, Progress, Segmented, Table, Tag, Tooltip, Typography, type TableColumnsType } from 'antd'
 import { FilePlus2, PackagePlus, Search } from 'lucide-react'
 import { BulkBar } from '@/shared/components/BulkBar'
 import { CountLabel } from '@/shared/components/CountLabel'
@@ -189,7 +189,11 @@ export function InventoryPage() {
       ),
     },
     {
-      title: 'Hạn sử dụng gần nhất',
+      title: (
+        <Tooltip title="Hạn của lô còn hàng sắp hết hạn sớm nhất">
+          <span>Hạn sử dụng</span>
+        </Tooltip>
+      ),
       key: 'expiry',
       width: 190,
       render: (_, product) => {
