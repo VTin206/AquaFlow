@@ -13,11 +13,14 @@ import java.sql.Timestamp;
 @Repository
 public class NotificationRepository {
     private final JdbcTemplate jdbc;
-    // A demoted owner must not retain access to business alerts through the inbox.
+    // Cảnh báo tự động chỉ hiện khi vai trò hiện tại vẫn được nhận loại đó: người bị đổi vai trò hoặc khóa
+    // không còn đọc được cảnh báo cũ. Vận hành: ADMIN, SALES_STAFF. Chuyến: DELIVERY_STAFF.
     private static final String VISIBLE = """
              AND (source_key IS NULL OR EXISTS (
                 SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id
-                WHERE u.id = notifications.recipient_id AND u.status = 'ACTIVE' AND r.code = 'ADMIN'))
+                WHERE u.id = notifications.recipient_id AND u.status = 'ACTIVE' AND (
+                    (notifications.kind IN ('TRIP_ASSIGNED', 'TRIP_ORDER_OVERDUE') AND r.code = 'DELIVERY_STAFF')
+                    OR (notifications.kind NOT IN ('TRIP_ASSIGNED', 'TRIP_ORDER_OVERDUE') AND r.code IN ('ADMIN', 'SALES_STAFF')))))
             """;
     private static final RowMapper<NotificationResponse> ROW = (rs, row) -> {
         var readAt = rs.getTimestamp("read_at");

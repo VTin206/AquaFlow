@@ -6,7 +6,7 @@ export type NotificationTone = 'urgent' | 'soon' | 'info'
 
 type KindView = { tone: NotificationTone; action?: string }
 
-/** Mỗi loại thông báo nói rõ việc cần làm; bấm nút mở đúng chỗ xử lý (chi tiết đơn hoặc trang kho). */
+/** Mỗi loại thông báo nói rõ việc cần làm; bấm nút mở đúng chỗ xử lý (chi tiết đơn, trang kho hoặc màn hình chuyến). */
 const kinds: Record<Notification['kind'], KindView> = {
   DELIVERY_FAILED: { tone: 'urgent', action: 'Xem lý do, giao lại' },
   BATCH_EXPIRED: { tone: 'urgent', action: 'Xử lý lô hết hạn' },
@@ -14,12 +14,20 @@ const kinds: Record<Notification['kind'], KindView> = {
   ORDER_PENDING: { tone: 'soon', action: 'Xác nhận đơn' },
   LOW_STOCK: { tone: 'soon', action: 'Nhập thêm hàng' },
   BATCH_EXPIRING: { tone: 'soon', action: 'Xem lô sắp hết hạn' },
+  TRIP_ORDER_OVERDUE: { tone: 'urgent', action: 'Xem chuyến, báo khách' },
+  TRIP_ASSIGNED: { tone: 'soon', action: 'Xem chuyến' },
   MANUAL: { tone: 'info' },
 }
 
 /** Thông báo thường không có việc riêng: chỉ mời mở đơn hoặc kho nếu có gắn. */
 const entityAction = (entityType: Notification['entityType']) =>
-  entityType === 'ORDER' ? 'Xem đơn' : entityType === 'PRODUCT' || entityType === 'BATCH' ? 'Xem kho' : undefined
+  entityType === 'ORDER'
+    ? 'Xem đơn'
+    : entityType === 'PRODUCT' || entityType === 'BATCH'
+      ? 'Xem kho'
+      : entityType === 'TRIP'
+        ? 'Xem chuyến'
+        : undefined
 
 export function notificationView(item: Pick<Notification, 'kind' | 'entityType' | 'resolvedAt'>) {
   const kind = kinds[item.kind] ?? kinds.MANUAL

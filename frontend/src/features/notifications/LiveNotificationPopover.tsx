@@ -14,6 +14,7 @@ import {
   Package,
   PackageX,
   TriangleAlert,
+  Truck,
   X,
   type LucideIcon,
 } from 'lucide-react'
@@ -30,11 +31,16 @@ const kindIcons: Record<Notification['kind'], LucideIcon> = {
   ORDER_PENDING: ClipboardCheck,
   LOW_STOCK: Package,
   BATCH_EXPIRING: CalendarClock,
+  TRIP_ASSIGNED: Truck,
+  TRIP_ORDER_OVERDUE: ClockAlert,
   MANUAL: Bell,
 }
 
-/** Hộp thông báo của nhân viên. */
-export function LiveNotificationPopover() {
+/**
+ * Hộp thông báo của nhân viên. `driver`: màn hình tài xế, chỉ có thông báo chuyến của mình nên không có
+ * liên kết sang danh sách đơn (tài xế không mở được trang đó).
+ */
+export function LiveNotificationPopover({ driver = false }: { driver?: boolean }) {
   const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const [page, setPage] = useState(0)
@@ -74,7 +80,7 @@ export function LiveNotificationPopover() {
     setOpen(false)
     trigger.current?.focus()
   }
-  /** Mở đúng chỗ xử lý: chi tiết đơn hoặc trang kho; mở rồi thì tính là đã đọc. */
+  /** Mở đúng chỗ xử lý: chi tiết đơn, trang kho hoặc màn hình chuyến; mở rồi thì tính là đã đọc. */
   const openItem = (item: Notification) => {
     if (!item.readAt) read.mutate(item.id)
     if (item.entityType === 'ORDER' && item.entityId) {
@@ -83,6 +89,9 @@ export function LiveNotificationPopover() {
     } else if (item.entityType === 'PRODUCT' || item.entityType === 'BATCH') {
       close()
       navigate('/inventory')
+    } else if (item.entityType === 'TRIP') {
+      close()
+      navigate('/driver')
     }
   }
 
@@ -221,9 +230,11 @@ export function LiveNotificationPopover() {
               )}
             </div>
             <div className="af-notifications-footer">
-              <Link to="/orders" onClick={() => setOpen(false)}>
-                Xem tất cả đơn hàng <ArrowRight size={14} aria-hidden />
-              </Link>
+              {!driver && (
+                <Link to="/orders" onClick={() => setOpen(false)}>
+                  Xem tất cả đơn hàng <ArrowRight size={14} aria-hidden />
+                </Link>
+              )}
               {/* Chỉ một trang thì không cần nút chuyển trang. */}
               {(page > 0 || hasNextPage) && (
                 <nav className="af-notifications-pager" aria-label="Trang thông báo">

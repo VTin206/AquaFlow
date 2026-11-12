@@ -5,6 +5,7 @@ import { Navigate, Outlet, useLocation } from 'react-router'
 import { canOpen, homeOf } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/useStaff'
 import { ThemeToggle } from './ThemeToggle'
+import { NotificationPopover } from './NotificationPopover'
 import { initialsOf, useAccountMenuItems } from './useAccountMenu'
 import '@/features/delivery/driver.css'
 import { ErrorBoundary } from '../ErrorBoundary'
@@ -28,6 +29,7 @@ export function DriverLayout() {
           <small>Giao hàng</small>
         </span>
         <div className="af-driver-bar-right">
+          <NotificationPopover driver />
           <ThemeToggle />
           <Dropdown trigger={['click']} menu={{ items: menuItems }}>
             <button type="button" className="af-account-menu af-driver-account" aria-label="Menu tài khoản">
