@@ -4,6 +4,7 @@ import { Alert, App, Button, Dropdown, Form, Input, Modal, Segmented, Space, Tab
 import { Ellipsis, Pencil, Plus } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
+import { useConfirm } from '@/shared/components/confirm'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { matchesSearch } from '@/shared/utils/search'
 import { modalWidth } from '@/shared/utils/modal'
@@ -71,6 +72,7 @@ function CategoryForm({ item, onClose }: { item: ProductCategory | null; onClose
 /** Thêm, đổi tên, ngừng dùng / dùng lại và xóa (khi chưa có sản phẩm) loại sản phẩm. */
 export function LiveProductCategories({ onClose }: { onClose: () => void }) {
   const { message, modal } = App.useApp()
+  const ask = useConfirm()
   const client = useQueryClient()
   const [status, setStatus] = useState<Status>('active')
   const [search, setSearch] = useState('')
@@ -200,7 +202,21 @@ export function LiveProductCategories({ onClose }: { onClose: () => void }) {
                         items: [
                           item.active
                             ? { key: 'stop', label: 'Ngừng dùng', disabled: busy, onClick: () => confirmStop(item) }
-                            : { key: 'resume', label: 'Dùng lại', disabled: busy, onClick: () => setActive.mutate(item) },
+                            : {
+                                key: 'resume',
+                                label: 'Dùng lại',
+                                disabled: busy,
+                                onClick: async () => {
+                                  if (
+                                    await ask({
+                                      title: `Dùng lại loại ${item.name}?`,
+                                      content: <p>Loại sản phẩm hiện lại trong bộ lọc và form sản phẩm.</p>,
+                                      okText: 'Dùng lại',
+                                    })
+                                  )
+                                    setActive.mutate(item)
+                                },
+                              },
                           {
                             key: 'delete',
                             danger: true,

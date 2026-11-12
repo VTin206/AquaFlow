@@ -6,6 +6,8 @@ import { ViewButton } from '@/shared/components/ViewButton'
 import { modalWidth } from '@/shared/utils/modal'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
+import { useConfirm } from '@/shared/components/confirm'
+import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { useAuth } from './useAuth'
 import { staffApi, type StaffAccount, type StaffCreate, type StaffUpdate } from './staffApi'
 import { roleLabel } from './roles'
@@ -162,11 +164,40 @@ function AccountForm({
   onSave: (value: Partial<StaffCreate & StaffUpdate>) => void
 }) {
   const [form] = Form.useForm()
+  const confirm = useConfirm()
+  const discard = useConfirmDiscard(form, onClose)
+  // Khóa, mở khóa và đặt lại mật khẩu ảnh hưởng ngay tới việc đăng nhập của nhân viên: hỏi lại trước khi lưu.
+  const submit = async (values: Partial<StaffCreate & StaffUpdate>) => {
+    if (action.kind === 'password') {
+      const ok = await confirm({
+        title: `Đặt mật khẩu mới cho ${action.account.fullName}?`,
+        content: <p>Mật khẩu cũ hết hiệu lực ngay; nhân viên phải đăng nhập bằng mật khẩu mới.</p>,
+        okText: 'Đặt mật khẩu',
+        danger: true,
+      })
+      if (!ok) return
+    }
+    if (action.kind === 'edit' && values.status && values.status !== action.account.status) {
+      const locking = values.status === 'INACTIVE'
+      const ok = await confirm({
+        title: `${locking ? 'Khóa' : 'Mở khóa'} tài khoản ${action.account.fullName}?`,
+        content: (
+          <p>
+            {locking ? 'Nhân viên không đăng nhập được cho tới khi mở khóa lại.' : 'Nhân viên đăng nhập lại được bằng mật khẩu hiện có.'}
+          </p>
+        ),
+        okText: locking ? 'Khóa tài khoản' : 'Mở khóa',
+        danger: locking,
+      })
+      if (!ok) return
+    }
+    onSave(values)
+  }
   return (
     <Modal
       open
       title={action.kind === 'create' ? 'Thêm nhân viên' : action.kind === 'edit' ? 'Cập nhật nhân viên' : 'Đặt mật khẩu mới'}
-      onCancel={onClose}
+      onCancel={discard}
       closable={!saving}
       maskClosable={!saving}
       onOk={() => form.submit()}
@@ -179,7 +210,7 @@ function AccountForm({
         form={form}
         layout="vertical"
         disabled={saving}
-        onFinish={onSave}
+        onFinish={submit}
         initialValues={action.kind === 'create' ? { role: 'SALES_STAFF' } : { ...action.account, phone: action.account.phone ?? '' }}
       >
         {action.kind !== 'password' && (

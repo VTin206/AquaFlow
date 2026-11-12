@@ -12,6 +12,16 @@ import { type SettingsSnapshot } from './settingsApi'
 import { normalizeDeliveryFees, STAIR_FLOORS, type StoreSettings } from './types'
 import { depositRatesLabel, useBottleDepositRates } from '@/features/live/bottleDeposits'
 import { TextArea } from '@/shared/components/TextArea'
+import { useConfirm } from '@/shared/components/confirm'
+
+/** Nhóm ô trên trang, dùng để tóm tắt phần sẽ đổi trong hộp thoại xác nhận lưu. */
+const settingGroups: { label: string; keys: (keyof StoreSettings)[] }[] = [
+  { label: 'thông tin cửa hàng', keys: ['storeName', 'taxCode', 'address', 'phone', 'email', 'openingHours'] },
+  { label: 'tài khoản chuyển khoản', keys: ['bankName', 'bankAccount', 'bankHolder'] },
+  { label: 'ghi chú hóa đơn', keys: ['invoiceNote'] },
+  { label: 'cảnh báo kho', keys: ['expiryWarningDays', 'defaultLowStock'] },
+  { label: 'phí giao hàng', keys: ['deliveryFees'] },
+]
 
 export function SettingsPage() {
   const settingsQuery = useSettings()
@@ -41,6 +51,7 @@ export function SettingsPage() {
 
 function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload: () => Promise<SettingsSnapshot> }) {
   const { message, modal } = App.useApp()
+  const ask = useConfirm()
   const [version, setVersion] = useState(settings.version)
   const [conflict, setConflict] = useState(false)
   const [form] = Form.useForm<StoreSettings>()
@@ -59,7 +70,22 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
       disabled={update.isPending}
       initialValues={toForm(settings)}
       onValuesChange={() => setDirty(true)}
-      onFinish={(values) =>
+      onFinish={async (values) => {
+        // Cài đặt áp dụng ngay cho mọi đơn mới, hóa đơn và mã QR chuyển khoản: liệt kê nhóm sẽ đổi trước khi lưu.
+        const changed = settingGroups
+          .filter((group) => group.keys.some((key) => JSON.stringify(values[key] ?? '') !== JSON.stringify(toForm(settings)[key] ?? '')))
+          .map((group) => group.label)
+        const ok = await ask({
+          title: 'Lưu cài đặt cửa hàng?',
+          content: (
+            <>
+              <p>Thay đổi: {changed.length ? changed.join(', ') : 'không có mục nào khác bản đang lưu'}.</p>
+              <p>Áp dụng ngay cho đơn mới, hóa đơn và mã QR chuyển khoản; đơn đã tạo giữ nguyên.</p>
+            </>
+          ),
+          okText: 'Lưu cài đặt',
+        })
+        if (!ok) return
         update.mutate(
           { ...values, version },
           {
@@ -76,7 +102,7 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
             },
           },
         )
-      }
+      }}
     >
       {conflict && (
         <Alert
@@ -271,7 +297,10 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
                 <Form.Item
                   name={['deliveryFees', 'freeFromUnits']}
                   label="Miễn phí từ (bình/thùng)"
-                  rules={[{ required: true, message: 'Nhập số bình/thùng.' }, { type: 'integer', min: 0, max: 1000, message: 'Từ 0 đến 1.000.' }]}
+                  rules={[
+                    { required: true, message: 'Nhập số bình/thùng.' },
+                    { type: 'integer', min: 0, max: 1000, message: 'Từ 0 đến 1.000.' },
+                  ]}
                 >
                   <InputNumber min={0} max={1000} precision={0} style={{ width: '100%' }} />
                 </Form.Item>
@@ -280,7 +309,10 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
                 <Form.Item
                   name={['deliveryFees', 'smallOrderFee']}
                   label="Phí đơn ít hơn (₫)"
-                  rules={[{ required: true, message: 'Nhập phí giao.' }, { type: 'integer', min: 0, max: 10000000, message: 'Từ 0 đến 10.000.000 ₫.' }]}
+                  rules={[
+                    { required: true, message: 'Nhập phí giao.' },
+                    { type: 'integer', min: 0, max: 10000000, message: 'Từ 0 đến 10.000.000 ₫.' },
+                  ]}
                 >
                   <InputNumber min={0} max={10000000} step={1000} precision={0} style={{ width: '100%' }} />
                 </Form.Item>
@@ -293,7 +325,10 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
                   <Form.Item
                     name={['deliveryFees', 'stairsPerJug', index]}
                     label={index === STAIR_FLOORS - 1 ? `Lầu ${index + 1}+` : `Lầu ${index + 1}`}
-                    rules={[{ required: true, message: 'Nhập phụ phí.' }, { type: 'integer', min: 0, max: 1000000, message: 'Từ 0 đến 1.000.000 ₫.' }]}
+                    rules={[
+                      { required: true, message: 'Nhập phụ phí.' },
+                      { type: 'integer', min: 0, max: 1000000, message: 'Từ 0 đến 1.000.000 ₫.' },
+                    ]}
                   >
                     <InputNumber min={0} max={1000000} step={1000} precision={0} style={{ width: '100%' }} />
                   </Form.Item>
@@ -301,8 +336,8 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
               ))}
             </Row>
             <Typography.Paragraph type="secondary" className="af-form-hint">
-              Áp dụng cho báo giá ở trang đặt hàng và đơn giao tận nơi tạo sau khi lưu; đơn đã tạo giữ phí cũ. Chỉ tính bình giao lên lầu bằng
-              thang bộ.
+              Áp dụng cho báo giá ở trang đặt hàng và đơn giao tận nơi tạo sau khi lưu; đơn đã tạo giữ phí cũ. Chỉ tính bình giao lên lầu
+              bằng thang bộ.
             </Typography.Paragraph>
           </Card>
 
@@ -327,8 +362,8 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
               ]}
             />
             <Typography.Paragraph type="secondary" className="af-form-hint">
-              Tiền cọc sửa ở Danh mục loại vỏ (trang Khách hàng › Vỏ bình), áp dụng theo loại vỏ của sản phẩm.{' '}
-              Đổi bù vỏ và thu hồi tận nơi chưa áp dụng.
+              Tiền cọc sửa ở Danh mục loại vỏ (trang Khách hàng › Vỏ bình), áp dụng theo loại vỏ của sản phẩm. Đổi bù vỏ và thu hồi tận nơi
+              chưa áp dụng.
             </Typography.Paragraph>
           </Card>
         </Col>

@@ -26,6 +26,7 @@ import { BulkBar } from '@/shared/components/BulkBar'
 import { Page } from '@/shared/components/Page'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
+import { useConfirm } from '@/shared/components/confirm'
 import { useColumnSort } from '@/shared/components/sortableColumn'
 import { downloadExcel, type ExcelColumn } from '@/shared/utils/excel'
 import { currency } from '@/shared/utils/format'
@@ -53,6 +54,7 @@ import { idleOptions, lastOrderLabel, type IdleFilter } from './lastOrder'
 export function CustomersPage() {
   const screens = Grid.useBreakpoint()
   const { message } = App.useApp()
+  const ask = useConfirm()
   const [exporting, setExporting] = useState(false)
   // Khách đã lưu trữ chỉ xem được khi BE có API.
   const [view, setView] = useState<'active' | 'archived'>('active')
@@ -144,7 +146,12 @@ export function CustomersPage() {
   const archived = (archivedQuery.data ?? []).filter((customer) =>
     matchesSearch(query, `${customerCode(customer)} ${customer.name} ${customer.phone} ${customer.area}`, customer.phone),
   )
-  const restore = (customer: Customer) =>
+  const restore = async (customer: Customer) =>
+    (await ask({
+      title: `Khôi phục hồ sơ ${customer.name}?`,
+      content: <p>Khách hiện lại trong danh sách và đặt đơn được.</p>,
+      okText: 'Khôi phục',
+    })) &&
     activate.mutateAsync(customer.id).then(
       () => {
         message.success(`Đã khôi phục hồ sơ ${customer.name}.`)

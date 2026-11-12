@@ -4,6 +4,7 @@ import { Alert, App, Button, Dropdown, Form, Input, InputNumber, Modal, Segmente
 import { Ellipsis, Pencil, Plus, RefreshCw } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
+import { useConfirm } from '@/shared/components/confirm'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { currency } from '@/shared/utils/format'
 import { matchesSearch } from '@/shared/utils/search'
@@ -81,6 +82,7 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
   const role = useStaff()?.role
   const admin = role === 'ADMIN' || role === 'SALES_STAFF'
   const { message, modal } = App.useApp()
+  const ask = useConfirm()
   const client = useQueryClient()
   const [status, setStatus] = useState<'active' | 'inactive' | 'all'>('active')
   const [search, setSearch] = useState('')
@@ -235,7 +237,16 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
                                   key: 'resume',
                                   label: 'Lưu hành lại',
                                   disabled: reactivate.isPending,
-                                  onClick: () => reactivate.mutate(item.id),
+                                  onClick: async () => {
+                                    if (
+                                      await ask({
+                                        title: `Lưu hành lại vỏ ${item.name}?`,
+                                        content: <p>Loại vỏ này dùng lại được cho sản phẩm và sổ vỏ.</p>,
+                                        okText: 'Lưu hành lại',
+                                      })
+                                    )
+                                      reactivate.mutate(item.id)
+                                  },
                                 },
                               ],
                             }}
