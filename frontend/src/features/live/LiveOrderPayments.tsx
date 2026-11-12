@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Alert, App, Button, Descriptions, Form, Input, InputNumber, Modal, Select, Skeleton, Space, Table, Tag } from 'antd'
 import { QueryError } from '@/shared/components/QueryError'
+import { useConfirm } from '@/shared/components/confirm'
 import { currency } from '@/shared/utils/format'
 import { invalidateLiveData } from './invalidateLiveData'
 import { paymentApi, useOrderPayments, type PaymentInput } from './paymentApi'
@@ -11,6 +12,7 @@ export function LiveOrderPayments({ orderId }: { orderId: number }) {
   const query = useOrderPayments(orderId)
   const client = useQueryClient()
   const { message } = App.useApp()
+  const ask = useConfirm()
   const [direction, setDirection] = useState<'IN' | 'OUT' | null>(null)
   const [form] = Form.useForm<Pick<PaymentInput, 'amount' | 'method' | 'reference' | 'note'>>()
   const request = useRef<{ id: string; payload: string } | null>(null)
@@ -27,6 +29,22 @@ export function LiveOrderPayments({ orderId }: { orderId: number }) {
   const submit = async (values: Pick<PaymentInput, 'amount' | 'method' | 'reference' | 'note'>) => {
     if (!direction || lock.current) return
     lock.current = true
+    // Phiếu thu/hoàn ghi vào sổ, không xóa được: nhắc lại số tiền và hình thức trước khi ghi.
+    const ok = await ask({
+      title: `${direction === 'IN' ? 'Ghi nhận đã thu' : 'Ghi nhận đã hoàn'} ${currency(values.amount)}?`,
+      content: (
+        <p>
+          Hình thức: <strong>{values.method === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}</strong>
+          {values.reference?.trim() ? ` · mã giao dịch ${values.reference.trim()}` : ''}. Phiếu đã ghi không xóa được.
+        </p>
+      ),
+      okText: direction === 'IN' ? 'Ghi nhận thu' : 'Ghi nhận hoàn',
+      danger: direction === 'OUT',
+    })
+    if (!ok) {
+      lock.current = false
+      return
+    }
     const input = { ...values, direction, reference: values.reference?.trim() || undefined, note: values.note?.trim() || undefined }
     const payload = JSON.stringify(input)
     if (request.current?.payload !== payload) request.current = { id: crypto.randomUUID(), payload }

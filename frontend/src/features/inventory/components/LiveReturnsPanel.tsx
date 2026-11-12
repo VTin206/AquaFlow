@@ -5,6 +5,8 @@ import { returnApi, usePendingReturns, type PendingReturn, type ReturnInspection
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { OrderFocusBanner } from '@/features/orders/components/OrderSheet'
 import { QueryError } from '@/shared/components/QueryError'
+import { useConfirm } from '@/shared/components/confirm'
+import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { modalWidth } from '@/shared/utils/modal'
 import { isoToVnDate } from '../expiry'
 import { ReturnsView, type ReturnHistoryRow } from './ReturnsView'
@@ -72,9 +74,11 @@ export function InspectionModal({
   onClose: () => void
 }) {
   const { message } = App.useApp()
+  const ask = useConfirm()
   const client = useQueryClient()
   const [requestId] = useState(() => crypto.randomUUID())
   const [form] = Form.useForm<{ lines: { quantity: number; sellable: number }[]; note?: string }>()
+  const discard = useConfirmDiscard(form, onClose)
   const values: { quantity: number; sellable: number }[] = Form.useWatch('lines', form) ?? []
   const received = values.reduce((sum, line) => sum + (line?.quantity ?? 0), 0)
   const outstanding = order.lines.reduce((sum, line) => sum + line.quantity, 0) - received
@@ -109,7 +113,7 @@ export function InspectionModal({
       open
       title={`Kiểm hàng hoàn · ${order.orderCode}`}
       width={modalWidth.medium}
-      onCancel={onClose}
+      onCancel={discard}
       okText="Lưu đợt nhận hàng"
       cancelText="Đóng"
       confirmLoading={mutation.isPending}
@@ -128,7 +132,7 @@ export function InspectionModal({
         layout="vertical"
         disabled={mutation.isPending}
         initialValues={{ lines: order.lines.map(() => ({ quantity: 0, sellable: 0 })) }}
-        onFinish={(input) => {
+        onFinish={async (input) => {
           const lines = order.lines
             .map((line, i) => ({ loadItemId: line.loadItemId, quantity: input.lines[i].quantity, sellable: input.lines[i].sellable }))
             .filter((line) => line.quantity > 0)
@@ -136,7 +140,21 @@ export function InspectionModal({
             message.error('Nhập ít nhất một lô có hàng thực nhận.')
             return
           }
-          mutation.mutate({ requestId, note: input.note, lines })
+          // Hàng bán lại được cộng vào tồn, phần loại bỏ ghi hủy; phiếu đã lưu không sửa được.
+          const sellable = lines.reduce((sum, line) => sum + line.sellable, 0)
+          const ok = await ask({
+            title: `Lưu đợt nhận ${received} đơn vị hàng hoàn?`,
+            content: (
+              <>
+                <p>
+                  Bán lại được <strong>{sellable}</strong> (cộng vào tồn) · loại bỏ <strong>{received - sellable}</strong>.
+                </p>
+                <p className="af-confirm-warning">Phiếu đã lưu không sửa được.</p>
+              </>
+            ),
+            okText: 'Lưu phiếu',
+          })
+          if (ok) mutation.mutate({ requestId, note: input.note, lines })
         }}
       >
         <div className="af-return-fill">

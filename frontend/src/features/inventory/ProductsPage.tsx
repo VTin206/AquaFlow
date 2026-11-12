@@ -23,6 +23,7 @@ import { Droplets, Ellipsis, FunnelX, LayoutGrid, Plus, Search } from 'lucide-re
 import { Page } from '@/shared/components/Page'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
+import { useConfirm } from '@/shared/components/confirm'
 import { currency } from '@/shared/utils/format'
 import { LiveBottleTypes } from '@/features/live/LiveBottleTypes'
 import { LiveProductCategories } from '@/features/live/LiveProductCategories'
@@ -60,6 +61,7 @@ function StockTag({ product }: { product: CatalogItem }) {
 
 export function ProductsPage() {
   const { message, modal } = App.useApp()
+  const ask = useConfirm()
   const canManage = useCanManageProducts()
   const [status, setStatus] = useState<ProductStatus>('active')
   // Quản lý tải hết một lần rồi lọc tại chỗ để đếm được từng trạng thái; nhân viên chỉ xem sản phẩm đang bán (BE cũng giới hạn như vậy).
@@ -159,7 +161,12 @@ export function ProductsPage() {
           },
         ),
     })
-  const resumeSelling = (product: CatalogItem) =>
+  const resumeSelling = async (product: CatalogItem) =>
+    (await ask({
+      title: `Bán lại ${product.name}?`,
+      content: <p>Sản phẩm hiện lại trên trang đặt hàng và khi tạo đơn.</p>,
+      okText: 'Bán lại',
+    })) &&
     activate.mutateAsync(product.id).then(
       () => {
         message.success(`Đã bán lại ${product.name}.`)

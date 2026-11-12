@@ -6,6 +6,7 @@ import { MapLink } from '@/shared/address/MapLink'
 import { modalWidth } from '@/shared/utils/modal'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
+import { useConfirm } from '@/shared/components/confirm'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { useColumnSort } from '@/shared/components/sortableColumn'
 import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
@@ -17,6 +18,7 @@ import { matchesSearch } from '@/shared/utils/search'
 
 export function SuppliersPage() {
   const { message, modal } = App.useApp()
+  const ask = useConfirm()
   const canManage = useCanManageSuppliers()
   const [status, setStatus] = useState<SupplierStatus>('active')
   // Quản lý tải hết một lần rồi lọc tại chỗ để đếm được từng trạng thái; nhân viên chỉ xem nhà cung cấp đang dùng (BE cũng giới hạn như vậy).
@@ -75,7 +77,12 @@ export function SuppliersPage() {
         ),
     })
 
-  const reactivate = (supplier: Supplier) =>
+  const reactivate = async (supplier: Supplier) =>
+    (await ask({
+      title: `Hợp tác lại với ${supplier.name}?`,
+      content: <p>Nhà cung cấp hiện lại khi tạo phiếu nhập kho.</p>,
+      okText: 'Hợp tác lại',
+    })) &&
     activate.mutateAsync(supplier.id).then(
       () => {
         message.success(`Đã hợp tác lại với ${supplier.name}.`)

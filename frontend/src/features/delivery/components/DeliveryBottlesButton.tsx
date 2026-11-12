@@ -5,6 +5,7 @@ import { useAuth } from '@/features/auth/useAuth'
 import { customerKeys } from '@/features/customers/useCustomers'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { QueryError } from '@/shared/components/QueryError'
+import { useConfirm } from '@/shared/components/confirm'
 import { currency } from '@/shared/utils/format'
 import { deliveryBottleApi, type BottleReturnInput } from '../deliveryBottleApi'
 
@@ -30,6 +31,7 @@ export function DeliveryBottlesModal({
   const { user } = useAuth()
   const client = useQueryClient()
   const { message } = App.useApp()
+  const ask = useConfirm()
   const [form] = Form.useForm<Record<string, number>>()
   const lock = useRef(false)
   const retry = useRef<{ payload: string; id: string } | null>(null)
@@ -120,7 +122,7 @@ export function DeliveryBottlesModal({
                   form={form}
                   layout="vertical"
                   disabled={save.isPending}
-                  onFinish={(values) => {
+                  onFinish={async (values) => {
                     if (lock.current) return
                     const lines = data.lines
                       .map((l) => ({ bottleTypeId: l.bottleTypeId, quantity: values[String(l.bottleTypeId)] ?? 0 }))
@@ -129,6 +131,22 @@ export function DeliveryBottlesModal({
                       message.warning('Nhập ít nhất một vỏ thực nhận.')
                       return
                     }
+                    // Ghi thẳng vào sổ vỏ của khách, không xóa được: nhắc lại số vỏ từng loại.
+                    lock.current = true
+                    const ok = await ask({
+                      title: `Xác nhận đã thu ${lines.reduce((sum, l) => sum + l.quantity, 0)} vỏ của đơn ${orderCode}?`,
+                      content: (
+                        <p>
+                          {lines
+                            .map((l) => `${l.quantity} × ${data.lines.find((x) => x.bottleTypeId === l.bottleTypeId)?.name ?? ''}`)
+                            .join(', ')}
+                          . Số vỏ được ghi ngay vào sổ khách hàng.
+                        </p>
+                      ),
+                      okText: 'Đã thu vỏ',
+                    })
+                    lock.current = false
+                    if (!ok) return
                     const payload = JSON.stringify(lines)
                     if (retry.current?.payload !== payload) retry.current = { payload, id: crypto.randomUUID() }
                     lock.current = true

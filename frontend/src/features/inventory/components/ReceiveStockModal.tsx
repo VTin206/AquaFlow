@@ -6,6 +6,7 @@ import { currency } from '@/shared/utils/format'
 import { isoToVnDate, localToday } from '../expiry'
 import { receiptToForm, useReceiptOptions, useSaveReceipt, type ReceiptForm, type ReceiptLineView, type ReceiptView } from '../useInventory'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
+import { useConfirm } from '@/shared/components/confirm'
 import { FormSection } from '@/shared/components/FormSection'
 import { useAuth } from '@/features/auth/useAuth'
 import { ModalTotalFooter } from '@/shared/components/ModalTotalFooter'
@@ -89,6 +90,7 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
   const currentUser = useAuth().user?.name
   const [form] = Form.useForm<ReceiptForm>()
   const discard = useConfirmDiscard(form, onClose)
+  const ask = useConfirm()
   const options = useReceiptOptions()
   const save = useSaveReceipt()
   const [savedId, setSavedId] = useState(receipt?.id)
@@ -102,7 +104,24 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
 
   const submit = (confirm: boolean) =>
     form.validateFields().then(
-      (values) =>
+      async (values) => {
+        // Nhập kho cộng tồn ngay và không sửa/hủy được nữa: tóm tắt lại trước khi ghi.
+        if (
+          confirm &&
+          !(await ask({
+            title: `Nhập kho ${good} đơn vị?`,
+            content: (
+              <>
+                <p>
+                  {values.lines.length} dòng hàng · giá trị hàng đạt <strong>{currency(total)}</strong>.
+                </p>
+                <p className="af-confirm-warning">Sau khi nhập kho, phiếu không sửa hoặc hủy được nữa.</p>
+              </>
+            ),
+            okText: 'Nhập kho',
+          }))
+        )
+          return
         save.mutate(
           { id: savedId, form: values, confirm, onSaved: setSavedId },
           {
@@ -114,7 +133,8 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
             onError: (error) =>
               message.error(savedId === undefined ? error.message : `Phiếu đã lưu nháp nhưng chưa nhập kho: ${error.message}`),
           },
-        ),
+        )
+      },
       () => undefined,
     )
 

@@ -5,6 +5,8 @@ import { useStaff } from '@/features/auth/useStaff'
 import { bottleLedgerApi, type BottleInput, type BottleLedger } from '@/features/live/bottleLedgerApi'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { QueryError } from '@/shared/components/QueryError'
+import { useConfirm } from '@/shared/components/confirm'
+import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { currency } from '@/shared/utils/format'
 import { customerKeys } from './useCustomers'
 import { TextArea } from '@/shared/components/TextArea'
@@ -35,6 +37,8 @@ function BottleForm({
 }) {
   const [form] = Form.useForm<Draft>()
   const { message } = App.useApp()
+  const ask = useConfirm()
+  const discard = useConfirmDiscard(form, onClose)
   const client = useQueryClient()
   const pending = useRef(false)
   const retry = useRef<{ payload: string; id: string } | null>(null)
@@ -62,7 +66,7 @@ function BottleForm({
       open
       title={labels[kind]}
       onCancel={() => {
-        if (!save.isPending) onClose()
+        if (!save.isPending) discard()
       }}
       onOk={() => form.submit()}
       okText="Xác nhận ghi nhận"
@@ -84,8 +88,22 @@ function BottleForm({
         layout="vertical"
         disabled={save.isPending}
         initialValues={counts ? { quantity: 1 } : { amount: kind === 'REFUND' ? ledger.balance.refundable : undefined }}
-        onFinish={(values) => {
+        onFinish={async (values) => {
           if (pending.current) return
+          // Sổ vỏ và cọc chỉ cộng dồn, không xóa dòng đã ghi: nhắc lại nội dung trước khi ghi.
+          pending.current = true
+          const ok = await ask({
+            title: `${labels[kind]}: ${
+              counts
+                ? `${values.quantity} vỏ ${ledger.types.find((t) => t.bottleTypeId === values.bottleTypeId)?.name ?? ''}`
+                : currency(values.amount ?? 0)
+            }?`,
+            content: <p>Dòng đã ghi vào sổ vỏ và tiền cọc không xóa được; sai thì phải ghi điều chỉnh.</p>,
+            okText: 'Ghi vào sổ',
+            danger: kind === 'LOSS' || kind === 'REFUND',
+          })
+          pending.current = false
+          if (!ok) return
           const draft = { kind, ...values, note: values.note?.trim() || undefined }
           const payload = JSON.stringify(draft)
           if (retry.current?.payload !== payload) retry.current = { payload, id: crypto.randomUUID() }
