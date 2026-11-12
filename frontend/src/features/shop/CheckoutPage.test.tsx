@@ -181,3 +181,10 @@ test('dòng cách tính phí lấy theo mức phí cửa hàng trong báo giá',
   expect(screen.getByText(/Lầu 1: 1\.000\s₫ · Từ lầu 2: 7\.000\s₫ mỗi bình\/thùng/)).toBeTruthy()
   expect(screen.queryByText(/Dưới 3 sản phẩm/)).toBeNull()
 })
+
+test('báo giá chưa có mức phí vẫn hiện cách tính chung, không để trống', async () => {
+  vi.mocked(deliveryQuoteApi.quote).mockResolvedValue({ subtotal: 100000, baseFee: 15000, stairsFee: 0, deliveryFee: 15000, total: 115000 })
+  renderPage()
+  expect(await screen.findByText('Miễn phí khi đơn đủ số sản phẩm cửa hàng quy định')).toBeTruthy()
+  expect(screen.getByText(/Tính cho mỗi bình\/thùng theo số tầng đi thang bộ/)).toBeTruthy()
+})
