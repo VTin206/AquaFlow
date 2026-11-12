@@ -31,9 +31,19 @@ const matches = (product: ShopProduct, filters: ShopFilterState, skip?: keyof Sh
   (skip === 'category' || filters.category === ALL || categoryOf(product) === filters.category) &&
   normalizeSearch(`${product.name} ${product.brand}`).includes(normalizeSearch(filters.query.trim()))
 
-/** Sản phẩm qua mọi bộ lọc; còn hàng xếp trước. */
-export const filterProducts = (products: ShopProduct[], filters: ShopFilterState) =>
-  products.filter((product) => matches(product, filters)).sort((a, b) => Number(b.available) - Number(a.available))
+/**
+ * Sản phẩm qua mọi bộ lọc: còn hàng xếp trước, trong đó sản phẩm bán chạy lên đầu theo thứ hạng
+ * (`bestSellerIds`, nhiều nhất trước); còn lại giữ thứ tự sẵn có.
+ */
+export const filterProducts = (products: ShopProduct[], filters: ShopFilterState, bestSellerIds: readonly string[] = []) => {
+  const rank = (product: ShopProduct) => {
+    const at = bestSellerIds.indexOf(product.id)
+    return at === -1 ? bestSellerIds.length : at
+  }
+  return products
+    .filter((product) => matches(product, filters))
+    .sort((a, b) => Number(a.available === false) - Number(b.available === false) || rank(a) - rank(b))
+}
 
 /** Số sản phẩm của mỗi lựa chọn, tính theo các bộ lọc khác đang chọn để không dẫn tới danh sách rỗng. */
 export const countBy = (

@@ -6,11 +6,12 @@ import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { UNCATEGORIZED } from '@/features/inventory/catalogGroups'
 import { useCartActions } from './cart'
-import { useShopProduct } from './shopService'
+import { useBestSellerIds, useShopProduct } from './shopService'
 
 export function ProductDetailPage() {
   const { id = '' } = useParams()
   const query = useShopProduct(id)
+  const bestSellerIds = useBestSellerIds()
   const actions = useCartActions()
   const { openCart } = useOutletContext<{ openCart: () => void }>()
   const navigate = useNavigate()
@@ -48,6 +49,7 @@ export function ProductDetailPage() {
                       ? 'Có thể đặt'
                       : 'Chưa có thông tin tồn kho'}
                 </Tag>
+                {bestSellerIds.includes(product.id) && <Tag color="red">Bán chạy</Tag>}
               </p>
               <div className="af-shop-buy">
                 <Space.Compact className="af-shop-buy-qty">

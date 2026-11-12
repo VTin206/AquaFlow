@@ -1,5 +1,6 @@
 package com.aquaflow.inventory.api;
 
+import com.aquaflow.inventory.application.BestSellerService;
 import com.aquaflow.inventory.application.ProductService;
 import com.aquaflow.inventory.api.dto.ProductResponse;
 import com.aquaflow.inventory.api.dto.CreateProductRequest;
@@ -24,9 +25,21 @@ import java.util.List;
 @Tag(name = "Products")
 public class ProductController {
     private final ProductService productService;
+    private final BestSellerService bestSellerService;
 
-    public ProductController(ProductService productService) {
+    public ProductController(ProductService productService, BestSellerService bestSellerService) {
         this.productService = productService;
+        this.bestSellerService = bestSellerService;
+    }
+
+    /** Công khai cho trang khách: chỉ trả mã sản phẩm theo thứ hạng, không lộ số lượng bán. */
+    @GetMapping("/best-sellers")
+    @Operation(summary = "Top 5 active products by quantity delivered in the last 30 days, best first")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Product ids, best seller first; empty when there is not enough sales data")
+    })
+    public ResponseEntity<List<Long>> getBestSellers() {
+        return ResponseEntity.ok(bestSellerService.productIds());
     }
 
     @GetMapping
