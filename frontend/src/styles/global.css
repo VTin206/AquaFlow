@@ -961,6 +961,10 @@ body {
 .af-row-inactive > td {
   color: var(--af-text-tertiary);
 }
+/* Dòng bấm được cả dòng (ví dụ chọn đơn để tạo chuyến). */
+.af-row-clickable {
+  cursor: pointer;
+}
 .af-row-inactive .af-cell-stack > span,
 .af-row-inactive a {
   color: var(--af-text-tertiary);

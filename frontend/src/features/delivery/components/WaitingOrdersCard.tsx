@@ -30,6 +30,12 @@ type WaitingOrdersCardProps = {
 /** Đơn chờ xếp chuyến: chọn đơn rồi tạo chuyến. */
 export function WaitingOrdersCard({ orders, loading, selected, onSelect, onCreate, error }: WaitingOrdersCardProps) {
   const chosen = orders.filter((order) => selected.includes(order.id))
+  const chosenIds = chosen.map((order) => order.id)
+  // Bấm chỗ nào trên dòng cũng chọn/bỏ chọn đơn; ô vuông tự xử lý nên bỏ qua để không đổi hai lần.
+  const toggleRow = (id: string, target: EventTarget) => {
+    if (target instanceof Element && target.closest('.ant-table-selection-column, button, a, input, label')) return
+    onSelect(chosenIds.includes(id) ? chosenIds.filter((item) => item !== id) : [...chosenIds, id])
+  }
   return (
     <Card
       className="af-card"
@@ -59,7 +65,9 @@ export function WaitingOrdersCard({ orders, loading, selected, onSelect, onCreat
           dataSource={orders}
           pagination={false}
           scroll={{ x: 820, y: 320 }}
-          rowSelection={{ selectedRowKeys: chosen.map((order) => order.id), onChange: (keys) => onSelect(keys as string[]) }}
+          rowSelection={{ selectedRowKeys: chosenIds, onChange: (keys) => onSelect(keys as string[]) }}
+          rowClassName="af-row-clickable"
+          onRow={(order) => ({ onClick: (event) => toggleRow(order.id, event.target) })}
           locale={{
             emptyText: (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có đơn chờ giao. Đơn giao đang chuẩn bị sẽ hiện ở đây." />
