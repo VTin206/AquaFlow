@@ -48,7 +48,7 @@ export function OrderCards({ orders, loading, compact, emptyText, onDetails, fil
             value={sort}
             onChange={setSort}
             options={[
-              { value: 'default', label: 'Thứ tự mặc định' },
+              { value: 'default', label: 'Ưu tiên xử lý' },
               { value: 'total', label: 'Tổng tiền: cao trước' },
               { value: 'due' as const, label: 'Còn phải thu: cao trước' },
             ]}

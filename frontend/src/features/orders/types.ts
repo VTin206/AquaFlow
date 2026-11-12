@@ -189,6 +189,34 @@ export function deliveryTimingOf(order: Order, now = Date.now()) {
   return { main, sub }
 }
 
+/**
+ * Mức ưu tiên xử lý, cùng thứ tự với danh sách phân trang ở BE (OrderQueryRepository):
+ * 0 giao thất bại, 1 quá giờ hẹn, 2 chờ xác nhận, 3 đang xử lý, 4 đã giao còn nợ, 5 xong/hủy.
+ */
+export function orderPriority(order: Order, now = Date.now()) {
+  if (order.status === 'Giao thất bại') return 0
+  if (isOverdue(order, now)) return 1
+  if (order.status === 'Chờ xác nhận') return 2
+  if (OPEN_DELIVERY.includes(order.status)) return 3
+  if (order.status === 'Đã giao' && amountDue(order) > 0) return 4
+  return 5
+}
+
+/**
+ * Thứ tự mặc định của bảng Đơn hàng: mức ưu tiên trước; trong mức, việc chờ/trễ lâu nhất trước (giờ hẹn, không hẹn
+ * thì lúc đặt). Mức đang xử lý xếp theo giờ hẹn gần nhất, đơn không hẹn giờ sau cùng. Đơn đã xong/hủy mới nhất trước.
+ */
+export function compareOrderPriority(a: Order, b: Order, now = Date.now()) {
+  const rankA = orderPriority(a, now)
+  const rankB = orderPriority(b, now)
+  if (rankA !== rankB) return rankA - rankB
+  const createdA = createdAtOf(a) ?? a.time
+  const createdB = createdAtOf(b) ?? b.time
+  if (rankA === 5) return createdB.localeCompare(createdA)
+  if (rankA === 3 && Boolean(a.appointment) !== Boolean(b.appointment)) return a.appointment ? -1 : 1
+  return (a.appointment ?? createdA).localeCompare(b.appointment ?? createdB) || createdA.localeCompare(createdB)
+}
+
 /** Sắp xếp "Hẹn giao": đơn chưa xong lên trước theo giờ cần giao (hẹn, hoặc lúc đặt nếu không hẹn); đơn đã xong theo lúc đặt mới nhất. */
 export function compareDeliveryDue(a: Order, b: Order) {
   const openA = OPEN_DELIVERY.includes(a.status)
