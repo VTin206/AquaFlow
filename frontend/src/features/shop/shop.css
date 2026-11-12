@@ -178,6 +178,10 @@
 .af-shop-nav-menu:focus-within .af-shop-mega {
   display: grid;
 }
+/* Vừa bấm "Nước uống" hoặc một mục trong menu: ẩn dù chuột/focus còn ở đó. */
+.af-shop-nav-menu.is-closed .af-shop-mega {
+  display: none;
+}
 .af-shop-mega-column {
   min-width: 0;
 }
