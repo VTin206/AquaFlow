@@ -23,6 +23,25 @@ class DeliveryPricingTest {
         assertThat(DeliveryPricing.calculate(BigDecimal.ONE, units, jugs, floor, fees).deliveryFee()).isEqualByComparingTo(expected);
     }
 
+    @ParameterizedTest
+    @CsvSource({"Bình,true", "bình,true", "BINH,true", "Thùng,true", "thùng,true", " Thung ,true",
+            "Chai,false", "Lon,false", "Lốc,false", "Vỏ,false"})
+    void chargesStairsForBottlesAndCasesOnly(String unit, boolean expected) {
+        assertThat(DeliveryPricing.carriesStairsFee(unit)).isEqualTo(expected);
+    }
+
+    @org.junit.jupiter.api.Test
+    void unknownUnitIsNotChargedForStairs() {
+        assertThat(DeliveryPricing.carriesStairsFee(null)).isFalse();
+    }
+
+    @org.junit.jupiter.api.Test
+    void quoteReturnsTheFeesItWasCalculatedWith() {
+        var fees = new com.aquaflow.workspace.api.DeliveryFees(5, 20_000, java.util.List.of(1_000, 7_000));
+        assertThat(DeliveryPricing.calculate(BigDecimal.ONE, 1, 1, 1, fees).fees()).isEqualTo(fees);
+        assertThat(DeliveryPricing.calculate(BigDecimal.ONE, 1, 1, 1, null).fees()).isEqualTo(com.aquaflow.workspace.api.DeliveryFees.DEFAULT);
+    }
+
     @org.junit.jupiter.api.Test
     void defaultFeesKeepTheRulesUsedBeforeTheyWereConfigurable() {
         assertThat(DeliveryPricing.calculate(BigDecimal.ONE, 2, 2, 3, null).deliveryFee())

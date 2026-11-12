@@ -1,30 +1,34 @@
 import type { ReactNode } from 'react'
 import { currency } from '@/shared/utils/format'
+import type { DeliveryFees } from '@/features/settings/types'
 import type { DeliveryQuote } from '../deliveryQuoteApi'
+import { baseFeeText, stairsFeeText } from '../deliveryFeeText'
 
 type Props = {
   fee: number | null
   /** Chỉ có khi báo giá đã sẵn sàng. */
   quote?: DeliveryQuote
+  /** Mức phí của lần báo giá gần nhất, giữ lại khi đang tính lại để dòng cách tính không nhấp nháy. */
+  fees?: DeliveryFees
   loading: boolean
   error?: ReactNode
 }
 
-/** Khối phí giao ở trang đặt hàng: mỗi khoản đi kèm cách tính, tổng nằm dưới cùng. */
-export function DeliveryFeeSummary({ fee, quote, loading, error }: Props) {
+/** Khối phí giao ở trang đặt hàng: mỗi khoản đi kèm cách tính theo cài đặt cửa hàng, tổng nằm dưới cùng. */
+export function DeliveryFeeSummary({ fee, quote, fees, loading, error }: Props) {
   return (
     <section className="af-checkout-fee" aria-label="Phí giao hàng">
       <div className="af-checkout-fee-row">
         <div>
           <span>Phí cơ bản</span>
-          <small>Dưới 3 sản phẩm: 15.000 ₫ · Từ 3 sản phẩm: miễn phí</small>
+          {fees && <small>{baseFeeText(fees)}</small>}
         </div>
         {quote && <span>{currency(quote.baseFee)}</span>}
       </div>
       <div className="af-checkout-fee-row">
         <div>
           <span>Phí thang bộ</span>
-          <small>Tầng 1–2: 2.000 ₫/bình/tầng · Tầng 3: 8.000 ₫/bình · Từ tầng 4: 12.000 ₫/bình</small>
+          {fees && <small>{stairsFeeText(fees.stairsPerJug)}</small>}
         </div>
         {quote && <span>{currency(quote.stairsFee)}</span>}
       </div>

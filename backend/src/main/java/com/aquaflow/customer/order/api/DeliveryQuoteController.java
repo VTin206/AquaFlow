@@ -29,14 +29,14 @@ public class DeliveryQuoteController {
     @Transactional(readOnly = true)
     public DeliveryPricing.Quote quote(@Valid @RequestBody Request request) {
         BigDecimal subtotal = BigDecimal.ZERO;
-        long units = 0, jugs = 0;
+        long units = 0, stairsUnits = 0;
         for (var line : request.items()) {
             Product product = products.findById(line.productId()).filter(Product::isActive)
                     .orElseThrow(() -> new NotFoundException("Active product not found: " + line.productId()));
             subtotal = subtotal.add(product.getSalePrice().multiply(BigDecimal.valueOf(line.quantity())));
             units += line.quantity();
-            if (DeliveryPricing.isJug(product.getUnit())) jugs += line.quantity();
+            if (DeliveryPricing.carriesStairsFee(product.getUnit())) stairsUnits += line.quantity();
         }
-        return DeliveryPricing.calculate(subtotal, units, jugs, request.stairFloor(), settings.deliveryFees());
+        return DeliveryPricing.calculate(subtotal, units, stairsUnits, request.stairFloor(), settings.deliveryFees());
     }
 }
