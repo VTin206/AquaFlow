@@ -38,6 +38,25 @@ class DeliveryQuotePostgresIntegrationTest {
         assertThat(order.total()).isEqualByComparingTo("186000");
     }
 
+    @Test void stairsFeeCountsCasesButNotLooseBottlesAndQuoteShowsTheFees() throws Exception {
+        long caseOfWater = product("Thùng");
+        long bottle = product("Chai");
+        // Lầu 2 mặc định 4.000 ₫/cái: chỉ tính 1 thùng, chai lẻ không tính; 2 sản phẩm nên còn phí cơ bản.
+        mvc.perform(post("/api/v1/delivery-quotes").contentType("application/json").content(
+                        "{\"items\":[{\"productId\":" + caseOfWater + ",\"quantity\":1},{\"productId\":" + bottle + ",\"quantity\":1}],\"stairFloor\":2}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("baseFee").value(15000))
+                .andExpect(jsonPath("stairsFee").value(4000))
+                .andExpect(jsonPath("fees.freeFromUnits").value(3))
+                .andExpect(jsonPath("fees.smallOrderFee").value(15000))
+                .andExpect(jsonPath("fees.stairsPerJug.length()").value(4));
+    }
+
+    private long product(String unit) {
+        return jdbc.queryForObject("INSERT INTO products(sku,name,unit,sale_price) VALUES (?,'Quote water',?,50000) RETURNING id",
+                Long.class, "QUOTE-" + UUID.randomUUID(), unit);
+    }
+
     private long product() {
         return jdbc.queryForObject("INSERT INTO products(sku,name,unit,sale_price) VALUES (?,'Quote water','Bình',50000) RETURNING id", Long.class, "QUOTE-" + UUID.randomUUID());
     }

@@ -170,7 +170,7 @@ public class OrderService {
                         ? (note == null ? "" : note + "\n") + "Số tầng đi thang bộ: " + stairFloor : note);
 
         BigDecimal subtotal = BigDecimal.ZERO;
-        long units = 0, jugs = 0;
+        long units = 0, stairsUnits = 0;
         List<OrderItem> items = new java.util.ArrayList<>();
 
         for (OrderItemRequest itemRequest : itemRequests) {
@@ -188,13 +188,13 @@ public class OrderService {
                     product.getSalePrice());
 
             units += itemRequest.quantity();
-            if (DeliveryPricing.isJug(product.getUnit())) jugs += itemRequest.quantity();
+            if (DeliveryPricing.carriesStairsFee(product.getUnit())) stairsUnits += itemRequest.quantity();
             items.add(item);
             subtotal = subtotal.add(item.getLineTotal());
         }
 
         BigDecimal fee = channel == OrderChannel.WEB && fulfillmentType == FulfillmentType.DELIVERY
-                ? DeliveryPricing.calculate(subtotal, units, jugs, stairFloor, storeSettings.deliveryFees()).deliveryFee() : BigDecimal.ZERO;
+                ? DeliveryPricing.calculate(subtotal, units, stairsUnits, stairFloor, storeSettings.deliveryFees()).deliveryFee() : BigDecimal.ZERO;
         if (expectedTotal != null && expectedTotal.compareTo(subtotal.add(fee)) != 0)
             throw new ConflictException("Giá hoặc phí giao đã thay đổi. Vui lòng tải lại phí giao và kiểm tra tổng tiền.");
         order.updateAmounts(

@@ -166,3 +166,18 @@ test('lỗi báo phí khóa đặt đơn đến khi tải lại thành công', a
   fireEvent.click(screen.getByRole('button', { name: /Thử lại/ }))
   await waitFor(() => expect((screen.getAllByRole('button', { name: /Đặt đơn/ })[0] as HTMLButtonElement).disabled).toBe(false))
 })
+
+test('dòng cách tính phí lấy theo mức phí cửa hàng trong báo giá', async () => {
+  vi.mocked(deliveryQuoteApi.quote).mockResolvedValue({
+    subtotal: 100000,
+    baseFee: 20000,
+    stairsFee: 0,
+    deliveryFee: 20000,
+    total: 120000,
+    fees: { freeFromUnits: 5, smallOrderFee: 20000, stairsPerJug: [1000, 7000] },
+  })
+  renderPage()
+  expect(await screen.findByText(/Dưới 5 sản phẩm: 20\.000\s₫ · Từ 5 sản phẩm: miễn phí/)).toBeTruthy()
+  expect(screen.getByText(/Lầu 1: 1\.000\s₫ · Từ lầu 2: 7\.000\s₫ mỗi bình\/thùng/)).toBeTruthy()
+  expect(screen.queryByText(/Dưới 3 sản phẩm/)).toBeNull()
+})

@@ -80,8 +80,10 @@ export function CheckoutPage() {
     enabled: !invalid && cart.length > 0 && validFloor,
     retry: false,
     staleTime: 0,
+    // Giữ báo giá trước khi đổi số tầng/giỏ để dòng cách tính không biến mất; số tiền vẫn ẩn tới khi tính xong (quoteBlocked).
+    placeholderData: (previous) => previous,
   })
-  const quoteBlocked = !validFloor || !quote.data || quote.isError || quote.isFetching
+  const quoteBlocked = !validFloor || !quote.data || quote.isPlaceholderData || quote.isError || quote.isFetching
   const fee = quoteBlocked ? null : quote.data!.deliveryFee
   const quotedSubtotal = quoteBlocked ? subtotal : quote.data!.subtotal
   const total = quotedSubtotal + (fee ?? 0)
@@ -266,6 +268,7 @@ export function CheckoutPage() {
                 <DeliveryFeeSummary
                   fee={fee}
                   quote={quoteBlocked ? undefined : quote.data}
+                  fees={quote.data?.fees}
                   loading={quoteBlocked}
                   error={quote.isError ? <QueryError error={quote.error} onRetry={quote.refetch} /> : undefined}
                 />

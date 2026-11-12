@@ -16,7 +16,7 @@ Live accounts use persisted settings. Demo accounts continue to use demo data. B
 
 `settings.deliveryFees` = `{ freeFromUnits, smallOrderFee, stairsPerJug }`, used by `POST /api/v1/delivery-quotes` and when a delivery
 order is created (orders already created keep their fee). Orders with at least `freeFromUnits` bottles/cases ship free;
-smaller orders pay `smallOrderFee`. `stairsPerJug[i]` is the extra fee per bottle carried up to floor `i + 1` by stairs;
+smaller orders pay `smallOrderFee`. `stairsPerJug[i]` is the extra fee per bottle or case (unit `Bình`/`Thùng`) carried up to floor `i + 1` by stairs;
 higher floors use the last value. Limits: `freeFromUnits` 0–1000, `smallOrderFee` 0–10,000,000, 1–10 floor values of
 0–1,000,000 each.
 
