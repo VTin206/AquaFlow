@@ -25,7 +25,8 @@ import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { LiveBottleTypes } from '@/features/live/LiveBottleTypes'
-import { brandGroups, capacityGroups, catalogCategories, getBrandGroup, getCatalogDetails, normalizeSearch } from './catalogGroups'
+import { LiveProductCategories } from '@/features/live/LiveProductCategories'
+import { brandGroups, capacityGroups, getBrandGroup, getCatalogDetails, normalizeSearch, sortCategoryNames } from './catalogGroups'
 import { ProductFormModal } from './components/ProductFormModal'
 import {
   useActivateProduct,
@@ -75,6 +76,7 @@ export function ProductsPage() {
   // undefined: đóng; null: thêm mới; CatalogItem: sửa.
   const [editing, setEditing] = useState<CatalogItem | null>()
   const [bottlesOpen, setBottlesOpen] = useState(false)
+  const [categoriesOpen, setCategoriesOpen] = useState(false)
   const allProducts = productsQuery.data ?? []
   const products = status === 'all' ? allProducts : allProducts.filter((product) => product.active === (status === 'active'))
   const activeCount = allProducts.filter((product) => product.active).length
@@ -90,6 +92,10 @@ export function ProductsPage() {
     logo: brandGroups.find((group) => group.name === name)?.logo ?? products.find((product) => brandName(product) === name)?.image,
     count: products.filter((product) => brandName(product) === name).length,
   }))
+  // Bộ lọc loại lấy từ chính danh sách sản phẩm, theo thứ tự cửa hàng tạo loại.
+  const categoryNames = sortCategoryNames(
+    products.map((product) => ({ name: getCatalogDetails(product).category, id: getCatalogDetails(product).categoryId })),
+  )
   const visible = products
     .filter((product) => {
       const details = getCatalogDetails(product)
@@ -294,6 +300,7 @@ export function ProductsPage() {
       title="Sản phẩm"
       actions={
         <Space wrap>
+          {canManage && <Button onClick={() => setCategoriesOpen(true)}>Loại sản phẩm</Button>}
           <Button onClick={() => setBottlesOpen(true)}>Loại vỏ bình</Button>
           {canManage && (
             <Button type="primary" icon={<Plus size={16} />} onClick={() => setEditing(null)}>
@@ -354,12 +361,12 @@ export function ProductsPage() {
             }}
           />
           <Select
-            aria-label="Loại nước"
+            aria-label="Loại sản phẩm"
             className={filterOn(Boolean(category))}
             allowClear
-            placeholder="Tất cả loại nước"
+            placeholder="Tất cả loại sản phẩm"
             value={category}
-            options={catalogCategories.map((value) => ({ value, label: value }))}
+            options={categoryNames.map((value) => ({ value, label: value }))}
             onChange={(value) => {
               setCategory(value)
               setPage(1)
@@ -419,6 +426,7 @@ export function ProductsPage() {
         onClose={() => setEditing(undefined)}
       />
       {bottlesOpen && <LiveBottleTypes onClose={() => setBottlesOpen(false)} />}
+      {categoriesOpen && <LiveProductCategories onClose={() => setCategoriesOpen(false)} />}
     </Page>
   )
 }

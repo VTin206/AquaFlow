@@ -30,15 +30,16 @@ describe('nhật ký theo đơn', () => {
   })
 })
 
-describe('loại nước và dung tích', () => {
-  it('dùng giá trị đã lưu, field chưa nhập thì đoán từ tên', () => {
-    expect(catalogFromApi({ name: 'Nước tinh khiết 500ml', unit: 'Thùng', waterType: 'ALKALINE', volumeMl: 350 })).toMatchObject({
-      category: 'Ion kiềm',
-      capacity: '250–355ml',
-      volumeMl: 350,
-    })
-    expect(catalogFromApi({ name: 'Nước tinh khiết 500ml', unit: 'Thùng', waterType: null, volumeMl: null })).toMatchObject({
-      category: 'Tinh khiết',
+describe('loại sản phẩm và dung tích', () => {
+  it('loại lấy đúng như cửa hàng đã lưu (không đoán); dung tích chưa nhập thì đoán từ tên', () => {
+    expect(
+      catalogFromApi({ name: 'Nước tinh khiết 500ml', unit: 'Thùng', categoryId: 3, categoryName: 'Ion kiềm', volumeMl: 350 }),
+    ).toMatchObject({ category: 'Ion kiềm', categoryId: 3, capacity: '250–355ml', volumeMl: 350 })
+    expect(
+      catalogFromApi({ name: 'Nước tinh khiết 500ml', unit: 'Thùng', categoryId: null, categoryName: null, volumeMl: null }),
+    ).toMatchObject({
+      category: 'Chưa phân loại',
+      categoryId: undefined,
       capacity: '390–520ml',
       volumeMl: 500,
     })

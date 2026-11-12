@@ -1,16 +1,19 @@
 import type { Product } from './types'
+import { normalizeSearch } from '@/shared/utils/search'
 
 type CatalogDetails = NonNullable<Product['catalog']>
-export const catalogCategories = [
-  'Tinh khiết',
-  'Nước khoáng',
-  'Ion kiềm',
-  'Hoàn lưu khoáng',
-  'Nước có ga',
-  'Bù khoáng & điện giải',
-  'Vỏ bình & phụ kiện',
-  'Chưa phân loại',
-]
+/** Tên hiện cho sản phẩm chưa có loại sản phẩm. */
+export const UNCATEGORIZED = 'Chưa phân loại'
+
+/**
+ * Tên loại sản phẩm cho bộ lọc, mỗi tên một lần, theo thứ tự cửa hàng tạo loại (`id` nhỏ trước);
+ * loại không có `id` (chưa phân loại) xuống cuối.
+ */
+export function sortCategoryNames(entries: { name: string; id?: number }[]) {
+  const order = new Map<string, number>()
+  for (const { name, id } of entries) order.set(name, Math.min(order.get(name) ?? Infinity, id ?? Infinity))
+  return [...order.keys()].sort((a, b) => order.get(a)! - order.get(b)! || a.localeCompare(b, 'vi'))
+}
 export const capacityGroups = ['250–355ml', '390–520ml', '750–900ml', '1–1,5L', '4,5–5L', '18,5–20L', 'Chưa có dung tích']
 
 type BrandGroup = { name: string; aliases: string[]; logo?: string }
@@ -94,34 +97,41 @@ export function inferCatalog(name: string, unit: string): CatalogDetails {
   return { category, packaging, capacity: capacityOf(volumeMl), volumeMl }
 }
 
-/** Mã loại nước của ProductResponse.waterType; null là chưa phân loại. */
-export type WaterTypeCode = 'PURIFIED' | 'MINERAL' | 'ALKALINE' | 'REMINERALIZED' | 'SPARKLING' | 'ELECTROLYTE' | 'CONTAINER'
-export const waterTypeLabels: Record<WaterTypeCode, string> = {
-  PURIFIED: 'Tinh khiết',
-  MINERAL: 'Nước khoáng',
-  ALKALINE: 'Ion kiềm',
-  REMINERALIZED: 'Hoàn lưu khoáng',
-  SPARKLING: 'Nước có ga',
-  ELECTROLYTE: 'Bù khoáng & điện giải',
-  CONTAINER: 'Vỏ bình & phụ kiện',
-}
-export const waterTypeOf = (category?: string) =>
-  (Object.keys(waterTypeLabels) as WaterTypeCode[]).find((code) => waterTypeLabels[code] === category)
-
 /**
- * Loại nước, dung tích đã lưu ở BE; field nào chưa nhập thì đoán từ tên như trang khách.
- * Quy cách đóng gói BE chưa lưu nên luôn đoán từ tên và đơn vị.
+ * Loại sản phẩm lấy đúng như cửa hàng đã lưu (chưa có thì "Chưa phân loại", không đoán).
+ * Dung tích chưa nhập thì đoán từ tên; quy cách đóng gói BE chưa lưu nên luôn đoán từ tên và đơn vị.
  */
-export function catalogFromApi(product: { name: string; unit: string; waterType?: WaterTypeCode | null; volumeMl?: number | null }) {
+export function catalogFromApi(product: {
+  name: string
+  unit: string
+  categoryId?: number | null
+  categoryName?: string | null
+  volumeMl?: number | null
+}): CatalogDetails {
   const guess = inferCatalog(product.name, product.unit)
   const volumeMl = product.volumeMl ?? guess.volumeMl
   return {
-    category: product.waterType ? waterTypeLabels[product.waterType] : guess.category,
+    category: product.categoryName ?? UNCATEGORIZED,
+    categoryId: product.categoryId ?? undefined,
     packaging: guess.packaging,
     capacity: capacityOf(volumeMl),
     volumeMl,
   }
 }
 
+/**
+ * Gợi ý điền form từ tên sản phẩm: thương hiệu (theo các nhóm thương hiệu đã biết), dung tích và tên loại đoán được.
+ * Chỉ là gợi ý để nhân viên kiểm tra lại; không nhận ra thì để trống.
+ */
+export function suggestFromName(name: string, unit: string) {
+  const text = ` ${normalizeSearch(name)} `
+  const brand = brandGroups.find((group) => group.aliases.some((alias) => text.includes(` ${normalizeSearch(alias)} `)))?.name
+  const guess = inferCatalog(name, unit)
+  return {
+    brand,
+    volumeMl: guess.volumeMl > 0 ? guess.volumeMl : undefined,
+    category: guess.category === UNCATEGORIZED ? undefined : guess.category,
+  }
+}
 
 export { normalizeSearch } from '@/shared/utils/search'

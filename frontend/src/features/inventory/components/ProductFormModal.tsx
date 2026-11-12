@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react'
 import { App, Col, Form, Input, InputNumber, Modal, Row, Select, Upload } from 'antd'
 import { ImagePlus } from 'lucide-react'
 import { useSettings } from '@/features/settings/settingsService'
-import { useBottleTypeOptions, useSaveProduct, type CatalogItem, type ProductForm } from '../useProductCatalog'
+import { useBottleTypeOptions, useProductCategories, useSaveProduct, type CatalogItem, type ProductForm } from '../useProductCatalog'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { FormSection } from '@/shared/components/FormSection'
-import { waterTypeLabels, waterTypeOf, type WaterTypeCode } from '../catalogGroups'
+import { suggestFromName } from '../catalogGroups'
 
 // Vừa đủ để ô tên hiện trọn tên sản phẩm dài nhất.
 const MODAL_WIDTH = 680
@@ -26,10 +26,37 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
   }, [open, product, settings.data, form])
   const save = useSaveProduct()
   const bottleTypes = useBottleTypeOptions(open)
+  const categories = useProductCategories(open)
+  // Các ô vừa được điền gợi ý từ tên, để nhắc nhân viên kiểm tra lại.
+  const [suggested, setSuggested] = useState<string[]>([])
 
   const close = () => {
     setImage(undefined)
+    setSuggested([])
     onClose()
+  }
+
+  // Rời ô tên: điền thương hiệu, dung tích, loại đoán được vào các ô còn trống; không ghi đè ô đã nhập.
+  const fillFromName = () => {
+    const name: string | undefined = form.getFieldValue('name')
+    if (!name?.trim()) return
+    const hint = suggestFromName(name, form.getFieldValue('unit') ?? '')
+    const filled: string[] = []
+    if (hint.brand && !form.getFieldValue('brand')?.trim()) {
+      form.setFieldValue('brand', hint.brand)
+      filled.push('thương hiệu')
+    }
+    if (hint.volumeMl && !form.getFieldValue('volumeMl')) {
+      form.setFieldValue('volumeMl', hint.volumeMl)
+      filled.push('dung tích')
+    }
+    const category =
+      hint.category && categories.data?.find((item) => item.active && item.name.toLowerCase() === hint.category?.toLowerCase())
+    if (category && !form.getFieldValue('categoryId')) {
+      form.setFieldValue('categoryId', category.id)
+      filled.push('loại sản phẩm')
+    }
+    setSuggested(filled)
   }
   const cancel = useConfirmDiscard(form, close)
 
@@ -54,7 +81,7 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
       { id: product?.id, form: { ...values, image } },
       {
         onSuccess: (saved) => {
-          message.success(product ? `Đã cập nhật sản phẩm ${saved.name}.` : `Đã thêm sản phẩm ${saved.name}.`)
+          message.success(product ? `Đã cập nhật sản phẩm ${saved.name}.` : `Đã thêm sản phẩm ${saved.name} (mã ${saved.sku}).`)
           close()
         },
         onError: (error) => message.error(error.message),
@@ -90,8 +117,8 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
                 unitsPerCase: product.unitsPerCase,
                 bottleTypeId: product.bottleTypeId,
                 threshold: product.threshold,
-                // Chưa nhập thì điền sẵn phần đoán từ tên để người sửa chỉ cần kiểm tra lại.
-                waterType: product.waterType ?? waterTypeOf(product.catalog?.category),
+                categoryId: product.categoryId,
+                // Chưa nhập thì điền sẵn dung tích đoán từ tên để người sửa chỉ cần kiểm tra lại.
                 volumeMl: product.volumeMl ?? (product.catalog?.volumeMl || undefined),
               }
             : { unit: 'Bình', price: 0, threshold: settings.data?.defaultLowStock ?? 10 }
@@ -124,20 +151,20 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
                     { required: true, whitespace: true, message: 'Nhập tên sản phẩm.' },
                     { max: 200, message: 'Tên tối đa 200 ký tự.' },
                   ]}
+                  extra={suggested.length ? `Đã điền ${suggested.join(', ')} theo tên. Kiểm tra lại trước khi lưu.` : undefined}
                 >
-                  <Input autoFocus placeholder="Ví dụ: Nước tinh khiết bình 20L" />
+                  <Input autoFocus placeholder="Ví dụ: Nước tinh khiết LaVie 19L" onBlur={fillFromName} />
                 </Form.Item>
                 <Form.Item
                   name="sku"
                   label="Mã sản phẩm"
-                  extra={product ? 'Không đổi sau khi tạo.' : undefined}
+                  extra={product ? 'Không đổi sau khi tạo.' : 'Để trống để hệ thống tự tạo mã (SP00001, SP00002...).'}
                   rules={[
-                    { required: true, whitespace: true, message: 'Nhập mã sản phẩm.' },
                     { pattern: /^[A-Za-z0-9-]+$/, message: 'Chỉ dùng chữ, số và dấu gạch ngang.' },
                     { max: 64, message: 'Mã tối đa 64 ký tự.' },
                   ]}
                 >
-                  <Input placeholder="Ví dụ: LAVIE-19L" disabled={Boolean(product)} />
+                  <Input placeholder={product ? undefined : 'Tự tạo nếu để trống'} disabled={Boolean(product)} />
                 </Form.Item>
                 <Form.Item name="brand" label="Thương hiệu" rules={[{ max: 150, message: 'Tối đa 150 ký tự.' }]}>
                   <Input placeholder="Ví dụ: LaVie, Aquafina..." />
@@ -176,14 +203,24 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
           <FormSection title="Phân loại">
             <Row gutter={12}>
               <Col xs={24} sm={12}>
-                <Form.Item name="waterType" label="Loại nước" tooltip="Dùng cho bộ lọc ở trang Sản phẩm và trang đặt hàng.">
+                <Form.Item
+                  name="categoryId"
+                  label="Loại sản phẩm"
+                  tooltip="Dùng cho bộ lọc ở trang Sản phẩm và trang đặt hàng. Thêm, sửa loại ở nút Loại sản phẩm trên trang Sản phẩm."
+                >
                   <Select
                     allowClear
+                    showSearch={{ optionFilterProp: 'label' }}
+                    loading={categories.isPending}
                     placeholder="Chưa phân loại"
-                    options={(Object.keys(waterTypeLabels) as WaterTypeCode[]).map((code) => ({
-                      value: code,
-                      label: waterTypeLabels[code],
-                    }))}
+                    // Loại đã ngừng dùng chỉ hiện khi sản phẩm đang thuộc loại đó (giữ được, không chọn mới được).
+                    options={(categories.data ?? [])
+                      .filter((item) => item.active || item.id === product?.categoryId)
+                      .map((item) => ({
+                        value: item.id,
+                        label: `${item.name}${item.active ? '' : ' (ngừng dùng)'}`,
+                        disabled: !item.active,
+                      }))}
                   />
                 </Form.Item>
               </Col>
@@ -224,7 +261,6 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
                 </Form.Item>
               </Col>
             </Row>
-            {!product && <p className="af-form-hint">Tồn kho tăng khi xác nhận phiếu nhập ở trang Kho.</p>}
           </FormSection>
         </div>
       </Form>

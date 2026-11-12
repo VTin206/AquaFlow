@@ -9,7 +9,8 @@ export type Product = {
   expiry: string
   sku: string
   image?: string
-  catalog?: { category: string; packaging: string; capacity: string; volumeMl: number }
+  /** `categoryId` thiếu khi chưa phân loại; dùng để xếp loại theo thứ tự cửa hàng tạo. */
+  catalog?: { category: string; categoryId?: number; packaging: string; capacity: string; volumeMl: number }
   /** false khi đã ngừng kinh doanh; thiếu nghĩa là đang bán. */
   active?: boolean
 }
