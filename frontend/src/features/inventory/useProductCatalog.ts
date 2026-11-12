@@ -30,8 +30,6 @@ export type CatalogItem = Pick<Product, 'id' | 'sku' | 'name' | 'brand' | 'unit'
 }
 export type ProductStatus = 'active' | 'inactive' | 'all'
 export type ProductForm = {
-  /** Để trống khi thêm mới: BE tự cấp mã SP00001... */
-  sku?: string
   name: string
   brand?: string
   unit: string
@@ -148,7 +146,8 @@ export function useSaveProduct() {
     mutationFn: async ({ id, form }: { id?: string; form: ProductForm }): Promise<{ name: string; sku: string }> => {
       return id
         ? api.put<ProductResponse>(`/products/${id}`, toRequest(form))
-        : api.post<ProductResponse>('/products', { sku: form.sku?.trim() || null, ...toRequest(form) })
+        : // Không gửi mã: BE luôn tự cấp SP00001, SP00002...
+          api.post<ProductResponse>('/products', toRequest(form))
     },
     onSuccess: () => void invalidate(),
   })
