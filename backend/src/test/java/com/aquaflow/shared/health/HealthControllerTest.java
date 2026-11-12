@@ -62,6 +62,9 @@ class HealthControllerTest {
     private UserRepository userRepository;
 
     // Test này tắt JPA nên phải giả lập các repository của module inventory
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.aquaflow.inventory.repository.ProductCategoryRepository productCategoryRepository;
+
     @MockBean
     private ProductRepository productRepository;
 

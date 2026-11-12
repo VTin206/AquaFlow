@@ -6,12 +6,13 @@ import { inventoryApi } from '@/features/live/inventoryApi'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { resolveProductImage } from './productImages'
 import type { Product } from './types'
-import { catalogFromApi, type WaterTypeCode } from './catalogGroups'
+import { catalogFromApi } from './catalogGroups'
+import { productCategoryApi } from '@/features/live/productCategoryApi'
 import { sortByName } from '@/shared/utils/table'
 
 /**
  * Danh mục cho trang Sản phẩm: gọi ProductController (BE2)
- * và lấy số khả dụng từ tồn kho. Loại nước, dung tích chưa nhập thì đoán từ tên (`catalogFromApi`).
+ * và lấy số khả dụng từ tồn kho. Dung tích chưa nhập thì đoán từ tên (`catalogFromApi`).
  */
 export type CatalogItem = Pick<Product, 'id' | 'sku' | 'name' | 'brand' | 'unit' | 'price' | 'image' | 'catalog'> & {
   active: boolean
@@ -24,12 +25,13 @@ export type CatalogItem = Pick<Product, 'id' | 'sku' | 'name' | 'brand' | 'unit'
   bottleTypeId?: number
   bottleTypeName?: string
   /** Giá trị đã lưu (không phải phần đoán từ tên); undefined khi chưa nhập. */
-  waterType?: WaterTypeCode
+  categoryId?: number
   volumeMl?: number
 }
 export type ProductStatus = 'active' | 'inactive' | 'all'
 export type ProductForm = {
-  sku: string
+  /** Để trống khi thêm mới: BE tự cấp mã SP00001... */
+  sku?: string
   name: string
   brand?: string
   unit: string
@@ -38,7 +40,7 @@ export type ProductForm = {
   unitsPerCase?: number
   bottleTypeId?: number
   threshold?: number
-  waterType?: WaterTypeCode
+  categoryId?: number
   volumeMl?: number
 }
 
@@ -55,7 +57,8 @@ type ProductResponse = {
   salePrice: number
   active: boolean
   lowStockThreshold?: number
-  waterType?: WaterTypeCode | null
+  categoryId?: number | null
+  categoryName?: string | null
   volumeMl?: number | null
 }
 
@@ -75,7 +78,7 @@ const fromResponse = (product: ProductResponse, available?: number): CatalogItem
   bottleTypeId: product.bottleTypeId ?? undefined,
   bottleTypeName: product.bottleTypeName ?? undefined,
   catalog: catalogFromApi(product),
-  waterType: product.waterType ?? undefined,
+  categoryId: product.categoryId ?? undefined,
   volumeMl: product.volumeMl ?? undefined,
 })
 
@@ -88,8 +91,8 @@ const toRequest = (form: ProductForm) => ({
   bottleTypeId: form.bottleTypeId ?? null,
   image: form.image ?? null,
   lowStockThreshold: form.threshold ?? null,
-  // Bỏ trống thì xóa giá trị đã lưu (BE coi thiếu field là giữ nguyên).
-  waterType: form.waterType ?? 'UNSPECIFIED',
+  // Bỏ trống thì xóa giá trị đã lưu (BE coi thiếu field là giữ nguyên, 0 là bỏ phân loại).
+  categoryId: form.categoryId ?? 0,
   volumeMl: form.volumeMl ?? 0,
 })
 
@@ -123,6 +126,11 @@ const useInvalidateProducts = () => {
   return () => invalidateLiveData(queryClient)
 }
 
+/** Loại sản phẩm do cửa hàng quản lý (cả loại đã ngừng dùng), cho form sản phẩm và cửa sổ quản lý loại. */
+export function useProductCategories(enabled = true) {
+  return useQuery({ queryKey: ['live', 'product-categories'], queryFn: productCategoryApi.list, enabled })
+}
+
 /** Loại vỏ cho form sản phẩm, cùng nguồn với danh mục loại vỏ. */
 export function useBottleTypeOptions(enabled: boolean) {
   const query = useQuery({
@@ -137,10 +145,10 @@ export function useBottleTypeOptions(enabled: boolean) {
 export function useSaveProduct() {
   const invalidate = useInvalidateProducts()
   return useMutation({
-    mutationFn: async ({ id, form }: { id?: string; form: ProductForm }): Promise<{ name: string }> => {
+    mutationFn: async ({ id, form }: { id?: string; form: ProductForm }): Promise<{ name: string; sku: string }> => {
       return id
         ? api.put<ProductResponse>(`/products/${id}`, toRequest(form))
-        : api.post<ProductResponse>('/products', { sku: form.sku.trim(), ...toRequest(form) })
+        : api.post<ProductResponse>('/products', { sku: form.sku?.trim() || null, ...toRequest(form) })
     },
     onSuccess: () => void invalidate(),
   })

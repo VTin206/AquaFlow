@@ -1,7 +1,5 @@
 package com.aquaflow.inventory.api.dto;
 
-import com.aquaflow.inventory.domain.WaterType;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 
@@ -19,8 +17,9 @@ public record ProductResponse(
         Instant createdAt,
         String image,
         int lowStockThreshold,
-        /** null: chưa phân loại. */
-        WaterType waterType,
+        /** Loại sản phẩm; null: chưa phân loại. */
+        Long categoryId,
+        String categoryName,
         /** null: chưa có dung tích. */
         Integer volumeMl
 ) {
@@ -33,6 +32,6 @@ public record ProductResponse(
     public ProductResponse(Long id, String sku, String name, String brand, String unit, Integer unitsPerCase, Long bottleTypeId,
             String bottleTypeName, BigDecimal salePrice, boolean active, Instant createdAt, String image, int lowStockThreshold) {
         this(id, sku, name, brand, unit, unitsPerCase, bottleTypeId, bottleTypeName, salePrice, active, createdAt, image,
-                lowStockThreshold, null, null);
+                lowStockThreshold, null, null, null);
     }
 }

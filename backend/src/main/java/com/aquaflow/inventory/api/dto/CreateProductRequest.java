@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
 public record CreateProductRequest(
-        @NotBlank(message = "SKU is required")
+        /** Để trống: hệ thống tự cấp mã SP00001, SP00002... */
         @Size(max = 64, message = "SKU must not exceed 64 characters")
         String sku,
 
@@ -42,8 +42,9 @@ public record CreateProductRequest(
         @PositiveOrZero(message = "Low stock threshold must be greater than or equal to 0")
         Integer lowStockThreshold,
 
-        /** Thiếu: giữ nguyên khi sửa. UNSPECIFIED: chưa phân loại. */
-        com.aquaflow.inventory.domain.WaterType waterType,
+        /** Loại sản phẩm (ProductCategory). Thiếu hoặc 0: chưa phân loại. */
+        @PositiveOrZero(message = "Category id must be greater than or equal to 0")
+        Long categoryId,
 
         /** Dung tích một chai/bình (ml). Thiếu: giữ nguyên khi sửa. 0: chưa có dung tích. */
         @jakarta.validation.constraints.PositiveOrZero(message = "Volume must be greater than or equal to 0")

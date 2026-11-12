@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Badge, Button, Card, Col, Empty, Row, Skeleton, Tag, Typography } from 'antd'
-import { Clock3, MapPin, Package, Phone } from 'lucide-react'
+import { Badge, Card, Skeleton, Tag } from 'antd'
+import { ChevronRight } from 'lucide-react'
 import { MapLink } from '@/shared/address/MapLink'
 import { ViewButton } from '@/shared/components/ViewButton'
 import { Money } from '@/shared/components/Money'
@@ -8,86 +8,89 @@ import { QueryError } from '@/shared/components/QueryError'
 import { dueTone } from '@/shared/utils/money'
 import { OrderDetails } from '@/features/orders/components/OrderDetails'
 import { useOrderList } from '@/features/orders/orderData'
-import { knownAmountDue, type Order, type OrderStatus } from '@/features/orders/types'
+import { isOverdue, knownAmountDue, type Order, type OrderStatus } from '@/features/orders/types'
+import { localDay, dayFromToday } from '@/features/reports/reportService'
 import { useLiveTrips } from '../useLiveTrips'
+import { groupDeliveries, readCollapsed, writeCollapsed } from '../deliveryBoard'
 
-// Mỗi cột là một bước, đơn đi từ trái sang phải.
-const columns: { status: OrderStatus; title: string; hint: string; color: string }[] = [
-  { status: 'Chờ xác nhận', title: 'Chờ xác nhận', hint: 'Gọi lại cho khách để xác nhận', color: '#f59f00' },
-  { status: 'Đã xác nhận', title: 'Đã xác nhận', hint: 'Đã giữ hàng, chuyển sang soạn hàng', color: '#4263eb' },
-  { status: 'Đang chuẩn bị', title: 'Đang chuẩn bị', hint: 'Xếp vào chuyến, xuất kho ở chi tiết chuyến', color: '#1c7ed6' },
-  { status: 'Đang giao', title: 'Đang giao', hint: 'Xác nhận khi khách đã nhận hàng', color: '#0b7a83' },
-  { status: 'Giao thất bại', title: 'Giao thất bại', hint: 'Kiểm hàng hoàn ở Kho hàng rồi giao lại', color: '#c34444' },
-]
+const timeOfDay = (iso: string) => new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+/** Hôm nay chỉ hiện giờ; ngày khác hiện thêm ngày/tháng. */
+const appointmentLabel = (iso?: string) => {
+  if (!iso) return 'Chưa hẹn'
+  if (localDay(iso) === dayFromToday()) return timeOfDay(iso)
+  const date = new Date(iso)
+  return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')} ${timeOfDay(iso)}`
+}
 
-type CardProps = { order: Order; failureReason?: string; orphan: boolean; onDetails: () => void }
+type RowProps = { order: Order; failureReason?: string; orphan: boolean; onDetails: () => void }
 
-function DeliveryCard({ order, failureReason, orphan, onDetails }: CardProps) {
+function DeliveryRow({ order, failureReason, orphan, onDetails }: RowProps) {
   const code = order.code ?? order.id
   const due = knownAmountDue(order)
+  const late = isOverdue(order)
   return (
-    <Card size="small" className="af-delivery-card">
-      <div className="af-delivery-top">
-        <Button type="link" size="small" className="af-cell-truncate" title={code} onClick={onDetails}>
-          {code}
-        </Button>
-        {due !== null && <Money value={due} tone={dueTone(due)} prefix="Thu " />}
-      </div>
-      <div className="af-delivery-customer">{order.customer}</div>
-      <div className="af-delivery-line">
-        <MapPin size={14} />
+    <li className="af-board-row">
+      <time
+        className={late ? 'af-text-danger' : order.appointment ? undefined : 'af-text-muted'}
+        title={order.appointment && new Date(order.appointment).toLocaleString('vi-VN')}
+      >
+        {appointmentLabel(order.appointment)}
+      </time>
+      <div className="af-cell-stack">
         <span>
-          {order.address}
+          {order.customer} <small>{code}</small>
+        </span>
+        {order.phone && (
+          <small>
+            <a href={`tel:${order.phone.replace(/\s/g, '')}`}>{order.phone}</a>
+          </small>
+        )}
+      </div>
+      <div className="af-cell-stack">
+        <span>
+          {[order.address, order.area].filter(Boolean).join(', ') || '—'}
           <MapLink address={[order.address, order.area].filter(Boolean).join(', ')} />
         </span>
+        <small>{order.items}</small>
       </div>
-      {order.phone && (
-        <div className="af-delivery-line">
-          <Phone size={14} />
-          <a href={`tel:${order.phone.replace(/\s/g, '')}`}>{order.phone}</a>
+      <span className="af-board-money">{due !== null && due > 0 && <Money value={due} tone={dueTone(due)} prefix="Thu " />}</span>
+      <ViewButton subject={`đơn ${code}`} onClick={onDetails} />
+      {(failureReason || orphan) && (
+        <div className="af-board-note">
+          {failureReason && <span className="af-text-danger">{failureReason}</span>}
+          {orphan && (
+            <Tag color="orange" title="Đơn đã xuất kho nhưng không có chuyến nên chưa ghi được kết quả giao.">
+              Không thuộc chuyến nào
+            </Tag>
+          )}
         </div>
       )}
-      {order.appointment && (
-        <div className="af-delivery-line">
-          <Clock3 size={14} />
-          {new Date(order.appointment).toLocaleString('vi-VN')}
-        </div>
-      )}
-      <div className="af-delivery-line">
-        <Package size={14} /> {order.items}
-      </div>
-      {failureReason && (
-        <Typography.Paragraph type="danger" className="af-delivery-reason">
-          {failureReason}
-        </Typography.Paragraph>
-      )}
-      {orphan && (
-        <Tag color="orange" className="af-delivery-reason" title="Đơn đã xuất kho nhưng không có chuyến nên chưa ghi được kết quả giao.">
-          Không thuộc chuyến nào
-        </Tag>
-      )}
-      <div className="af-delivery-footer">
-        <ViewButton subject={`đơn ${code}`} onClick={onDetails} />
-      </div>
-    </Card>
+    </li>
   )
 }
 
-/** Bảng theo dõi mọi đơn giao, kể cả đơn chưa thuộc chuyến nào. */
+/** Theo dõi mọi đơn giao theo nhóm trạng thái, mỗi đơn một hàng; kể cả đơn chưa thuộc chuyến nào. */
 export function DeliveryBoard() {
   const ordersQuery = useOrderList()
   const trips = useLiveTrips()
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const deliveries = (ordersQuery.data ?? []).filter((order) => order.method === 'Giao tận nơi')
+  const [collapsed, setCollapsed] = useState(readCollapsed)
+  const toggle = (status: OrderStatus) => {
+    const next = collapsed.includes(status) ? collapsed.filter((item) => item !== status) : [...collapsed, status]
+    setCollapsed(next)
+    writeCollapsed(next)
+  }
 
-  // BE giữ đơn giao thất bại ở OUT_FOR_DELIVERY và chỉ ghi kết quả trên chuyến, nên suy ra cột từ lần giao gần nhất.
   const stops = (trips.data ?? []).filter((trip) => trip.status !== 'CANCELLED').flatMap((trip) => trip.orders)
   const failures = new Map(
-    stops.filter((stop) => stop.latestAttempt?.outcome === 'FAILED').map((stop) => [String(stop.orderId), stop.latestAttempt?.failureReason ?? 'Giao thất bại']),
+    stops
+      .filter((stop) => stop.latestAttempt?.outcome === 'FAILED')
+      .map((stop) => [String(stop.orderId), stop.latestAttempt?.failureReason ?? 'Giao thất bại']),
   )
   const inTrip = new Set(stops.map((stop) => String(stop.orderId)))
-  const columnOf = (order: Order): OrderStatus => (order.status === 'Đang giao' && failures.has(order.id) ? 'Giao thất bại' : order.status)
-  const failureOf = (order: Order) => failures.get(order.id)
+  const groups = groupDeliveries(ordersQuery.data ?? [], new Set(failures.keys()))
+  const filled = groups.filter((group) => group.orders.length > 0)
+  const empty = groups.filter((group) => group.orders.length === 0)
 
   if (ordersQuery.isError) {
     return (
@@ -97,42 +100,62 @@ export function DeliveryBoard() {
     )
   }
   return (
-    <>
-      <Row gutter={[16, 16]}>
-        {columns
-          .map((column) => {
-            const items = deliveries.filter((order) => columnOf(order) === column.status)
+    <Card className="af-card">
+      {ordersQuery.isPending ? (
+        <Skeleton active />
+      ) : (
+        <>
+          {filled.length === 0 && <p className="af-board-empty">Không có đơn giao nào đang chờ xử lý.</p>}
+          {filled.map((group, index) => {
+            const open = !collapsed.includes(group.status)
+            const late = group.orders.filter((order) => isOverdue(order)).length
+            const listId = `af-board-group-${index}`
             return (
-              <Col key={column.status} flex="1 1 260px" style={{ minWidth: 0 }}>
-                <div className="af-board-column">
-                  <div className="af-board-head">
-                    <Badge color={column.color} text={<strong>{column.title}</strong>} />
-                    <span className="af-board-count">{items.length}</span>
-                  </div>
-                  <Typography.Text type="secondary" className="af-board-hint">
-                    {column.hint}
-                  </Typography.Text>
-                  {ordersQuery.isPending ? (
-                    <Skeleton active />
-                  ) : items.length === 0 ? (
-                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có đơn" />
-                  ) : (
-                    items.map((order) => (
-                      <DeliveryCard
+              <section key={group.status} className="af-board-group" aria-label={group.title}>
+                {/* Cả dòng tiêu đề là nút đóng/mở; nhóm đóng vẫn báo số đơn trễ để không bỏ sót việc gấp. */}
+                <button
+                  type="button"
+                  className="af-board-head"
+                  aria-expanded={open}
+                  aria-controls={listId}
+                  onClick={() => toggle(group.status)}
+                >
+                  <ChevronRight size={16} className={`af-board-chevron${open ? ' is-open' : ''}`} aria-hidden />
+                  <Badge color={group.color} text={<strong>{group.title}</strong>} />
+                  <span className="af-board-count">{group.orders.length}</span>
+                  {late > 0 && <span className="af-board-late">· trễ {late}</span>}
+                  {open && <span className="af-board-hint">{group.hint}</span>}
+                </button>
+                {open && (
+                  <ul className="af-board-rows" id={listId}>
+                    {group.orders.map((order) => (
+                      <DeliveryRow
                         key={order.id}
                         order={order}
-                        failureReason={failureOf(order)}
+                        failureReason={failures.get(order.id)}
                         orphan={trips.isSuccess && order.status === 'Đang giao' && !inTrip.has(order.id)}
                         onDetails={() => setSelectedId(order.id)}
                       />
-                    ))
-                  )}
-                </div>
-              </Col>
+                    ))}
+                  </ul>
+                )}
+              </section>
             )
           })}
-      </Row>
+          {/* Nhóm trống gộp thành một dòng chữ, không chiếm khung. */}
+          {empty.length > 0 && filled.length > 0 && (
+            <p className="af-board-empty">
+              {empty.map((group, index) => (
+                <span key={group.status}>
+                  {index > 0 && ' · '}
+                  {group.title} <strong>0</strong>
+                </span>
+              ))}
+            </p>
+          )}
+        </>
+      )}
       {selectedId && <OrderDetails id={selectedId} onClose={() => setSelectedId(null)} />}
-    </>
+    </Card>
   )
 }

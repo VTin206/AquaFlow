@@ -68,16 +68,15 @@ cũ trước mới sau:
   Thao tác trước khi bật nhật ký (V13) thì không có.
 - Nhật ký toàn cửa hàng `/api/v1/admin/activity-logs` vẫn chỉ ADMIN xem; trả hàng thuộc khu vực ORDERS.
 
-## 4. Loại nước và dung tích
+## 4. Loại sản phẩm và dung tích
 
-`ProductResponse` có thêm `waterType` và `volumeMl` (null là chưa nhập). Danh mục công khai cũng trả hai field này.
-`CreateProductRequest`/`UpdateProductRequest` nhận thêm:
+Từ V29, `waterType` (danh sách cố định) được thay bằng loại sản phẩm do cửa hàng tự quản lý; xem
+[PRODUCT_CATEGORIES_API.md](PRODUCT_CATEGORIES_API.md). `ProductResponse` trả `categoryId`, `categoryName` và `volumeMl`
+(null là chưa nhập); danh mục công khai cũng trả các field này. `CreateProductRequest`/`UpdateProductRequest` nhận:
 
-- `waterType`: `PURIFIED` (Tinh khiết), `MINERAL` (Nước khoáng), `ALKALINE` (Ion kiềm), `REMINERALIZED` (Hoàn lưu khoáng),
-  `SPARKLING` (Nước có ga), `ELECTROLYTE` (Bù khoáng & điện giải), `CONTAINER` (Vỏ bình & phụ kiện).
-  `UNSPECIFIED` để xóa. Giá trị khác trả 400.
+- `categoryId`: id loại sản phẩm đang dùng. `0` để bỏ phân loại. Âm trả 400.
 - `volumeMl`: dung tích một chai/bình, 1–100000 ml. `0` để xóa.
 - Thiếu field thì giữ nguyên, như `image` và `lowStockThreshold`, để client cũ không xóa mất dữ liệu.
 
-Frontend: sản phẩm chưa nhập thì vẫn đoán từ tên như trước (`catalogFromApi`). Form sản phẩm điền sẵn phần đoán để người
-sửa kiểm tra rồi lưu. Quy cách đóng gói vẫn đoán từ tên và đơn vị.
+Frontend: loại hiện đúng như đã lưu, chưa có thì "Chưa phân loại". Dung tích chưa nhập và quy cách đóng gói vẫn đoán từ tên
+và đơn vị (`catalogFromApi`).

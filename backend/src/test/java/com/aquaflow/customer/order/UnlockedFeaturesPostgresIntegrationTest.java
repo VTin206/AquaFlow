@@ -229,28 +229,31 @@ class UnlockedFeaturesPostgresIntegrationTest {
         send(post("/api/v1/sales/customers/999999999/reactivate"), staffToken, null).andExpect(status().isNotFound());
     }
 
-    // ---- Loại nước và dung tích ----
+    // ---- Loại sản phẩm và dung tích ----
 
     @Test
-    void waterTypeAndVolumeAreSavedKeptWhenOmittedAndCleared() throws Exception {
+    void categoryAndVolumeAreSavedKeptWhenOmittedAndCleared() throws Exception {
         String sku = "CAT-" + tag;
+        long category = jdbc.queryForObject("INSERT INTO product_categories(name) VALUES (?) RETURNING id", Long.class, "Ion kiềm " + tag);
         long id = body(send(post("/api/v1/products"), staffToken, json.writeValueAsString(Map.of(
                 "sku", sku, "name", "Nước ion kiềm " + tag, "unit", "Thùng", "salePrice", 90000,
-                "waterType", "ALKALINE", "volumeMl", 500))).andExpect(status().isCreated())
-                .andExpect(jsonPath("$.waterType").value("ALKALINE")).andExpect(jsonPath("$.volumeMl").value(500))).get("id").asLong();
+                "categoryId", category, "volumeMl", 500))).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.categoryId").value(category)).andExpect(jsonPath("$.categoryName").value("Ion kiềm " + tag))
+                .andExpect(jsonPath("$.volumeMl").value(500))).get("id").asLong();
 
         // Client cũ không gửi hai field này: giữ nguyên.
         send(put("/api/v1/products/" + id), staffToken, json.writeValueAsString(Map.of("name", "Nước ion kiềm " + tag, "unit", "Thùng", "salePrice", 95000)))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.waterType").value("ALKALINE")).andExpect(jsonPath("$.volumeMl").value(500));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.categoryId").value(category)).andExpect(jsonPath("$.volumeMl").value(500));
+        // Danh mục công khai trả tên loại để trang khách lọc.
+        mvc.perform(get("/api/v1/products/" + id)).andExpect(status().isOk()).andExpect(jsonPath("$.categoryName").value("Ion kiềm " + tag));
         send(put("/api/v1/products/" + id), staffToken, json.writeValueAsString(Map.of("name", "Nước ion kiềm " + tag, "unit", "Thùng",
-                "salePrice", 95000, "waterType", "UNSPECIFIED", "volumeMl", 0)))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.waterType").isEmpty()).andExpect(jsonPath("$.volumeMl").isEmpty());
+                "salePrice", 95000, "categoryId", 0, "volumeMl", 0)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.categoryId").isEmpty()).andExpect(jsonPath("$.volumeMl").isEmpty());
 
-        send(put("/api/v1/products/" + id), staffToken, json.writeValueAsString(Map.of("name", "X", "unit", "Thùng", "salePrice", 1, "waterType", "JUICE")))
+        send(put("/api/v1/products/" + id), staffToken, json.writeValueAsString(Map.of("name", "X", "unit", "Thùng", "salePrice", 1, "categoryId", -1)))
                 .andExpect(status().isBadRequest());
         send(put("/api/v1/products/" + id), staffToken, json.writeValueAsString(Map.of("name", "X", "unit", "Thùng", "salePrice", 1, "volumeMl", 100001)))
                 .andExpect(status().isBadRequest());
-        // Danh mục công khai cũng trả hai field để trang khách lọc.
         mvc.perform(get("/api/v1/products/" + id)).andExpect(status().isOk()).andExpect(jsonPath("$.volumeMl").isEmpty());
     }
 
