@@ -966,6 +966,10 @@ body {
 .af-row-inactive > td {
   color: var(--af-text-tertiary);
 }
+/* Bảng trong cửa sổ danh mục: chỉ hiện thanh cuộn khi danh sách dài hơn khung (Ant Design mặc định luôn hiện). */
+.af-modal-table .ant-table-body {
+  overflow-y: auto !important;
+}
 /* Dòng bấm được cả dòng (ví dụ chọn đơn để tạo chuyến). */
 .af-row-clickable {
   cursor: pointer;

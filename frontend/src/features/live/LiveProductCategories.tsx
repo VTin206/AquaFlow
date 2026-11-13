@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Alert, App, Button, Dropdown, Form, Input, Modal, Segmented, Space, Table, Tag, Tooltip } from 'antd'
+import { App, Button, Dropdown, Form, Input, Modal, Segmented, Space, Table, Tag, Tooltip } from 'antd'
 import { Ellipsis, Pencil, Plus } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
@@ -8,6 +8,7 @@ import { useConfirm } from '@/shared/components/confirm'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { matchesSearch } from '@/shared/utils/search'
 import { modalWidth } from '@/shared/utils/modal'
+import { modalTableScrollHeight } from '@/shared/utils/table'
 import { useProductCategories } from '@/features/inventory/useProductCatalog'
 import { productCategoryApi, type ProductCategory } from './productCategoryApi'
 import { invalidateLiveData } from './invalidateLiveData'
@@ -127,14 +128,14 @@ export function LiveProductCategories({ onClose }: { onClose: () => void }) {
 
   return (
     <>
-      <Modal open title="Loại sản phẩm" width={modalWidth.large} onCancel={onClose} footer={<Button onClick={onClose}>Đóng</Button>}>
-        <Alert
-          type="info"
-          showIcon
-          title="Dùng để phân loại và lọc ở trang Sản phẩm và trang mua hàng"
-          description="Loại ngừng dùng vẫn giữ trên sản phẩm cũ nhưng không chọn được cho sản phẩm khác. Chỉ xóa được loại chưa có sản phẩm nào."
-          style={{ marginBottom: 16 }}
-        />
+      <Modal
+        open
+        centered
+        title="Loại sản phẩm"
+        width={modalWidth.large}
+        onCancel={onClose}
+        footer={<Button onClick={onClose}>Đóng</Button>}
+      >
         <Space wrap style={{ marginBottom: 16 }}>
           <Input
             aria-label="Tìm loại sản phẩm"
@@ -163,10 +164,12 @@ export function LiveProductCategories({ onClose }: { onClose: () => void }) {
           <Table<ProductCategory>
             key={`${status}:${search}`}
             rowKey="id"
+            className="af-modal-table"
             rowClassName={(item) => (item.active ? '' : 'af-row-inactive')}
             loading={categories.isPending}
             dataSource={visible}
             pagination={{ pageSize: 10 }}
+            scroll={{ y: modalTableScrollHeight }}
             locale={{ emptyText: 'Không có loại sản phẩm phù hợp.' }}
             columns={[
               {
