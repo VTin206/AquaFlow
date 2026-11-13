@@ -2571,6 +2571,13 @@ body {
 .af-tab-card > .ant-card-head .ant-tabs-tab {
   padding: 12px 0;
 }
+/* Tab con "Chờ kiểm / Đã kiểm" và thông báo thẳng lề 24px với tab chính; bảng vẫn sát mép thẻ như các tab khác. */
+.af-returns-tabs > .ant-tabs-nav {
+  padding-inline: 24px;
+}
+.af-returns-tabs .af-order-focus {
+  margin: 0 24px 16px;
+}
 .af-receipt-line {
   margin-bottom: 12px;
   padding: 10px 14px 4px;
