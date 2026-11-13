@@ -32,6 +32,8 @@ const light = {
   chrome: '#ffffff',
   // Chữ/nút trắng đặt trên nền màu thương hiệu; giữ trắng ở mọi chế độ.
   onPrimary: '#fff',
+  // Số đếm trên viên thuốc màu trạng thái (tab đang chọn); chế độ tối các màu trạng thái sáng nên số phải tối.
+  onTone: '#fff',
   // Khung ảnh sản phẩm, logo, QR: ảnh có nền trắng nên khung luôn trắng.
   imageBg: '#fff',
   brandDeep: '#0a5f8f',
@@ -93,6 +95,7 @@ const dark: Palette = {
   segmentTrack: '#0b1220',
   segmentSelected: '#1e2d46',
   selectedText: '#5bb8e3',
+  onTone: '#0b1220',
 }
 
 export const palettes = { light, dark }

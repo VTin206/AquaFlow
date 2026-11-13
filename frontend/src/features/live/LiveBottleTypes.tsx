@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, App, Button, Dropdown, Form, Input, InputNumber, Modal, Segmented, Space, Table, Tag, Tooltip } from 'antd'
+import { App, Button, Dropdown, Form, Input, InputNumber, Modal, Segmented, Space, Table, Tag, Tooltip } from 'antd'
 import { Ellipsis, Pencil, Plus, RefreshCw } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
@@ -12,6 +12,7 @@ import { useStaff } from '@/features/auth/useStaff'
 import { bottleTypeApi, type BottleType, type BottleTypeDraft } from './bottleTypeApi'
 import { invalidateLiveData } from './invalidateLiveData'
 import { modalWidth } from '@/shared/utils/modal'
+import { modalTableScrollHeight } from '@/shared/utils/table'
 
 function BottleTypeForm({ item, onClose }: { item: BottleType | null; onClose: () => void }) {
   const [form] = Form.useForm<BottleTypeDraft>()
@@ -127,14 +128,14 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
     })
   return (
     <>
-      <Modal open title="Loại vỏ bình" width={modalWidth.large} onCancel={onClose} footer={<Button onClick={onClose}>Đóng</Button>}>
-        <Alert
-          type="info"
-          showIcon
-          title="Quản lý loại vỏ và tiền cọc"
-          description="Loại vỏ ngừng lưu hành vẫn giữ lịch sử nhưng không chọn được cho sản phẩm mới; lưu hành lại khi cần dùng tiếp."
-          style={{ marginBottom: 16 }}
-        />
+      <Modal
+        open
+        centered
+        title="Loại vỏ bình"
+        width={modalWidth.large}
+        onCancel={onClose}
+        footer={<Button onClick={onClose}>Đóng</Button>}
+      >
         <Space wrap style={{ marginBottom: 16 }}>
           <Input
             aria-label="Tìm loại vỏ"
@@ -170,11 +171,12 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
           <Table<BottleType>
             key={`${status}:${search}`}
             rowKey="id"
+            className="af-modal-table"
             rowClassName={(item) => (item.active ? '' : 'af-row-inactive')}
             loading={types.isPending}
             dataSource={visible}
             pagination={{ pageSize: 10 }}
-            scroll={{ x: 600 }}
+            scroll={{ x: 600, y: modalTableScrollHeight }}
             locale={{ emptyText: 'Không có loại vỏ phù hợp.' }}
             columns={[
               {

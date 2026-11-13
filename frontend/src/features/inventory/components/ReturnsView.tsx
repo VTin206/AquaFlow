@@ -27,12 +27,23 @@ type Props = {
 }
 
 /** Hàng hoàn về: đơn chờ kiểm và các phiếu đã kiểm. */
-export function ReturnsView({ pending, pendingLoading, pendingError, onInspect, history, historyLoading, historyError, paging, children }: Props) {
+export function ReturnsView({
+  pending,
+  pendingLoading,
+  pendingError,
+  onInspect,
+  history,
+  historyLoading,
+  historyError,
+  paging,
+  children,
+}: Props) {
   const [detail, setDetail] = useState<ReturnHistoryRow | null>(null)
   const waiting = pending.length
   return (
     <>
       <Tabs
+        className="af-returns-tabs"
         items={[
           {
             key: 'pending',
@@ -44,7 +55,8 @@ export function ReturnsView({ pending, pendingLoading, pendingError, onInspect, 
                     focus={{
                       tone: 'action',
                       title: `Có ${waiting} đơn cần kiểm hàng hoàn`,
-                      description: 'Hàng giao thất bại không tự cộng lại vào kho. Kiểm đủ hàng thì đơn mới giao lại hoặc hủy được. Phiếu hoàn không tự hoàn tiền.',
+                      description:
+                        'Hàng giao thất bại không tự cộng lại vào kho. Kiểm đủ hàng thì đơn mới giao lại hoặc hủy được. Phiếu hoàn không tự hoàn tiền.',
                     }}
                   />
                 )}
@@ -54,7 +66,11 @@ export function ReturnsView({ pending, pendingLoading, pendingError, onInspect, 
                   dataSource={pending}
                   pagination={false}
                   scroll={{ x: 760 }}
-                  locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có đơn chờ kiểm. Đơn giao thất bại sẽ hiện ở đây." /> }}
+                  locale={{
+                    emptyText: (
+                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có đơn chờ kiểm. Đơn giao thất bại sẽ hiện ở đây." />
+                    ),
+                  }}
                   columns={[
                     { title: 'Đơn hàng', dataIndex: 'orderCode' },
                     { title: 'Người nhận', dataIndex: 'recipient' },
@@ -98,7 +114,7 @@ export function ReturnsView({ pending, pendingLoading, pendingError, onInspect, 
                   ]}
                 />
                 {paging && (
-                  <Space style={{ padding: 12 }}>
+                  <Space style={{ padding: '12px 24px' }}>
                     <Button disabled={paging.page === 0} onClick={() => paging.onChange(paging.page - 1)}>
                       Trước
                     </Button>
