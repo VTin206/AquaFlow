@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Card, Descriptions, Form, Input, Modal, Select, Table, Tag } from 'antd'
 import { KeyRound, Pencil, Plus } from 'lucide-react'
 import { ViewButton } from '@/shared/components/ViewButton'
-import { modalWidth } from '@/shared/utils/modal'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
 import { useConfirm } from '@/shared/components/confirm'
@@ -106,10 +105,10 @@ function AccountDetails({
   onAction: (kind: 'edit' | 'password', account: StaffAccount) => void
 }) {
   return (
+    // Rộng mặc định như cửa sổ đặt mật khẩu và sửa thông tin để mở chồng lên nhau không bị lệch khung.
     <Modal
       open={account !== undefined}
       centered
-      width={modalWidth.small}
       onCancel={onClose}
       title={account?.fullName}
       footer={
