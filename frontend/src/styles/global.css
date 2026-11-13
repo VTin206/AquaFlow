@@ -683,7 +683,7 @@ body {
 }
 .ant-segmented-item-selected-text .af-tone .af-count {
   background: var(--tone);
-  color: var(--af-on-primary);
+  color: var(--af-on-tone);
 }
 .af-order-id {
   align-items: center;
