@@ -80,6 +80,8 @@ class ReportPostgresIntegrationTest {
             .andExpect(jsonPath("$.sales.ordersCreated").value(3)).andExpect(jsonPath("$.sales.ordersDelivered").value(2))
             .andExpect(jsonPath("$.sales.ordersCancelled").value(1)).andExpect(jsonPath("$.sales.revenue").value(101))
             .andExpect(jsonPath("$.sales.averageOrderValue").value(50.5)).andExpect(jsonPath("$.sales.newCustomers").value(1))
+            .andExpect(jsonPath("$.sales.estimatedCost").value(0)).andExpect(jsonPath("$.sales.estimatedGrossProfit").value(101))
+            .andExpect(jsonPath("$.sales.unpricedCostLines").value(3)).andExpect(jsonPath("$.sales.totalCostLines").value(3))
             .andExpect(jsonPath("$.sales.returnsValue").value(9)).andExpect(jsonPath("$.sales.netPayments").value(130))
             .andExpect(jsonPath("$.days.length()").value(1)).andExpect(jsonPath("$.days[0].date").value("2026-01-02"))
             .andExpect(jsonPath("$.days[0].revenue").value(101)).andExpect(jsonPath("$.days[0].collected").value(130));
@@ -100,10 +102,13 @@ class ReportPostgresIntegrationTest {
         mvc.perform(get(BASE+"/products"+RANGE+"&size=1&page=1").with(user("owner").roles("ADMIN")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].revenue").value(47));
         mvc.perform(get(BASE+"/customers"+RANGE).with(user("owner").roles("ADMIN")))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].revenue").value(101)).andExpect(jsonPath("$.content[0].orders").value(2));
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].revenue").value(101)).andExpect(jsonPath("$.content[0].orders").value(2))
+            .andExpect(jsonPath("$.content[0].lastOrder").value("2026-01-02")).andExpect(jsonPath("$.content[0].daysSinceLastOrder").value(0));
         mvc.perform(get(BASE+"/delivery"+RANGE).with(user("owner").roles("ADMIN")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].delivered").value(1))
-            .andExpect(jsonPath("$.content[0].failed").value(1)).andExpect(jsonPath("$.content[0].late").value(1))
+            .andExpect(jsonPath("$.content[0].failed").value(1)).andExpect(jsonPath("$.content[0].ordersSucceeded").value(1))
+            .andExpect(jsonPath("$.content[0].ordersFailed").value(0)).andExpect(jsonPath("$.content[0].successRate").value(100))
+            .andExpect(jsonPath("$.content[0].redeliveredOrders").value(1)).andExpect(jsonPath("$.content[0].late").value(1))
             .andExpect(jsonPath("$.content[0].cashDifference").value(2));
     }
     @Test void emptyPeriodsHaveZeroDailyBucketsAndNoEstimatedNumbers() throws Exception {

@@ -36,6 +36,19 @@ public class ReportRepository {
         """;
     public Map<String,Object> summary(MapSqlParameterSource p) {
         return jdbc.queryForMap(ORDERS+"""
+          , sold_cost AS (
+            SELECT COALESCE(SUM(oi.quantity * cost.unit_cost),0) AS cost,
+              COUNT(*) FILTER (WHERE cost.unit_cost IS NULL) AS unpriced_lines,
+              COUNT(*) AS total_lines
+            FROM sold s JOIN order_items oi ON oi.order_id=s.id
+            LEFT JOIN LATERAL (
+              SELECT pi.unit_cost
+              FROM purchase_items pi JOIN purchase_receipts pr ON pr.id=pi.receipt_id
+              WHERE pi.product_id=oi.product_id AND pi.quantity_accepted>0
+                AND pr.status='CONFIRMED' AND pr.confirmed_at<:end
+              ORDER BY pr.confirmed_at DESC,pr.id DESC,pi.id DESC LIMIT 1
+            ) cost ON TRUE
+          )
           SELECT (SELECT COUNT(*) FROM filtered WHERE created_at>=:start AND created_at<:end) AS "ordersCreated",
             (SELECT COUNT(*) FROM filtered WHERE cancelled_at>=:start AND cancelled_at<:end) AS "ordersCancelled",
             COUNT(*) AS "ordersDelivered", COALESCE(SUM(subtotal),0) AS "goods",
@@ -44,6 +57,11 @@ public class ReportRepository {
             COALESCE(SUM(subtotal-discount_amount),0)-(SELECT COALESCE(SUM(amount),0) FROM returns) AS "revenue",
             ROUND(CASE WHEN COUNT(*)=0 THEN 0 ELSE
               (COALESCE(SUM(subtotal-discount_amount),0)-(SELECT COALESCE(SUM(amount),0) FROM returns))/COUNT(*) END,2) AS "averageOrderValue",
+            (SELECT COALESCE(cost,0) FROM sold_cost) AS "estimatedCost",
+            (COALESCE(SUM(subtotal-discount_amount),0)-(SELECT COALESCE(SUM(amount),0) FROM returns)
+              -(SELECT COALESCE(cost,0) FROM sold_cost)) AS "estimatedGrossProfit",
+            (SELECT unpriced_lines FROM sold_cost) AS "unpricedCostLines",
+            (SELECT total_lines FROM sold_cost) AS "totalCostLines",
             (SELECT COUNT(*) FROM customers c WHERE c.created_at>=:start AND c.created_at<:end) AS "newCustomers",
             (SELECT COALESCE(SUM(amount) FILTER(WHERE direction='IN' AND method='CASH'),0) FROM cash) AS "cashIn",
             (SELECT COALESCE(SUM(amount) FILTER(WHERE direction='IN' AND method='BANK_TRANSFER'),0) FROM cash) AS "transferIn",
@@ -79,11 +97,30 @@ public class ReportRepository {
     }
     public Map<String,Object> deposits(MapSqlParameterSource p) {
         return jdbc.queryForMap("""
+          WITH bottle_flow AS (
+            SELECT
+              COALESCE(SUM(quantity) FILTER(WHERE movement IN ('GIVE','ADJUST_GIVE') AND occurred_at<:end),0) AS given,
+              COALESCE(SUM(quantity) FILTER(WHERE movement IN ('RECEIVE','ADJUST_RECEIVE') AND entry_kind IS DISTINCT FROM 'LOSS' AND occurred_at<:end),0) AS received,
+              COALESCE(SUM(quantity) FILTER(WHERE entry_kind='LOSS' AND occurred_at<:end),0) AS lost,
+              COALESCE(SUM(CASE WHEN movement IN ('GIVE','ADJUST_GIVE') THEN quantity ELSE -quantity END) FILTER(WHERE occurred_at<:end),0) AS held
+            FROM bottle_transactions
+          ), obligations AS (
+            SELECT c.id,
+              GREATEST(COALESCE(SUM(bt.liability_delta) FILTER(WHERE bt.occurred_at<:end),0),0) AS required,
+              COALESCE((SELECT SUM(CASE WHEN d.direction IN ('COLLECT','ADJUST_COLLECT') THEN d.amount ELSE -d.amount END)
+                        FROM deposit_transactions d WHERE d.customer_id=c.id AND d.created_at<:end),0) AS deposit
+            FROM customers c LEFT JOIN bottle_transactions bt ON bt.customer_id=c.id
+            GROUP BY c.id
+          )
           SELECT COALESCE(SUM(amount) FILTER(WHERE direction IN ('COLLECT','ADJUST_COLLECT') AND created_at>=:start),0) AS collected,
             COALESCE(SUM(amount) FILTER(WHERE direction IN ('REFUND','ADJUST_REFUND') AND entry_kind IS DISTINCT FROM 'LOSS' AND created_at>=:start),0) AS refunded,
             COALESCE(SUM(amount) FILTER(WHERE entry_kind='LOSS' AND created_at>=:start),0) AS forfeited,
             COALESCE(SUM(CASE WHEN direction IN ('COLLECT','ADJUST_COLLECT') THEN amount ELSE -amount END),0) AS held,
-            (SELECT COALESCE(SUM(CASE WHEN movement IN ('GIVE','ADJUST_GIVE') THEN quantity ELSE -quantity END),0) FROM bottle_transactions WHERE occurred_at<:end) AS "bottlesHeld"
+            (SELECT held FROM bottle_flow) AS "bottlesHeld",
+            (SELECT given FROM bottle_flow) AS "bottlesGiven",
+            (SELECT received FROM bottle_flow) AS "bottlesReceived",
+            (SELECT lost FROM bottle_flow) AS "bottlesLost",
+            (SELECT COALESCE(SUM(GREATEST(required-deposit,0)),0) FROM obligations) AS "uncoveredDeposit"
           FROM deposit_transactions WHERE created_at<:end
           """,p);
     }
@@ -163,24 +200,54 @@ public class ReportRepository {
               ROW_NUMBER() OVER(PARTITION BY a.order_id ORDER BY da.attempted_at,da.id) AS delivery_number
             FROM delivery_attempts da JOIN delivery_assignments a ON a.id=da.assignment_id
             JOIN delivery_trips t ON t.id=a.trip_id
+          ), period_attempts AS (
+            SELECT da.*,o.requested_delivery_at
+            FROM ordered_attempts da JOIN filtered o ON o.id=da.order_id
+            WHERE da.attempted_at>=:start AND da.attempted_at<:end
           ), attempts AS (
             SELECT da.driver_id,COUNT(*) FILTER(WHERE da.outcome='SUCCESS') AS delivered,
               COUNT(*) FILTER(WHERE da.outcome='FAILED') AS failed,
               COUNT(*) FILTER(WHERE da.delivery_number>1) AS redelivered,
-              COUNT(*) FILTER(WHERE da.outcome='SUCCESS' AND o.requested_delivery_at IS NOT NULL) AS appointed,
-              COUNT(*) FILTER(WHERE da.outcome='SUCCESS' AND da.attempted_at>o.requested_delivery_at) AS late
-            FROM ordered_attempts da JOIN filtered o ON o.id=da.order_id
-            WHERE da.attempted_at>=:start AND da.attempted_at<:end GROUP BY da.driver_id
+              COUNT(*) FILTER(WHERE da.outcome='SUCCESS' AND da.requested_delivery_at IS NOT NULL) AS appointed,
+              COUNT(*) FILTER(WHERE da.outcome='SUCCESS' AND da.attempted_at>da.requested_delivery_at) AS late
+            FROM period_attempts da GROUP BY da.driver_id
+          ), latest_order_attempt AS (
+            SELECT DISTINCT ON (order_id) order_id,driver_id,outcome,delivery_number
+            FROM period_attempts ORDER BY order_id,attempted_at DESC,id DESC
+          ), order_metrics AS (
+            SELECT driver_id,
+              COUNT(*) FILTER(WHERE outcome='SUCCESS') AS orders_succeeded,
+              COUNT(*) FILTER(WHERE outcome='FAILED') AS orders_failed,
+              COUNT(*) FILTER(WHERE delivery_number>1) AS redelivered_orders
+            FROM latest_order_attempt GROUP BY driver_id
+          ), dispatched AS (
+            SELECT t.driver_id,COUNT(DISTINCT d.order_id) AS orders_dispatched
+            FROM order_dispatches d
+            JOIN delivery_assignments a ON a.order_id=d.order_id
+            JOIN delivery_trips t ON t.id=a.trip_id
+            JOIN filtered o ON o.id=d.order_id
+            WHERE d.dispatched_at>=:start AND d.dispatched_at<:end
+            GROUP BY t.driver_id
           ), handovers AS (
             SELECT driver_id,COUNT(*) AS trips,SUM(cash_reported) AS reported,SUM(cash_confirmed) AS confirmed
             FROM handover_records WHERE handed_over_at>=:start AND handed_over_at<:end GROUP BY driver_id
-          ), ids AS (SELECT driver_id FROM attempts UNION SELECT driver_id FROM handovers)
+          ), ids AS (
+            SELECT driver_id FROM attempts UNION SELECT driver_id FROM handovers UNION SELECT driver_id FROM dispatched
+          )
           SELECT COALESCE(ids.driver_id,0) AS "driverId",COALESCE(u.full_name,'Chưa phân công') AS driver,
             COALESCE(a.delivered,0) AS delivered,COALESCE(a.failed,0) AS failed,COALESCE(a.appointed,0) AS appointed,COALESCE(a.late,0) AS late,
             COALESCE(a.redelivered,0) AS redelivered,
+            COALESCE(d.orders_dispatched,0) AS "ordersDispatched",
+            COALESCE(m.orders_succeeded,0) AS "ordersSucceeded",
+            COALESCE(m.orders_failed,0) AS "ordersFailed",
+            ROUND(CASE WHEN COALESCE(m.orders_succeeded,0)+COALESCE(m.orders_failed,0)=0 THEN 0
+              ELSE 100.0*COALESCE(m.orders_succeeded,0)/(m.orders_succeeded+m.orders_failed) END,2) AS "successRate",
+            COALESCE(m.redelivered_orders,0) AS "redeliveredOrders",
             COALESCE(h.trips,0) AS "settledTrips",COALESCE(h.reported,0) AS "cashReported",COALESCE(h.confirmed,0) AS "cashConfirmed",
             COALESCE(h.reported-h.confirmed,0) AS "cashDifference"
           FROM ids LEFT JOIN users u ON u.id=ids.driver_id LEFT JOIN attempts a ON a.driver_id IS NOT DISTINCT FROM ids.driver_id
+          LEFT JOIN order_metrics m ON m.driver_id IS NOT DISTINCT FROM ids.driver_id
+          LEFT JOIN dispatched d ON d.driver_id IS NOT DISTINCT FROM ids.driver_id
           LEFT JOIN handovers h ON h.driver_id IS NOT DISTINCT FROM ids.driver_id
           """;
         return page(sql,"delivered DESC, \"driverId\"",p,page,size);
@@ -190,10 +257,17 @@ public class ReportRepository {
           , events AS (
             SELECT id,customer_id,subtotal-discount_amount AS revenue,1 AS orders FROM sold
             UNION ALL SELECT o.id,o.customer_id,-r.amount,0 FROM returns r JOIN filtered o ON o.id=r.order_id
+          ), last_orders AS (
+            SELECT customer_id,MAX(sold_at) AS last_order
+            FROM filtered WHERE status IN ('DELIVERED','COMPLETED') AND sold_at<:end
+            GROUP BY customer_id
           )
           SELECT CASE WHEN e.customer_id IS NULL THEN 'guest' ELSE e.customer_id::text END AS key,
-            COALESCE(c.full_name,'Khách vãng lai') AS name, SUM(e.orders) AS orders,ROUND(SUM(e.revenue),2) AS revenue
-          FROM events e LEFT JOIN customers c ON c.id=e.customer_id GROUP BY e.customer_id,c.full_name
+            COALESCE(c.full_name,'Khách vãng lai') AS name, SUM(e.orders) AS orders,ROUND(SUM(e.revenue),2) AS revenue,
+            CASE WHEN lo.last_order IS NULL THEN NULL ELSE to_char(lo.last_order AT TIME ZONE 'Asia/Ho_Chi_Minh','YYYY-MM-DD') END AS "lastOrder",
+            CASE WHEN lo.last_order IS NULL THEN NULL ELSE GREATEST(0,CAST(:toDate AS date)-(lo.last_order AT TIME ZONE 'Asia/Ho_Chi_Minh')::date) END AS "daysSinceLastOrder"
+          FROM events e LEFT JOIN customers c ON c.id=e.customer_id LEFT JOIN last_orders lo ON lo.customer_id=e.customer_id
+          GROUP BY e.customer_id,c.full_name,lo.last_order
           """;
         return page(sql,"revenue DESC,key",p,page,size);
     }
