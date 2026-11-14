@@ -28,7 +28,8 @@ import { AttemptsTimeline } from './components/AttemptsTimeline'
 import { DeliveryActionModal } from './components/DeliveryActionModal'
 import { TripRouteButton } from './components/TripRouteButton'
 import { TripStatusTag } from './components/TripStatusTag'
-import { DriverDue, driverToday } from './driverParts'
+import { DriverDue } from './driverParts'
+import { driverToday } from './driverUtils'
 import { driverTripFocus, liveTripStatus } from './tripFocus'
 
 /** Màn hình tài xế: lấy chuyến của tài xế đang đăng nhập, giao diện nằm ở DriverScreen. */
