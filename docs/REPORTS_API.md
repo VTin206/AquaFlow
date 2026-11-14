@@ -24,10 +24,12 @@ Mỗi request đọc một snapshot REPEATABLE_READ. Summary có timezone và ge
 - Thanh toán chỉ CONFIRMED theo confirmed_at, IN dương/OUT âm. Tiền mặt và chuyển khoản là thu IN, refunds là OUT. Đây là toàn bộ tiền thanh toán đã lưu (có thể gồm cọc nếu khoản thanh toán gộp), không phải doanh thu. Không cộng thêm handover_records hoặc suy thu tiền từ payment_status.
 - Kho tính lùi từ inventory_balances: tồn cuối = tồn hiện tại − biến động từ cuối kỳ trở đi; tồn đầu = tồn cuối − biến động trong kỳ. RECEIVE/RETURN/ADJUST_UP cộng, DISPATCH/COUNTER_SALE/ADJUST_DOWN trừ. Điều chỉnh hiện riêng; hàng loại khi nhận/hoàn không trừ tồn lần hai. Độ đầy đủ lịch sử phụ thuộc tồn và sổ kho đã lưu; không phải snapshot khóa sổ kế toán.
 - Nhập NCC chỉ phiếu CONFIRMED theo confirmed_at: giá trị hàng đạt = quantity_accepted × unit_cost; hàng loại = quantity_received − quantity_accepted.
-- Giao hàng đếm từng attempt trong kỳ, không đếm đơn duy nhất. Late là SUCCESS sau requested_delivery_at. Đối soát theo handed_over_at, cashReported − cashConfirmed là chênh lệch báo/nộp, không phải tiền khách phải trả.
-- Cọc và vỏ đọc sổ deposit_transactions / bottle_transactions đến hết kỳ; không suy từ số đơn hay từ lượng hàng giao.
+- Giao hàng trả cả số liệu theo attempt (`delivered`, `failed`, `redelivered`) và theo đơn (`ordersDispatched`, `ordersSucceeded`, `ordersFailed`, `successRate`, `redeliveredOrders`). Tỷ lệ thành công dùng kết quả cuối của từng đơn trong kỳ, nên giao lại nhiều lần không làm tăng số đơn thành công. Late là SUCCESS sau requested_delivery_at. Đối soát theo handed_over_at, cashReported − cashConfirmed là chênh lệch báo/nộp, không phải tiền khách phải trả.
+- Cọc và vỏ đọc sổ deposit_transactions / bottle_transactions đến hết kỳ; không suy từ số đơn hay từ lượng hàng giao. Summary trả thêm số vỏ giao/thu/mất và `uncoveredDeposit` (phần cọc còn thiếu so với nghĩa vụ của vỏ đang giữ).
+- Summary có `estimatedCost`, `estimatedGrossProfit`, `unpricedCostLines`, `totalCostLines`. Đây là ước tính theo giá nhập xác nhận gần nhất đến cuối kỳ, không phải COGS kế toán; FE chỉ hiển thị lãi gộp khi mọi dòng hàng đã có giá nhập.
+- Bảng customers trả thêm `lastOrder` và `daysSinceLastOrder` để nhận diện khách lâu chưa mua; không tự gán khách guest vào hồ sơ khách hàng.
 - Kho, nhập hàng, cọc/vỏ và đối soát luôn toàn cửa hàng. Bộ lọc kênh/hình thức áp dụng vào các số liệu theo đơn và delivery attempts.
-- Chưa tính giá vốn, lãi gộp, giá trị tồn theo giá vốn, khách mới/khách lâu không mua do chưa có chính sách giá vốn chốt và lịch sử đủ tin cậy. FE không dùng công thức giá bán × 70% của dữ liệu mẫu.
+- `estimatedCost`/`estimatedGrossProfit` và `closingValue` chỉ là số liệu vận hành dựa trên giá nhập xác nhận gần nhất; chưa phải COGS kế toán theo cost layer. Khách mới vẫn đếm theo ngày tạo hồ sơ, còn `daysSinceLastOrder` dựa trên lần giao gần nhất. FE không dùng công thức giá bán × 70% của dữ liệu mẫu.
 
 ## FE và Excel
 
