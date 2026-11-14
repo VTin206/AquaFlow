@@ -7,7 +7,6 @@ import { Link, useSearchParams } from 'react-router'
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
-import { Unsupported } from '@/shared/components/Unsupported'
 import { currency } from '@/shared/utils/format'
 import { reportApi, channelLabels, type ReportQuery, type ReportSection, type ReportRow } from './reportApi'
 import { DriverDeliveryChart, RevenueChart, TopProductsChart } from './charts'
@@ -25,10 +24,10 @@ const sections: Record<ReportSection, { title: string; key: string; columns: Rep
     { key: 'name', title: 'Sản phẩm' }, { key: 'unit', title: 'Đơn vị' }, { key: 'opening', title: 'Tồn đầu' }, { key: 'received', title: 'Nhập NCC' }, { key: 'restocked', title: 'Hoàn nhập kho' }, { key: 'issued', title: 'Xuất kho' }, { key: 'adjustments', title: 'Điều chỉnh (+/−)' }, { key: 'closing', title: 'Tồn cuối' }, { key: 'latestUnitCost', title: 'Giá nhập gần nhất', money: true }, { key: 'closingValue', title: 'Giá trị tồn cuối kỳ', money: true }, { key: 'damaged', title: 'Loại khi nhận NCC' }, { key: 'discarded', title: 'Loại khi hoàn hàng' },
   ] },
   delivery: { title: 'Giao hàng', key: 'driverId', columns: [
-    { key: 'driver', title: 'Tài xế' }, { key: 'delivered', title: 'Lần giao thành công' }, { key: 'failed', title: 'Lần thất bại' }, { key: 'redelivered', title: 'Lần giao lại' }, { key: 'appointed', title: 'Giao có hẹn' }, { key: 'late', title: 'Giao trễ hẹn' }, { key: 'settledTrips', title: 'Chuyến đối soát' }, { key: 'cashReported', title: 'Tiền báo nộp', money: true }, { key: 'cashConfirmed', title: 'Tiền xác nhận nhận', money: true }, { key: 'cashDifference', title: 'Chênh lệch báo − nhận', money: true },
+    { key: 'driver', title: 'Tài xế' }, { key: 'ordersDispatched', title: 'Đơn đã xuất' }, { key: 'ordersSucceeded', title: 'Đơn giao thành công' }, { key: 'ordersFailed', title: 'Đơn giao thất bại' }, { key: 'successRate', title: 'Tỷ lệ thành công' }, { key: 'redeliveredOrders', title: 'Đơn giao lại' }, { key: 'delivered', title: 'Lần giao thành công' }, { key: 'failed', title: 'Lần thất bại' }, { key: 'redelivered', title: 'Lần giao lại' }, { key: 'appointed', title: 'Giao có hẹn' }, { key: 'late', title: 'Giao trễ hẹn' }, { key: 'settledTrips', title: 'Chuyến đối soát' }, { key: 'cashReported', title: 'Tiền báo nộp', money: true }, { key: 'cashConfirmed', title: 'Tiền xác nhận nhận', money: true }, { key: 'cashDifference', title: 'Chênh lệch báo − nhận', money: true },
   ] },
   customers: { title: 'Khách hàng', key: 'key', columns: [
-    { key: 'name', title: 'Khách hàng' }, { key: 'orders', title: 'Đơn giao trong kỳ' }, { key: 'revenue', title: 'Doanh thu sau hàng trả', money: true },
+    { key: 'name', title: 'Khách hàng' }, { key: 'orders', title: 'Đơn giao trong kỳ' }, { key: 'revenue', title: 'Doanh thu sau hàng trả', money: true }, { key: 'lastOrder', title: 'Mua gần nhất' }, { key: 'daysSinceLastOrder', title: 'Ngày chưa mua' },
   ] },
 }
 const dailyColumns: ReportColumn[] = [{ key: 'date', title: 'Ngày' }, { key: 'revenue', title: 'Doanh thu', money: true }, { key: 'collected', title: 'Thanh toán ròng', money: true }, { key: 'orders', title: 'Đơn tạo' }]
@@ -121,7 +120,7 @@ function LiveReportContent() {
           const value = Number(report?.sales[key] ?? 0)
           return <Col flex="1 1 220px" key={key}><Card loading={summary.isPending}><Statistic title={title} value={money ? currency(value) : value} />{report && <Delta current={value} previous={previous.data?.sales[key]} />}</Card></Col>
         })}
-        <Col flex="1 1 220px"><Card loading={summary.isPending}><Statistic title="Lãi gộp ước tính" valueRender={() => <Unsupported />} /></Card></Col>
+        <Col flex="1 1 220px"><Card loading={summary.isPending}><Statistic title="Lãi gộp ước tính" value={report && report.sales.unpricedCostLines === 0 ? currency(Number(report.sales.estimatedGrossProfit ?? 0)) : 'Chưa đủ giá nhập'} /><Typography.Text type="secondary">{report && report.sales.totalCostLines > 0 && report.sales.unpricedCostLines > 0 ? `Thiếu giá nhập cho ${report.sales.unpricedCostLines}/${report.sales.totalCostLines} dòng hàng.` : 'Dùng giá nhập xác nhận gần nhất đến cuối kỳ.'}</Typography.Text></Card></Col>
       </Row>
       {report && <p>Doanh thu kỳ trước: {previous.isError ? 'Không tải được' : previous.isPending ? 'Đang tải…' : currency(previous.data?.sales.revenue ?? 0)} · Đơn hủy trong kỳ: {report.sales.ordersCancelled}</p>}
       {!!report?.sales.undatedDeliveredOrders && <Alert type="warning" showIcon title={`Có ${report.sales.undatedDeliveredOrders} đơn đã giao thiếu thời điểm giao, chưa thể tính vào doanh thu theo kỳ.`} />}
@@ -133,7 +132,7 @@ function LiveReportContent() {
             { key: 'discounts', label: 'Giảm giá', children: currency(report.sales.discounts) },
             { key: 'fees', label: 'Phí giao', children: currency(report.sales.deliveryFees) },
             { key: 'returns', label: 'Hàng khách trả trong kỳ', children: currency(report.sales.returnsValue) },
-          ]} /><Typography.Text type="secondary">Hoàn kho của đơn giao thất bại không trừ doanh thu lần nữa. Giá vốn và lãi gộp chưa được tính do chưa có giá vốn chốt theo lần bán.</Typography.Text></Card></Col>
+          ]} /><Typography.Text type="secondary">Hoàn kho của đơn giao thất bại không trừ doanh thu lần nữa. Lãi gộp ở trên là ước tính theo giá nhập xác nhận gần nhất, không thay thế COGS kế toán theo cost layer.</Typography.Text></Card></Col>
           <Col xs={24} lg={12}><Card title="Thanh toán đã xác nhận"><Descriptions column={1} items={[
             { key: 'cash', label: 'Thu tiền mặt', children: currency(report.sales.cashIn) }, { key: 'bank', label: 'Thu chuyển khoản', children: currency(report.sales.transferIn) }, { key: 'refunds', label: 'Chi hoàn', children: currency(report.sales.refunds) },
           ]} /><Typography.Text type="secondary">Tính theo thời điểm xác nhận thanh toán, có thể gồm tiền cọc trong khoản thu. Tiền tài xế bàn giao không được cộng lần nữa.</Typography.Text></Card></Col></Row>
@@ -143,14 +142,16 @@ function LiveReportContent() {
             { key: 'deposit', label: 'Số dư cọc cuối kỳ', children: currency(report.deposits.held) }, { key: 'bottles', label: 'Vỏ còn ngoài cửa hàng', children: report.deposits.bottlesHeld },
             { key: 'collected', label: 'Thu cọc trong kỳ', children: currency(report.deposits.collected) }, { key: 'refunded', label: 'Hoàn cọc trong kỳ', children: currency(report.deposits.refunded) },
             { key: 'forfeited', label: 'Cọc cấn trừ mất/vỡ', children: currency(report.deposits.forfeited ?? 0) },
-            { key: 'flow', label: 'Vỏ giao / thu / mất', children: <Unsupported /> },
-            { key: 'uncovered', label: 'Vỏ chưa đủ cọc', children: <Unsupported /> },
+            { key: 'given', label: 'Vỏ giao kèm', children: report.deposits.bottlesGiven },
+            { key: 'received', label: 'Vỏ thu lại', children: report.deposits.bottlesReceived },
+            { key: 'lost', label: 'Vỏ mất / vỡ', children: report.deposits.bottlesLost },
+            { key: 'uncovered', label: 'Cọc chưa đủ nghĩa vụ vỏ', children: currency(report.deposits.uncoveredDeposit) },
           ]} /><Typography.Text type="secondary">Sổ cọc/vỏ chỉ phản ánh giao dịch đã lưu; không suy từ đơn hàng.</Typography.Text></Card>
         </> },
         ...Object.entries(sections).map(([key, section]) => ({ key, label: section.title, children: details.isError ? <QueryError error={details.error} onRetry={details.refetch} /> : <Card>
           {key === 'inventory' && <p>Tồn đầu + nhập NCC + hoàn nhập + điều chỉnh − xuất = tồn cuối. Hàng loại bỏ không nhập vào tồn. Số dư lịch sử được tính lùi từ tồn hiện tại và sổ kho. Giá trị tồn cuối = tồn cuối × giá nhập của hàng đạt từ phiếu đã xác nhận gần nhất đến cuối kỳ. Đây là giá trị vận hành, không phải giá vốn kế toán; chưa có giá nhập thì chưa định giá.</p>}
-          {key === 'delivery' && <p>Kết quả tính theo từng lần giao. Giao lại là lần giao thứ hai trở đi của cùng đơn, kể cả khi đổi chuyến hoặc nhân viên; lần đầu có thể nằm ngoài kỳ. Giao trễ chỉ tính lần giao thành công sau giờ hẹn. Đối soát tính theo ngày bàn giao và không phải doanh thu hay thanh toán của khách.</p>}
-          {key === 'customers' && <p>Khách chưa gắn hồ sơ được gộp vào Khách vãng lai. Danh sách khách lâu chưa đặt lại: <Unsupported />.</p>}
+          {key === 'delivery' && <p>Kết quả theo cả đơn và lần giao. Tỷ lệ thành công là số đơn có kết quả cuối trong kỳ là thành công chia cho tổng đơn có kết quả cuối là thành công hoặc thất bại; các cột “Lần” vẫn giữ số attempt để đối soát retry. Giao trễ chỉ tính lần giao thành công sau giờ hẹn.</p>}
+          {key === 'customers' && <p>Khách chưa gắn hồ sơ được gộp vào Khách vãng lai. “Ngày chưa mua” tính từ lần giao gần nhất đến ngày cuối kỳ; dùng để nhận diện khách cần chăm sóc lại.</p>}
           {key === 'products' && detailRows.some((row) => num(row.revenue) > 0) && <TopProductsChart rows={detailRows.map((row) => ({ name: String(row.name), unit: String(row.unit), sold: num(row.sold), revenue: num(row.revenue) }))} />}
           {key === 'delivery' && detailRows.length > 0 && <DriverDeliveryChart rows={detailRows.map((row) => ({ driver: String(row.driver), delivered: num(row.delivered), late: num(row.late), failed: num(row.failed) }))} />}
           <Table<ReportRow> rowKey={section.key} loading={details.isPending} columns={key === 'customers' ? customerColumns : columnsOf(section.columns)} dataSource={details.data?.content ?? []} scroll={{ x: key === 'inventory' || key === 'delivery' ? 1500 : 900 }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : 'Chưa có dữ liệu trong kỳ.' }}
