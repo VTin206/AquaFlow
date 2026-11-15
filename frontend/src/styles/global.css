@@ -229,6 +229,15 @@ body {
 .af-notification-item[data-resolved] {
   opacity: 0.6;
 }
+/* Bấm cả dòng để mở đơn / kho / chuyến của thông báo. */
+.af-notification-item.is-clickable {
+  cursor: pointer;
+}
+.af-notification-item.is-clickable:hover,
+.af-notification-item.is-clickable:focus-visible {
+  background: color-mix(in srgb, var(--af-primary) 10%, transparent);
+  outline: none;
+}
 .af-notification-title {
   display: flex;
   align-items: baseline;
@@ -970,6 +979,40 @@ body {
 .af-modal-table .ant-table-body {
   overflow-y: auto !important;
 }
+/* Thanh công cụ trong hộp thoại danh sách: tìm và lọc bên trái, nút thêm dạt phải cùng hàng. */
+.af-modal-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.af-modal-toolbar-end {
+  margin-left: auto;
+}
+.af-modal-toolbar > .ant-input-affix-wrapper {
+  flex: 1 1 160px;
+  max-width: 260px;
+  min-width: 160px;
+}
+/* Bảng danh mục trong hộp thoại giữ nguyên chiều cao khi đổi bộ lọc, để cửa sổ không co giãn. */
+/* Bảng giãn hết phần còn lại của thân hộp thoại (modalFixedBody); chỉ phần thân bảng cuộn, đầu bảng đứng yên. */
+.af-modal-table-fixed,
+.af-modal-table-fixed > .ant-spin,
+.af-modal-table-fixed .ant-spin-nested-loading,
+.af-modal-table-fixed .ant-spin-container,
+.af-modal-table-fixed .ant-table,
+.af-modal-table-fixed .ant-table-container {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.af-modal-table-fixed .ant-table-body {
+  flex: 1;
+  max-height: none !important;
+  min-height: 0;
+}
 /* Dòng bấm được cả dòng (ví dụ chọn đơn để tạo chuyến). */
 .af-row-clickable {
   cursor: pointer;
@@ -1017,6 +1060,25 @@ body {
 .af-sort-trigger:hover .af-sort-icon,
 .af-sort-trigger.is-active .af-sort-icon {
   color: var(--af-primary);
+}
+/* Tiêu đề cột không xuống dòng; ô không bẻ đôi một từ hay một ngày (25/10/20|26), chỉ xuống dòng ở khoảng trắng. */
+.ant-table-wrapper .ant-table-thead > tr > th {
+  white-space: nowrap;
+}
+.ant-table-wrapper .ant-table-tbody > tr > td {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.af-nowrap {
+  white-space: nowrap;
+}
+/* Mã chứng từ dài trong ô hẹp: cắt bằng "…", rê chuột xem đủ. */
+.af-ref-link.ant-btn {
+  max-width: 100%;
+}
+.af-ref-link.ant-btn > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .af-data-table .af-cell-stack {
   line-height: 20px;
@@ -1074,6 +1136,9 @@ body {
 }
 .af-text-danger {
   color: var(--af-danger) !important;
+}
+.af-text-success {
+  color: var(--af-success) !important;
 }
 .af-money-stack > small {
   font-size: var(--af-fs-sm);
@@ -2617,13 +2682,20 @@ body {
   background: var(--af-primary-soft);
   color: var(--af-primary);
 }
-.af-trip-card {
-  height: 100%;
-}
-.af-trip-card .ant-card-body {
+/* Danh sách chuyến: ô tìm và khoảng ngày cạnh nhóm chuyến; thanh tiến độ gọn trong một ô. */
+.af-trips-filters {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.af-trips-filters > .ant-input-affix-wrapper {
+  width: 240px;
+}
+.af-trips-filters > .ant-select {
+  width: 140px;
+}
+.af-trip-progress-cell.ant-progress {
+  margin: 0;
 }
 .af-trip-card-head,
 .af-trip-card-foot,

@@ -1,16 +1,17 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Dropdown, Form, Input, Modal, Segmented, Space, Table, Tag, Tooltip } from 'antd'
-import { Ellipsis, Pencil, Plus } from 'lucide-react'
+import { Ellipsis, Pencil, Plus, Search } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
 import { useConfirm } from '@/shared/components/confirm'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { matchesSearch } from '@/shared/utils/search'
-import { modalWidth } from '@/shared/utils/modal'
+import { modalFixedBody, modalFixedWidth, modalWidth } from '@/shared/utils/modal'
 import { modalTableScrollHeight } from '@/shared/utils/table'
 import { useProductCategories } from '@/features/inventory/useProductCatalog'
 import { productCategoryApi, type ProductCategory } from './productCategoryApi'
+import { ApiError } from '@/shared/api/client'
 import { invalidateLiveData } from './invalidateLiveData'
 
 type Status = 'active' | 'inactive' | 'all'
@@ -27,7 +28,9 @@ function CategoryForm({ item, onClose }: { item: ProductCategory | null; onClose
       message.success(item ? `Đã đổi tên thành ${saved.name}.` : `Đã thêm loại ${saved.name}.`)
       onClose()
     },
-    onError: (error: Error) => message.error(error.message),
+    // Trùng tên (409): nêu rõ tên vừa nhập trong ngoặc kép.
+    onError: (error: Error, { name }) =>
+      message.error(error instanceof ApiError && error.status === 409 ? `Đã có loại sản phẩm "${name.trim()}".` : error.message),
   })
   return (
     <Modal
@@ -128,17 +131,11 @@ export function LiveProductCategories({ onClose }: { onClose: () => void }) {
 
   return (
     <>
-      <Modal
-        open
-        centered
-        title="Loại sản phẩm"
-        width={modalWidth.large}
-        onCancel={onClose}
-        footer={<Button onClick={onClose}>Đóng</Button>}
-      >
-        <Space wrap style={{ marginBottom: 16 }}>
+      <Modal open centered title="Loại sản phẩm" width={modalFixedWidth} styles={modalFixedBody} onCancel={onClose} footer={null}>
+        <div className="af-modal-toolbar">
           <Input
             aria-label="Tìm loại sản phẩm"
+            prefix={<Search size={16} className="af-input-icon" />}
             placeholder="Tìm tên loại"
             value={search}
             allowClear
@@ -154,21 +151,22 @@ export function LiveProductCategories({ onClose }: { onClose: () => void }) {
               { value: 'all', label: <CountLabel label="Tất cả" count={all.length} /> },
             ]}
           />
-          <Button type="primary" icon={<Plus size={16} />} onClick={() => setEditing(null)}>
+          <Button className="af-modal-toolbar-end" type="primary" icon={<Plus size={16} />} onClick={() => setEditing(null)}>
             Thêm loại
           </Button>
-        </Space>
+        </div>
         {categories.isError ? (
           <QueryError error={categories.error} onRetry={categories.refetch} />
         ) : (
           <Table<ProductCategory>
             key={`${status}:${search}`}
             rowKey="id"
-            className="af-modal-table"
+            className="af-modal-table af-modal-table-fixed"
             rowClassName={(item) => (item.active ? '' : 'af-row-inactive')}
             loading={categories.isPending}
             dataSource={visible}
-            pagination={{ pageSize: 10 }}
+            size="small"
+            pagination={false}
             scroll={{ y: modalTableScrollHeight }}
             locale={{ emptyText: 'Không có loại sản phẩm phù hợp.' }}
             columns={[
