@@ -42,12 +42,8 @@ export function ProductDetailPage() {
                 <span className="af-money af-shop-price">{currency(product.price)}</span> <small>/ {product.unit.toLowerCase()}</small>
               </p>
               <p>
-                <Tag color={product.available === false ? 'default' : product.available ? 'green' : 'blue'}>
-                  {product.available === false
-                    ? 'Tạm ngừng bán / hết hàng'
-                    : product.available
-                      ? 'Có thể đặt'
-                      : 'Chưa có thông tin tồn kho'}
+                <Tag color={product.available === false ? 'default' : 'green'}>
+                  {product.available === false ? 'Tạm ngừng bán / hết hàng' : 'Có sẵn'}
                 </Tag>
                 {bestSellerIds.includes(product.id) && <Tag color="red">Bán chạy</Tag>}
               </p>
