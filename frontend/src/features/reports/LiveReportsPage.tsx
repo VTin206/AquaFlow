@@ -93,24 +93,29 @@ const kpis = [
 
 /** Mức tăng/giảm so với kỳ trước; kỳ trước chưa có số liệu thì không hiện gì. */
 function Delta({ current, previous }: { current: number; previous?: number }) {
-  if (previous === undefined || previous === 0) return null
+  if (previous === undefined) return null
+  // Kỳ trước bằng 0 thì phần trăm vô nghĩa: ghi số kỳ trước để vẫn so được.
+  if (previous === 0) return <span className="af-report-delta">{current ? 'Kỳ trước chưa phát sinh' : 'Không đổi so với kỳ trước'}</span>
   const change = Math.round(((current - previous) / Math.abs(previous)) * 100)
   if (change === 0) return <span className="af-report-delta">Không đổi so với kỳ trước</span>
   const Icon = change > 0 ? ArrowUpRight : ArrowDownRight
   return (
-    <span className={`af-report-delta ${change > 0 ? 'is-up' : 'is-down'}`}>
-      <Icon size={14} aria-hidden /> {change > 0 ? 'Tăng' : 'Giảm'} {Math.abs(change)}% so với kỳ trước
+    <span className="af-report-delta">
+      <b className={change > 0 ? 'is-up' : 'is-down'}><Icon size={13} aria-hidden />{change > 0 ? '+' : '−'}{Math.abs(change).toLocaleString('vi-VN')}%</b>
+      so với kỳ trước
     </span>
   )
 }
 
-/** Một chỉ số trong hàng chỉ số chính: chữ và số, không đóng khung thẻ. */
-function Kpi({ title, value, note, loading }: { title: string; value: ReactNode; note?: ReactNode; loading: boolean }) {
+/** Chỉ số chính dạng ô: nhãn, số lớn (đơn vị tiền nhỏ và nhạt bên cạnh), dòng so sánh luôn nằm cuối ô. */
+function Kpi({ title, value, money = false, note, loading }: { title: string; value: number | string | undefined; money?: boolean; note?: ReactNode; loading: boolean }) {
   return (
     <div className="af-report-kpi">
       <span className="af-report-kpi-label">{title}</span>
-      <strong className="af-report-kpi-value">{loading ? '…' : value}</strong>
-      {note}
+      <strong className={typeof value === 'string' ? 'af-report-kpi-value is-text' : 'af-report-kpi-value'}>
+        {loading || value === undefined ? '…' : typeof value === 'string' ? value : <>{value.toLocaleString('vi-VN')}{money && <small className="af-report-kpi-unit">₫</small>}</>}
+      </strong>
+      <div className="af-report-kpi-note">{note}</div>
     </div>
   )
 }
@@ -313,14 +318,16 @@ function LiveReportContent() {
       <div className="af-report-kpis">
         {kpis.map(({ title, key, money }) => {
           const value = Number(report?.sales[key] ?? 0)
-          return <Kpi key={key} title={title} loading={summary.isPending} value={money ? currency(value) : value} note={report && <>
+          return <Kpi key={key} title={title} loading={summary.isPending} money={money} value={report ? value : undefined} note={report && <>
             <Delta current={value} previous={previous.data?.sales[key]} />
             {key === 'ordersCreated' && report.sales.ordersCancelled > 0 && <span className="af-report-delta">{report.sales.ordersCancelled} đơn đã hủy</span>}
           </>} />
         })}
         <Kpi title="Lãi gộp ước tính" loading={summary.isPending}
-          value={report && report.sales.unpricedCostLines === 0 ? currency(Number(report.sales.estimatedGrossProfit ?? 0)) : 'Chưa đủ giá nhập'}
-          note={report && report.sales.totalCostLines > 0 && report.sales.unpricedCostLines > 0 && <span className="af-report-delta is-down">Thiếu giá nhập cho {report.sales.unpricedCostLines}/{report.sales.totalCostLines} dòng hàng</span>} />
+          money value={!report ? undefined : report.sales.unpricedCostLines === 0 ? Number(report.sales.estimatedGrossProfit ?? 0) : 'Chưa đủ giá nhập'}
+          note={report && (report.sales.unpricedCostLines > 0
+            ? report.sales.totalCostLines > 0 && <span className="af-report-delta"><b className="is-down">Thiếu giá nhập</b>{report.sales.unpricedCostLines}/{report.sales.totalCostLines} dòng hàng</span>
+            : report.sales.revenue > 0 && <span className="af-report-delta">Biên lãi {(Number(report.sales.estimatedGrossProfit ?? 0) / report.sales.revenue * 100).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}% doanh thu</span>)} />
       </div>
       {!!report?.sales.undatedDeliveredOrders && <Alert type="warning" showIcon title={`Có ${report.sales.undatedDeliveredOrders} đơn đã giao thiếu thời điểm giao, chưa thể tính vào doanh thu theo kỳ.`} />}
       <Tabs activeKey={tab} tabBarExtraContent={tab !== 'overview' && <div className="af-report-tab-tools">
