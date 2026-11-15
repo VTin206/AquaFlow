@@ -36,6 +36,8 @@ const pageRoles: Record<string, RoleCode[]> = {
   '/customers': ['ADMIN', 'SALES_STAFF'],
   '/reports': ['ADMIN'],
   '/activity': ['ADMIN'],
+  // Nội dung công khai trên trang khách: chỉ chủ cửa hàng sửa (BE: /api/v1/admin/shop-articles).
+  '/articles': ['ADMIN'],
   '/settings': ['ADMIN'],
   '/staff': ['ADMIN'],
 }

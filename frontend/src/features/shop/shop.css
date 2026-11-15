@@ -749,6 +749,11 @@
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
+.af-shop-news-empty {
+  margin: 0;
+  padding: 16px 18px;
+  color: var(--af-text-tertiary);
+}
 .af-shop-news ul {
   list-style: none;
   margin: 0;

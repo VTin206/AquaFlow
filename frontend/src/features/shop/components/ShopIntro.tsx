@@ -1,4 +1,4 @@
-import { Button, Carousel } from 'antd'
+import { Button, Carousel, Skeleton } from 'antd'
 import {
   ArrowRight,
   BadgeCheck,
@@ -13,7 +13,9 @@ import {
   UserRoundCheck,
 } from 'lucide-react'
 import { Link } from 'react-router'
-import { articleDate, shopArticles } from '../shopNews'
+import { articleDate } from '@/features/articles/articleApi'
+import { usePublishedArticles } from '@/features/articles/useArticles'
+import { ArticleIcon } from '@/features/articles/articleIcons'
 import type { ShopProduct } from '../shopService'
 
 type Props = {
@@ -29,6 +31,9 @@ export function ShopIntro({ phone, products, onShop }: Props) {
   const showcase = products.filter((product) => product.image && product.available !== false).slice(0, 9)
   const productSlides = showcase
   const tel = phone?.replace(/\s/g, '')
+  const news = usePublishedArticles('NEWS')
+  // Khung tin cạnh banner chỉ đủ chỗ cho vài bài mới nhất.
+  const newsItems = (news.data ?? []).slice(0, 5)
 
   const promos = [
     { icon: <Truck size={20} />, title: 'Giao tận nơi', text: 'Bình 19L, thùng chai giao tới nhà, văn phòng.' },
@@ -92,23 +97,28 @@ export function ShopIntro({ phone, products, onShop }: Props) {
         </div>
         <aside className="af-shop-news" aria-labelledby="af-shop-news-title">
           <h2 id="af-shop-news-title">Tin mới cập nhật</h2>
+          {/* Khung tin luôn giữ chỗ để banner không nhảy bố cục khi tin tải xong hoặc chưa có tin. */}
+          {news.isPending ? (
+            <div className="af-shop-news-empty">
+              <Skeleton active title={false} paragraph={{ rows: 4 }} />
+            </div>
+          ) : newsItems.length === 0 ? (
+            <p className="af-shop-news-empty">Chưa có tin mới.</p>
+          ) : null}
           <ul>
-            {shopArticles.map((article) => {
-              const Icon = article.icon
-              return (
-                <li key={article.slug}>
-                  <Link to={`/shop/news/${article.slug}`}>
-                    <span className="af-shop-news-thumb" aria-hidden>
-                      <Icon size={24} />
-                    </span>
-                    <span className="af-shop-news-text">
-                      <strong>{article.title}</strong>
-                      {article.publishedOn && <small>{articleDate(article.publishedOn)}</small>}
-                    </span>
-                  </Link>
-                </li>
-              )
-            })}
+            {newsItems.map((article) => (
+              <li key={article.slug}>
+                <Link to={`/shop/news/${article.slug}`}>
+                  <span className="af-shop-news-thumb" aria-hidden>
+                    <ArticleIcon name={article.icon} size={24} />
+                  </span>
+                  <span className="af-shop-news-text">
+                    <strong>{article.title}</strong>
+                    {article.publishedOn && <small>{articleDate(article.publishedOn)}</small>}
+                  </span>
+                </Link>
+              </li>
+            ))}
           </ul>
         </aside>
       </div>
