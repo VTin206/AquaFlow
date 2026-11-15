@@ -1,20 +1,16 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { App, Card, Col, Empty, Row, Skeleton } from 'antd'
+import { App } from 'antd'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { useOrderList } from '@/features/orders/orderData'
 import { jugCount, knownAmountDue, orderedAtOf } from '@/features/orders/types'
 import type { DeliveryTrip } from '../deliveryApi'
 import { stopOrderId, useTripBackend } from '../tripBackend'
-import { liveTripStatus, type TripViewStatus } from '../tripFocus'
 import { CreateTripModal } from './CreateTripModal'
 import { TripDrawer } from './TripDrawer'
-import { TripCard } from './TripCard'
+import { TripsList } from './TripsList'
 import { WaitingOrdersCard, type WaitingOrder } from './WaitingOrdersCard'
-
-// Việc cần làm lên trước, chuyến đã xong xuống cuối.
-const statusRank: Record<TripViewStatus, number> = { 'Chờ đối soát': 0, 'Chờ xuất phát': 1, 'Đang giao': 2, 'Đã đối soát': 3, 'Đã hủy': 4 }
 
 /** Xếp đơn chờ giao vào chuyến và theo dõi các chuyến. */
 export function TripsPanel() {
@@ -57,7 +53,6 @@ export function TripsPanel() {
     const sum = dues.reduce<number>((total, due) => total + (due ?? 0), 0)
     return `Cần thu ${dues.includes(null) ? 'từ ' : ''}${currency(sum)}`
   }
-  const trips = [...(tripsQuery.data ?? [])].sort((a, b) => statusRank[liveTripStatus(a)] - statusRank[liveTripStatus(b)] || b.id - a.id)
 
   return (
     <>
@@ -67,7 +62,11 @@ export function TripsPanel() {
         selected={selected}
         onSelect={setSelected}
         onCreate={() => setCreating(true)}
-        error={availableQuery.isError && availableQuery.error ? <QueryError error={availableQuery.error} onRetry={availableQuery.refetch} /> : undefined}
+        error={
+          availableQuery.isError && availableQuery.error ? (
+            <QueryError error={availableQuery.error} onRetry={availableQuery.refetch} />
+          ) : undefined
+        }
       />
 
       <div className="af-section-heading">
@@ -76,29 +75,8 @@ export function TripsPanel() {
       </div>
       {tripsQuery.isError && tripsQuery.error ? (
         <QueryError error={tripsQuery.error} onRetry={tripsQuery.refetch} />
-      ) : tripsQuery.isPending ? (
-        <Skeleton active />
-      ) : trips.length === 0 ? (
-        <Card>
-          <Empty description="Chưa có chuyến nào." />
-        </Card>
       ) : (
-        <Row gutter={[12, 12]}>
-          {trips.map((trip) => (
-            <Col key={trip.id} xs={24} md={12} xl={8}>
-              <TripCard
-                code={`Chuyến #${trip.id}`}
-                status={liveTripStatus(trip)}
-                driver={trip.driverName ?? 'Chưa phân tài xế'}
-                vehicle={trip.vehicle}
-                finished={trip.orders.filter((stop) => stop.latestAttempt).length}
-                total={trip.orders.length}
-                dueLabel={dueLabel(trip)}
-                onOpen={() => setTripId(trip.id)}
-              />
-            </Col>
-          ))}
-        </Row>
+        <TripsList trips={tripsQuery.data ?? []} loading={tripsQuery.isPending} dueLabel={dueLabel} onOpen={setTripId} />
       )}
 
       {creating && (
