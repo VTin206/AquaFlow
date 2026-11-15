@@ -1,6 +1,6 @@
 # Bổ sung các thao tác còn thiếu (thêm/sửa/hủy)
 
-Trạng thái: kế hoạch, chờ nhóm backend duyệt trước khi làm.
+Trạng thái: đã làm đủ 6 mục (backend, giao diện, test); nhật ký hoạt động ghi kiểm kê, sửa đơn và khách hủy đơn. Hủy phiếu thu và hủy giao dịch vỏ chưa vào nhật ký vì module thanh toán và sổ vỏ chưa ghi nhật ký; lý do và người hủy vẫn lưu trong dữ liệu.
 
 Phạm vi: các chỗ thiếu thao tác phát hiện khi rà API ngày 15/11/2026. Mỗi mục gồm API backend, giao diện và test. Một migration mới `V32` (`V31` đã dùng cho bài viết shop); không sửa migration cũ. Chỉ chạy thử trên database test local, không chạy trên database dùng chung trước khi merge.
 
