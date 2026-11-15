@@ -2230,23 +2230,6 @@ body {
   padding-block: 5px;
   line-height: 1.3;
 }
-/* Màn hình thấp: thu thêm để vẫn thấy đủ 10 dòng và thanh phân trang. */
-@media (max-height: 960px) {
-  .af-page:has(.af-table-dense) .af-page-header {
-    padding-block: 12px 10px;
-  }
-  .af-page:has(.af-table-dense) .af-toolbar {
-    padding-block: 10px;
-  }
-  .af-page:has(.af-table-dense) .af-order-groups {
-    padding-top: 10px;
-  }
-  .ant-table-wrapper.af-table-dense .ant-table .ant-table-tbody > tr > td {
-    padding-block: 2px;
-    font-size: 13px;
-    line-height: 1.25;
-  }
-}
 .ant-table-wrapper.af-table-dense .ant-table-tbody .ant-btn {
   height: 28px;
   min-width: 28px;
