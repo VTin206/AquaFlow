@@ -1,15 +1,16 @@
-import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import type { Dayjs } from 'dayjs'
 import { activityApi, activityAreas, type ActivityAreaCode } from './activityApi'
 import { fromLive, rangeBounds, type ActivityItem, type ActivityRange } from './activityFeed'
 
-const PAGE = 50
+/** Mỗi trang 10 dòng như các trang danh sách khác. */
+export const ACTIVITY_PAGE_SIZE = 10
 const EXPORT_LIMIT = 5000
 
 export type ActivityFilter = { range: ActivityRange; custom: [Dayjs, Dayjs] | null; area?: string; actor?: string; q: string }
 
-/** Nguồn nhật ký cho trang Nhật ký: đọc từ máy chủ theo từng đợt 50 dòng. */
-export function useActivityFeed(filter: ActivityFilter) {
+/** Nguồn nhật ký cho trang Nhật ký: đọc từ máy chủ theo trang (`page` tính từ 0). */
+export function useActivityFeed(filter: ActivityFilter, page: number) {
   const { from, to } = rangeBounds(filter.range, filter.custom)
   const params = {
     area: filter.area as ActivityAreaCode | undefined,
@@ -18,29 +19,24 @@ export function useActivityFeed(filter: ActivityFilter) {
     from: from?.toISOString(),
     to: to?.toISOString(),
   }
-  const query = useInfiniteQuery({
-    queryKey: ['live', 'activity', 'feed', params],
-    initialPageParam: 0,
-    queryFn: ({ pageParam }) => activityApi.list({ ...params, page: pageParam, size: PAGE }),
-    getNextPageParam: (last) => ((last.page + 1) * last.size < last.totalElements ? last.page + 1 : undefined),
+  const query = useQuery({
+    queryKey: ['live', 'activity', 'feed', params, page],
+    queryFn: () => activityApi.list({ ...params, page, size: ACTIVITY_PAGE_SIZE }),
     refetchInterval: 30_000,
     // Đổi bộ lọc thì giữ danh sách cũ đến khi có kết quả mới, không chớp trắng.
     placeholderData: keepPreviousData,
   })
   const actors = useQuery({ queryKey: ['live', 'activity', 'actors'], queryFn: activityApi.actors, staleTime: 60_000 })
-  const items = query.data?.pages.flatMap((page) => page.content.map(fromLive)) ?? []
+  const items = query.data?.content.map(fromLive) ?? []
   return {
     items,
-    total: query.data?.pages[0]?.totalElements ?? 0,
+    total: query.data?.totalElements ?? 0,
     loading: query.isPending,
     error: query.error ?? actors.error,
     refetch: () => void Promise.all([query.refetch(), actors.refetch()]),
-    refreshing: query.isFetching && !query.isFetchingNextPage,
+    refreshing: query.isFetching,
     stale: query.isPlaceholderData,
     updatedAt: query.dataUpdatedAt,
-    hasMore: Boolean(query.hasNextPage),
-    loadingMore: query.isFetchingNextPage,
-    loadMore: () => void query.fetchNextPage(),
     areaOptions: Object.entries(activityAreas).map(([value, label]) => ({ value, label })),
     actorOptions: (actors.data ?? []).map((actor) => ({ value: String(actor.id), label: actor.name })),
     /** Xuất toàn bộ kết quả đang lọc, tối đa 5.000 dòng; gọi lần lượt từng trang 100 dòng. */
