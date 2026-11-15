@@ -196,7 +196,7 @@ export function SuppliersPage() {
               />
             </div>
             <Table<Supplier>
-              className="af-data-table af-table-flush"
+              className="af-data-table af-table-flush af-table-dense"
               size="middle"
               rowKey="id"
               columns={columns}

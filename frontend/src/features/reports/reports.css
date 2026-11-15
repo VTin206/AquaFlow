@@ -177,6 +177,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  margin-bottom: 16px;
 }
 .af-report-filters .ant-segmented {
   max-width: 100%;

@@ -65,13 +65,13 @@ export function LotsPanel({ initialFilter = 'stock' }: { initialFilter?: LotFilt
       </div>
       <Table<LotItem>
         key={`${filter}:${query}`}
-        className="af-data-table af-table-flush"
+        className="af-data-table af-table-flush af-table-dense"
         size="middle"
         rowKey="id"
         loading={lotsQuery.isPending}
         dataSource={visible}
         pagination={tablePagination}
-        scroll={{ x: 1040 }}
+        scroll={{ x: 1000 }}
         locale={{ emptyText: lots.length ? 'Không có lô phù hợp.' : 'Chưa có lô hàng. Lô được tạo khi xác nhận nhập kho.' }}
         columns={[
           {
@@ -86,11 +86,11 @@ export function LotsPanel({ initialFilter = 'stock' }: { initialFilter?: LotFilt
               </div>
             ),
           },
-          { title: 'Ngày SX', dataIndex: 'mfgDate', width: 120, render: (date?: string) => (date ? isoToVnDate(date) : '—') },
+          { title: 'Ngày SX', dataIndex: 'mfgDate', width: 100, render: (date?: string) => (date ? isoToVnDate(date) : '—') },
           {
             title: 'Hạn dùng',
             dataIndex: 'expiryDate',
-            width: 150,
+            width: 125,
             render: (_, lot) => {
               const days = daysLeft(lot)
               if (days === null) return <Typography.Text type="secondary">Không áp dụng</Typography.Text>
@@ -107,7 +107,7 @@ export function LotsPanel({ initialFilter = 'stock' }: { initialFilter?: LotFilt
           {
             title: 'Còn / nhập',
             key: 'qty',
-            width: 130,
+            width: 95,
             align: 'right',
             render: (_, lot) => (
               <span className="af-money">
@@ -120,7 +120,7 @@ export function LotsPanel({ initialFilter = 'stock' }: { initialFilter?: LotFilt
                 {
                   title: 'Đã giữ',
                   dataIndex: 'reserved',
-                  width: 90,
+                  width: 75,
                   align: 'right' as const,
                   render: (value: number) => (value ? <Typography.Text type="warning">{value}</Typography.Text> : 0),
                 },
@@ -129,14 +129,14 @@ export function LotsPanel({ initialFilter = 'stock' }: { initialFilter?: LotFilt
           {
             title: 'Giá vốn',
             dataIndex: 'costPrice',
-            width: 120,
+            width: 105,
             align: 'right',
             render: (cost?: number) => (cost === undefined ? '—' : currency(cost)),
           },
           {
             title: 'Nguồn',
             key: 'source',
-            width: 150,
+            width: 115,
             render: (_, lot) =>
               lot.receiptCode ? (
                 <div className="af-cell-stack">
@@ -150,7 +150,7 @@ export function LotsPanel({ initialFilter = 'stock' }: { initialFilter?: LotFilt
           {
             title: 'Xuất',
             key: 'state',
-            width: 120,
+            width: 105,
             render: (_, lot) =>
               lot.onHand === 0 ? (
                 <Tag>Đã hết</Tag>
@@ -169,7 +169,7 @@ export function LotsPanel({ initialFilter = 'stock' }: { initialFilter?: LotFilt
                 {
                   title: 'Thao tác',
                   key: 'actions',
-                  width: 110,
+                  width: 95,
                   render: (_: unknown, lot: LotItem) => (
                     <Button size="small" onClick={() => setCounting(lot)}>
                       Kiểm kê

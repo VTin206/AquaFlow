@@ -336,7 +336,7 @@ export function CustomersPage() {
                 <QueryError error={archivedQuery.error} onRetry={archivedQuery.refetch} />
               ) : (
                 <Table<Customer>
-                  className="af-data-table af-table-flush"
+                  className="af-data-table af-table-flush af-table-dense"
                   size="middle"
                   rowKey="id"
                   rowClassName="af-row-inactive"
@@ -367,7 +367,7 @@ export function CustomersPage() {
                   </Button>
                 </BulkBar>
                 <Table<Customer>
-                  className="af-data-table af-table-flush"
+                  className="af-data-table af-table-flush af-table-dense"
                   size="middle"
                   rowKey="id"
                   columns={columns}

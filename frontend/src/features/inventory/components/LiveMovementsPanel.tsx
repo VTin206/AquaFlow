@@ -16,7 +16,7 @@ const signed = (row: InventoryMovement) => `${row.signedQuantity > 0 ? '+' : ''}
 /** Lịch sử xuất nhập kho. */
 export function LiveMovementsPanel() {
   const { user } = useAuth()
-  const [filter, setFilter] = useState<MovementFilter>({ page: 0, size: 20 })
+  const [filter, setFilter] = useState<MovementFilter>({ page: 0, size: 10 })
   const [selected, setSelected] = useState<number | null>(null)
   const [orderId, setOrderId] = useState<string | null>(null)
   const query = useQuery({
@@ -71,7 +71,7 @@ export function LiveMovementsPanel() {
       ) : (
         <Table<InventoryMovement>
           rowKey="id"
-          className="af-data-table af-table-flush"
+          className="af-data-table af-table-flush af-table-dense"
           loading={query.isPending}
           dataSource={query.data?.content ?? []}
           scroll={{ x: 1060 }}

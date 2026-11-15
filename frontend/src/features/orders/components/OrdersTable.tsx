@@ -167,12 +167,12 @@ export function OrdersTable({
           {!compact && <OrderBulkActions orders={checked} onSelect={setCheckedIds} />}
           <Table<Order>
             key={filterKey}
-            className="af-data-table af-table-flush"
+            className="af-data-table af-table-flush af-table-dense"
             rowKey="id"
             columns={columns}
             dataSource={rows}
             loading={loading}
-            size="middle"
+            size="small"
             pagination={
               compact
                 ? false

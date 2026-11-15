@@ -69,13 +69,14 @@ export function OrdersPage() {
     [searched, activeGroup, statusValue, method, paymentFilter],
   )
   const filterKey = JSON.stringify(listFilters)
-  // Đổi bộ lọc thì về trang đầu; cỡ trang giữ nguyên.
-  const [paging, setPaging] = useState({ filterKey, page: 0, size: tablePagination.defaultPageSize ?? 10 })
+  // Mỗi trang cố định 10 đơn; đổi bộ lọc thì về trang đầu.
+  const pageSize = tablePagination.defaultPageSize ?? 10
+  const [paging, setPaging] = useState({ filterKey, page: 0 })
   const page = paging.filterKey === filterKey ? paging.page : 0
-  const listQuery = useOrderPage(listFilters, page, paging.size)
+  const listQuery = useOrderPage(listFilters, page, pageSize)
   const visible = listQuery.data?.orders ?? []
   const server: ServerPagination | undefined = listQuery.data?.serverPaged
-    ? { page, size: paging.size, total: listQuery.data.total, onChange: (next, size) => setPaging({ filterKey, page: next, size }) }
+    ? { page, size: pageSize, total: listQuery.data.total, onChange: (next) => setPaging({ filterKey, page: next }) }
     : undefined
   const failed = countsQuery.isError ? countsQuery : listQuery.isError ? listQuery : undefined
   const loading = countsQuery.isPending || listQuery.isPending
@@ -172,20 +173,21 @@ export function OrdersPage() {
                   </Button>
                 )}
               </div>
-              <Input
-                allowClear
-                prefix={<Search size={16} className="af-input-icon" />}
-                placeholder="Tìm mã đơn, tên khách, số điện thoại..."
-                aria-label="Tìm đơn hàng"
-                value={query}
-                onChange={(event) => updateFilters({ query: event.target.value })}
-                className={`af-search ${filterOn(Boolean(query.trim()))}`}
-              />
-            </div>
-            <div className="af-filter-summary">
-              <span role="status">
-                {loading ? 'Đang tải đơn hàng…' : `${listQuery.data?.total ?? 0} / ${countGroup(activeGroup)} đơn hàng`}
-              </span>
+              {/* Số đơn đứng cạnh ô tìm thay vì một dòng riêng, để trang 10 đơn vừa khung hình. */}
+              <div className="af-toolbar-end">
+                <span role="status" className="af-toolbar-count">
+                  {loading ? 'Đang tải…' : `${listQuery.data?.total ?? 0} / ${countGroup(activeGroup)} đơn`}
+                </span>
+                <Input
+                  allowClear
+                  prefix={<Search size={16} className="af-input-icon" />}
+                  placeholder="Tìm mã đơn, tên khách, số điện thoại..."
+                  aria-label="Tìm đơn hàng"
+                  value={query}
+                  onChange={(event) => updateFilters({ query: event.target.value })}
+                  className={`af-search ${filterOn(Boolean(query.trim()))}`}
+                />
+              </div>
             </div>
             <OrdersTable
               filterKey={filterKey}

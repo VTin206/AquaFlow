@@ -89,7 +89,7 @@ export function StaffAccountsPage() {
             </div>
           </div>
           <Table<StaffAccount>
-            className="af-data-table af-table-flush"
+            className="af-data-table af-table-flush af-table-dense"
             rowKey="id"
             loading={query.isPending}
             dataSource={visible}
