@@ -227,9 +227,7 @@ export function ActivityPage() {
           <div className={`af-activity-body${feed.stale ? ' is-stale' : ''}`} aria-busy={feed.stale}>
             {groups.map((group) => (
               <section key={group.key} className="af-activity-day" aria-label={group.label}>
-                <h3>
-                  {group.label} <span>{group.items.length} hoạt động</span>
-                </h3>
+                <h3>{group.label}</h3>
                 <ol>
                   {group.items.map((item) => {
                     const Icon = areaIcons[item.area]

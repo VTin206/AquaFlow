@@ -22,7 +22,8 @@ export function useActivityFeed(filter: ActivityFilter, page: number) {
   const query = useQuery({
     queryKey: ['live', 'activity', 'feed', params, page],
     queryFn: () => activityApi.list({ ...params, page, size: ACTIVITY_PAGE_SIZE }),
-    refetchInterval: 30_000,
+    // Chỉ tự cập nhật ở trang đầu; trang sau đứng yên để dòng không bị xô khi có thao tác mới.
+    refetchInterval: page === 0 ? 30_000 : false,
     // Đổi bộ lọc thì giữ danh sách cũ đến khi có kết quả mới, không chớp trắng.
     placeholderData: keepPreviousData,
   })
