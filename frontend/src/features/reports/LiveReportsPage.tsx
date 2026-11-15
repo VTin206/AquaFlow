@@ -230,6 +230,8 @@ function LiveReportContent() {
   const presets = reportPresets(today).filter(({ label }) => quickRanges.includes(label))
   const activePreset = presets.find(({ value }) => value[0].isSame(dates[0], 'day') && value[1].isSame(dates[1], 'day'))?.label
   const rangeMode = customRange || !activePreset ? CUSTOM_RANGE : activePreset
+  // Tồn kho tính cho cả cửa hàng: lọc kênh/hình thức không đổi số liệu nên khóa lại ở tab này.
+  const filtersApply = tab !== 'inventory'
   return <Page title="Báo cáo"
     actions={<Button loading={exporting} disabled={!report || summary.isError || (tab !== 'overview' && (details.isError || details.isPending)) || !rows.length} onClick={async () => {
         if (!report) return
@@ -247,21 +249,23 @@ function LiveReportContent() {
       }} options={[...presets.map(({ label }) => ({ value: label, label: label.replace(' qua', '') })), CUSTOM_RANGE]} />
       {rangeMode === CUSTOM_RANGE && <DatePicker.RangePicker allowClear={false} value={dates} format="DD/MM/YYYY" presets={reportPresets(today)} disabledDate={date => date.isAfter(today, 'day')}
         onChange={value => { if (value?.[0] && value[1]) { if (value[1].diff(value[0], 'day') > 365 || value[1].isAfter(today, 'day')) { setRangeError('Chọn tối đa 366 ngày và không vượt quá hôm nay.'); return }; setRangeError(undefined); setDates([value[0], value[1]]); setPage(0) } }} />}
-      <Select allowClear placeholder="Mọi kênh" value={channel} className={filterOn(Boolean(channel))} style={{ width: 140 }} options={Object.entries(channelLabels).map(([value, label]) => ({ value, label }))} onChange={value => { setChannel(value); setPage(0) }} />
-      <Select allowClear placeholder="Mọi hình thức" value={method} className={filterOn(Boolean(method))} style={{ width: 150 }} options={[{ value: 'DELIVERY', label: 'Giao tận nơi' }, { value: 'COUNTER', label: 'Tại quầy' }]} onChange={value => { setMethod(value); setPage(0) }} />
+      <Select allowClear placeholder="Mọi kênh" disabled={!filtersApply} value={channel} className={filterOn(Boolean(channel))} style={{ width: 140 }} options={Object.entries(channelLabels).map(([value, label]) => ({ value, label }))} onChange={value => { setChannel(value); setPage(0) }} />
+      <Select allowClear placeholder="Mọi hình thức" disabled={!filtersApply} value={method} className={filterOn(Boolean(method))} style={{ width: 150 }} options={[{ value: 'DELIVERY', label: 'Giao tận nơi' }, { value: 'COUNTER', label: 'Tại quầy' }]} onChange={value => { setMethod(value); setPage(0) }} />
     </div>
     {rangeError && <Alert type="warning" showIcon title={rangeError} />}
     {summary.isError ? <QueryError error={summary.error} onRetry={summary.refetch} /> : <>
       <div className="af-report-kpis">
         {kpis.map(({ title, key, money }) => {
           const value = Number(report?.sales[key] ?? 0)
-          return <Kpi key={key} title={title} loading={summary.isPending} value={money ? currency(value) : value} note={report && <Delta current={value} previous={previous.data?.sales[key]} />} />
+          return <Kpi key={key} title={title} loading={summary.isPending} value={money ? currency(value) : value} note={report && <>
+            <Delta current={value} previous={previous.data?.sales[key]} />
+            {key === 'ordersCreated' && report.sales.ordersCancelled > 0 && <span className="af-report-delta">{report.sales.ordersCancelled} đơn đã hủy</span>}
+          </>} />
         })}
         <Kpi title="Lãi gộp ước tính" loading={summary.isPending}
           value={report && report.sales.unpricedCostLines === 0 ? currency(Number(report.sales.estimatedGrossProfit ?? 0)) : 'Chưa đủ giá nhập'}
           note={report && report.sales.totalCostLines > 0 && report.sales.unpricedCostLines > 0 && <span className="af-report-delta is-down">Thiếu giá nhập cho {report.sales.unpricedCostLines}/{report.sales.totalCostLines} dòng hàng</span>} />
       </div>
-      {report && <Typography.Text type="secondary" className="af-report-scope">Kỳ trước: doanh thu {previous.isError ? 'không tải được' : previous.isPending ? '…' : currency(previous.data?.sales.revenue ?? 0)} · Đơn hủy trong kỳ: {report.sales.ordersCancelled}</Typography.Text>}
       {!!report?.sales.undatedDeliveredOrders && <Alert type="warning" showIcon title={`Có ${report.sales.undatedDeliveredOrders} đơn đã giao thiếu thời điểm giao, chưa thể tính vào doanh thu theo kỳ.`} />}
       <Tabs activeKey={tab} tabBarExtraContent={tab !== 'overview' && <div className="af-report-tab-tools">
         {chartTabs.includes(tab) && <Segmented<'table' | 'chart'> size="small" aria-label="Kiểu xem" value={view} onChange={setView} options={[{ value: 'table', label: 'Bảng' }, { value: 'chart', label: 'Biểu đồ' }]} />}
@@ -289,9 +293,7 @@ function LiveReportContent() {
             </div>
           </Card>
           <Card className="af-report-overview">
-            <ReportList title="Nhập hàng và sổ cọc toàn cửa hàng" columns lines={[
-              { label: 'Phiếu nhập xác nhận', value: report.receipts.count },
-              { label: 'Giá trị hàng đạt nhập', value: report.receipts.value, money: true },
+            <ReportList title="Sổ cọc và vỏ bình toàn cửa hàng" columns lines={[
               { label: 'Số dư cọc cuối kỳ', value: report.deposits.held, money: true },
               { label: 'Vỏ còn ngoài cửa hàng', value: report.deposits.bottlesHeld },
               { label: 'Thu cọc trong kỳ', value: report.deposits.collected, money: true },

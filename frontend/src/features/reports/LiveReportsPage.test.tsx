@@ -57,6 +57,8 @@ test('tồn kho hiển thị giá trị và phân biệt thiếu giá nhập v�
   expect(screen.getAllByText('Chưa có giá nhập')).toHaveLength(2)
   expect(screen.getAllByText('Giá trị tồn cuối kỳ').length).toBeGreaterThan(0)
   expect(screen.queryByRole('button', { name: /Chỉnh kho/ })).toBeNull()
+  // Tồn kho tính cho cả cửa hàng: hai ô lọc kênh và hình thức bị khóa.
+  expect(document.querySelectorAll('.ant-select-disabled')).toHaveLength(2)
   // Cột phụ ẩn mặc định, bật thêm qua nút "Cột".
   expect(screen.queryByText('Hoàn nhập kho')).toBeNull()
   fireEvent.click(screen.getByRole('button', { name: /Cột/ }))

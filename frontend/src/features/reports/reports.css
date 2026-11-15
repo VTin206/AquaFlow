@@ -240,11 +240,6 @@
   max-width: 100%;
   overflow-x: auto;
 }
-.af-report-scope {
-  display: block;
-  margin: 8px 0 16px;
-  font-size: var(--af-fs-sm);
-}
 
 .af-report-column-picker {
   display: flex;
