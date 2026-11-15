@@ -3397,3 +3397,16 @@ html:has(.af-shell) body {
   padding: 0 6px;
   color: var(--af-text-tertiary);
 }
+
+/* Trang Nhân viên: lọc trạng thái và ô tìm cạnh nhóm vai trò. */
+.af-staff-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.af-staff-filters > .ant-select {
+  width: 160px;
+}
+.af-staff-filters > .ant-input-affix-wrapper {
+  width: 260px;
+}
