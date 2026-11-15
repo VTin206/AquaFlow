@@ -1,10 +1,10 @@
 import { useState, type ReactNode } from 'react'
 import { filterOn } from '@/shared/utils/filterOn'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, App, Button, Card, Col, DatePicker, Descriptions, Row, Segmented, Select, Table, Tabs, Tooltip, Typography } from 'antd'
+import { Alert, App, Button, Card, Checkbox, Col, DatePicker, Descriptions, Popover, Row, Segmented, Select, Table, Tabs, Tooltip, Typography } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { Link, useSearchParams } from 'react-router'
-import { ArrowDownRight, ArrowUpRight, Info } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, Columns3, Info } from 'lucide-react'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
@@ -30,6 +30,18 @@ const sections: Record<ReportSection, { title: string; key: string; columns: Rep
     { key: 'name', title: 'Khách hàng' }, { key: 'orders', title: 'Đơn giao trong kỳ' }, { key: 'revenue', title: 'Doanh thu sau hàng trả', money: true }, { key: 'lastOrder', title: 'Mua gần nhất' }, { key: 'daysSinceLastOrder', title: 'Ngày chưa mua' },
   ] },
 }
+/** Cách tính của từng bảng, xem qua ⓘ "Cách tính" thay vì đoạn chữ dài trên bảng. */
+const sectionNotes: Partial<Record<ReportSection, string>> = {
+  inventory: 'Tồn đầu + nhập NCC + hoàn nhập + điều chỉnh − xuất = tồn cuối. Hàng loại bỏ không nhập vào tồn. Số dư lịch sử được tính lùi từ tồn hiện tại và sổ kho. Giá trị tồn cuối = tồn cuối × giá nhập của hàng đạt từ phiếu đã xác nhận gần nhất đến cuối kỳ. Đây là giá trị vận hành, không phải giá vốn kế toán; chưa có giá nhập thì chưa định giá.',
+  delivery: 'Kết quả theo cả đơn và lần giao. Tỷ lệ thành công là số đơn có kết quả cuối trong kỳ là thành công chia cho tổng đơn có kết quả cuối là thành công hoặc thất bại; các cột “Lần” vẫn giữ số attempt để đối soát retry. Giao trễ chỉ tính lần giao thành công sau giờ hẹn.',
+  customers: 'Khách chưa gắn hồ sơ được gộp vào Khách vãng lai. “Ngày chưa mua” tính từ lần giao gần nhất đến ngày cuối kỳ; dùng để nhận diện khách cần chăm sóc lại.',
+}
+/** Bảng nhiều cột: mặc định chỉ hiện cột chính, cột còn lại bật thêm qua nút "Cột" (file Excel vẫn đủ cột). */
+const coreColumns: Partial<Record<ReportSection, string[]>> = {
+  inventory: ['name', 'unit', 'opening', 'received', 'issued', 'closing', 'latestUnitCost', 'closingValue'],
+  delivery: ['driver', 'ordersDispatched', 'ordersSucceeded', 'ordersFailed', 'successRate', 'redelivered', 'late', 'cashDifference'],
+}
+
 const dailyColumns: ReportColumn[] = [{ key: 'date', title: 'Ngày' }, { key: 'revenue', title: 'Doanh thu', money: true }, { key: 'collected', title: 'Thanh toán ròng', money: true }, { key: 'orders', title: 'Đơn tạo' }]
 /**
  * Cột tên (sản phẩm, tài xế, khách) rộng nhất, một dòng, ghim trái khi cuộn ngang; cột số tự co vừa tiêu đề và
@@ -100,6 +112,40 @@ function Kpi({ title, hint, value, note, loading }: { title: string; hint: strin
   )
 }
 
+const shownColumns = (columns: ReportColumn[], core?: string[], extra: string[] = []) =>
+  core ? columns.filter((column) => core.includes(column.key) || extra.includes(column.key)) : columns
+
+/** Trên bảng: ⓘ "Cách tính" bên trái, nút "Cột" bên phải (chỉ bảng có cột phụ). */
+function ReportTableBar({ note, columns, core, extra, onExtraChange }: {
+  note?: string
+  columns: ReportColumn[]
+  core?: string[]
+  extra: string[]
+  onExtraChange: (keys: string[]) => void
+}) {
+  const optional = core ? columns.filter((column) => !core.includes(column.key)) : []
+  if (!note && !optional.length) return null
+  return (
+    <div className="af-report-table-bar">
+      {note ? (
+        <Tooltip title={note} placement="bottomLeft">
+          <span className="af-report-howto" tabIndex={0}>
+            <Info size={14} aria-hidden /> Cách tính
+          </span>
+        </Tooltip>
+      ) : <span />}
+      {optional.length > 0 && (
+        <Popover trigger="click" placement="bottomRight" title="Cột thêm" content={
+          <Checkbox.Group className="af-report-column-picker" value={extra} onChange={(keys) => onExtraChange(keys as string[])}
+            options={optional.map((column) => ({ value: column.key, label: column.title }))} />
+        }>
+          <Button size="small" icon={<Columns3 size={15} />}>Cột{extra.length ? ` (+${extra.length})` : ''}</Button>
+        </Popover>
+      )}
+    </div>
+  )
+}
+
 export function LiveReportsPage() {
   const staff = useStaff()
   return staff?.role === 'ADMIN' ? <LiveReportContent /> : <Alert type="warning" showIcon title="Chỉ ADMIN được xem báo cáo." />
@@ -115,6 +161,7 @@ function LiveReportContent() {
   const [dates, setDates] = useState<[Dayjs, Dayjs]>([today.subtract(29, 'day'), today])
   const [rangeError, setRangeError] = useState<string>()
   const [customRange, setCustomRange] = useState(false)
+  const [extraColumns, setExtraColumns] = useState<Partial<Record<ReportSection, string[]>>>({})
   const [channel, setChannel] = useState<ReportQuery['channel']>()
   const [method, setMethod] = useState<ReportQuery['method']>()
   const [page, setPage] = useState(0)
@@ -198,12 +245,11 @@ function LiveReportContent() {
           ]} /><Typography.Text type="secondary">Sổ cọc/vỏ chỉ phản ánh giao dịch đã lưu; không suy từ đơn hàng.</Typography.Text></Card>
         </> },
         ...Object.entries(sections).map(([key, section]) => ({ key, label: section.title, children: details.isError ? <QueryError error={details.error} onRetry={details.refetch} /> : <Card>
-          {key === 'inventory' && <p>Tồn đầu + nhập NCC + hoàn nhập + điều chỉnh − xuất = tồn cuối. Hàng loại bỏ không nhập vào tồn. Số dư lịch sử được tính lùi từ tồn hiện tại và sổ kho. Giá trị tồn cuối = tồn cuối × giá nhập của hàng đạt từ phiếu đã xác nhận gần nhất đến cuối kỳ. Đây là giá trị vận hành, không phải giá vốn kế toán; chưa có giá nhập thì chưa định giá.</p>}
-          {key === 'delivery' && <p>Kết quả theo cả đơn và lần giao. Tỷ lệ thành công là số đơn có kết quả cuối trong kỳ là thành công chia cho tổng đơn có kết quả cuối là thành công hoặc thất bại; các cột “Lần” vẫn giữ số attempt để đối soát retry. Giao trễ chỉ tính lần giao thành công sau giờ hẹn.</p>}
-          {key === 'customers' && <p>Khách chưa gắn hồ sơ được gộp vào Khách vãng lai. “Ngày chưa mua” tính từ lần giao gần nhất đến ngày cuối kỳ; dùng để nhận diện khách cần chăm sóc lại.</p>}
           {key === 'products' && detailRows.some((row) => num(row.revenue) > 0) && <TopProductsChart rows={detailRows.map((row) => ({ name: String(row.name), unit: String(row.unit), sold: num(row.sold), revenue: num(row.revenue) }))} />}
           {key === 'delivery' && detailRows.length > 0 && <DriverDeliveryChart rows={detailRows.map((row) => ({ driver: String(row.driver), delivered: num(row.delivered), late: num(row.late), failed: num(row.failed) }))} />}
-          <Table<ReportRow> rowKey={section.key} loading={details.isPending} columns={key === 'customers' ? customerColumns : columnsOf(section.columns)} dataSource={details.data?.content ?? []} scroll={{ x: 'max-content' }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : 'Chưa có dữ liệu trong kỳ.' }}
+          <ReportTableBar note={sectionNotes[key as ReportSection]} columns={section.columns} core={coreColumns[key as ReportSection]} extra={extraColumns[key as ReportSection] ?? []}
+            onExtraChange={(keys) => setExtraColumns((previous) => ({ ...previous, [key]: keys }))} />
+          <Table<ReportRow> rowKey={section.key} loading={details.isPending} columns={key === 'customers' ? customerColumns : columnsOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection]))} dataSource={details.data?.content ?? []} scroll={{ x: 'max-content' }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : 'Chưa có dữ liệu trong kỳ.' }}
             pagination={{ current: page + 1, pageSize: size, total: details.data?.totalElements ?? 0, showSizeChanger: true, pageSizeOptions: [20, 50, 100], onChange: (next, nextSize) => { setPage(nextSize === size ? next - 1 : 0); setSize(nextSize) } }} />
         </Card> })),
       ]} />

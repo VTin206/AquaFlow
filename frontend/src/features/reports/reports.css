@@ -254,3 +254,25 @@
   margin: 8px 0 16px;
   font-size: var(--af-fs-sm);
 }
+
+/* Trên bảng báo cáo: "Cách tính" (ⓘ) bên trái, nút chọn cột bên phải. */
+.af-report-table-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.af-report-howto {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--af-text-secondary);
+  font-size: var(--af-fs-sm);
+  cursor: help;
+}
+.af-report-column-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

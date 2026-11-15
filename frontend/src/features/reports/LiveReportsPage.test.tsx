@@ -57,6 +57,11 @@ test('tồn kho hiển thị giá trị và phân biệt thiếu giá nhập v�
   expect(screen.getAllByText('Chưa có giá nhập')).toHaveLength(2)
   expect(screen.getAllByText('Giá trị tồn cuối kỳ').length).toBeGreaterThan(0)
   expect(screen.queryByRole('button', { name: /Chỉnh kho/ })).toBeNull()
+  // Cột phụ ẩn mặc định, bật thêm qua nút "Cột".
+  expect(screen.queryByText('Hoàn nhập kho')).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: /Cột/ }))
+  fireEvent.click(await screen.findByLabelText('Hoàn nhập kho'))
+  await waitFor(() => expect(screen.getAllByText('Hoàn nhập kho').length).toBeGreaterThan(1))
 })
 test.each(['inventory', 'delivery'])('%s xử lý loading, lỗi, thử lại và kỳ rỗng', async tab => {
   let reject!: (error: Error) => void
