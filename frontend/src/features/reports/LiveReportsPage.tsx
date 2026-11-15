@@ -205,7 +205,7 @@ function rangeFromParams(from: string | null, to: string | null, today: Dayjs): 
 }
 
 const CUSTOM_RANGE = 'Tùy chọn'
-const quickRanges = ['Hôm nay', '7 ngày qua', '30 ngày qua', 'Tháng này', 'Tháng trước']
+const quickRanges = ['Hôm nay', 'Tháng này', 'Tháng trước']
 
 function LiveReportContent() {
   const { message } = App.useApp()
@@ -270,7 +270,7 @@ function LiveReportContent() {
         const preset = presets.find(({ label }) => label === value)
         if (!preset) return
         setCustomRange(false); setRangeError(undefined); setDates([preset.value[0], preset.value[1]]); setPage(0)
-      }} options={[...presets.map(({ label }) => ({ value: label, label: label.replace(' qua', '') })), CUSTOM_RANGE]} />
+      }} options={[...presets.map(({ label }) => label), CUSTOM_RANGE]} />
       {rangeMode === CUSTOM_RANGE && <DatePicker.RangePicker allowClear={false} value={dates} format="DD/MM/YYYY" presets={reportPresets(today)} disabledDate={date => date.isAfter(today, 'day')}
         onChange={value => { if (value?.[0] && value[1]) { if (value[1].diff(value[0], 'day') > 365 || value[1].isAfter(today, 'day')) { setRangeError('Chọn tối đa 366 ngày và không vượt quá hôm nay.'); return }; setRangeError(undefined); setDates([value[0], value[1]]); setPage(0) } }} />}
       <Select allowClear placeholder="Mọi kênh" disabled={!filtersApply} value={channel} className={filterOn(Boolean(channel))} style={{ width: 140 }} options={Object.entries(channelLabels).map(([value, label]) => ({ value, label }))} onChange={value => { setChannel(value); setPage(0) }} />

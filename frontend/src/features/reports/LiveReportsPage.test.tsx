@@ -37,8 +37,8 @@ test('giao hàng hiển thị giao lại và đổi kỳ gửi đúng filter đ�
   expect(screen.getAllByText('Giao trễ hẹn').length).toBeGreaterThan(0)
   // Ô chọn khoảng ngày chỉ hiện khi chọn "Tùy chọn"; chọn nhanh kỳ thì gửi ngay khoảng ngày tương ứng.
   expect(screen.queryByText('Đổi kỳ test')).toBeNull()
-  fireEvent.click(screen.getByText('7 ngày'))
-  await waitFor(() => expect(reportApi.section).toHaveBeenLastCalledWith('delivery', expect.objectContaining({ from: dayjs().subtract(6, 'day').format('YYYY-MM-DD') }), 0, 20))
+  fireEvent.click(screen.getByText('Hôm nay'))
+  await waitFor(() => expect(reportApi.section).toHaveBeenLastCalledWith('delivery', expect.objectContaining({ from: dayjs().format('YYYY-MM-DD'), to: dayjs().format('YYYY-MM-DD') }), 0, 20))
   fireEvent.click(screen.getByText('Tùy chọn'))
   fireEvent.click(screen.getByText('Đổi kỳ test'))
   await waitFor(() => expect(reportApi.section).toHaveBeenLastCalledWith('delivery', expect.objectContaining({ from: '2026-01-01', to: '2026-01-07' }), 0, 20))
