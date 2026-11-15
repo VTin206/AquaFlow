@@ -20,6 +20,7 @@ const DriverPage = lazy(() => import('@/features/delivery/DriverPage').then((m) 
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 const StaffAccountsPage = lazy(() => import('@/features/auth/StaffAccountsPage').then((m) => ({ default: m.StaffAccountsPage })))
 const ActivityPage = lazy(() => import('@/features/activity/ActivityPage').then((m) => ({ default: m.ActivityPage })))
+const ArticlesPage = lazy(() => import('@/features/articles/ArticlesPage').then((m) => ({ default: m.ArticlesPage })))
 const ShopLayout = lazy(() => import('@/features/shop/ShopLayout').then((m) => ({ default: m.ShopLayout })))
 const ArticlePage = lazy(() => import('@/features/shop/ArticlePage').then((m) => ({ default: m.ArticlePage })))
 const ShopAccountPage = lazy(() => import('@/features/shop/ShopAccountPage').then((m) => ({ default: m.ShopAccountPage })))
@@ -78,6 +79,7 @@ export function App() {
             <Route path="delivery" element={<DeliveryPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="activity" element={<ActivityPage />} />
+            <Route path="articles" element={<ArticlesPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

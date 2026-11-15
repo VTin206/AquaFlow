@@ -1,6 +1,6 @@
 import { ArrowRight, Clock3, Mail, MapPin, Phone, ShieldCheck, Truck } from 'lucide-react'
 import { Link } from 'react-router'
-import { shopArticles, shopPolicies } from '../shopNews'
+import { usePublishedArticles } from '@/features/articles/useArticles'
 
 type Props = {
   /** Thông tin liên hệ công khai (lấy từ /store-profile); thiếu thì ẩn phần liên hệ. */
@@ -10,7 +10,9 @@ type Props = {
 export function ShopFooter({ contact }: Props) {
   const tel = contact?.phone?.replace(/\s/g, '')
   const hasContact = Boolean(contact?.phone || contact?.address || contact?.email)
-  const latest = shopArticles[0]
+  // Lỗi tải thì chỉ ẩn link bài viết; chân trang vẫn hiện liên hệ và các link khác.
+  const latest = usePublishedArticles('NEWS').data?.[0]
+  const policies = usePublishedArticles('POLICY').data ?? []
   const openingHours = contact?.openingHours?.trim()
 
   return (
@@ -60,16 +62,18 @@ export function ShopFooter({ contact }: Props) {
             </li>
           </ul>
         </nav>
-        <nav aria-labelledby="af-footer-policy">
-          <h2 id="af-footer-policy">Chính sách</h2>
-          <ul>
-            {shopPolicies.map((policy) => (
-              <li key={policy.slug}>
-                <Link to={`/shop/policy/${policy.slug}`}>{policy.title}</Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        {policies.length > 0 && (
+          <nav aria-labelledby="af-footer-policy">
+            <h2 id="af-footer-policy">Chính sách</h2>
+            <ul>
+              {policies.map((policy) => (
+                <li key={policy.slug}>
+                  <Link to={`/shop/policy/${policy.slug}`}>{policy.title}</Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
         {hasContact && (
           <section aria-labelledby="af-footer-contact">
             <h2 id="af-footer-contact">Liên hệ</h2>
