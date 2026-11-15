@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { filterOn } from '@/shared/utils/filterOn'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, App, Button, Card, Col, DatePicker, Descriptions, Row, Segmented, Select, Statistic, Table, Tabs, Typography } from 'antd'
+import { Alert, App, Button, Card, Col, DatePicker, Descriptions, Row, Segmented, Select, Table, Tabs, Tooltip, Typography } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { Link, useSearchParams } from 'react-router'
-import { ArrowDownRight, ArrowUpRight } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, Info } from 'lucide-react'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
@@ -63,28 +63,40 @@ const customerColumns = columnsOf(sections.customers.columns).map((column) => co
   ),
 })
 
+/** Chỉ số chính: nhãn ngắn, ý nghĩa đầy đủ nằm trong ⓘ. */
 const kpis = [
-  { title: 'Doanh thu sau giảm giá / hàng trả', key: 'revenue', money: true },
-  { title: 'Thanh toán ròng đã xác nhận', key: 'netPayments', money: true },
-  { title: 'Đơn đã giao trong kỳ', key: 'ordersDelivered', money: false },
-  { title: 'Đơn tạo trong kỳ', key: 'ordersCreated', money: false },
+  { title: 'Doanh thu', hint: 'Doanh thu sau giảm giá và hàng khách trả, tính theo đơn đã giao trong kỳ.', key: 'revenue', money: true },
+  { title: 'Đã thu', hint: 'Thanh toán ròng đã xác nhận trong kỳ (thu trừ hoàn).', key: 'netPayments', money: true },
+  { title: 'Đơn đã giao', hint: 'Số đơn giao thành công trong kỳ.', key: 'ordersDelivered', money: false },
+  { title: 'Đơn tạo', hint: 'Số đơn được tạo trong kỳ, gồm cả đơn chưa giao.', key: 'ordersCreated', money: false },
 ] as const
 
-/** Thay đổi so với kỳ trước. */
+/** Mức tăng/giảm so với kỳ trước; kỳ trước chưa có số liệu thì không hiện gì. */
 function Delta({ current, previous }: { current: number; previous?: number }) {
-  if (previous === undefined) return null
-  const change = previous === 0 ? 0 : Math.round(((current - previous) / Math.abs(previous)) * 100)
-  if (change === 0)
-    return (
-      <Typography.Text type="secondary" className="af-report-delta">
-        {previous === 0 && current ? 'Kỳ trước chưa có số liệu' : 'Không đổi so với kỳ trước'}
-      </Typography.Text>
-    )
+  if (previous === undefined || previous === 0) return null
+  const change = Math.round(((current - previous) / Math.abs(previous)) * 100)
+  if (change === 0) return <span className="af-report-delta">Không đổi so với kỳ trước</span>
   const Icon = change > 0 ? ArrowUpRight : ArrowDownRight
   return (
-    <Typography.Text type={change > 0 ? 'success' : 'danger'} className="af-report-delta">
+    <span className={`af-report-delta ${change > 0 ? 'is-up' : 'is-down'}`}>
       <Icon size={14} aria-hidden /> {change > 0 ? 'Tăng' : 'Giảm'} {Math.abs(change)}% so với kỳ trước
-    </Typography.Text>
+    </span>
+  )
+}
+
+/** Một chỉ số trong hàng chỉ số chính: chữ và số, không đóng khung thẻ. */
+function Kpi({ title, hint, value, note, loading }: { title: string; hint: string; value: ReactNode; note?: ReactNode; loading: boolean }) {
+  return (
+    <div className="af-report-kpi">
+      <span className="af-report-kpi-label">
+        {title}
+        <Tooltip title={hint}>
+          <Info size={13} aria-label={hint} className="af-report-kpi-hint" />
+        </Tooltip>
+      </span>
+      <strong className="af-report-kpi-value">{loading ? '…' : value}</strong>
+      {note}
+    </div>
   )
 }
 
@@ -150,14 +162,16 @@ function LiveReportContent() {
     {rangeError && <Alert type="warning" showIcon title={rangeError} />}
     <Typography.Text type="secondary" className="af-report-scope">Kênh và hình thức áp dụng cho doanh thu, thanh toán, sản phẩm, khách hàng và giao hàng. Kho, nhập hàng, sổ cọc và đối soát tài xế tính cho cả cửa hàng.</Typography.Text>
     {summary.isError ? <QueryError error={summary.error} onRetry={summary.refetch} /> : <>
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        {kpis.map(({ title, key, money }) => {
+      <div className="af-report-kpis">
+        {kpis.map(({ title, hint, key, money }) => {
           const value = Number(report?.sales[key] ?? 0)
-          return <Col flex="1 1 220px" key={key}><Card loading={summary.isPending}><Statistic title={title} value={money ? currency(value) : value} />{report && <Delta current={value} previous={previous.data?.sales[key]} />}</Card></Col>
+          return <Kpi key={key} title={title} hint={hint} loading={summary.isPending} value={money ? currency(value) : value} note={report && <Delta current={value} previous={previous.data?.sales[key]} />} />
         })}
-        <Col flex="1 1 220px"><Card loading={summary.isPending}><Statistic title="Lãi gộp ước tính" value={report && report.sales.unpricedCostLines === 0 ? currency(Number(report.sales.estimatedGrossProfit ?? 0)) : 'Chưa đủ giá nhập'} /><Typography.Text type="secondary">{report && report.sales.totalCostLines > 0 && report.sales.unpricedCostLines > 0 ? `Thiếu giá nhập cho ${report.sales.unpricedCostLines}/${report.sales.totalCostLines} dòng hàng.` : 'Dùng giá nhập xác nhận gần nhất đến cuối kỳ.'}</Typography.Text></Card></Col>
-      </Row>
-      {report && <p>Doanh thu kỳ trước: {previous.isError ? 'Không tải được' : previous.isPending ? 'Đang tải…' : currency(previous.data?.sales.revenue ?? 0)} · Đơn hủy trong kỳ: {report.sales.ordersCancelled}</p>}
+        <Kpi title="Lãi gộp ước tính" hint="Doanh thu trừ giá vốn ước tính theo giá nhập xác nhận gần nhất đến cuối kỳ; không thay giá vốn kế toán." loading={summary.isPending}
+          value={report && report.sales.unpricedCostLines === 0 ? currency(Number(report.sales.estimatedGrossProfit ?? 0)) : 'Chưa đủ giá nhập'}
+          note={report && report.sales.totalCostLines > 0 && report.sales.unpricedCostLines > 0 && <span className="af-report-delta is-down">Thiếu giá nhập cho {report.sales.unpricedCostLines}/{report.sales.totalCostLines} dòng hàng</span>} />
+      </div>
+      {report && <Typography.Text type="secondary" className="af-report-scope">Kỳ trước: doanh thu {previous.isError ? 'không tải được' : previous.isPending ? '…' : currency(previous.data?.sales.revenue ?? 0)} · Đơn hủy trong kỳ: {report.sales.ordersCancelled}</Typography.Text>}
       {!!report?.sales.undatedDeliveredOrders && <Alert type="warning" showIcon title={`Có ${report.sales.undatedDeliveredOrders} đơn đã giao thiếu thời điểm giao, chưa thể tính vào doanh thu theo kỳ.`} />}
       <Tabs activeKey={tab} onChange={key => { setSearch(params => { params.set('tab', key); return params }, { replace: true }); setPage(0) }} items={[
         { key: 'overview', label: 'Tổng quan', children: report && <>
