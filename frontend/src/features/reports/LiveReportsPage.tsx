@@ -10,7 +10,8 @@ import { PeriodPicker } from '@/shared/components/PeriodPicker'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { reportApi, channelLabels, type LiveReport, type ReportQuery, type ReportSection, type ReportRow } from './reportApi'
-import { DriverDeliveryChart, RevenueChart, TopProductsChart } from './charts'
+import { DriverDeliveryChart, ProductShareChart, RevenueChart, TopProductsChart } from './charts'
+import { metricLabels, rankProducts, useProductSales, type SalesMetric } from './productSales'
 import { autoGranularity, granularityLabels, groupRevenue, reportPresets, type Granularity } from './periods'
 import { previousRange } from './reportService'
 import type { ReportColumn } from './exportLiveReport'
@@ -190,6 +191,35 @@ function ColumnPicker({ columns, core, extra, onExtraChange }: {
   )
 }
 
+/**
+ * Biểu đồ tab Sản phẩm bán: xếp hạng và tỷ lệ tính trên mọi sản phẩm của kỳ (không theo trang bảng).
+ * Mặc định theo số lượng vì hàng bán nhiều mà giá thấp (bình 19L) dễ bị hàng giá cao che khi xếp theo tiền.
+ */
+function ProductCharts({ query }: { query: ReportQuery }) {
+  const [metric, setMetric] = useState<SalesMetric>('quantity')
+  const sales = useProductSales(query)
+  if (sales.isError) return <QueryError error={sales.error} onRetry={sales.refetch} />
+  if (sales.isPending) return <Typography.Text type="secondary">Đang tải báo cáo…</Typography.Text>
+  if (!rankProducts(sales.data ?? [], metric).length) return <Typography.Text type="secondary">Chưa có dữ liệu trong kỳ.</Typography.Text>
+  return <>
+    <div className="af-report-chart-tools">
+      <Segmented<SalesMetric> size="small" aria-label="Xếp hạng theo" value={metric} onChange={setMetric}
+        options={(Object.keys(metricLabels) as SalesMetric[]).map((value) => ({ value, label: `Theo ${metricLabels[value].toLowerCase()}` }))} />
+    </div>
+    <div className="af-report-products-charts">
+      <section>
+        <h3>8 sản phẩm bán chạy nhất</h3>
+        <TopProductsChart rows={sales.data ?? []} metric={metric} />
+      </section>
+      <section>
+        <h3>Tỷ lệ {metricLabels[metric].toLowerCase()}</h3>
+        <ProductShareChart rows={sales.data ?? []} metric={metric} />
+      </section>
+    </div>
+    {metric === 'quantity' && <Typography.Text type="secondary" className="af-report-chart-note">Số lượng đã trừ hàng khách trả, cộng theo đơn vị bán của từng sản phẩm (bình, thùng, chai…).</Typography.Text>}
+  </>
+}
+
 export function LiveReportsPage() {
   const staff = useStaff()
   return staff?.role === 'ADMIN' ? <LiveReportContent /> : <Alert type="warning" showIcon title="Chỉ ADMIN được xem báo cáo." />
@@ -333,12 +363,14 @@ function LiveReportContent() {
           </Card>
         </> },
         ...Object.entries(sections).map(([key, section]) => ({ key, label: section.title, children: details.isError ? <QueryError error={details.error} onRetry={details.refetch} /> : <Card>
-          {chartTabs.includes(key) && view === 'chart' ? (
+          {key === 'products' && view === 'chart' ? (
+            <ProductCharts query={query} />
+          ) : chartTabs.includes(key) && view === 'chart' ? (
             details.isPending ? <Typography.Text type="secondary">Đang tải báo cáo…</Typography.Text>
               : !detailRows.length ? <Typography.Text type="secondary">Chưa có dữ liệu trong kỳ.</Typography.Text>
               : <>
-                <Typography.Text type="secondary" className="af-report-chart-note">{key === 'products' ? '8 sản phẩm doanh thu cao nhất' : '8 tài xế nhiều lượt giao nhất'} trong trang đang xem. Đủ số liệu xem ở chế độ Bảng.</Typography.Text>
-                {key === 'products' ? <TopProductsChart rows={detailRows.map((row) => ({ name: String(row.name), unit: String(row.unit), sold: num(row.sold), revenue: num(row.revenue) }))} /> : <DriverDeliveryChart rows={detailRows.map((row) => ({ driver: String(row.driver), delivered: num(row.delivered), late: num(row.late), failed: num(row.failed) }))} />}
+                <Typography.Text type="secondary" className="af-report-chart-note">8 tài xế nhiều lượt giao nhất trong trang đang xem. Đủ số liệu xem ở chế độ Bảng.</Typography.Text>
+                <DriverDeliveryChart rows={detailRows.map((row) => ({ driver: String(row.driver), delivered: num(row.delivered), late: num(row.late), failed: num(row.failed) }))} />
               </>
           ) : (
             <Table<ReportRow> className="af-report-table" size="middle" rowKey={section.key} loading={details.isPending} columns={key === 'customers' ? customerColumns : columnsOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection]))} dataSource={details.data?.content ?? []} scroll={{ x: tableWidthOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection])), y: reportTableHeight }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : 'Chưa có dữ liệu trong kỳ.' }}

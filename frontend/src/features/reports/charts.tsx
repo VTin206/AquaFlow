@@ -1,10 +1,26 @@
 import type { ReactNode } from 'react'
 import { fontSizes } from '@/app/typography'
 import { Grid } from 'antd'
-import { Bar, BarChart, CartesianGrid, ComposedChart, LabelList, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ComposedChart,
+  LabelList,
+  Line,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { compactCurrency, currency } from '@/shared/utils/format'
 import type { RevenueBucket } from './periods'
-import type { DriverReportRow, ProductReportRow } from './reportService'
+import { metricLabels, productShares, rankProducts, type ProductSale, type ProductShare, type SalesMetric } from './productSales'
+import type { DriverReportRow } from './reportService'
+import './reports.css'
 
 // Màu lấy từ biến CSS nên biểu đồ tự đổi theo chế độ sáng/tối.
 const axisTick = { fill: 'var(--af-text-tertiary)', fontSize: fontSizes.xs }
@@ -122,18 +138,27 @@ export function RevenueChart({ data }: { data: RevenueBucket[] }) {
 const TOP_PRODUCTS = 8
 const TOP_DRIVERS = 8
 
-/** Top sản phẩm theo doanh thu, thanh ngang để tên dài vẫn đọc được. */
-export function TopProductsChart({ rows }: { rows: Pick<ProductReportRow, 'name' | 'unit' | 'sold' | 'revenue'>[] }) {
-  // Màn hẹp thu cột tên lại để thanh còn đủ dài mà so.
-  const wide = Grid.useBreakpoint().md !== false
-  const data = rows
-    .filter((row) => row.revenue > 0)
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, TOP_PRODUCTS)
+const formatMetric = (metric: SalesMetric, value: number) => (metric === 'revenue' ? compactCurrency(value) : value.toLocaleString('vi-VN'))
+
+/** Sản phẩm bán chạy theo số lượng hoặc doanh thu, thanh ngang để tên dài vẫn đọc được. */
+export function TopProductsChart({
+  rows,
+  metric = 'quantity',
+  limit = TOP_PRODUCTS,
+  compact = false,
+}: {
+  rows: ProductSale[]
+  metric?: SalesMetric
+  limit?: number
+  compact?: boolean
+}) {
+  // Màn hẹp (hoặc thẻ nhỏ trên trang tổng quan) thu cột tên lại để thanh còn đủ dài mà so.
+  const wide = Grid.useBreakpoint().md !== false && !compact
+  const data = rankProducts(rows, metric, limit)
   return (
     <div
       role="img"
-      aria-label={`Sản phẩm doanh thu cao nhất. ${data.map((row) => `${row.name}: ${compactCurrency(row.revenue)}`).join('; ')}`}
+      aria-label={`Sản phẩm bán chạy theo ${metricLabels[metric].toLowerCase()}. ${data.map((row) => `${row.name}: ${formatMetric(metric, row[metric])}`).join('; ')}`}
     >
       <ResponsiveContainer width="100%" height={data.length * 36 + 8}>
         <BarChart layout="vertical" data={data} margin={{ top: 4, right: 56, bottom: 4, left: 0 }} barCategoryGap={8}>
@@ -141,36 +166,119 @@ export function TopProductsChart({ rows }: { rows: Pick<ProductReportRow, 'name'
           <YAxis
             type="category"
             dataKey="name"
-            width={wide ? 230 : 120}
+            width={wide ? 230 : 130}
             tickLine={false}
             axisLine={false}
-            tick={(props) => <CategoryTick {...props} maxLength={wide ? 30 : 15} />}
+            tick={(props) => <CategoryTick {...props} maxLength={wide ? 30 : 17} />}
           />
           <Tooltip
             cursor={hoverCursor}
             content={({ active, payload }) => {
-              const row = active ? (payload?.[0]?.payload as ProductReportRow | undefined) : undefined
+              const row = active ? (payload?.[0]?.payload as ProductSale | undefined) : undefined
               return row ? (
                 <ChartTooltip
                   title={row.name}
                   rows={[
-                    { label: 'Doanh thu', color: 'var(--af-primary)', value: currency(row.revenue) },
-                    { label: 'Đã bán', color: 'transparent', value: `${row.sold} ${row.unit}` },
+                    {
+                      label: 'Đã bán',
+                      color: metric === 'quantity' ? 'var(--af-primary)' : 'transparent',
+                      value: `${row.quantity.toLocaleString('vi-VN')} ${row.unit}`,
+                    },
+                    { label: 'Doanh thu', color: metric === 'revenue' ? 'var(--af-primary)' : 'transparent', value: currency(row.revenue) },
                   ]}
                 />
               ) : null
             }}
           />
-          <Bar dataKey="revenue" fill="var(--af-primary)" radius={[0, 4, 4, 0]} maxBarSize={20} isAnimationActive={false}>
+          <Bar dataKey={metric} fill="var(--af-primary)" radius={[0, 4, 4, 0]} maxBarSize={20} isAnimationActive={false}>
             <LabelList
-              dataKey="revenue"
+              dataKey={metric}
               position="right"
-              formatter={(value) => compactCurrency(Number(value))}
+              formatter={(value) => formatMetric(metric, Number(value))}
               style={{ fill: 'var(--af-text-secondary)', fontSize: fontSizes.xs }}
             />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+    </div>
+  )
+}
+
+/** Màu lát theo thứ tự cố định (lát 1 luôn màu 1); phần "Khác" dùng màu xám trung tính. */
+const shareColors = ['var(--af-chart-cat1)', 'var(--af-chart-cat2)', 'var(--af-chart-cat3)', 'var(--af-chart-cat4)', 'var(--af-chart-cat5)']
+const sliceColor = (slice: ProductShare, index: number) => (slice.other ? 'var(--af-chart-other)' : shareColors[index % shareColors.length])
+const percent = (share: number) => `${(share * 100).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}%`
+
+/**
+ * Tỷ lệ từng sản phẩm trên tổng số bán, dạng vành khuyên. Chú thích bên cạnh ghi tên, % và số
+ * nên không phải dựa vào màu để đọc.
+ */
+export function ProductShareChart({
+  rows,
+  metric = 'quantity',
+  slices = 5,
+}: {
+  rows: ProductSale[]
+  metric?: SalesMetric
+  slices?: number
+}) {
+  const data = productShares(rows, metric, Math.min(slices, shareColors.length))
+  const total = data.reduce((sum, slice) => sum + slice.value, 0)
+  return (
+    <div className="af-chart af-share-chart">
+      <div
+        className="af-share-chart-pie"
+        role="img"
+        aria-label={`Tỷ lệ ${metricLabels[metric].toLowerCase()} theo sản phẩm. ${data.map((slice) => `${slice.name}: ${percent(slice.share)}`).join('; ')}`}
+      >
+        <ResponsiveContainer width="100%" height={200}>
+          <PieChart>
+            <Tooltip
+              content={({ active, payload }) => {
+                const slice = active ? (payload?.[0]?.payload as ProductShare | undefined) : undefined
+                if (!slice) return null
+                const index = data.indexOf(slice)
+                return (
+                  <ChartTooltip
+                    title={slice.name}
+                    rows={[{ label: percent(slice.share), color: sliceColor(slice, index), value: formatMetric(metric, slice.value) }]}
+                  />
+                )
+              }}
+            />
+            <Pie
+              data={data}
+              dataKey="value"
+              nameKey="name"
+              innerRadius="58%"
+              outerRadius="92%"
+              startAngle={90}
+              endAngle={-270}
+              stroke="var(--af-surface)"
+              strokeWidth={2}
+              isAnimationActive={false}
+            >
+              {data.map((slice, index) => (
+                <Cell key={slice.key} fill={sliceColor(slice, index)} />
+              ))}
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="af-share-chart-total" aria-hidden>
+          <b>{formatMetric(metric, total)}</b>
+          <small>{metric === 'quantity' ? 'đơn vị bán' : 'doanh thu'}</small>
+        </div>
+      </div>
+      <ul className="af-share-chart-legend">
+        {data.map((slice, index) => (
+          <li key={slice.key}>
+            <i style={{ background: sliceColor(slice, index) }} aria-hidden />
+            <span title={slice.name}>{slice.name}</span>
+            <b>{percent(slice.share)}</b>
+            <small>{formatMetric(metric, slice.value)}</small>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

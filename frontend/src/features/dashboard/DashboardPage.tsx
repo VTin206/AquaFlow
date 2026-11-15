@@ -3,6 +3,7 @@ import { Button, Card, Col, Empty, Row, Space, Tag } from 'antd'
 import { ArrowRight, PackagePlus, Plus } from 'lucide-react'
 import { Link } from 'react-router'
 import { deliveryToday } from './dashboardData'
+import { BestSellersCard } from './BestSellersCard'
 import { Page } from '@/shared/components/Page'
 import { PanelHeading } from '@/shared/components/PanelHeading'
 import { QueryError } from '@/shared/components/QueryError'
@@ -355,28 +356,35 @@ export function DashboardPage() {
       </Row>
 
       {showRevenue && (
-        <Card
-          title="Doanh thu 7 ngày"
-          className="af-card af-dash-revenue"
-          loading={revenueQuery.isPending}
-          extra={
-            <Link to="/reports" className="af-text-link">
-              Xem báo cáo <ArrowRight size={14} />
-            </Link>
-          }
-        >
-          {revenueQuery.isError ? (
-            <QueryError error={revenueQuery.error} onRetry={revenueQuery.refetch} />
-          ) : !lastWeek.some((day) => day.revenue !== 0) ? (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có doanh thu 7 ngày qua." />
-          ) : (
-            <BarChart
-              data={lastWeek.map((day) => ({ label: shortDate(day.date), value: day.revenue }))}
-              formatValue={compactCurrency}
-              height={180}
-            />
-          )}
-        </Card>
+        <Row gutter={[16, 16]} className="af-dash-revenue">
+          <Col xs={24} xl={14}>
+            <Card
+              title="Doanh thu 7 ngày"
+              className="af-card"
+              loading={revenueQuery.isPending}
+              extra={
+                <Link to="/reports" className="af-text-link">
+                  Xem báo cáo <ArrowRight size={14} />
+                </Link>
+              }
+            >
+              {revenueQuery.isError ? (
+                <QueryError error={revenueQuery.error} onRetry={revenueQuery.refetch} />
+              ) : !lastWeek.some((day) => day.revenue !== 0) ? (
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có doanh thu 7 ngày qua." />
+              ) : (
+                <BarChart
+                  data={lastWeek.map((day) => ({ label: shortDate(day.date), value: day.revenue }))}
+                  formatValue={compactCurrency}
+                  height={180}
+                />
+              )}
+            </Card>
+          </Col>
+          <Col xs={24} xl={10}>
+            <BestSellersCard />
+          </Col>
+        </Row>
       )}
 
       {creatingOrder && <OrderIntakeModal onClose={() => setCreatingOrder(false)} onCreated={setOpenedOrder} />}

@@ -1209,6 +1209,10 @@ body {
 .af-dash-revenue {
   margin-top: 16px;
 }
+/* Hai thẻ doanh thu và bán chạy đứng cạnh nhau thì cao bằng nhau. */
+.af-dash-revenue .af-card {
+  height: 100%;
+}
 .af-dash-tasks,
 .af-dash-shipping {
   list-style: none;
