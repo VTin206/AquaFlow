@@ -17,6 +17,8 @@
   font-variant-numeric: tabular-nums;
 }
 .af-report-range .ant-picker-range-separator {
+  display: inline-flex;
+  align-items: center;
   padding: 0 6px;
   color: var(--af-text-tertiary);
 }
