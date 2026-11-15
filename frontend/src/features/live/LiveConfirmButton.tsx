@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Popconfirm, Tooltip, type ButtonProps } from 'antd'
 import { Check } from 'lucide-react'
+import { useNavigate } from 'react-router'
 import type { Order } from '@/features/orders/types'
 import { invalidateLiveData } from './invalidateLiveData'
 import { confirmOrderHint, orderApi } from './orderApi'
@@ -17,12 +18,30 @@ export function LiveConfirmButton({
 }) {
   const { message } = App.useApp()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const code = order.code ?? order.id
   const confirm = useMutation({
     mutationFn: () => orderApi.updateStatus(Number(order.id), 'CONFIRMED'),
     onSuccess: () => {
       void invalidateLiveData(queryClient)
-      message.success(`Đã xác nhận đơn ${code} và giữ hàng trong kho.`)
+      const key = `confirmed-${order.id}`
+      message.success({
+        key,
+        duration: 6,
+        content: (
+          <>
+            Đã xác nhận đơn {code} và giữ hàng trong kho.{' '}
+            <a
+              onClick={() => {
+                message.destroy(key)
+                navigate(`/orders?order=${encodeURIComponent(order.id)}`)
+              }}
+            >
+              Xem đơn
+            </a>
+          </>
+        ),
+      })
     },
     // Đơn có thể đã đổi trạng thái ở nơi khác (409): tải lại để hiện trạng thái mới.
     onError: (error: Error) => {

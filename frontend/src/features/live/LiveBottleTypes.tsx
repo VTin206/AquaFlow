@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Dropdown, Form, Input, InputNumber, Modal, Segmented, Space, Table, Tag, Tooltip } from 'antd'
-import { Ellipsis, Pencil, Plus, RefreshCw } from 'lucide-react'
+import { Ellipsis, Pencil, Plus, Search, RefreshCw } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
 import { useConfirm } from '@/shared/components/confirm'
@@ -10,8 +10,9 @@ import { currency } from '@/shared/utils/format'
 import { matchesSearch } from '@/shared/utils/search'
 import { useStaff } from '@/features/auth/useStaff'
 import { bottleTypeApi, type BottleType, type BottleTypeDraft } from './bottleTypeApi'
+import { ApiError } from '@/shared/api/client'
 import { invalidateLiveData } from './invalidateLiveData'
-import { modalWidth } from '@/shared/utils/modal'
+import { modalFixedBody, modalFixedWidth, modalWidth } from '@/shared/utils/modal'
 import { modalTableScrollHeight } from '@/shared/utils/table'
 
 function BottleTypeForm({ item, onClose }: { item: BottleType | null; onClose: () => void }) {
@@ -26,7 +27,9 @@ function BottleTypeForm({ item, onClose }: { item: BottleType | null; onClose: (
       message.success(item ? 'Đã cập nhật tiền cọc.' : 'Đã thêm loại vỏ.')
       onClose()
     },
-    onError: (error: Error) => message.error(error.message),
+    // Trùng tên (409): nêu rõ tên vừa nhập trong ngoặc kép.
+    onError: (error: Error, draft) =>
+      message.error(error instanceof ApiError && error.status === 409 ? `Đã có loại vỏ "${draft.name.trim()}".` : error.message),
   })
   return (
     <Modal
@@ -128,17 +131,11 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
     })
   return (
     <>
-      <Modal
-        open
-        centered
-        title="Loại vỏ bình"
-        width={modalWidth.large}
-        onCancel={onClose}
-        footer={<Button onClick={onClose}>Đóng</Button>}
-      >
-        <Space wrap style={{ marginBottom: 16 }}>
+      <Modal open centered title="Loại vỏ bình" width={modalFixedWidth} styles={modalFixedBody} onCancel={onClose} footer={null}>
+        <div className="af-modal-toolbar">
           <Input
             aria-label="Tìm loại vỏ"
+            prefix={<Search size={16} className="af-input-icon" />}
             placeholder="Tìm tên loại vỏ"
             value={search}
             allowClear
@@ -156,26 +153,27 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
               ]}
             />
           )}
-          <Button icon={<RefreshCw size={16} />} onClick={() => void types.refetch()} loading={types.isFetching}>
-            Làm mới
-          </Button>
+          <Tooltip title="Làm mới">
+            <Button icon={<RefreshCw size={16} />} aria-label="Làm mới" onClick={() => void types.refetch()} loading={types.isFetching} />
+          </Tooltip>
           {admin && (
-            <Button type="primary" icon={<Plus size={16} />} onClick={() => setEditing(null)}>
+            <Button className="af-modal-toolbar-end" type="primary" icon={<Plus size={16} />} onClick={() => setEditing(null)}>
               Thêm loại vỏ
             </Button>
           )}
-        </Space>
+        </div>
         {types.isError ? (
           <QueryError error={types.error} onRetry={types.refetch} />
         ) : (
           <Table<BottleType>
             key={`${status}:${search}`}
             rowKey="id"
-            className="af-modal-table"
+            className="af-modal-table af-modal-table-fixed"
             rowClassName={(item) => (item.active ? '' : 'af-row-inactive')}
             loading={types.isPending}
             dataSource={visible}
-            pagination={{ pageSize: 10 }}
+            size="small"
+            pagination={false}
             scroll={{ x: 600, y: modalTableScrollHeight }}
             locale={{ emptyText: 'Không có loại vỏ phù hợp.' }}
             columns={[

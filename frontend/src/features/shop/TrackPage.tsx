@@ -222,26 +222,38 @@ function TrackedOrder({ token }: { token: string }) {
             </li>
           ))}
         </ul>
-        <div className="af-order-summary">
-          <span>Phí giao</span>
-          <span>{order.deliveryFee ? currency(order.deliveryFee) : 'Miễn phí'}</span>
-        </div>
-        <div className="af-order-summary af-order-summary-highlight">
-          <span>{order.status === 'Chờ xác nhận' ? 'Tạm tính' : 'Tổng cộng'}</span>
-          <strong>{currency(order.total)}</strong>
-        </div>
-        {order.paid > 0 && (
-          <div className="af-order-summary">
-            <span>Đã thanh toán</span>
-            <Money value={order.paid} tone="paid" />
+        <dl className="af-checkout-totals">
+          <div>
+            <dt>Tiền hàng</dt>
+            <dd className="af-money">{currency(order.total - (order.deliveryFee ?? 0))}</dd>
           </div>
-        )}
-        {!cancelled && (
-          <div className="af-order-summary">
-            <span>Còn phải trả</span>
-            <Money value={order.due} tone={dueTone(order.due)} />
+          <div>
+            <dt>Phí giao</dt>
+            <dd>{order.deliveryFee ? <span className="af-money">{currency(order.deliveryFee)}</span> : 'Miễn phí'}</dd>
           </div>
-        )}
+          <div className="is-total">
+            <dt>{order.status === 'Chờ xác nhận' ? 'Tạm tính' : 'Tổng cộng'}</dt>
+            <dd>
+              <Money value={order.total} tone="due" />
+            </dd>
+          </div>
+          {order.paid > 0 && (
+            <div>
+              <dt>Đã thanh toán</dt>
+              <dd>
+                <Money value={order.paid} tone="paid" />
+              </dd>
+            </div>
+          )}
+          {!cancelled && (
+            <div>
+              <dt>Còn phải trả</dt>
+              <dd>
+                <Money value={order.due} tone={dueTone(order.due)} />
+              </dd>
+            </div>
+          )}
+        </dl>
       </Card>
 
       {canTransfer && (

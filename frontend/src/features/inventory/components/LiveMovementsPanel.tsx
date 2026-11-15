@@ -75,7 +75,7 @@ export function LiveMovementsPanel() {
           className="af-data-table af-table-flush"
           loading={query.isPending}
           dataSource={query.data?.content ?? []}
-          scroll={{ x: 1212, y: tableScrollHeight }}
+          scroll={{ x: 1060, y: tableScrollHeight }}
           pagination={{
             current: filter.page + 1,
             pageSize: filter.size,
@@ -94,7 +94,18 @@ export function LiveMovementsPanel() {
             ),
           }}
           columns={[
-            { title: 'Thời điểm', dataIndex: 'occurredAt', width: 170, render: timestamp },
+            {
+              title: 'Thời điểm',
+              dataIndex: 'occurredAt',
+              width: 120,
+              // Ngày trên, giờ dưới để cột hẹp mà không bẻ đôi.
+              render: (value: string) => (
+                <div className="af-cell-stack" title={timestamp(value)}>
+                  <span className="af-nowrap">{new Date(value).toLocaleDateString('vi-VN')}</span>
+                  <small className="af-nowrap">{new Date(value).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</small>
+                </div>
+              ),
+            },
             {
               title: 'Loại',
               dataIndex: 'type',
@@ -106,7 +117,9 @@ export function LiveMovementsPanel() {
               dataIndex: 'productName',
               render: (_, item) => (
                 <div className="af-cell-stack">
-                  <span>{item.productName}</span>
+                  <span className="af-cell-truncate" title={item.productName}>
+                    {item.productName}
+                  </span>
                   <small>{item.sku}</small>
                 </div>
               ),
@@ -114,10 +127,10 @@ export function LiveMovementsPanel() {
             {
               title: 'Lô / hạn dùng',
               key: 'lot',
-              width: 150,
+              width: 140,
               render: (_, item) => (
                 <div className="af-cell-stack">
-                  <span>{item.lotCode}</span>
+                  <span className="af-nowrap">{item.lotCode}</span>
                   <small>{item.expiresOn ? isoToVnDate(item.expiresOn) : '—'}</small>
                 </div>
               ),
@@ -126,24 +139,33 @@ export function LiveMovementsPanel() {
               title: 'Số lượng',
               key: 'quantity',
               align: 'right',
-              width: 120,
-              render: (_, item) => <span className={item.signedQuantity < 0 ? 'af-text-danger' : undefined}>{signed(item)}</span>,
+              width: 110,
+              render: (_, item) => (
+                <span
+                  className={`af-nowrap ${item.signedQuantity < 0 ? 'af-text-danger' : item.signedQuantity > 0 ? 'af-text-success' : ''}`}
+                >
+                  {signed(item)}
+                </span>
+              ),
             },
             {
               title: 'Chứng từ',
               dataIndex: 'referenceCode',
               width: 170,
+              // Người thực hiện ghi dưới mã chứng từ để bảng vừa khung, không cuộn ngang.
               render: (code: string, item) => (
-                <Button type="link" onClick={() => setSelected(item.id)}>
-                  {code}
-                </Button>
+                <div className="af-cell-stack">
+                  <Button type="link" size="small" className="af-link-button af-ref-link" title={code} onClick={() => setSelected(item.id)}>
+                    {code}
+                  </Button>
+                  {item.performedByName && <small className="af-cell-truncate">{item.performedByName}</small>}
+                </div>
               ),
             },
-            { title: 'Người thực hiện', dataIndex: 'performedByName', width: 160 },
             {
               title: 'Thao tác',
               key: 'actions',
-              width: 112,
+              width: 96,
               align: 'center' as const,
               fixed: 'right',
               render: (_, item) => <ViewButton subject={`giao dịch kho #${item.id}`} onClick={() => setSelected(item.id)} />,

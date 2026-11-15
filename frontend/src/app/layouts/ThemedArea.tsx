@@ -21,7 +21,7 @@ export function ThemedArea({ children }: { children: ReactNode }) {
   }, [dark])
   return (
     <ConfigProvider theme={narrow ? withTouchInputs(dark ? darkTheme : appTheme) : dark ? darkTheme : appTheme}>
-      <AntApp message={{ maxCount: 3 }}>{children}</AntApp>
+      <AntApp message={{ maxCount: 3, top: 76 }}>{children}</AntApp>
     </ConfigProvider>
   )
 }
