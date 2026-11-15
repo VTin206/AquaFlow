@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Dropdown, Form, Input, InputNumber, Modal, Segmented, Space, Table, Tag, Tooltip } from 'antd'
-import { Ellipsis, Pencil, Plus, Search, RefreshCw } from 'lucide-react'
+import { Ellipsis, Pencil, Plus, Search } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
 import { useConfirm } from '@/shared/components/confirm'
@@ -153,9 +153,6 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
               ]}
             />
           )}
-          <Tooltip title="Làm mới">
-            <Button icon={<RefreshCw size={16} />} aria-label="Làm mới" onClick={() => void types.refetch()} loading={types.isFetching} />
-          </Tooltip>
           {admin && (
             <Button className="af-modal-toolbar-end" type="primary" icon={<Plus size={16} />} onClick={() => setEditing(null)}>
               Thêm loại vỏ
