@@ -11,6 +11,8 @@ import { suggestFromName } from '../catalogGroups'
 const MODAL_WIDTH = 680
 const MAX_IMAGE_MB = 5
 const UNITS = ['Bình', 'Thùng', 'Chai', 'Vỏ']
+/** Đơn vị duy nhất bán kèm vỏ có cọc. */
+const BOTTLE_UNIT = 'Bình'
 
 type ProductFormModalProps = { open: boolean; product?: CatalogItem; onClose: () => void }
 
@@ -202,22 +204,29 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
                   />
                 </Form.Item>
               </Col>
-              <Col xs={12} sm={8}>
-                <Form.Item name="bottleTypeId" label="Loại vỏ" tooltip="Chọn khi sản phẩm bán kèm vỏ bình có cọc.">
-                  <Select
-                    allowClear
-                    loading={bottleTypes.isPending}
-                    placeholder="Không dùng vỏ"
-                    options={bottleTypes.types
-                      .filter((type) => type.active || type.id === product?.bottleTypeId)
-                      .map((type) => ({
-                        value: type.id,
-                        label: `${type.name}${type.active ? '' : ' (ngừng lưu hành)'}`,
-                        disabled: !type.active,
-                      }))}
-                  />
-                </Form.Item>
-              </Col>
+              {/* Chỉ sản phẩm bán theo bình mới có vỏ cọc; đổi sang đơn vị khác thì bỏ loại vỏ (lưu thành không dùng vỏ). */}
+              <Form.Item noStyle shouldUpdate={(previous, next) => previous.unit !== next.unit}>
+                {({ getFieldValue }) =>
+                  getFieldValue('unit') === BOTTLE_UNIT && (
+                    <Col xs={12} sm={8}>
+                      <Form.Item name="bottleTypeId" label="Loại vỏ" tooltip="Chọn khi sản phẩm bán kèm vỏ bình có cọc.">
+                        <Select
+                          allowClear
+                          loading={bottleTypes.isPending}
+                          placeholder="Không dùng vỏ"
+                          options={bottleTypes.types
+                            .filter((type) => type.active || type.id === product?.bottleTypeId)
+                            .map((type) => ({
+                              value: type.id,
+                              label: `${type.name}${type.active ? '' : ' (ngừng lưu hành)'}`,
+                              disabled: !type.active,
+                            }))}
+                        />
+                      </Form.Item>
+                    </Col>
+                  )
+                }
+              </Form.Item>
               <Col xs={24} sm={8}>
                 <Form.Item
                   name="threshold"
