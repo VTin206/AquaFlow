@@ -33,6 +33,6 @@ Mỗi request đọc một snapshot REPEATABLE_READ. Summary có timezone và ge
 
 ## FE và Excel
 
-Tài khoản thật dùng LiveReportsPage, demo giữ trang mẫu. Tổng quan có biểu đồ và so sánh doanh thu kỳ trước cùng số ngày. Các bảng phân trang ở BE. Excel tổng quan xuất toàn bộ bucket ngày; Excel tab bảng xuất **trang hiện tại**, ghi rõ phạm vi và bộ lọc. Ô số giữ numeric, chuỗi lưu dạng text. Trang Tổng quan dashboard cũ vẫn giữ cờ revenueReports vì hook đó chưa chuyển sang báo cáo thật; việc mở trang /reports độc lập với cờ dashboard.
+Tài khoản thật dùng LiveReportsPage, demo giữ trang mẫu. Tổng quan có biểu đồ và so sánh doanh thu kỳ trước cùng số ngày. Các bảng phân trang ở BE. Excel tổng quan xuất toàn bộ bucket ngày; Excel tab bảng xuất **trang hiện tại**, ghi rõ phạm vi và bộ lọc. Ô số giữ numeric, chuỗi lưu dạng text. Biểu đồ doanh thu 14 ngày trên trang Tổng quan (dashboard) cũng lấy từ `/admin/reports/summary` qua `useDailyRevenue`; không còn cờ tính năng nào cho báo cáo.
 
 V14 thêm index theo thời gian, không thay đổi giao dịch cũ. Kiểm thử PostgreSQL bao gồm biên giờ Việt Nam, discount, hàng trả kỳ trước, fallback đơn tại quầy, loại thanh toán pending, không cộng trùng handover, tồn lùi/điều chỉnh, quyền và phân trang.
