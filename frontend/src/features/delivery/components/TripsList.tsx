@@ -75,7 +75,7 @@ export function TripsList({ trips, loading, dueLabel, onOpen }: TripsListProps) 
         </div>
       </div>
       <Table<DeliveryTrip>
-        className="af-data-table af-table-flush"
+        className="af-data-table af-table-flush af-table-dense"
         size="small"
         rowKey="id"
         loading={loading}

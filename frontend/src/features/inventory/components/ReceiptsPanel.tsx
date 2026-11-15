@@ -58,7 +58,7 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
         />
       </div>
       <Table<ReceiptView>
-        className="af-data-table af-table-flush"
+        className="af-data-table af-table-flush af-table-dense"
         size="middle"
         rowKey="id"
         loading={receiptsQuery.isPending || (receiptsQuery.isFetching && receiptsQuery.isPlaceholderData)}

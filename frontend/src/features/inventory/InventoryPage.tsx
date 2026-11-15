@@ -314,7 +314,7 @@ export function InventoryPage() {
                 </BulkBar>
                 <Table<StockItem>
                   key={`${filter}:${query}`}
-                  className="af-data-table af-table-flush"
+                  className="af-data-table af-table-flush af-table-dense"
                   size="middle"
                   rowKey="id"
                   columns={columns}
