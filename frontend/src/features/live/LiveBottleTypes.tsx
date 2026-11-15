@@ -21,10 +21,10 @@ function BottleTypeForm({ item, onClose }: { item: BottleType | null; onClose: (
   const { message } = App.useApp()
   const client = useQueryClient()
   const save = useMutation({
-    mutationFn: (draft: BottleTypeDraft) => (item ? bottleTypeApi.update(item.id, draft.depositUnitAmount) : bottleTypeApi.create(draft)),
+    mutationFn: (draft: BottleTypeDraft) => (item ? bottleTypeApi.update(item.id, draft) : bottleTypeApi.create(draft)),
     onSuccess: () => {
       void invalidateLiveData(client)
-      message.success(item ? 'Đã cập nhật tiền cọc.' : 'Đã thêm loại vỏ.')
+      message.success(item ? 'Đã cập nhật loại vỏ.' : 'Đã thêm loại vỏ.')
       onClose()
     },
     // Trùng tên (409): nêu rõ tên vừa nhập trong ngoặc kép.
@@ -34,7 +34,7 @@ function BottleTypeForm({ item, onClose }: { item: BottleType | null; onClose: (
   return (
     <Modal
       open
-      title={item ? 'Sửa tiền cọc loại vỏ' : 'Thêm loại vỏ'}
+      title={item ? 'Sửa loại vỏ' : 'Thêm loại vỏ'}
       onCancel={() => {
         if (!save.isPending) cancel()
       }}
@@ -63,9 +63,8 @@ function BottleTypeForm({ item, onClose }: { item: BottleType | null; onClose: (
             { required: true, whitespace: true, message: 'Nhập tên loại vỏ.' },
             { max: 100, message: 'Tên tối đa 100 ký tự.' },
           ]}
-          extra={item ? 'Tên loại vỏ được giữ cố định sau khi tạo.' : undefined}
         >
-          <Input disabled={!!item} />
+          <Input />
         </Form.Item>
         <Form.Item
           name="depositUnitAmount"
@@ -194,11 +193,11 @@ export function LiveBottleTypes({ onClose }: { onClose: () => void }) {
                       render: (_: unknown, item: BottleType) =>
                         item.active ? (
                           <Space size={4}>
-                            <Tooltip title="Sửa tiền cọc">
+                            <Tooltip title="Sửa">
                               <Button
                                 size="small"
                                 icon={<Pencil size={15} />}
-                                aria-label={`Sửa tiền cọc ${item.name}`}
+                                aria-label={`Sửa ${item.name}`}
                                 disabled={deactivate.isPending}
                                 onClick={() => setEditing(item)}
                               />
