@@ -179,3 +179,30 @@
   border-radius: 2px;
   background: var(--af-chart-bar-hover);
 }
+
+/* Cột tên trong bảng báo cáo: rộng hơn cột số, một dòng, tên quá dài thì "…" (rê chuột xem đủ). */
+.af-report-name {
+  display: block;
+  max-width: 360px;
+  min-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Thanh lọc kỳ báo cáo: chọn nhanh kỳ, ô khoảng ngày chỉ hiện khi "Tùy chọn", kênh và hình thức bên cạnh. */
+.af-report-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.af-report-filters .ant-segmented {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.af-report-scope {
+  display: block;
+  margin: 8px 0 16px;
+  font-size: var(--af-fs-sm);
+}

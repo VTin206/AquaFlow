@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { filterOn } from '@/shared/utils/filterOn'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, App, Button, Card, Col, DatePicker, Descriptions, Row, Segmented, Select, Space, Statistic, Table, Tabs, Typography } from 'antd'
+import { Alert, App, Button, Card, Col, DatePicker, Descriptions, Row, Segmented, Select, Statistic, Table, Tabs, Typography } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { Link, useSearchParams } from 'react-router'
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react'
@@ -31,13 +31,36 @@ const sections: Record<ReportSection, { title: string; key: string; columns: Rep
   ] },
 }
 const dailyColumns: ReportColumn[] = [{ key: 'date', title: 'Ngày' }, { key: 'revenue', title: 'Doanh thu', money: true }, { key: 'collected', title: 'Thanh toán ròng', money: true }, { key: 'orders', title: 'Đơn tạo' }]
-const columnsOf = (columns: ReportColumn[]) => columns.map(column => ({ title: column.title, dataIndex: column.key, key: column.key, render: (value: string | number | null) => column.money ? value == null ? 'Chưa có giá nhập' : currency(Number(value)) : value ?? '—', width: column.money ? 180 : 140 }))
+/**
+ * Cột tên (sản phẩm, tài xế, khách) rộng nhất, một dòng, ghim trái khi cuộn ngang; cột số tự co vừa tiêu đề và
+ * con số (bảng tự canh độ rộng), canh phải.
+ */
+const nameKeys = ['name', 'driver']
+const columnsOf = (columns: ReportColumn[]) => columns.map(column => {
+  const isName = nameKeys.includes(column.key)
+  const format = (value: string | number | null) => column.money ? value == null ? 'Chưa có giá nhập' : currency(Number(value)) : value ?? '—'
+  return {
+    title: column.title,
+    dataIndex: column.key,
+    key: column.key,
+    render: isName
+      ? (value: string | number | null) => <span className="af-report-name" title={String(value ?? '')}>{format(value)}</span>
+      : format,
+    fixed: isName ? ('left' as const) : undefined,
+    className: isName ? undefined : 'af-nowrap',
+    align: !isName && !['sku', 'unit', 'date', 'lastOrder'].includes(column.key) ? ('right' as const) : undefined,
+  }
+})
 /** Tên khách có hồ sơ mở được hồ sơ; khách vãng lai và khách chỉ có số điện thoại thì không. */
 const customerColumns = columnsOf(sections.customers.columns).map((column) => column.key !== 'name' ? column : {
   ...column,
-  render: (name: string | number | null, row: ReportRow) => row.key === 'guest' || String(row.key).startsWith('SĐT ') || !row.key
-    ? name
-    : <Link to={`/customers?customerId=${encodeURIComponent(String(row.key))}`}>{name}</Link>,
+  render: (name: string | number | null, row: ReportRow) => (
+    <span className="af-report-name" title={String(name ?? '')}>
+      {row.key === 'guest' || String(row.key).startsWith('SĐT ') || !row.key
+        ? name
+        : <Link to={`/customers?customerId=${encodeURIComponent(String(row.key))}`}>{name}</Link>}
+    </span>
+  ),
 })
 
 const kpis = [
@@ -70,12 +93,16 @@ export function LiveReportsPage() {
   return staff?.role === 'ADMIN' ? <LiveReportContent /> : <Alert type="warning" showIcon title="Chỉ ADMIN được xem báo cáo." />
 }
 
+const CUSTOM_RANGE = 'Tùy chọn'
+const quickRanges = ['Hôm nay', '7 ngày qua', '30 ngày qua', 'Tháng này', 'Tháng trước']
+
 function LiveReportContent() {
   const { message } = App.useApp()
   const [granularity, setGranularity] = useState<Granularity>()
   const today = dayjs(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()))
   const [dates, setDates] = useState<[Dayjs, Dayjs]>([today.subtract(29, 'day'), today])
   const [rangeError, setRangeError] = useState<string>()
+  const [customRange, setCustomRange] = useState(false)
   const [channel, setChannel] = useState<ReportQuery['channel']>()
   const [method, setMethod] = useState<ReportQuery['method']>()
   const [page, setPage] = useState(0)
@@ -96,24 +123,32 @@ function LiveReportContent() {
   const selectedSection = tab === 'overview' ? undefined : sections[tab]
   const rows: ReportRow[] = tab === 'overview' ? report?.days ?? [] : details.data?.content ?? []
   const columns = selectedSection?.columns ?? dailyColumns
+  // Chọn nhanh kỳ hay dùng; kỳ khác chọn "Tùy chọn" rồi mới hiện ô chọn khoảng ngày.
+  const presets = reportPresets(today).filter(({ label }) => quickRanges.includes(label))
+  const activePreset = presets.find(({ value }) => value[0].isSame(dates[0], 'day') && value[1].isSame(dates[1], 'day'))?.label
+  const rangeMode = customRange || !activePreset ? CUSTOM_RANGE : activePreset
   return <Page title="Báo cáo"
-    actions={<Space wrap>
-      <DatePicker.RangePicker allowClear={false} value={dates} format="DD/MM/YYYY" presets={reportPresets(today)} disabledDate={date => date.isAfter(today, 'day')}
-        onChange={value => { if (value?.[0] && value[1]) { if (value[1].diff(value[0], 'day') > 365 || value[1].isAfter(today, 'day')) { setRangeError('Chọn tối đa 366 ngày và không vượt quá hôm nay.'); return }; setRangeError(undefined); setDates([value[0], value[1]]); setPage(0) } }} />
-      <Select allowClear placeholder="Mọi kênh" value={channel} className={filterOn(Boolean(channel))} style={{ width: 150 }} options={Object.entries(channelLabels).map(([value, label]) => ({ value, label }))} onChange={value => { setChannel(value); setPage(0) }} />
-      <Select allowClear placeholder="Mọi hình thức" value={method} className={filterOn(Boolean(method))} style={{ width: 170 }} options={[{ value: 'DELIVERY', label: 'Giao tận nơi' }, { value: 'COUNTER', label: 'Tại quầy' }]} onChange={value => { setMethod(value); setPage(0) }} />
-      <Button onClick={() => { void summary.refetch(); void previous.refetch(); if (tab !== 'overview') void details.refetch() }}>Làm mới</Button>
-      <Button loading={exporting} disabled={!report || summary.isError || (tab !== 'overview' && (details.isError || details.isPending)) || !rows.length} onClick={async () => {
+    actions={<Button loading={exporting} disabled={!report || summary.isError || (tab !== 'overview' && (details.isError || details.isPending)) || !rows.length} onClick={async () => {
         if (!report) return
         setExporting(true)
         try { const { downloadLiveReport } = await import('./exportLiveReport'); await downloadLiveReport(report, query, selectedSection?.title ?? 'Doanh thu theo ngày', columns, rows, tab === 'overview' ? undefined : page) }
         catch { message.error('Không thể xuất báo cáo. Vui lòng thử lại.') }
         finally { setExporting(false) }
-      }}>{tab === 'overview' ? 'Xuất Excel theo ngày' : 'Xuất Excel trang này'}</Button>
-    </Space>}>
+      }}>{tab === 'overview' ? 'Xuất Excel theo ngày' : 'Xuất Excel trang này'}</Button>}>
+    <div className="af-report-filters">
+      <Segmented<string> aria-label="Kỳ báo cáo" value={rangeMode} onChange={value => {
+        if (value === CUSTOM_RANGE) { setCustomRange(true); return }
+        const preset = presets.find(({ label }) => label === value)
+        if (!preset) return
+        setCustomRange(false); setRangeError(undefined); setDates([preset.value[0], preset.value[1]]); setPage(0)
+      }} options={[...presets.map(({ label }) => ({ value: label, label: label.replace(' qua', '') })), CUSTOM_RANGE]} />
+      {rangeMode === CUSTOM_RANGE && <DatePicker.RangePicker allowClear={false} value={dates} format="DD/MM/YYYY" presets={reportPresets(today)} disabledDate={date => date.isAfter(today, 'day')}
+        onChange={value => { if (value?.[0] && value[1]) { if (value[1].diff(value[0], 'day') > 365 || value[1].isAfter(today, 'day')) { setRangeError('Chọn tối đa 366 ngày và không vượt quá hôm nay.'); return }; setRangeError(undefined); setDates([value[0], value[1]]); setPage(0) } }} />}
+      <Select allowClear placeholder="Mọi kênh" value={channel} className={filterOn(Boolean(channel))} style={{ width: 140 }} options={Object.entries(channelLabels).map(([value, label]) => ({ value, label }))} onChange={value => { setChannel(value); setPage(0) }} />
+      <Select allowClear placeholder="Mọi hình thức" value={method} className={filterOn(Boolean(method))} style={{ width: 150 }} options={[{ value: 'DELIVERY', label: 'Giao tận nơi' }, { value: 'COUNTER', label: 'Tại quầy' }]} onChange={value => { setMethod(value); setPage(0) }} />
+    </div>
     {rangeError && <Alert type="warning" showIcon title={rangeError} />}
-    <Alert type="info" showIcon title="Kỳ báo cáo tối đa 366 ngày, gồm cả ngày bắt đầu và kết thúc."
-      description="Kênh và hình thức áp dụng cho doanh thu, thanh toán, sản phẩm, khách hàng và kết quả giao. Kho, nhập hàng, sổ cọc và đối soát tài xế tính cho cả cửa hàng." />
+    <Typography.Text type="secondary" className="af-report-scope">Kênh và hình thức áp dụng cho doanh thu, thanh toán, sản phẩm, khách hàng và giao hàng. Kho, nhập hàng, sổ cọc và đối soát tài xế tính cho cả cửa hàng.</Typography.Text>
     {summary.isError ? <QueryError error={summary.error} onRetry={summary.refetch} /> : <>
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         {kpis.map(({ title, key, money }) => {
@@ -154,7 +189,7 @@ function LiveReportContent() {
           {key === 'customers' && <p>Khách chưa gắn hồ sơ được gộp vào Khách vãng lai. “Ngày chưa mua” tính từ lần giao gần nhất đến ngày cuối kỳ; dùng để nhận diện khách cần chăm sóc lại.</p>}
           {key === 'products' && detailRows.some((row) => num(row.revenue) > 0) && <TopProductsChart rows={detailRows.map((row) => ({ name: String(row.name), unit: String(row.unit), sold: num(row.sold), revenue: num(row.revenue) }))} />}
           {key === 'delivery' && detailRows.length > 0 && <DriverDeliveryChart rows={detailRows.map((row) => ({ driver: String(row.driver), delivered: num(row.delivered), late: num(row.late), failed: num(row.failed) }))} />}
-          <Table<ReportRow> rowKey={section.key} loading={details.isPending} columns={key === 'customers' ? customerColumns : columnsOf(section.columns)} dataSource={details.data?.content ?? []} scroll={{ x: key === 'inventory' || key === 'delivery' ? 1500 : 900 }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : 'Chưa có dữ liệu trong kỳ.' }}
+          <Table<ReportRow> rowKey={section.key} loading={details.isPending} columns={key === 'customers' ? customerColumns : columnsOf(section.columns)} dataSource={details.data?.content ?? []} scroll={{ x: 'max-content' }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : 'Chưa có dữ liệu trong kỳ.' }}
             pagination={{ current: page + 1, pageSize: size, total: details.data?.totalElements ?? 0, showSizeChanger: true, pageSizeOptions: [20, 50, 100], onChange: (next, nextSize) => { setPage(nextSize === size ? next - 1 : 0); setSize(nextSize) } }} />
         </Card> })),
       ]} />
