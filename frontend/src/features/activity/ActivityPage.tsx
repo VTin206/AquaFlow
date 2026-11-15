@@ -1,41 +1,15 @@
 import { useState } from 'react'
 import { filterOn } from '@/shared/utils/filterOn'
-import {
-  App,
-  Button,
-  Card,
-  Descriptions,
-  Empty,
-  Input,
-  Modal,
-  Pagination,
-  Select,
-  Skeleton,
-  Switch,
-  Tag,
-} from 'antd'
+import { App, Button, Card, Descriptions, Empty, Input, Modal, Pagination, Select, Skeleton, Switch, Tag } from 'antd'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
-import {
-  Boxes,
-  Building2,
-  Download,
-  FunnelX,
-  Search,
-  Settings2,
-  ShoppingBag,
-  Truck,
-  Users,
-  Wallet,
-  type LucideIcon,
-} from 'lucide-react'
+import { Boxes, Building2, FileSpreadsheet, FunnelX, Search, Settings2, ShoppingBag, Truck, Users, Wallet, type LucideIcon } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
 import { modalWidth } from '@/shared/utils/modal'
-import { downloadCsv } from '@/shared/utils/csv'
+import { downloadExcel } from '@/shared/utils/excel'
 import { OrderDetails } from '@/features/orders/components/OrderDetails'
-import { csvSafeCell } from './activityApi'
 import { entityPages, groupByDay, type ActivityItem, type ActivityRange } from './activityFeed'
 import { ACTIVITY_PAGE_SIZE, useActivityFeed, type ActivityFilter } from './useActivityFeed'
 import './activity.css'
@@ -96,24 +70,24 @@ export function ActivityPage() {
     else if (entityPages[item.entity.type]) navigate(entityPages[item.entity.type].path)
   }
   const canOpen = (item: ActivityItem) => Boolean(item.entity && (item.entity.type === 'ORDER' || entityPages[item.entity.type]))
-  const exportCsv = async () => {
+  const exportExcel = async () => {
     setExporting(true)
     try {
       const { items, truncated } = await feed.exportAll()
       const rows = importantOnly ? items.filter((item) => item.important) : items
-      downloadCsv(`nhat-ky-${dayjs().format('YYYY-MM-DD')}.csv`, [
-        ['Thời điểm', 'Người thực hiện', 'Khu vực', 'Đối tượng', 'Nội dung', 'Quan trọng'],
-        ...rows.map((item) =>
-          [
-            dayjs(item.at).format('DD/MM/YYYY HH:mm:ss'),
-            item.actor,
-            item.area,
-            item.target,
-            item.description,
-            item.important ? 'Có' : '',
-          ].map(csvSafeCell),
-        ),
-      ])
+      await downloadExcel(
+        `nhat-ky-${dayjs().format('YYYY-MM-DD')}.xlsx`,
+        'Nhật ký',
+        [
+          { title: 'Thời điểm', width: 20, value: (item) => dayjs(item.at).format('DD/MM/YYYY HH:mm:ss') },
+          { title: 'Người thực hiện', width: 22, value: (item) => item.actor },
+          { title: 'Khu vực', width: 14, value: (item) => item.area },
+          { title: 'Đối tượng', width: 20, value: (item) => item.target },
+          { title: 'Nội dung', width: 40, value: (item) => item.description },
+          { title: 'Quan trọng', width: 12, value: (item) => (item.important ? 'Có' : '') },
+        ],
+        rows,
+      )
       message.success(truncated ? `Đã xuất 5.000 dòng mới nhất. Thu hẹp khoảng ngày để xuất phần còn lại.` : `Đã xuất ${rows.length} dòng.`)
     } catch (error) {
       message.error(error instanceof Error ? error.message : 'Không xuất được nhật ký.')
@@ -134,8 +108,8 @@ export function ActivityPage() {
       title="Nhật ký hoạt động"
       actions={
         <>
-          <Button icon={<Download size={16} />} loading={exporting} disabled={!feed.total} onClick={() => void exportCsv()}>
-            Xuất CSV
+          <Button icon={<FileSpreadsheet size={16} />} loading={exporting} disabled={!feed.total} onClick={() => void exportExcel()}>
+            Xuất Excel
           </Button>
         </>
       }
@@ -187,11 +161,7 @@ export function ActivityPage() {
           )}
           <div className="af-activity-end">
             <span role="status" className="af-activity-count">
-              {feed.loading || feed.stale
-                ? 'Đang tải…'
-                : importantOnly
-                  ? `${shown.length} quan trọng`
-                  : `${feed.total} dòng`}
+              {feed.loading || feed.stale ? 'Đang tải…' : importantOnly ? `${shown.length} quan trọng` : `${feed.total} dòng`}
             </span>
             <Input
               allowClear
