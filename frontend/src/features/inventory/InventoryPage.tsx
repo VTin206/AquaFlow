@@ -5,7 +5,6 @@ import { BulkBar } from '@/shared/components/BulkBar'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
-import { Unsupported } from '@/shared/components/Unsupported'
 import { usePendingReturns } from '@/features/live/returnApi'
 import { useColumnSort } from '@/shared/components/sortableColumn'
 import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
@@ -168,13 +167,8 @@ export function InventoryPage() {
               {product.onHand} <Typography.Text type="secondary">{product.unit?.toLowerCase()}</Typography.Text>
             </span>
             <small>
-              {product.threshold !== undefined ? (
-                `Tối thiểu ${product.threshold}`
-              ) : (
-                <>
-                  Khả dụng {product.available} · <Unsupported label="tối thiểu: chưa hỗ trợ" />
-                </>
-              )}
+              {/* Danh mục chỉ trả sản phẩm đang bán; hàng đã ngừng bán còn tồn thì không theo dõi mức tối thiểu. */}
+              {product.threshold !== undefined ? `Tối thiểu ${product.threshold}` : `Khả dụng ${product.available} · đã ngừng bán`}
               {product.reserved > 0 && ` · giữ ${product.reserved}`}
             </small>
           </div>
