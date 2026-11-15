@@ -23,7 +23,7 @@ public class ActivityRepository {
           WHEN entity_type IN ('DELIVERY_TRIP','DELIVERY_ASSIGNMENT') THEN 'DELIVERY'
           WHEN entity_type IN ('CUSTOMER','CUSTOMER_ADDRESS') THEN 'CUSTOMERS'
           WHEN entity_type = 'SUPPLIER' THEN 'SUPPLIERS'
-          WHEN entity_type = 'STORE_SETTINGS' THEN 'SETTINGS'
+          WHEN entity_type IN ('STORE_SETTINGS','SHOP_ARTICLE') THEN 'SETTINGS'
           WHEN entity_type IN ('PRODUCT','BOTTLE_TYPE','PURCHASE_RECEIPT','DISPATCH','INVENTORY_RETURN') THEN 'INVENTORY'
           ELSE 'OTHER' END AS area FROM audit_logs a) a
         LEFT JOIN users u ON u.id=a.actor_id

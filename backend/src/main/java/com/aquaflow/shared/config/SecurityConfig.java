@@ -65,6 +65,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/password-reset-requests", "/api/v1/auth/password-resets").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/store-profile").permitAll()
+                        // Tin tức, chính sách đã đăng; quản lý (cả bản nháp) ở /api/v1/admin/shop-articles chỉ ADMIN.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/shop-articles", "/api/v1/shop-articles/*").permitAll()
                         // Public catalog is intentionally limited to the existing collection/detail endpoints.
                         // Do not use /** here: future administrative sub-resources must not become public by accident.
                         .requestMatchers(HttpMethod.GET,

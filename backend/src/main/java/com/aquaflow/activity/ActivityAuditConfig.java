@@ -32,7 +32,8 @@ public class ActivityAuditConfig {
         Map.entry("com.aquaflow.customer.application.CustomerService","CUSTOMER"),
         Map.entry("com.aquaflow.customer.application.CustomerAddressService","CUSTOMER_ADDRESS"),
         Map.entry("com.aquaflow.delivery.application.DeliveryService","DELIVERY_TRIP"),
-        Map.entry("com.aquaflow.customer.order.application.OrderReturnService","ORDER_RETURN"));
+        Map.entry("com.aquaflow.customer.order.application.OrderReturnService","ORDER_RETURN"),
+        Map.entry("com.aquaflow.content.application.ShopArticleService","SHOP_ARTICLE"));
     private static final Map<String,String> LABELS=Map.ofEntries(
         Map.entry("create","Tạo mới"), Map.entry("createForStaff","Tạo đơn tại cửa hàng"),
         Map.entry("createForCustomer","Khách tạo đơn"), Map.entry("createForGuest","Khách vãng lai tạo đơn"),

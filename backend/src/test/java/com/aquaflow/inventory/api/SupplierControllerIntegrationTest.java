@@ -68,6 +68,8 @@ class SupplierControllerIntegrationTest {
 
     @org.springframework.test.context.bean.override.mockito.MockitoBean
     private com.aquaflow.inventory.repository.ProductCategoryRepository productCategoryRepository;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.aquaflow.content.repository.ShopArticleRepository shopArticleRepository;
 
     @MockitoBean
     private ProductRepository productRepository;
