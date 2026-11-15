@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Alert, App, Button, Card, Checkbox, DatePicker, Popover, Segmented, Select, Table, Tabs, Typography } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { Link, useSearchParams } from 'react-router'
-import { ArrowDownRight, ArrowUpRight, Columns3 } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, Columns3, FunnelX } from 'lucide-react'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
@@ -33,7 +33,7 @@ const sections: Record<ReportSection, { title: string; key: string; columns: Rep
 /** Bảng nhiều cột: mặc định chỉ hiện cột chính, cột còn lại bật thêm qua nút "Cột" (file Excel vẫn đủ cột). */
 const coreColumns: Partial<Record<ReportSection, string[]>> = {
   inventory: ['name', 'unit', 'opening', 'received', 'issued', 'closing', 'latestUnitCost', 'closingValue'],
-  delivery: ['driver', 'ordersDispatched', 'ordersSucceeded', 'ordersFailed', 'successRate', 'redelivered', 'late', 'cashDifference'],
+  delivery: ['driver', 'ordersDispatched', 'ordersSucceeded', 'ordersFailed', 'successRate', 'redelivered', 'late'],
 }
 
 const dailyColumns: ReportColumn[] = [{ key: 'date', title: 'Ngày' }, { key: 'revenue', title: 'Doanh thu', money: true }, { key: 'collected', title: 'Thanh toán ròng', money: true }, { key: 'orders', title: 'Đơn tạo' }]
@@ -194,24 +194,48 @@ export function LiveReportsPage() {
   return staff?.role === 'ADMIN' ? <LiveReportContent /> : <Alert type="warning" showIcon title="Chỉ ADMIN được xem báo cáo." />
 }
 
+/** Kỳ trên địa chỉ trang; sai định dạng, quá 366 ngày hoặc vượt hôm nay thì bỏ qua để dùng mặc định. */
+function rangeFromParams(from: string | null, to: string | null, today: Dayjs): [Dayjs, Dayjs] | undefined {
+  if (!from || !to) return undefined
+  const start = dayjs(from)
+  const end = dayjs(to)
+  if (!start.isValid() || !end.isValid() || start.format('YYYY-MM-DD') !== from || end.format('YYYY-MM-DD') !== to) return undefined
+  if (end.isBefore(start, 'day') || end.diff(start, 'day') > 365 || end.isAfter(today, 'day')) return undefined
+  return [start, end]
+}
+
 const CUSTOM_RANGE = 'Tùy chọn'
 const quickRanges = ['Hôm nay', '7 ngày qua', '30 ngày qua', 'Tháng này', 'Tháng trước']
 
 function LiveReportContent() {
   const { message } = App.useApp()
   const [granularity, setGranularity] = useState<Granularity>()
+  // Kỳ, kênh, hình thức nằm trên địa chỉ trang (cùng tab) để tải lại hay gửi link vẫn đúng chỗ đang xem.
+  const [search, setSearch] = useSearchParams()
   const today = dayjs(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()))
-  const [dates, setDates] = useState<[Dayjs, Dayjs]>([today.subtract(29, 'day'), today])
   const [rangeError, setRangeError] = useState<string>()
+  // Mặc định tháng này: chủ đại lý chốt số theo tháng.
+  const dates = rangeFromParams(search.get('from'), search.get('to'), today) ?? [today.startOf('month'), today]
+  const channelParam = search.get('channel')
+  const channel = channelParam && channelParam in channelLabels ? channelParam as ReportQuery['channel'] : undefined
+  const methodParam = search.get('method')
+  const method = methodParam === 'DELIVERY' || methodParam === 'COUNTER' ? methodParam : undefined
+  const updateParams = (changes: Record<string, string | undefined>) => setSearch(params => {
+    for (const [name, value] of Object.entries(changes)) {
+      if (value) params.set(name, value)
+      else params.delete(name)
+    }
+    return params
+  }, { replace: true })
+  const setDates = ([from, to]: [Dayjs, Dayjs]) => updateParams({ from: from.format('YYYY-MM-DD'), to: to.format('YYYY-MM-DD') })
+  const setChannel = (value?: ReportQuery['channel']) => updateParams({ channel: value })
+  const setMethod = (value?: ReportQuery['method']) => updateParams({ method: value })
   const [customRange, setCustomRange] = useState(false)
   const [view, setView] = useState<'table' | 'chart'>('table')
   const [extraColumns, setExtraColumns] = useState<Partial<Record<ReportSection, string[]>>>({})
-  const [channel, setChannel] = useState<ReportQuery['channel']>()
-  const [method, setMethod] = useState<ReportQuery['method']>()
   const [page, setPage] = useState(0)
   const [size, setSize] = useState(20)
   const [exporting, setExporting] = useState(false)
-  const [search, setSearch] = useSearchParams()
   const selected = search.get('tab') ?? 'overview'
   const tab = selected in sections ? selected as ReportSection : 'overview'
   const query: ReportQuery = { from: dates[0].format('YYYY-MM-DD'), to: dates[1].format('YYYY-MM-DD'), channel, method }
@@ -250,7 +274,8 @@ function LiveReportContent() {
       {rangeMode === CUSTOM_RANGE && <DatePicker.RangePicker allowClear={false} value={dates} format="DD/MM/YYYY" presets={reportPresets(today)} disabledDate={date => date.isAfter(today, 'day')}
         onChange={value => { if (value?.[0] && value[1]) { if (value[1].diff(value[0], 'day') > 365 || value[1].isAfter(today, 'day')) { setRangeError('Chọn tối đa 366 ngày và không vượt quá hôm nay.'); return }; setRangeError(undefined); setDates([value[0], value[1]]); setPage(0) } }} />}
       <Select allowClear placeholder="Mọi kênh" disabled={!filtersApply} value={channel} className={filterOn(Boolean(channel))} style={{ width: 140 }} options={Object.entries(channelLabels).map(([value, label]) => ({ value, label }))} onChange={value => { setChannel(value); setPage(0) }} />
-      <Select allowClear placeholder="Mọi hình thức" disabled={!filtersApply} value={method} className={filterOn(Boolean(method))} style={{ width: 150 }} options={[{ value: 'DELIVERY', label: 'Giao tận nơi' }, { value: 'COUNTER', label: 'Tại quầy' }]} onChange={value => { setMethod(value); setPage(0) }} />
+      <Select<NonNullable<ReportQuery['method']>> allowClear placeholder="Mọi hình thức" disabled={!filtersApply} value={method} className={filterOn(Boolean(method))} style={{ width: 150 }} options={[{ value: 'DELIVERY', label: 'Giao tận nơi' }, { value: 'COUNTER', label: 'Tại quầy' }]} onChange={value => { setMethod(value); setPage(0) }} />
+      {(channel || method) && <Button type="link" icon={<FunnelX size={15} />} onClick={() => { updateParams({ channel: undefined, method: undefined }); setPage(0) }}>Xóa lọc</Button>}
     </div>
     {rangeError && <Alert type="warning" showIcon title={rangeError} />}
     {summary.isError ? <QueryError error={summary.error} onRetry={summary.refetch} /> : <>
