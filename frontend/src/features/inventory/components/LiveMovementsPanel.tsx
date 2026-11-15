@@ -7,7 +7,6 @@ import { movementApi, movementLabels, type InventoryMovement, type MovementFilte
 import { OrderDetails } from '@/features/orders/components/OrderDetails'
 import { QueryError } from '@/shared/components/QueryError'
 import { ViewButton } from '@/shared/components/ViewButton'
-import { usePagedScroll } from '@/shared/utils/table'
 import { isoToVnDate } from '../expiry'
 import { PeriodPicker } from '@/shared/components/PeriodPicker'
 
@@ -18,7 +17,6 @@ const signed = (row: InventoryMovement) => `${row.signedQuantity > 0 ? '+' : ''}
 export function LiveMovementsPanel() {
   const { user } = useAuth()
   const [filter, setFilter] = useState<MovementFilter>({ page: 0, size: 20 })
-  const { attach: attachTable, scroll: pagedScroll } = usePagedScroll(filter.size, 20)
   const [selected, setSelected] = useState<number | null>(null)
   const [orderId, setOrderId] = useState<string | null>(null)
   const query = useQuery({
@@ -76,14 +74,12 @@ export function LiveMovementsPanel() {
           className="af-data-table af-table-flush"
           loading={query.isPending}
           dataSource={query.data?.content ?? []}
-          ref={attachTable}
-          scroll={{ x: 1060, ...pagedScroll }}
+          scroll={{ x: 1060 }}
           pagination={{
             current: filter.page + 1,
             pageSize: filter.size,
             total: query.data?.totalElements ?? 0,
-            showSizeChanger: true,
-            pageSizeOptions: [20, 50, 100],
+            showSizeChanger: false,
             showTotal: (total) => `${total} giao dịch`,
             onChange: (page, size) => setFilter((previous) => ({ ...previous, page: size === previous.size ? page - 1 : 0, size })),
           }}

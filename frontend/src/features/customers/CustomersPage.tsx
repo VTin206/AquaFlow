@@ -15,7 +15,7 @@ import { useConfirm } from '@/shared/components/confirm'
 import { useColumnSort } from '@/shared/components/sortableColumn'
 import { downloadExcel, type ExcelColumn } from '@/shared/utils/excel'
 import { currency } from '@/shared/utils/format'
-import { serverTablePagination, usePagedScroll, tablePagination, type ServerPagination } from '@/shared/utils/table'
+import { serverTablePagination, tablePagination, type ServerPagination } from '@/shared/utils/table'
 import { LiveReceivables } from './LiveReceivables'
 import { LiveBottleOverview } from './LiveBottleOverview'
 import { OrderIntakeModal } from '@/features/orders/components/OrderIntakeModal'
@@ -85,7 +85,6 @@ export function CustomersPage() {
     total: customersQuery.data?.total ?? 0,
     onChange: (next, size) => setPaging({ filterKey, page: next, size }),
   }
-  const { attach: attachTable, scroll: pagedScroll } = usePagedScroll(server.size)
   const filtered = Boolean(query.trim()) || idle !== 'all'
   // Khách đã tích được giữ khi lật trang (lưu cả hồ sơ để xuất Excel), xóa khi đổi bộ lọc.
   const [checkedState, setCheckedState] = useState<{ filterKey: string; customers: Customer[] }>({ filterKey, customers: [] })
@@ -376,8 +375,7 @@ export function CustomersPage() {
                   loading={customersQuery.isPending}
                   pagination={serverTablePagination(server)}
                   locale={{ emptyText: filtered ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.' }}
-                  ref={attachTable}
-                  scroll={{ x: 1074, ...pagedScroll }}
+                  scroll={{ x: 1074 }}
                   rowSelection={{
                     selectedRowKeys: checked.map((customer) => customer.id),
                     preserveSelectedRowKeys: true,

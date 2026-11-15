@@ -7,7 +7,7 @@ import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
 import { usePendingReturns } from '@/features/live/returnApi'
 import { useColumnSort } from '@/shared/components/sortableColumn'
-import { usePagedTable } from '@/shared/utils/table'
+import { tablePagination } from '@/shared/utils/table'
 import { LotsPanel, type LotFilter } from './components/LotsPanel'
 import { InventoryAttention, type AttentionItem } from './components/InventoryAttention'
 import { MovementsPanel } from './components/MovementsPanel'
@@ -35,7 +35,6 @@ export function InventoryPage() {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const [view, setView] = useState<View>('stock')
-  const { pagination: pagedPagination, attach: attachTable, scroll: pagedScroll } = usePagedTable()
   // Bấm từ khung "Cần xử lý" thì tab Lô hàng mở sẵn bộ lọc tương ứng.
   const [lotFilter, setLotFilter] = useState<LotFilter>('stock')
   const [receiving, setReceiving] = useState<{
@@ -321,14 +320,13 @@ export function InventoryPage() {
                   columns={columns}
                   dataSource={visible}
                   loading={stockQuery.isPending}
-                  pagination={pagedPagination}
+                  pagination={tablePagination}
                   locale={{
                     emptyText: products.length
                       ? 'Không có sản phẩm phù hợp.'
                       : 'Chưa có sản phẩm. Thêm sản phẩm ở trang Sản phẩm trước khi nhập kho.',
                   }}
-                  ref={attachTable}
-                  scroll={{ x: 1044, ...pagedScroll }}
+                  scroll={{ x: 1044 }}
                   rowSelection={{
                     selectedRowKeys: checked.map((item) => item.id),
                     onChange: (keys) => setCheckedIds(keys.map(String)),
