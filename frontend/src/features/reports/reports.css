@@ -389,3 +389,20 @@
 .af-report-products-charts + .af-report-chart-note {
   margin: 12px 0 0;
 }
+/* Bảng sản phẩm bán chậm dưới biểu đồ bán chạy. */
+.af-report-slow {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--af-border);
+}
+.af-report-slow h3 {
+  margin: 0 0 4px;
+  color: var(--af-text-strong);
+  font-size: var(--af-fs-md);
+  font-weight: 600;
+}
+.af-slow-hint {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}

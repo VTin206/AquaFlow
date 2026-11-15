@@ -12,7 +12,9 @@ import { StatChange, StatTile, StatTiles, StatWarning } from '@/shared/component
 import { currency } from '@/shared/utils/format'
 import { reportApi, channelLabels, type LiveReport, type ReportQuery, type ReportSection, type ReportRow } from './reportApi'
 import { DriverDeliveryChart, ProductShareChart, RevenueChart, TopProductsChart } from './charts'
-import { metricLabels, rankProducts, useProductSales, type SalesMetric } from './productSales'
+import { metricLabels, rankProducts, slowMovers, useProductSales, type ProductSale, type SalesMetric } from './productSales'
+import { SlowMovers } from './SlowMovers'
+import { useStockItems } from '@/features/inventory/useInventory'
 import { autoGranularity, granularityLabels, groupRevenue, reportPresets, type Granularity } from './periods'
 import { previousRange } from './reportService'
 import type { ReportColumn } from './exportLiveReport'
@@ -175,9 +177,24 @@ function ColumnPicker({ columns, core, extra, onExtraChange }: {
 function ProductCharts({ query }: { query: ReportQuery }) {
   const [metric, setMetric] = useState<SalesMetric>('quantity')
   const sales = useProductSales(query)
+  const stock = useStockItems()
   if (sales.isError) return <QueryError error={sales.error} onRetry={sales.refetch} />
   if (sales.isPending) return <Typography.Text type="secondary">Đang tải báo cáo…</Typography.Text>
-  if (!rankProducts(sales.data ?? [], metric).length) return <Typography.Text type="secondary">Chưa có dữ liệu trong kỳ.</Typography.Text>
+  const hasSales = rankProducts(sales.data ?? [], metric).length > 0
+  return <>
+    {hasSales ? <BestSellerCharts rows={sales.data ?? []} metric={metric} onMetricChange={setMetric} /> : <Typography.Text type="secondary">Chưa bán sản phẩm nào trong kỳ.</Typography.Text>}
+    {/* Bán chậm tính trên cả danh mục đang bán, nên sản phẩm chưa bán lần nào trong kỳ cũng có mặt. */}
+    <section className="af-report-slow">
+      <h3>8 sản phẩm bán chậm nhất</h3>
+      <Typography.Text type="secondary" className="af-report-chart-note">Sản phẩm đang bán, xếp từ bán ít nhất trong kỳ; bằng nhau thì sản phẩm tồn nhiều hơn đứng trước. Tồn kho tính tại thời điểm hiện tại.</Typography.Text>
+      {stock.isError ? <QueryError error={stock.error} onRetry={stock.refetch} />
+        : stock.isPending ? <Typography.Text type="secondary">Đang tải tồn kho…</Typography.Text>
+        : <SlowMovers rows={slowMovers(sales.data ?? [], stock.data ?? [])} />}
+    </section>
+  </>
+}
+
+function BestSellerCharts({ rows, metric, onMetricChange: setMetric }: { rows: ProductSale[]; metric: SalesMetric; onMetricChange: (metric: SalesMetric) => void }) {
   return <>
     <div className="af-report-chart-tools">
       <Segmented<SalesMetric> size="small" aria-label="Xếp hạng theo" value={metric} onChange={setMetric}
@@ -186,11 +203,11 @@ function ProductCharts({ query }: { query: ReportQuery }) {
     <div className="af-report-products-charts">
       <section>
         <h3>8 sản phẩm bán chạy nhất</h3>
-        <TopProductsChart rows={sales.data ?? []} metric={metric} />
+        <TopProductsChart rows={rows} metric={metric} />
       </section>
       <section>
         <h3>Tỷ lệ {metricLabels[metric].toLowerCase()}</h3>
-        <ProductShareChart rows={sales.data ?? []} metric={metric} />
+        <ProductShareChart rows={rows} metric={metric} />
       </section>
     </div>
     {metric === 'quantity' && <Typography.Text type="secondary" className="af-report-chart-note">Số lượng đã trừ hàng khách trả, cộng theo đơn vị bán của từng sản phẩm (bình, thùng, chai…).</Typography.Text>}
