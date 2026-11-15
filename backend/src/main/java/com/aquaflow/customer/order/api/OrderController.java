@@ -84,6 +84,14 @@ public class OrderController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    @PutMapping("/{id}")
+    @Operation(summary = "Edit a pending order: recipient, address, appointment, note and items")
+    public ResponseEntity<OrderResponse> update(
+            @PathVariable Long id,
+            @Valid @RequestBody com.aquaflow.customer.order.api.dto.OrderUpdateRequest request) {
+        return ResponseEntity.ok(orderService.updatePending(id, request));
+    }
+
     @PatchMapping("/{id}/status")
     @Operation(summary = "Update order status")
     public ResponseEntity<OrderResponse> updateStatus(

@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
-import { Alert, Button, Card, Descriptions, Empty, Result, Select, Skeleton, Space, Table, Tag } from 'antd'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Alert, App, Button, Card, Descriptions, Empty, Popconfirm, Result, Select, Skeleton, Space, Table, Tag } from 'antd'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useAuth } from '@/features/auth/useAuth'
@@ -95,6 +95,19 @@ export function CustomerOrderPage() {
     queryFn: catalogApi.products,
     enabled: valid && isCustomer(user),
   })
+  const { message } = App.useApp()
+  const client = useQueryClient()
+  const cancel = useMutation({
+    mutationFn: () => customerOrderApi.cancel(id),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ['live'] })
+      message.success('Đã hủy đơn.')
+    },
+    onError: (error: Error) => {
+      void query.refetch()
+      message.error(error.message)
+    },
+  })
   const notFound = !valid || (query.error instanceof ApiError && [403, 404].includes(query.error.status))
   if (notFound)
     return (
@@ -118,6 +131,20 @@ export function CustomerOrderPage() {
         <Button loading={query.isFetching} onClick={() => void query.refetch()}>
           Làm mới
         </Button>
+        {/* Khách tự hủy khi cửa hàng chưa xác nhận; đã xác nhận thì phải gọi cửa hàng. */}
+        {query.data?.status === 'PENDING' && (
+          <Popconfirm
+            title="Hủy đơn này?"
+            okText="Hủy đơn"
+            okButtonProps={{ danger: true }}
+            cancelText="Không"
+            onConfirm={() => cancel.mutate()}
+          >
+            <Button danger loading={cancel.isPending}>
+              Hủy đơn
+            </Button>
+          </Popconfirm>
+        )}
       </Space>
       {query.isError ? (
         <QueryError error={query.error} onRetry={query.refetch} />

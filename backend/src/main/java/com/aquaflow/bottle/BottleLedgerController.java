@@ -20,6 +20,11 @@ public class BottleLedgerController {
     }
     @GetMapping("/customers/{id}/bottle-ledger") public Ledger ledger(@PathVariable long id) { return service.ledger(id); }
     @GetMapping("/customers/{id}/bottle-transactions/{requestId}") public Entry detail(@PathVariable long id,@PathVariable UUID requestId) { return service.detail(id,requestId); }
+    /** Hủy giao dịch vỏ/cọc ghi nhầm (chỉ ADMIN, xem SecurityConfig). */
+    @PostMapping("/customers/{id}/bottle-transactions/{requestId}/void") public Entry voidEntry(@PathVariable long id,@PathVariable UUID requestId,
+            @Valid @RequestBody BottleLedgerDtos.Void input,@AuthenticationPrincipal AuthUserDetails user) {
+        return service.voidEntry(id,requestId,user.user().getId(),input);
+    }
     @PostMapping("/customers/{id}/bottle-transactions") public ResponseEntity<Entry> create(@PathVariable long id,@Valid @RequestBody Create input,@AuthenticationPrincipal AuthUserDetails user) {
         boolean admin=user.getAuthorities().stream().anyMatch(a->a.getAuthority().equals("ROLE_ADMIN"));
         var entry=service.create(id,user.user().getId(),admin,input);

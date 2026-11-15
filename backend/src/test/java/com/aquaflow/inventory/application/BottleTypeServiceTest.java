@@ -61,9 +61,33 @@ class BottleTypeServiceTest {
         BottleType existing = new BottleType("Bình 19L", new BigDecimal("50000"));
         when(bottleTypeRepository.findById(1L)).thenReturn(Optional.of(existing));
 
-        bottleTypeService.update(1L, new UpdateBottleTypeRequest(new BigDecimal("60000")));
+        bottleTypeService.update(1L, new UpdateBottleTypeRequest(null, new BigDecimal("60000")));
 
         assertThat(existing.getDepositUnitAmount()).isEqualByComparingTo("60000");
+    }
+
+    @Test
+    void updateRenamesBottleTypeWhenNameIsFree() {
+        BottleType existing = new BottleType("Binh 19L", new BigDecimal("50000"));
+        when(bottleTypeRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(bottleTypeRepository.existsByNameIgnoreCaseAndIdNot("Bình 19/20L", 1L)).thenReturn(false);
+
+        bottleTypeService.update(1L, new UpdateBottleTypeRequest("  Bình 19/20L ", new BigDecimal("50000")));
+
+        assertThat(existing.getName()).isEqualTo("Bình 19/20L");
+        assertThat(existing.getDepositUnitAmount()).isEqualByComparingTo("50000");
+    }
+
+    @Test
+    void updateRejectsNameUsedByAnotherBottleType() {
+        BottleType existing = new BottleType("Binh 19L", new BigDecimal("50000"));
+        when(bottleTypeRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(bottleTypeRepository.existsByNameIgnoreCaseAndIdNot("Bình 20L", 1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> bottleTypeService.update(1L, new UpdateBottleTypeRequest("Bình 20L", new BigDecimal("50000"))))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("\"Bình 20L\"");
+        assertThat(existing.getName()).isEqualTo("Binh 19L");
     }
 
     @Test
@@ -71,7 +95,7 @@ class BottleTypeServiceTest {
         when(bottleTypeRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> bottleTypeService.update(99L,
-                new UpdateBottleTypeRequest(new BigDecimal("60000"))))
+                new UpdateBottleTypeRequest(null, new BigDecimal("60000"))))
                 .isInstanceOf(NotFoundException.class);
     }
 

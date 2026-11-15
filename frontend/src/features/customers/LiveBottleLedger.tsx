@@ -2,7 +2,8 @@ import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, App, Button, Checkbox, Form, InputNumber, Modal, Select, Skeleton, Space, Table, Tag } from 'antd'
 import { useStaff } from '@/features/auth/useStaff'
-import { bottleLedgerApi, type BottleInput, type BottleLedger } from '@/features/live/bottleLedgerApi'
+import { bottleLedgerApi, type BottleInput, type BottleLedger, type BottleLedgerEntry } from '@/features/live/bottleLedgerApi'
+import { can } from '@/features/auth/permissions'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { QueryError } from '@/shared/components/QueryError'
 import { useConfirm } from '@/shared/components/confirm'
@@ -21,6 +22,7 @@ const labels: Record<string, string> = {
   ADJUST_RECEIVE: 'Điều chỉnh giảm vỏ',
   ADJUST_COLLECT: 'Điều chỉnh tăng cọc',
   ADJUST_REFUND: 'Điều chỉnh giảm cọc',
+  VOID: 'Hủy giao dịch',
 }
 type Draft = Omit<BottleInput, 'requestId' | 'kind'>
 
@@ -174,10 +176,54 @@ function BottleForm({
   )
 }
 
+/** Hủy giao dịch vỏ/cọc ghi nhầm: ghi một dòng đảo ngược, lịch sử giữ cả hai dòng. */
+function VoidEntryModal({ customerId, entry, onClose }: { customerId: number; entry: BottleLedgerEntry; onClose: () => void }) {
+  const [form] = Form.useForm<{ reason: string }>()
+  const { message } = App.useApp()
+  const client = useQueryClient()
+  // Một mã cho mỗi lần mở cửa sổ: bấm lại khi mạng chậm không tạo hai dòng hủy.
+  const [requestId] = useState(() => crypto.randomUUID())
+  const save = useMutation({
+    mutationFn: (reason: string) => bottleLedgerApi.void(customerId, entry.id, requestId, reason),
+    onSuccess: async () => {
+      await invalidateLiveData(client)
+      message.success('Đã hủy giao dịch.')
+      onClose()
+    },
+    onError: (error: Error) => message.error(error.message),
+  })
+  return (
+    <Modal
+      open
+      centered
+      title={`Hủy giao dịch: ${labels[entry.kind] ?? entry.kind}`}
+      okText="Hủy giao dịch"
+      okButtonProps={{ danger: true }}
+      cancelText="Không"
+      onOk={() => form.submit()}
+      confirmLoading={save.isPending}
+      onCancel={() => !save.isPending && onClose()}
+    >
+      <p>
+        {entry.bottles ? `${entry.bottles > 0 ? '+' : ''}${entry.bottles} vỏ ${entry.bottleType ?? ''}` : ''}
+        {entry.bottles && entry.deposit ? ' · ' : ''}
+        {entry.deposit ? `Cọc ${currency(entry.deposit)}` : ''} · {new Date(entry.at).toLocaleString('vi-VN')}
+      </p>
+      <Form form={form} layout="vertical" disabled={save.isPending} onFinish={({ reason }) => save.mutate(reason)}>
+        <Form.Item name="reason" label="Lý do hủy" rules={[{ required: true, whitespace: true, message: 'Nhập lý do hủy.' }, { max: 300 }]}>
+          <TextArea rows={2} maxLength={300} placeholder="Ví dụ: ghi nhầm khách" />
+        </Form.Item>
+      </Form>
+    </Modal>
+  )
+}
+
 /** Sổ vỏ và tiền cọc của một khách. */
 export function LiveBottleLedger({ customerId }: { customerId: number | string }) {
   const staff = useStaff()
   const [kind, setKind] = useState<BottleInput['kind']>()
+  const canVoid = !!staff && can(staff.role, 'adjustBottles')
+  const [voiding, setVoiding] = useState<BottleLedgerEntry | null>(null)
   const query = useQuery({
     queryKey: ['live', 'bottle-ledger', staff?.name, staff?.role, customerId],
     queryFn: () => bottleLedgerApi.ledger(Number(customerId)),
@@ -262,8 +308,27 @@ export function LiveBottleLedger({ customerId }: { customerId: number | string }
           { title: 'Vỏ (+/−)', dataIndex: 'bottles', align: 'right' },
           { title: 'Cọc (+/−)', dataIndex: 'deposit', render: currency, align: 'right' },
           { title: 'Người ghi', dataIndex: 'actor' },
+          // Chỉ dòng ghi qua sổ (id dạng UUID) mới hủy được; dòng đã hủy hoặc dòng hủy thì không.
+          ...(canVoid
+            ? [
+                {
+                  title: 'Thao tác',
+                  key: 'actions',
+                  width: 100,
+                  render: (_: unknown, entry: BottleLedgerEntry) =>
+                    entry.voided ? (
+                      <Tag>Đã hủy</Tag>
+                    ) : entry.kind === 'VOID' || !/^[0-9a-f-]{36}$/.test(entry.id) ? null : (
+                      <Button size="small" type="text" danger onClick={() => setVoiding(entry)}>
+                        Hủy
+                      </Button>
+                    ),
+                },
+              ]
+            : []),
         ]}
       />
+      {voiding && <VoidEntryModal customerId={Number(customerId)} entry={voiding} onClose={() => setVoiding(null)} />}
       <p className="af-form-hint">
         Số dư cộng dồn từ lịch sử. Đổi giá cọc của loại vỏ không làm thay đổi nghĩa vụ đã ghi nhận. Sổ này ghi nhận vỏ thực tế, không tự
         tăng hoặc giảm tồn kho nước.

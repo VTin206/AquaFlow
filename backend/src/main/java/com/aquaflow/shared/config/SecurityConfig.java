@@ -75,6 +75,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/suppliers/**").hasAnyRole("ADMIN", "SALES_STAFF")
                         // NhÃ¢n viÃªn láº­p/sá»­a phiáº¿u nháº­p/xÃ¡c nháº­n (cá»™ng tá»“n)/há»§y phiáº¿u
                         .requestMatchers("/api/v1/purchase-receipts/**").hasAnyRole("ADMIN", "SALES_STAFF")
+                        // Kiểm kê (điều chỉnh tồn) chỉ chủ cửa hàng.
+                        .requestMatchers("/api/v1/inventory/adjustments/**", "/api/v1/inventory/adjustments").hasRole("ADMIN")
                         .requestMatchers("/api/v1/inventory/**").hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers("/api/v1/products/**", "/api/v1/bottle-types/**", "/api/v1/suppliers/**").hasAnyRole("ADMIN", "SALES_STAFF")
                         // Loại sản phẩm chỉ cho nhân viên cửa hàng; trang khách đọc tên loại trong ProductResponse.
@@ -86,6 +88,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         // Nhận trả hàng làm giảm doanh thu và có thể hoàn tiền: chỉ chủ cửa hàng.
                         .requestMatchers(HttpMethod.POST, "/api/v1/sales/orders/*/returns").hasRole("ADMIN")
+                        // Hủy phiếu thu và hủy giao dịch vỏ/cọc ghi nhầm chỉ chủ cửa hàng.
+                        .requestMatchers(HttpMethod.POST, "/api/v1/sales/orders/*/payments/*/void",
+                                "/api/v1/sales/customers/*/bottle-transactions/*/void").hasRole("ADMIN")
                         .requestMatchers("/api/v1/sales/**").hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers(HttpMethod.POST, "/api/v1/delivery-quotes").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/customer/orders/guest").permitAll()

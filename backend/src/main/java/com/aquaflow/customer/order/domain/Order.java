@@ -151,6 +151,20 @@ public class Order {
         this.deliveryFee = validatedDeliveryFee;
     }
 
+    /** Sửa thông tin nhận hàng khi đơn còn chờ xác nhận; kênh, hình thức nhận và phí giao giữ nguyên. */
+    public void updateDetails(String recipientName, String recipientPhone, String deliveryAddress, String deliveryArea,
+                              OffsetDateTime requestedDeliveryAt, String note) {
+        if (status != OrderStatus.PENDING) {
+            throw new com.aquaflow.shared.api.ConflictException("Chỉ sửa được đơn đang chờ xác nhận");
+        }
+        this.recipientName = recipientName;
+        this.recipientPhone = recipientPhone;
+        this.deliveryAddress = deliveryAddress;
+        this.deliveryArea = deliveryArea;
+        this.requestedDeliveryAt = requestedDeliveryAt;
+        this.note = note;
+    }
+
     public BigDecimal getTotal() {
         return subtotal.subtract(discountAmount).add(deliveryFee);
     }

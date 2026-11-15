@@ -7,4 +7,5 @@ import java.util.List;
 public interface BottleTypeRepository extends JpaRepository<BottleType, Long> {
     List<BottleType> findByActive(Boolean active);
     boolean existsByName(String name);
+    boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
 }

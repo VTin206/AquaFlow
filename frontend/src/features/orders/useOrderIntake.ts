@@ -5,7 +5,7 @@ import { catalogApi } from '@/features/live/catalogApi'
 import { customerApi } from '@/features/live/customerApi'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { orderApi } from '@/features/live/orderApi'
-import { toLiveOrderInput, type IntakeValues } from './orderIntake'
+import { toLiveOrderInput, toLiveOrderUpdate, type IntakeValues } from './orderIntake'
 
 export type IntakeProduct = {
   id: string
@@ -54,6 +54,18 @@ export function useIntakeAddresses(customer: Customer | undefined) {
     isDefault: address.isDefault,
   }))
   return { addresses, isError: query.isError, refetch: query.refetch }
+}
+
+/** Lưu đơn đang sửa (chỉ đơn chờ xác nhận). */
+export function useSaveOrderEdit() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, values }: { id: number; values: IntakeValues }) => {
+      const order = await orderApi.update(id, toLiveOrderUpdate(values))
+      void invalidateLiveData(queryClient)
+      return order
+    },
+  })
 }
 
 /** Tạo đơn chờ xác nhận; trả về mã để mở chi tiết và mã hiển thị. */

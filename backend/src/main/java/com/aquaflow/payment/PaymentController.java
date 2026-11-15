@@ -20,6 +20,11 @@ public class PaymentController {
         var receipt=service.create(id,user.user().getId(),input);
         return ResponseEntity.created(URI.create("/api/v1/sales/orders/"+id+"/payments/"+receipt.id())).body(receipt);
     }
+    /** Hủy phiếu thu/hoàn ghi nhầm (chỉ ADMIN, xem SecurityConfig); trả số dư mới của đơn. */
+    @PostMapping("/orders/{orderId}/payments/{id}/void") public Balance voidPayment(@PathVariable long orderId,@PathVariable long id,
+            @Valid @RequestBody PaymentDtos.Void input,@AuthenticationPrincipal AuthUserDetails user) {
+        return service.voidPayment(orderId,id,user.user().getId(),input);
+    }
     @GetMapping("/order-balances") public List<Balance> balances() { return service.balances(); }
     /** Khách còn phải thu hoặc cần hoàn, nhiều tiền nhất trước; q tìm theo tên hoặc số điện thoại. */
     @GetMapping("/customer-balances") public com.aquaflow.shared.api.PageResponse<CustomerBalance> customers(@RequestParam(required=false) Integer page,

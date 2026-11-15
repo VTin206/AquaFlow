@@ -99,6 +99,27 @@ public class CustomerOrderController {
                 .body(order);
     }
 
+    @PostMapping("/{id}/cancel")
+    @Operation(summary = "Cancel an order of the current customer while it is still pending")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Order cancelled"),
+            @ApiResponse(responseCode = "404", description = "Order not found for this customer", content =
+                    @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
+            @ApiResponse(responseCode = "409", description = "Order is no longer pending", content =
+                    @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
+    })
+    public ResponseEntity<OrderResponse> cancel(
+            @PathVariable Long id,
+            @AuthenticationPrincipal AuthUserDetails principal) {
+
+        Long userId = principal.user().getId();
+
+        return customerService.findActiveByUserId(userId)
+                .map(customer -> ResponseEntity.ok(orderService.cancelForCustomer(id, customer.id())))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @PostMapping("/guest")
     @Operation(summary = "Create a guest delivery order without authentication")
     @ApiResponses({

@@ -1,5 +1,8 @@
 import { useState } from 'react'
-import { Input, Segmented, Table, Tag, Typography } from 'antd'
+import { Button, Input, Segmented, Table, Tag, Typography } from 'antd'
+import { useStaff } from '@/features/auth/useStaff'
+import { can } from '@/features/auth/permissions'
+import { StocktakeModal } from './StocktakeModal'
 import { Search } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
@@ -21,6 +24,9 @@ export function LotsPanel({ initialFilter = 'stock' }: { initialFilter?: LotFilt
   const warningDays = useExpiryWarningDays()
   const [filter, setFilter] = useState<LotFilter>(initialFilter)
   const [query, setQuery] = useState('')
+  const [counting, setCounting] = useState<LotItem>()
+  const role = useStaff()?.role
+  const canAdjust = !!role && can(role, 'adjustStock')
   const lots = [...(lotsQuery.data ?? [])].sort((a, b) => (a.expiryDate ?? '9999').localeCompare(b.expiryDate ?? '9999'))
   const inStock = lots.filter((lot) => lot.onHand > 0)
   const stateOf = (lot: LotItem) => expiryStatus(lot.expiryDate ? isoToVnDate(lot.expiryDate) : '—', warningDays)
@@ -158,8 +164,23 @@ export function LotsPanel({ initialFilter = 'stock' }: { initialFilter?: LotFilt
                 <Tag color="default">Chờ</Tag>
               ),
           },
+          ...(canAdjust
+            ? [
+                {
+                  title: 'Thao tác',
+                  key: 'actions',
+                  width: 110,
+                  render: (_: unknown, lot: LotItem) => (
+                    <Button size="small" onClick={() => setCounting(lot)}>
+                      Kiểm kê
+                    </Button>
+                  ),
+                },
+              ]
+            : []),
         ]}
       />
+      {counting && <StocktakeModal lot={counting} onClose={() => setCounting(undefined)} />}
     </>
   )
 }

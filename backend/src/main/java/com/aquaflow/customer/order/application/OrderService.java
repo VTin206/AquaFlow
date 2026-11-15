@@ -295,6 +295,64 @@ public class OrderService {
                 });
     }
 
+    /**
+     * Sửa đơn còn chờ xác nhận (chưa giữ hàng nên không đụng tồn kho): thay người nhận, địa chỉ, giờ hẹn, ghi chú và
+     * toàn bộ dòng hàng theo giá hiện tại. Phí giao giữ nguyên; tổng mới không được nhỏ hơn số khách đã trả.
+     */
+    @Transactional
+    public OrderResponse updatePending(Long id, com.aquaflow.customer.order.api.dto.OrderUpdateRequest request) {
+        Order order = orderRepository.findForUpdateById(id)
+                .orElseThrow(() -> new NotFoundException("Order not found: " + id));
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new ConflictException("Chỉ sửa được đơn đang chờ xác nhận");
+        }
+        if (order.getFulfillmentType() == FulfillmentType.DELIVERY
+                && (isBlank(request.recipientName()) || isBlank(request.recipientPhone()) || isBlank(request.deliveryAddress()))) {
+            throw new BadRequestException("Recipient name, recipient phone, and delivery address are required for delivery orders");
+        }
+
+        BigDecimal subtotal = BigDecimal.ZERO;
+        List<OrderItem> items = new java.util.ArrayList<>();
+        for (OrderItemRequest itemRequest : request.items()) {
+            Product product = productRepository.findById(itemRequest.productId())
+                    .filter(Product::isActive)
+                    .orElseThrow(() -> new NotFoundException("Active product not found: " + itemRequest.productId()));
+            OrderItem item = new OrderItem(order, product.getId(), itemRequest.quantity(), product.getSalePrice());
+            items.add(item);
+            subtotal = subtotal.add(item.getLineTotal());
+        }
+        BigDecimal paid = orderQueryRepository.balances(List.of(id))
+                .getOrDefault(id, OrderQueryRepository.Balance.ZERO).paid();
+        if (subtotal.add(order.getDeliveryFee()).compareTo(paid) < 0) {
+            throw new ConflictException("Tổng đơn mới nhỏ hơn số khách đã trả; hãy hoàn tiền trước khi bớt hàng.");
+        }
+
+        order.updateDetails(request.recipientName(), request.recipientPhone(), request.deliveryAddress(),
+                request.deliveryArea(), request.requestedDeliveryAt(), request.note());
+        order.updateAmounts(subtotal, BigDecimal.ZERO, order.getDeliveryFee());
+        orderItemRepository.deleteAll(orderItemRepository.findAllByOrder_Id(id));
+        orderItemRepository.flush();
+        orderItemRepository.saveAll(items);
+        return toResponse(orderRepository.save(order));
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    /** Khách tự hủy đơn của mình khi đơn còn chờ xác nhận (chưa giữ hàng). */
+    @Transactional
+    public OrderResponse cancelForCustomer(Long id, Long customerId) {
+        Order order = orderRepository.findForUpdateById(id)
+                .filter(found -> customerId.equals(found.getCustomerId()))
+                .orElseThrow(() -> new NotFoundException("Order not found: " + id));
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new ConflictException("Đơn đã được cửa hàng xác nhận, vui lòng gọi cửa hàng để hủy.");
+        }
+        order.transitionTo(OrderStatus.CANCELLED);
+        return toResponse(orderRepository.save(order));
+    }
+
     public List<OrderResponse> findAllByCustomerId(Long customerId) {
         List<Order> orders = orderRepository.findAllByCustomerId(customerId);
         if (orders.isEmpty()) return List.of();

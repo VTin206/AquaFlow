@@ -8,6 +8,9 @@ import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { dueTone } from '@/shared/utils/money'
 import { useStaff } from '@/features/auth/useStaff'
+import { can } from '@/features/auth/permissions'
+import { OrderIntakeModal } from '@/features/orders/components/OrderIntakeModal'
+import { Pencil } from 'lucide-react'
 import { tripLabels } from '@/features/delivery/deliveryApi'
 import { catalogApi } from './catalogApi'
 import {
@@ -56,6 +59,8 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
   // Nhận trả hàng làm giảm doanh thu và có thể hoàn tiền nên chỉ chủ cửa hàng (BE cũng chặn).
   const canTakeReturns = staff?.role === 'ADMIN'
   const [returning, setReturning] = useState(false)
+  const [editingOrder, setEditingOrder] = useState(false)
+  const canEdit = !!staff && can(staff.role, 'editOrder')
   const returns = useOrderReturns(id)
   const activity = useOrderActivity(id, canManage)
   const { message } = App.useApp()
@@ -408,7 +413,16 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
         )
       }
       sections={moreSections}
-      cancelAction={cancelAction}
+      cancelAction={
+        <>
+          {order && canEdit && order.status === 'PENDING' && (
+            <Button type="text" icon={<Pencil size={15} />} disabled={busy} onClick={() => setEditingOrder(true)}>
+              Sửa đơn
+            </Button>
+          )}
+          {cancelAction}
+        </>
+      }
       moreItems={moreItems}
       actions={primaryAction}
       onClose={onClose}
@@ -462,6 +476,7 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
       }
     >
       {printer.portal}
+      {editingOrder && order && <OrderIntakeModal editing={order} onClose={() => setEditingOrder(false)} />}
       {returning && order && (
         <LiveOrderReturnModal
           order={{ id: order.id, orderCode: order.orderCode, subtotal: Number(order.subtotal), discountAmount: Number(order.discountAmount) }}

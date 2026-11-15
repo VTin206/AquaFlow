@@ -13,5 +13,7 @@ export const customerOrderApi = {
     }
   },
   detail: (id: number) => api.get<LiveOrder>(`/customer/orders/${id}`),
+  /** Khách tự hủy khi đơn còn chờ xác nhận; đơn đã xác nhận thì backend trả 409. */
+  cancel: (id: number) => api.post<LiveOrder>(`/customer/orders/${id}/cancel`),
   create: (draft: GuestOrderInput) => api.post<LiveOrder>('/customer/orders', { ...draft, channel: 'WEB', fulfillmentType: 'DELIVERY' }),
 }

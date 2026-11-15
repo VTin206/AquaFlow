@@ -73,6 +73,18 @@ public class PaymentRepository {
         });
         return existing;
     }
+    public record Voidable(String status,String direction,java.math.BigDecimal amount,boolean fromDelivery) {}
+    public Voidable voidable(long orderId,long id) {
+        return jdbc.query("""
+            SELECT p.status,p.direction,p.amount,EXISTS(SELECT 1 FROM delivery_collections d WHERE d.payment_id=p.id) AS from_delivery
+            FROM payments p WHERE p.order_id=? AND p.id=? FOR UPDATE OF p
+            """,(r,n)->new Voidable(r.getString("status"),r.getString("direction"),r.getBigDecimal("amount"),r.getBoolean("from_delivery")),orderId,id)
+            .stream().findFirst().orElseThrow(()->new NotFoundException("Không tìm thấy phiếu thanh toán"));
+    }
+    public void voidPayment(long orderId,long id,long actor,String reason) {
+        jdbc.update("UPDATE payments SET status='REJECTED',voided_by=?,voided_at=NOW(),void_reason=? WHERE order_id=? AND id=?",actor,reason,orderId,id);
+        jdbc.queryForObject("SELECT refresh_order_payment_status(?)",Object.class,orderId);
+    }
     public Receipt create(long orderId,long actor,Create input) {
         Long id=jdbc.queryForObject("""
             INSERT INTO payments(order_id,direction,method,amount,status,external_reference,note,recorded_by,confirmed_by,confirmed_at,request_id)

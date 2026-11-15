@@ -15,6 +15,7 @@ import {
   addQuickLine,
   bestSellers,
   contactSuggestions,
+  intakeValuesOf,
   lastOrderOf,
   samePhone,
   shortProductName,
@@ -22,7 +23,15 @@ import {
   type IntakeValues,
 } from '../orderIntake'
 import { orderedAtOf, walkInName, type Order } from '../types'
-import { useIntakeAddresses, useIntakeProducts, useSubmitIntake, type IntakeAddress, type IntakeProduct } from '../useOrderIntake'
+import {
+  useIntakeAddresses,
+  useIntakeProducts,
+  useSaveOrderEdit,
+  useSubmitIntake,
+  type IntakeAddress,
+  type IntakeProduct,
+} from '../useOrderIntake'
+import type { LiveOrder } from '@/features/live/orderApi'
 import { FormSection } from '@/shared/components/FormSection'
 import { ModalTotalFooter } from '@/shared/components/ModalTotalFooter'
 import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
@@ -35,6 +44,8 @@ type OrderIntakeModalProps = {
   onCreated?: (id: string) => void
   /** Tạo đơn từ hồ sơ khách. */
   defaultCustomer?: Customer
+  /** Sửa đơn còn chờ xác nhận: điền sẵn đơn, khóa kênh và hình thức nhận, lưu đè thay vì tạo mới. */
+  editing?: LiveOrder
 }
 
 const QUICK_PRODUCTS = 4
@@ -43,13 +54,15 @@ const priceAndStock = (product: IntakeProduct) =>
   `${currency(product.price)}${product.available === undefined ? '' : ` · còn ${product.available}`}`
 
 /** Nhận đơn bắt đầu từ số điện thoại: khách quen tự điền thông tin và đặt lại đơn trước chỉ với một lần bấm. */
-export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderIntakeModalProps) {
+export function OrderIntakeModal({ onClose, onCreated, defaultCustomer, editing }: OrderIntakeModalProps) {
   const { message } = App.useApp()
   const [form] = Form.useForm<IntakeValues>()
   const cancel = useConfirmDiscard(form, onClose)
   const { products, isPending: loadingProducts, error: productsError, refetch: refetchProducts } = useIntakeProducts()
   const { data: orders = [] } = useOrderList()
   const submit = useSubmitIntake()
+  const saveEdit = useSaveOrderEdit()
+  const saving = submit.isPending || saveEdit.isPending
 
   // Khách theo số đang gõ; mở từ hồ sơ thì giữ đúng khách đó cho đến khi nhân viên đổi số.
   const [typedPhone, setTypedPhone] = useState(defaultCustomer?.phone ?? '')
@@ -108,7 +121,7 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
   const filledFor = useRef(defaultCustomer?.id)
   const addressFilledFor = useRef<string>(undefined)
   useEffect(() => {
-    if (customer?.id === filledFor.current) return
+    if (editing || customer?.id === filledFor.current) return
     const hadCustomer = filledFor.current !== undefined
     filledFor.current = customer?.id
     addressFilledFor.current = undefined
@@ -116,7 +129,7 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
   })
   // Tự điền địa chỉ mặc định, mỗi khách một lần để không đè phần nhân viên đã sửa.
   useEffect(() => {
-    if (!delivery || !customer || !addresses || addressFilledFor.current === customer.id) return
+    if (editing || !delivery || !customer || !addresses || addressFilledFor.current === customer.id) return
     addressFilledFor.current = customer.id
     const saved = addresses.find((item) => item.isDefault)
     if (saved) applyAddress(saved)
@@ -126,6 +139,7 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
   const contactOrder = customer ? undefined : lastOrder
   const orderFilledFor = useRef<string>(undefined)
   useEffect(() => {
+    if (editing) return
     const key = contactOrder && phoneDigits(contactOrder.phone)
     if (key === orderFilledFor.current) return
     const hadOrder = orderFilledFor.current !== undefined
@@ -169,16 +183,16 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
   return (
     <Modal
       open
-      title="Tiếp nhận đơn hàng"
+      title={editing ? `Sửa đơn ${editing.orderCode}` : 'Tiếp nhận đơn hàng'}
       width={modalWidth.large}
       styles={modalScrollBody}
-      okText="Tạo đơn chờ xác nhận"
+      okText={editing ? 'Lưu thay đổi' : 'Tạo đơn chờ xác nhận'}
       cancelText="Hủy"
       okButtonProps={{ disabled: loadingProducts || Boolean(productsError) }}
-      confirmLoading={submit.isPending}
+      confirmLoading={saving}
       onOk={() => form.submit()}
-      onCancel={submit.isPending ? undefined : cancel}
-      mask={{ closable: !submit.isPending }}
+      onCancel={saving ? undefined : cancel}
+      mask={{ closable: !saving }}
       footer={(_, { OkBtn, CancelBtn }) => (
         <ModalTotalFooter label="Tiền hàng dự kiến" value={currency(goods)}>
           <CancelBtn />
@@ -193,30 +207,45 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
           name="order-intake"
           form={form}
           layout="vertical"
-          disabled={submit.isPending}
+          disabled={saving}
           scrollToFirstError={{ block: 'center', focus: true }}
           onKeyDown={focusNextOnEnter}
-          initialValues={{
-            phone: defaultCustomer?.phone,
-            customer: defaultCustomer?.name,
-            method: 'Giao tận nơi',
-            channel: 'Điện thoại',
-            lines: [{ quantity: 1 }],
-          }}
+          initialValues={
+            editing
+              ? intakeValuesOf(editing)
+              : {
+                  phone: defaultCustomer?.phone,
+                  customer: defaultCustomer?.name,
+                  method: 'Giao tận nơi',
+                  channel: 'Điện thoại',
+                  lines: [{ quantity: 1 }],
+                }
+          }
           // Lỗi nằm ở phần đang thu gọn thì mở ra để nhân viên thấy.
           onFinishFailed={() => setEditingFor(customer?.id)}
           onFinish={(values) =>
-            submit.mutate(
-              { values, customerId: customer?.id },
-              {
-                onSuccess: ({ id, code }) => {
-                  message.success(`Đã tạo đơn ${code}. Đơn đang chờ xác nhận.`)
-                  onClose()
-                  onCreated?.(id)
-                },
-                onError: (error) => message.error(error.message),
-              },
-            )
+            editing
+              ? saveEdit.mutate(
+                  { id: editing.id, values },
+                  {
+                    onSuccess: () => {
+                      message.success(`Đã lưu đơn ${editing.orderCode}.`)
+                      onClose()
+                    },
+                    onError: (error) => message.error(error.message),
+                  },
+                )
+              : submit.mutate(
+                  { values, customerId: customer?.id },
+                  {
+                    onSuccess: ({ id, code }) => {
+                      message.success(`Đã tạo đơn ${code}. Đơn đang chờ xác nhận.`)
+                      onClose()
+                      onCreated?.(id)
+                    },
+                    onError: (error) => message.error(error.message),
+                  },
+                )
           }
         >
           {customersQuery.isError && (
@@ -311,6 +340,7 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
                   <Col xs={24} sm={14}>
                     <Form.Item name="method" label="Hình thức nhận" rules={[{ required: true }]}>
                       <Segmented
+                        disabled={!!editing}
                         block
                         options={[
                           { value: 'Giao tận nơi', label: 'Giao tận nơi' },
@@ -321,7 +351,10 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
                   </Col>
                   <Col xs={24} sm={10}>
                     <Form.Item name="channel" label="Kênh tiếp nhận" rules={[{ required: true }]}>
-                      <Select options={['Điện thoại', 'Tại quầy', 'Tin nhắn'].map((value) => ({ value, label: value }))} />
+                      <Select
+                        disabled={!!editing}
+                        options={['Điện thoại', 'Tại quầy', 'Tin nhắn'].map((value) => ({ value, label: value }))}
+                      />
                     </Form.Item>
                   </Col>
                 </Row>
