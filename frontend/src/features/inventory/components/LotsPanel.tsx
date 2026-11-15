@@ -80,7 +80,7 @@ export function LotsPanel({ initialFilter = 'stock' }: { initialFilter?: LotFilt
               </div>
             ),
           },
-          { title: 'Ngày SX', dataIndex: 'mfgDate', width: 110, render: (date?: string) => (date ? isoToVnDate(date) : '—') },
+          { title: 'Ngày SX', dataIndex: 'mfgDate', width: 120, render: (date?: string) => (date ? isoToVnDate(date) : '—') },
           {
             title: 'Hạn dùng',
             dataIndex: 'expiryDate',

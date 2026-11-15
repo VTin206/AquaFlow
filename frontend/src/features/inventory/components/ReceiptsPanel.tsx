@@ -69,15 +69,17 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
           total: receiptsQuery.data?.total ?? 0,
           onChange: (next, size) => setPaging({ filter, page: next, size }),
         })}
-        scroll={{ x: 1170 }}
         locale={{ emptyText: totalReceipts ? 'Không có phiếu phù hợp.' : 'Chưa có phiếu nhập.' }}
         expandable={{
           expandedRowRender: (receipt) => (
             <>
               <Table<ReceiptLineView>
                 rowKey={(line) => `${line.productId}-${line.lotCode}`}
+                className="af-receipt-lines"
                 size="small"
                 pagination={false}
+                // Phiếu nhiều dòng: danh sách tự cuộn trong khung, không kéo dài cả trang.
+                scroll={{ y: 320 }}
                 dataSource={receipt.lines}
                 columns={[
                   { title: 'Sản phẩm', dataIndex: 'productName', ellipsis: true },
@@ -99,10 +101,21 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
           ),
         }}
         columns={[
-          { title: 'Phiếu', dataIndex: 'code', width: 105, render: (code: string) => <strong>{code}</strong> },
-          { title: 'Ngày nhận', dataIndex: 'receivedAt', width: 115, render: isoToVnDate },
-          { title: 'Nhà cung cấp', dataIndex: 'supplierName', ellipsis: true },
-          { title: 'Số dòng', key: 'lines', width: 80, align: 'right', render: (_, receipt) => receipt.lines.length },
+          { title: 'Phiếu', dataIndex: 'code', width: 110, render: (code: string) => <strong className="af-nowrap">{code}</strong> },
+          {
+            title: 'Ngày nhận',
+            dataIndex: 'receivedAt',
+            width: 130,
+            // Người nhận ghi dưới ngày để bảng vừa khung, không phải cuộn ngang.
+            render: (date: string, receipt) => (
+              <div className="af-cell-stack">
+                <span className="af-nowrap">{isoToVnDate(date)}</span>
+                {receipt.receiver && <small>{receipt.receiver}</small>}
+              </div>
+            ),
+          },
+          { title: 'Nhà cung cấp', dataIndex: 'supplierName', ellipsis: { showTitle: true } },
+          { title: 'Số dòng', key: 'lines', width: 95, align: 'right', render: (_, receipt) => receipt.lines.length },
           {
             title: 'Trạng thái',
             dataIndex: 'status',
@@ -132,15 +145,9 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
             render: (total: number) => <span className="af-money">{currency(total)}</span>,
           },
           {
-            title: 'Người nhận',
-            dataIndex: 'receiver',
-            width: 105,
-            render: (receiver?: string) => receiver ?? '—',
-          },
-          {
             title: 'Thao tác',
             key: 'actions',
-            width: 200,
+            width: 180,
             render: (_: unknown, receipt: ReceiptView) =>
               receipt.status === 'DRAFT' && (
                 <Space size={4} wrap>
