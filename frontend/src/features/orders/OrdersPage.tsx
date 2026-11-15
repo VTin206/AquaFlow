@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { ToneLabel } from '@/shared/components/ToneLabel'
 import { filterOn } from '@/shared/utils/filterOn'
 import { Button, Card, Grid, Input, Segmented, Select } from 'antd'
@@ -29,6 +30,22 @@ export function OrdersPage() {
   const [moreFilters, setMoreFilters] = useState(false)
   const extraActive = Number(status !== ALL) + Number(method !== ALL) + Number(payment !== ALL)
   const [created, setCreated] = useState<string | null>(null)
+  // Link `/orders?order=<id>` (ví dụ nút "Xem đơn" trên thông báo) mở thẳng chi tiết đơn đó.
+  const [params, setParams] = useSearchParams()
+  const linkedOrder = params.get('order')
+  const viewing = created ?? linkedOrder
+  const closeViewing = () => {
+    setCreated(null)
+    if (linkedOrder) {
+      setParams(
+        (current) => {
+          current.delete('order')
+          return current
+        },
+        { replace: true },
+      )
+    }
+  }
 
   const counts = countsQuery.data ?? {}
   const countOf = (value: OrderStatus) => counts[value] ?? 0
@@ -189,7 +206,7 @@ export function OrdersPage() {
         )}
       </Card>
       {creating && <OrderIntakeModal onClose={() => setCreating(false)} onCreated={setCreated} />}
-      {created !== null && <OrderDetails id={created} onClose={() => setCreated(null)} />}
+      {viewing !== null && <OrderDetails id={viewing} onClose={closeViewing} />}
     </Page>
   )
 }

@@ -74,3 +74,11 @@ it('keeps the orders link for office staff', async () => {
   fireEvent.click(await screen.findByRole('button', { name: 'Thông báo, 1 chưa đọc' }))
   expect(await screen.findByText(/Xem tất cả đơn hàng/)).toBeTruthy()
 })
+
+it('opens the linked screen when the whole notification row is clicked', async () => {
+  show(true)
+  fireEvent.click(await screen.findByRole('button', { name: 'Thông báo, 1 chưa đọc' }))
+  fireEvent.click(await screen.findByText('Chuyến #7 có 2 đơn đang chờ bạn khởi hành.'))
+  expect(await screen.findByText('Màn hình chuyến')).toBeTruthy()
+  await waitFor(() => expect(notificationService.markRead).toHaveBeenCalledWith(1))
+})

@@ -80,6 +80,9 @@ export function LiveNotificationPopover({ driver = false }: { driver?: boolean }
     setOpen(false)
     trigger.current?.focus()
   }
+  /** Thông báo có chỗ để mở (đơn, hàng trong kho, chuyến) thì bấm cả dòng là mở. */
+  const hasTarget = (item: Notification) =>
+    (item.entityType === 'ORDER' && !!item.entityId) || ['PRODUCT', 'BATCH', 'TRIP'].includes(item.entityType ?? '')
   /** Mở đúng chỗ xử lý: chi tiết đơn, trang kho hoặc màn hình chuyến; mở rồi thì tính là đã đọc. */
   const openItem = (item: Notification) => {
     if (!item.readAt) read.mutate(item.id)
@@ -176,10 +179,24 @@ export function LiveNotificationPopover({ driver = false }: { driver?: boolean }
                         const view = notificationView(item)
                         const Icon = item.resolvedAt ? Check : kindIcons[item.kind]
                         const unreadItem = !item.readAt && !item.resolvedAt
+                        const clickable = hasTarget(item)
                         return (
                           <li
                             key={item.id}
-                            className="af-notification-item"
+                            className={clickable ? 'af-notification-item is-clickable' : 'af-notification-item'}
+                            role={clickable ? 'button' : undefined}
+                            tabIndex={clickable ? 0 : undefined}
+                            aria-label={clickable ? `Mở thông báo: ${item.title}` : undefined}
+                            onClick={clickable ? () => openItem(item) : undefined}
+                            onKeyDown={
+                              clickable
+                                ? (event) => {
+                                    if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return
+                                    event.preventDefault()
+                                    openItem(item)
+                                  }
+                                : undefined
+                            }
                             data-tone={item.resolvedAt ? undefined : view.tone}
                             data-unread={unreadItem || undefined}
                             data-resolved={item.resolvedAt ? true : undefined}
@@ -203,7 +220,10 @@ export function LiveNotificationPopover({ driver = false }: { driver?: boolean }
                                   danger={view.tone === 'urgent'}
                                   className="af-notification-action"
                                   disabled={read.isPending}
-                                  onClick={() => openItem(item)}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    openItem(item)
+                                  }}
                                 >
                                   {view.action} <ArrowRight size={14} aria-hidden />
                                 </Button>
@@ -214,7 +234,10 @@ export function LiveNotificationPopover({ driver = false }: { driver?: boolean }
                                     type="link"
                                     className="af-notification-action"
                                     disabled={read.isPending}
-                                    onClick={() => read.mutate(item.id)}
+                                    onClick={(event) => {
+                                      event.stopPropagation()
+                                      read.mutate(item.id)
+                                    }}
                                   >
                                     Đánh dấu đã đọc
                                   </Button>
