@@ -48,3 +48,45 @@ export function productShares(rows: ProductSale[], metric: SalesMetric, slices =
   }
   return shares
 }
+
+/** Sản phẩm đang bán xếp từ bán ít nhất, kèm tồn kho để biết nên giảm nhập, khuyến mãi hay bổ sung hàng. */
+export type SlowMover = ProductSale & {
+  onHand: number
+  available: number
+  nearestExpiry?: string
+  /** `unsold`: còn hàng mà cả kỳ không bán được; `outOfStock`: bán ít vì hết hàng, không phải vì ít khách mua. */
+  status: 'unsold' | 'outOfStock' | 'slow'
+}
+
+type StockLike = { id: string; name: string; unit?: string; onHand: number; available: number; threshold?: number; nearestExpiry?: string }
+
+/**
+ * Ghép số bán trong kỳ với danh mục đang bán: sản phẩm không có dòng nào trong báo cáo (chưa bán) vẫn được tính với số 0.
+ * Hàng đã ngừng bán (không có ngưỡng tối thiểu) bỏ qua. Bằng số bán thì sản phẩm tồn nhiều hơn đứng trước.
+ */
+export function slowMovers(sales: ProductSale[], stock: StockLike[], limit = 8): SlowMover[] {
+  const sold = new Map(sales.map((row) => [row.productId, row]))
+  const rows = stock
+    .filter((item) => item.threshold !== undefined)
+    .map((item): SlowMover => {
+      const row = sold.get(item.id)
+      const quantity = Math.max(0, row?.quantity ?? 0)
+      return {
+        productId: item.id,
+        name: item.name,
+        unit: item.unit ?? row?.unit ?? '',
+        quantity,
+        revenue: row?.revenue ?? 0,
+        onHand: item.onHand,
+        available: item.available,
+        nearestExpiry: item.nearestExpiry,
+        status: item.available <= 0 ? 'outOfStock' : quantity === 0 ? 'unsold' : 'slow',
+      }
+    })
+  // Danh mục ít sản phẩm thì hàng bán đạt từ mức trung bình trở lên không tính là chậm, kể cả khi đứng cuối bảng.
+  const average = rows.reduce((sum, row) => sum + row.quantity, 0) / Math.max(1, rows.length)
+  return rows
+    .filter((row) => row.status !== 'slow' || row.quantity < average)
+    .sort((a, b) => a.quantity - b.quantity || b.onHand - a.onHand || a.name.localeCompare(b.name, 'vi'))
+    .slice(0, limit)
+}
