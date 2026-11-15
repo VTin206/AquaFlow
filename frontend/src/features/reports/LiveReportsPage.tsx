@@ -1,13 +1,14 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { filterOn } from '@/shared/utils/filterOn'
 import { useQuery } from '@tanstack/react-query'
 import { Alert, App, Button, Card, Checkbox, Popover, Segmented, Select, Table, Tabs, Typography } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { Link, useSearchParams } from 'react-router'
-import { ArrowDownRight, ArrowUpRight, Columns3, FileSpreadsheet, FunnelX } from 'lucide-react'
+import { Columns3, FileSpreadsheet, FunnelX } from 'lucide-react'
 import { Page } from '@/shared/components/Page'
 import { PeriodPicker } from '@/shared/components/PeriodPicker'
 import { QueryError } from '@/shared/components/QueryError'
+import { StatChange, StatTile, StatTiles, StatWarning } from '@/shared/components/StatTiles'
 import { currency } from '@/shared/utils/format'
 import { reportApi, channelLabels, type LiveReport, type ReportQuery, type ReportSection, type ReportRow } from './reportApi'
 import { DriverDeliveryChart, ProductShareChart, RevenueChart, TopProductsChart } from './charts'
@@ -90,35 +91,6 @@ const kpis = [
   { title: 'Đơn đã giao', key: 'ordersDelivered', money: false },
   { title: 'Đơn tạo', key: 'ordersCreated', money: false },
 ] as const
-
-/** Mức tăng/giảm so với kỳ trước; kỳ trước chưa có số liệu thì không hiện gì. */
-function Delta({ current, previous }: { current: number; previous?: number }) {
-  if (previous === undefined) return null
-  // Kỳ trước bằng 0 thì phần trăm vô nghĩa: ghi số kỳ trước để vẫn so được.
-  if (previous === 0) return <span className="af-report-delta">{current ? 'Kỳ trước chưa phát sinh' : 'Không đổi so với kỳ trước'}</span>
-  const change = Math.round(((current - previous) / Math.abs(previous)) * 100)
-  if (change === 0) return <span className="af-report-delta">Không đổi so với kỳ trước</span>
-  const Icon = change > 0 ? ArrowUpRight : ArrowDownRight
-  return (
-    <span className="af-report-delta">
-      <b className={change > 0 ? 'is-up' : 'is-down'}><Icon size={13} aria-hidden />{change > 0 ? '+' : '−'}{Math.abs(change).toLocaleString('vi-VN')}%</b>
-      so với kỳ trước
-    </span>
-  )
-}
-
-/** Chỉ số chính dạng ô: nhãn, số lớn (đơn vị tiền nhỏ và nhạt bên cạnh), dòng so sánh luôn nằm cuối ô. */
-function Kpi({ title, value, money = false, note, loading }: { title: string; value: number | string | undefined; money?: boolean; note?: ReactNode; loading: boolean }) {
-  return (
-    <div className="af-report-kpi">
-      <span className="af-report-kpi-label">{title}</span>
-      <strong className={typeof value === 'string' ? 'af-report-kpi-value is-text' : 'af-report-kpi-value'}>
-        {loading || value === undefined ? '…' : typeof value === 'string' ? value : <>{value.toLocaleString('vi-VN')}{money && <small className="af-report-kpi-unit">₫</small>}</>}
-      </strong>
-      <div className="af-report-kpi-note">{note}</div>
-    </div>
-  )
-}
 
 type ReportLine = { label: string; value: number | null | undefined; money?: boolean; total?: boolean }
 
@@ -315,20 +287,20 @@ function LiveReportContent() {
     </div>
     {rangeError && <Alert type="warning" showIcon title={rangeError} />}
     {summary.isError ? <QueryError error={summary.error} onRetry={summary.refetch} /> : <>
-      <div className="af-report-kpis">
+      <StatTiles label="Chỉ số chính của kỳ">
         {kpis.map(({ title, key, money }) => {
           const value = Number(report?.sales[key] ?? 0)
-          return <Kpi key={key} title={title} loading={summary.isPending} money={money} value={report ? value : undefined} note={report && <>
-            <Delta current={value} previous={previous.data?.sales[key]} />
-            {key === 'ordersCreated' && report.sales.ordersCancelled > 0 && <span className="af-report-delta">{report.sales.ordersCancelled} đơn đã hủy</span>}
+          return <StatTile key={key} title={title} loading={summary.isPending} money={money} value={report ? value : undefined} note={report && <>
+            <StatChange current={value} previous={previous.data?.sales[key]} />
+            {key === 'ordersCreated' && report.sales.ordersCancelled > 0 && <span>{report.sales.ordersCancelled} đơn đã hủy</span>}
           </>} />
         })}
-        <Kpi title="Lãi gộp ước tính" loading={summary.isPending}
+        <StatTile title="Lãi gộp ước tính" loading={summary.isPending}
           money value={!report ? undefined : report.sales.unpricedCostLines === 0 ? Number(report.sales.estimatedGrossProfit ?? 0) : 'Chưa đủ giá nhập'}
           note={report && (report.sales.unpricedCostLines > 0
-            ? report.sales.totalCostLines > 0 && <span className="af-report-delta"><b className="is-down">Thiếu giá nhập</b>{report.sales.unpricedCostLines}/{report.sales.totalCostLines} dòng hàng</span>
-            : report.sales.revenue > 0 && <span className="af-report-delta">Biên lãi {(Number(report.sales.estimatedGrossProfit ?? 0) / report.sales.revenue * 100).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}% doanh thu</span>)} />
-      </div>
+            ? report.sales.totalCostLines > 0 && <StatWarning label="Thiếu giá nhập">{report.sales.unpricedCostLines}/{report.sales.totalCostLines} dòng hàng</StatWarning>
+            : report.sales.revenue > 0 && <span>Biên lãi {(Number(report.sales.estimatedGrossProfit ?? 0) / report.sales.revenue * 100).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}% doanh thu</span>)} />
+      </StatTiles>
       {!!report?.sales.undatedDeliveredOrders && <Alert type="warning" showIcon title={`Có ${report.sales.undatedDeliveredOrders} đơn đã giao thiếu thời điểm giao, chưa thể tính vào doanh thu theo kỳ.`} />}
       <Tabs activeKey={tab} tabBarExtraContent={tab !== 'overview' && <div className="af-report-tab-tools">
         {chartTabs.includes(tab) && <Segmented<'table' | 'chart'> size="small" aria-label="Kiểu xem" value={view} onChange={setView} options={[{ value: 'table', label: 'Bảng' }, { value: 'chart', label: 'Biểu đồ' }]} />}

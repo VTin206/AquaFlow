@@ -7,6 +7,7 @@ import { BestSellersCard } from './BestSellersCard'
 import { Page } from '@/shared/components/Page'
 import { PanelHeading } from '@/shared/components/PanelHeading'
 import { QueryError } from '@/shared/components/QueryError'
+import { StatChange, StatTile, StatTiles } from '@/shared/components/StatTiles'
 import { BarChart } from '@/shared/components/BarChart'
 import { ViewButton } from '@/shared/components/ViewButton'
 import { canOpen } from '@/features/auth/permissions'
@@ -88,10 +89,13 @@ export function DashboardPage() {
   const unpaid = orders.filter(isUnpaid)
   const delivery = deliveryToday(orders)
   const lowStock = productsQuery.rows
-  const todayOrders = orders.filter((order) => {
-    const at = createdAtOf(order)
-    return at !== undefined && localDay(at) === dayFromToday()
-  }).length
+  const createdOn = (day: string) =>
+    orders.filter((order) => {
+      const at = createdAtOf(order)
+      return at !== undefined && localDay(at) === day
+    }).length
+  const todayOrders = createdOn(dayFromToday())
+  const yesterdayOrders = createdOn(dayFromToday(-1))
 
   const openButton = (order: Order, label = 'Xem đơn') => (
     <Button size="small" onClick={() => setOpenedOrder(order.id)}>
@@ -171,7 +175,6 @@ export function DashboardPage() {
   const shownTasks = activeFilter === 'all' ? tasks : tasks.filter((task) => task.kind === activeFilter)
 
   const loadingTasks = ordersQuery.isPending || productsQuery.isPending
-  const ordersValue = (value: ReactNode) => (ordersQuery.isPending ? 'Đang tải…' : ordersQuery.isError ? '—' : value)
 
   return (
     <Page
@@ -187,37 +190,54 @@ export function DashboardPage() {
         </>
       }
     >
-      {/* Số trong ngày: dòng chữ, không đóng khung từng số. */}
-      <dl className="af-dash-today" aria-label="Hôm nay">
-        <div>
-          <dt>Đơn tạo hôm nay</dt>
-          <dd>{ordersValue(todayOrders)}</dd>
-        </div>
+      <StatTiles label="Hôm nay">
+        <StatTile
+          title="Đơn tạo hôm nay"
+          loading={ordersQuery.isPending}
+          value={ordersQuery.isError ? undefined : todayOrders}
+          note={!ordersQuery.isError && <span>Hôm qua {yesterdayOrders} đơn</span>}
+        />
         {showRevenue && (
           <>
-            <div>
-              <dt>Doanh thu hôm nay</dt>
-              <dd>
-                {revenueQuery.isPending ? 'Đang tải…' : revenueToday ? currency(revenueToday.revenue) : '—'}
-                {revenueYesterday && <small>Hôm qua {currency(revenueYesterday.revenue)}</small>}
-              </dd>
-            </div>
-            <div>
-              <dt>Thu ròng hôm nay</dt>
-              <dd>{revenueQuery.isPending ? 'Đang tải…' : revenueToday ? currency(revenueToday.collected) : '—'}</dd>
-            </div>
+            <StatTile
+              title="Doanh thu hôm nay"
+              money
+              loading={revenueQuery.isPending}
+              value={revenueToday?.revenue}
+              note={
+                revenueToday &&
+                revenueYesterday && (
+                  <>
+                    <StatChange current={revenueToday.revenue} previous={revenueYesterday.revenue} period="hôm qua" />
+                    <span>Hôm qua {currency(revenueYesterday.revenue)}</span>
+                  </>
+                )
+              }
+            />
+            <StatTile
+              title="Thu ròng hôm nay"
+              money
+              loading={revenueQuery.isPending}
+              value={revenueToday?.collected}
+              note={revenueYesterday && <span>Hôm qua {currency(revenueYesterday.collected)}</span>}
+            />
           </>
         )}
         {staff?.role === 'ADMIN' && (
-          <div>
-            <dt>Còn phải thu</dt>
-            <dd>
-              {ordersValue(currency(unpaid.reduce((sum, order) => sum + amountDue(order), 0)))}
-              {!ordersQuery.isPending && !ordersQuery.isError && <small>{unpaid.length} đơn</small>}
-            </dd>
-          </div>
+          <StatTile
+            title="Còn phải thu"
+            money
+            tone={unpaid.length ? 'due' : undefined}
+            loading={ordersQuery.isPending}
+            value={ordersQuery.isError ? undefined : unpaid.reduce((sum, order) => sum + amountDue(order), 0)}
+            note={
+              !ordersQuery.isError && (
+                <span>{unpaid.length ? `${unpaid.length} đơn đã giao chưa thu đủ` : 'Đã thu đủ các đơn đã giao'}</span>
+              )
+            }
+          />
         )}
-      </dl>
+      </StatTiles>
 
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={16}>
