@@ -166,6 +166,11 @@ export function OrdersPage() {
                     />
                   </>
                 )}
+                {hasFilters && (
+                  <Button type="link" className="af-clear-filter" icon={<FunnelX size={15} />} onClick={resetFilters}>
+                    Xóa lọc
+                  </Button>
+                )}
               </div>
               <Input
                 allowClear
@@ -181,11 +186,6 @@ export function OrdersPage() {
               <span role="status">
                 {loading ? 'Đang tải đơn hàng…' : `${listQuery.data?.total ?? 0} / ${countGroup(activeGroup)} đơn hàng`}
               </span>
-              {hasFilters && (
-                <Button type="link" size="small" className="af-clear-filter" icon={<FunnelX size={14} />} onClick={resetFilters}>
-                  Xóa bộ lọc
-                </Button>
-              )}
             </div>
             <OrdersTable
               filterKey={filterKey}

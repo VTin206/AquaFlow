@@ -23,11 +23,11 @@ describe('liveTripFocus', () => {
     expect(liveTripFocus(trip('CREATED', [stop('PREPARING'), stop('OUT_FOR_DELIVERY')])).focus.title).toBe('Cần xuất kho 1 đơn')
   })
 
-  it('explains why settling is not available yet', () => {
+  it('shows progress without a hint line while results are missing', () => {
     const { focus, next } = liveTripFocus(trip('IN_PROGRESS', [stop('DELIVERED', 'SUCCESS'), stop('OUT_FOR_DELIVERY')]))
     expect(next).toBeUndefined()
     expect(focus.title).toBe('Đã có kết quả 1/2 điểm giao')
-    expect(focus.description).toContain('Ghi đủ kết quả')
+    expect(focus.description).toBeUndefined()
   })
 
   it('treats a failed delivery as a result and mentions it', () => {

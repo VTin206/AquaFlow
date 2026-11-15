@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button, Card, Empty, Input, Progress, Segmented, Select, Table } from 'antd'
-import { Search } from 'lucide-react'
+import { FunnelX, Search } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { ViewButton } from '@/shared/components/ViewButton'
 import { matchesSearch } from '@/shared/utils/search'
@@ -70,6 +70,19 @@ export function TripsList({ trips, loading, dueLabel, onOpen }: TripsListProps) 
               { value: '30', label: '30 ngày qua' },
             ]}
           />
+          {(search.trim() || range !== '7') && (
+            <Button
+              type="link"
+              className="af-clear-filter"
+              icon={<FunnelX size={15} />}
+              onClick={() => {
+                setSearch('')
+                setRange('7')
+              }}
+            >
+              Xóa lọc
+            </Button>
+          )}
         </div>
       </div>
       <Table<DeliveryTrip>

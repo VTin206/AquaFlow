@@ -2210,6 +2210,18 @@ body {
   gap: 10px;
   max-width: 100%;
 }
+.af-payment-summary {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  color: var(--af-text-secondary);
+}
+.af-payment-summary strong {
+  color: var(--af-text-strong);
+}
 .af-filter-summary {
   display: flex;
   align-items: center;

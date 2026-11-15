@@ -9,11 +9,22 @@ import { useConfirm } from '@/shared/components/confirm'
 import { currency } from '@/shared/utils/format'
 import { deliveryBottleApi, type BottleReturnInput } from '../deliveryBottleApi'
 
-export function DeliveryBottlesButton({ assignmentId, orderCode }: { assignmentId: number; orderCode: string }) {
+export function DeliveryBottlesButton({
+  assignmentId,
+  orderCode,
+  size,
+}: {
+  assignmentId: number
+  orderCode: string
+  /** Cùng cỡ với các nút đứng cạnh (trong cửa sổ chuyến dùng nút nhỏ). */
+  size?: 'small' | 'middle'
+}) {
   const [open, setOpen] = useState(false)
   return (
     <>
-      <Button onClick={() => setOpen(true)}>Vỏ của đơn</Button>
+      <Button size={size} onClick={() => setOpen(true)}>
+        Vỏ của đơn
+      </Button>
       {open && <DeliveryBottlesModal assignmentId={assignmentId} orderCode={orderCode} onClose={() => setOpen(false)} />}
     </>
   )
@@ -94,13 +105,7 @@ export function DeliveryBottlesModal({
               title="Đơn chưa liên kết hồ sơ khách hàng"
               description="Chưa tự ghi sổ vỏ cho đơn này. Liên hệ cửa hàng để đối chiếu khách hàng và số vỏ thực giao."
             />
-          ) : (
-            <p>
-              {data.given
-                ? 'Vỏ giao thành công đã tự ghi vào sổ khách. Nhập đúng số vỏ thực nhận của từng loại để cập nhật sổ và tổng vỏ bàn giao chuyến.'
-                : 'Số vỏ dưới đây được chốt khi khởi hành; chỉ tự ghi vào sổ khách khi giao thành công.'}
-            </p>
-          )}
+          ) : null}
           {data.tracked && (
             <>
               <Table
@@ -114,7 +119,7 @@ export function DeliveryBottlesModal({
                   { title: 'Loại vỏ', dataIndex: 'name' },
                   { title: data.given ? 'Đã giao' : 'Dự kiến giao', dataIndex: 'given' },
                   { title: 'Đã thu', dataIndex: 'returned' },
-                  { title: 'Cọc / vỏ khi khởi hành', dataIndex: 'unitDeposit', render: currency },
+                  { title: 'Cọc / vỏ', dataIndex: 'unitDeposit', render: currency },
                 ]}
               />
               {data.canReturn && data.lines.some((l) => l.returned < l.given) && (
@@ -179,22 +184,25 @@ export function DeliveryBottlesModal({
                   </Button>
                 </Form>
               )}
-              <p>Thu vỏ không tự hoàn cọc hoặc nhập kho nước. Các loại vỏ khác hoặc số vỏ ngoài đơn cần cửa hàng xử lý riêng.</p>
-              <h3>Lịch sử thu vỏ</h3>
-              <Table
-                rowKey={(r) => `${r.requestId}-${r.typeName}`}
-                size="small"
-                dataSource={data.receipts}
-                pagination={{ pageSize: 5, hideOnSinglePage: true }}
-                locale={{ emptyText: 'Chưa thu vỏ theo loại.' }}
-                scroll={{ x: 450 }}
-                columns={[
-                  { title: 'Thời gian', dataIndex: 'at', render: (value) => new Date(value).toLocaleString('vi-VN') },
-                  { title: 'Loại vỏ', dataIndex: 'typeName' },
-                  { title: 'Số vỏ', dataIndex: 'quantity' },
-                  { title: 'Người thu', dataIndex: 'actor' },
-                ]}
-              />
+              {data.receipts.length > 0 && (
+                <>
+                  <h3>Lịch sử thu vỏ</h3>
+                  <Table
+                    rowKey={(r) => `${r.requestId}-${r.typeName}`}
+                    size="small"
+                    dataSource={data.receipts}
+                    pagination={{ pageSize: 5, hideOnSinglePage: true }}
+                    locale={{ emptyText: 'Chưa thu vỏ theo loại.' }}
+                    scroll={{ x: 450 }}
+                    columns={[
+                      { title: 'Thời gian', dataIndex: 'at', render: (value) => new Date(value).toLocaleString('vi-VN') },
+                      { title: 'Loại vỏ', dataIndex: 'typeName' },
+                      { title: 'Số vỏ', dataIndex: 'quantity' },
+                      { title: 'Người thu', dataIndex: 'actor' },
+                    ]}
+                  />
+                </>
+              )}
             </>
           )}
         </>

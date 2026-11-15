@@ -252,7 +252,7 @@ export function TripDrawer({ tripId, onClose }: { tripId: number; onClose: () =>
                     </small>
                   )}
                   <div className="af-trip-stop-foot">
-                    <small>{balance ? <Money value={balance.due} tone={dueTone(balance.due)} prefix="Thu " /> : null}</small>
+                    <small>{balance && balance.due > 0 ? <Money value={balance.due} tone={dueTone(balance.due)} prefix="Thu " /> : null}</small>
                     <div className="af-trip-stop-actions">
                       {stop.latestAttempt && (
                         <Button size="small" type="text" onClick={() => setHistory(stop)}>
@@ -295,7 +295,7 @@ export function TripDrawer({ tripId, onClose }: { tripId: number; onClose: () =>
                           Ghi kết quả
                         </Button>
                       )}
-                      <DeliveryBottlesButton assignmentId={stop.id} orderCode={stop.orderCode} />
+                      <DeliveryBottlesButton size="small" assignmentId={stop.id} orderCode={stop.orderCode} />
                     </div>
                   </div>
                 </div>
