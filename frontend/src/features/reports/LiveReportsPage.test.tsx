@@ -35,6 +35,11 @@ test('giao hàng hiển thị giao lại và đổi kỳ gửi đúng filter đ�
   expect(await screen.findByText('Tài xế Test')).toBeTruthy()
   expect(screen.getAllByText('Lần giao lại').length).toBeGreaterThan(0)
   expect(screen.getAllByText('Giao trễ hẹn').length).toBeGreaterThan(0)
+  // Ô chọn khoảng ngày chỉ hiện khi chọn "Tùy chọn"; chọn nhanh kỳ thì gửi ngay khoảng ngày tương ứng.
+  expect(screen.queryByText('Đổi kỳ test')).toBeNull()
+  fireEvent.click(screen.getByText('Hôm nay'))
+  await waitFor(() => expect(reportApi.section).toHaveBeenLastCalledWith('delivery', expect.objectContaining({ from: dayjs().format('YYYY-MM-DD'), to: dayjs().format('YYYY-MM-DD') }), 0, 20))
+  fireEvent.click(screen.getByText('Tùy chọn'))
   fireEvent.click(screen.getByText('Đổi kỳ test'))
   await waitFor(() => expect(reportApi.section).toHaveBeenLastCalledWith('delivery', expect.objectContaining({ from: '2026-01-01', to: '2026-01-07' }), 0, 20))
   const calls = vi.mocked(reportApi.section).mock.calls.length
@@ -52,6 +57,13 @@ test('tồn kho hiển thị giá trị và phân biệt thiếu giá nhập v�
   expect(screen.getAllByText('Chưa có giá nhập')).toHaveLength(2)
   expect(screen.getAllByText('Giá trị tồn cuối kỳ').length).toBeGreaterThan(0)
   expect(screen.queryByRole('button', { name: /Chỉnh kho/ })).toBeNull()
+  // Tồn kho tính cho cả cửa hàng: hai ô lọc kênh và hình thức bị khóa.
+  expect(document.querySelectorAll('.ant-select-disabled')).toHaveLength(2)
+  // Cột phụ ẩn mặc định, bật thêm qua nút "Cột".
+  expect(screen.queryByText('Hoàn nhập kho')).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: /Cột/ }))
+  fireEvent.click(await screen.findByLabelText('Hoàn nhập kho'))
+  await waitFor(() => expect(screen.getAllByText('Hoàn nhập kho').length).toBeGreaterThan(1))
 })
 test.each(['inventory', 'delivery'])('%s xử lý loading, lỗi, thử lại và kỳ rỗng', async tab => {
   let reject!: (error: Error) => void
@@ -71,4 +83,15 @@ test.each(['SALES_STAFF', 'DELIVERY_STAFF'])('%s không gọi API báo cáo ADMI
   expect(screen.getByText('Chỉ ADMIN được xem báo cáo.')).toBeTruthy()
   expect(reportApi.summary).not.toHaveBeenCalled()
   expect(reportApi.section).not.toHaveBeenCalled()
+})
+test('mặc định xem tháng này; kỳ và bộ lọc lấy từ địa chỉ trang, có nút xóa lọc', async () => {
+  mount('delivery')
+  await waitFor(() => expect(reportApi.section).toHaveBeenLastCalledWith('delivery', expect.objectContaining({ from: dayjs().startOf('month').format('YYYY-MM-DD') }), 0, 20))
+  cleanup()
+  vi.mocked(reportApi.section).mockClear()
+  mount('delivery&from=2026-01-01&to=2026-01-07&channel=WEB&method=DELIVERY')
+  await waitFor(() => expect(reportApi.section).toHaveBeenLastCalledWith('delivery', { from: '2026-01-01', to: '2026-01-07', channel: 'WEB', method: 'DELIVERY' }, 0, 20))
+  fireEvent.click(await screen.findByRole('button', { name: /Xóa lọc/ }))
+  await waitFor(() => expect(reportApi.section).toHaveBeenLastCalledWith('delivery', expect.objectContaining({ from: '2026-01-01', channel: undefined, method: undefined }), 0, 20))
+  expect(screen.queryByRole('button', { name: /Xóa lọc/ })).toBeNull()
 })

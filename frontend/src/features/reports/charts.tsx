@@ -120,6 +120,7 @@ export function RevenueChart({ data }: { data: RevenueBucket[] }) {
 }
 
 const TOP_PRODUCTS = 8
+const TOP_DRIVERS = 8
 
 /** Top sản phẩm theo doanh thu, thanh ngang để tên dài vẫn đọc được. */
 export function TopProductsChart({ rows }: { rows: Pick<ProductReportRow, 'name' | 'unit' | 'sold' | 'revenue'>[] }) {
@@ -187,12 +188,16 @@ type DriverBar = { driver: string; onTime: number; late: number; failed: number 
 /** Lượt giao của từng tài xế: đúng hẹn + trễ hẹn = giao thành công, cộng thêm lần thất bại. */
 export function DriverDeliveryChart({ rows }: { rows: Pick<DriverReportRow, 'driver' | 'delivered' | 'late' | 'failed'>[] }) {
   const wide = Grid.useBreakpoint().md !== false
-  const data: DriverBar[] = rows.map((row) => ({
-    driver: row.driver,
-    onTime: Math.max(0, row.delivered - row.late),
-    late: row.late,
-    failed: row.failed,
-  }))
+  // Nhiều tài xế: chỉ vẽ những người có nhiều lượt giao nhất để biểu đồ không dài vô hạn; đủ số liệu xem ở bảng.
+  const data: DriverBar[] = [...rows]
+    .sort((a, b) => b.delivered + b.failed - (a.delivered + a.failed))
+    .slice(0, TOP_DRIVERS)
+    .map((row) => ({
+      driver: row.driver,
+      onTime: Math.max(0, row.delivered - row.late),
+      late: row.late,
+      failed: row.failed,
+    }))
   return (
     <div className="af-chart">
       <ChartLegend items={[...deliverySeries]} />
