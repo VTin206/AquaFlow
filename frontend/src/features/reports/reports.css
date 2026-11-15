@@ -58,10 +58,6 @@
   color: var(--af-text-secondary);
   font-size: var(--af-fs-sm);
 }
-.af-report-kpi-hint {
-  color: var(--af-text-tertiary);
-  cursor: help;
-}
 .af-report-kpi-value {
   color: var(--af-text-strong);
   font-size: var(--af-fs-2xl);
@@ -228,13 +224,8 @@
   background: var(--af-chart-bar-hover);
 }
 
-/* Cột tên trong bảng báo cáo: rộng hơn cột số, một dòng, tên quá dài thì "…" (rê chuột xem đủ). */
-.af-report-name {
-  display: block;
-  max-width: 360px;
-  min-width: 280px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* Bảng báo cáo cuộn trong khung: tiêu đề cột giữ một dòng (độ rộng cột đã tính theo tiêu đề). */
+.af-report-table .ant-table-thead > tr > th {
   white-space: nowrap;
 }
 
@@ -255,24 +246,108 @@
   font-size: var(--af-fs-sm);
 }
 
-/* Trên bảng báo cáo: "Cách tính" (ⓘ) bên trái, nút chọn cột bên phải. */
-.af-report-table-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-.af-report-howto {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--af-text-secondary);
-  font-size: var(--af-fs-sm);
-  cursor: help;
-}
 .af-report-column-picker {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+/* Tổng quan báo cáo: các khối nhãn – số xếp cột, đường kẻ mảnh, không để khoảng trống thừa. */
+.af-report-overview {
+  margin-top: 12px;
+}
+.af-report-overview .ant-card-body {
+  padding: 16px 20px;
+}
+.af-report-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 32px;
+}
+@media (max-width: 991px) {
+  .af-report-overview-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.af-report-list h3 {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 6px;
+  color: var(--af-text-strong);
+  font-size: var(--af-fs-md);
+  font-weight: 600;
+}
+.af-report-lines {
+  margin: 0;
+}
+.af-report-lines.is-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  column-gap: 32px;
+}
+.af-report-lines > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--af-border);
+}
+.af-report-lines dt,
+.af-report-lines dd {
+  margin: 0;
+}
+.af-report-lines dt {
+  color: var(--af-text-secondary);
+}
+.af-report-lines dd {
+  color: var(--af-text-strong);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.af-report-lines > .is-total {
+  border-bottom: 0;
+}
+.af-report-lines > .is-total dt,
+.af-report-lines > .is-total dd {
+  color: var(--af-text-strong);
+  font-weight: 700;
+}
+.af-report-lines > .is-zero dt,
+.af-report-lines > .is-zero dd {
+  color: var(--af-text-tertiary);
+}
+.af-report-channel dt small {
+  margin-left: 4px;
+  color: var(--af-text-tertiary);
+}
+.af-report-channel-bar {
+  flex-basis: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--af-border);
+  overflow: hidden;
+}
+.af-report-channel-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--af-primary);
+}
+
+/* Cạnh hàng tab: chọn kiểu xem (Bảng | Biểu đồ) và nút chọn cột. */
+.af-report-tab-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.af-report-chart-note {
+  display: block;
+  margin-bottom: 8px;
+  font-size: var(--af-fs-sm);
+}
+/* Mã hàng, đơn vị, số tiền không xuống dòng. */
+.af-report-table td.af-nowrap {
+  white-space: nowrap;
 }

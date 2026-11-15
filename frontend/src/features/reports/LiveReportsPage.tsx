@@ -1,14 +1,14 @@
 import { useState, type ReactNode } from 'react'
 import { filterOn } from '@/shared/utils/filterOn'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, App, Button, Card, Checkbox, Col, DatePicker, Descriptions, Popover, Row, Segmented, Select, Table, Tabs, Tooltip, Typography } from 'antd'
+import { Alert, App, Button, Card, Checkbox, DatePicker, Popover, Segmented, Select, Table, Tabs, Typography } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { Link, useSearchParams } from 'react-router'
-import { ArrowDownRight, ArrowUpRight, Columns3, Info } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, Columns3 } from 'lucide-react'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
-import { reportApi, channelLabels, type ReportQuery, type ReportSection, type ReportRow } from './reportApi'
+import { reportApi, channelLabels, type LiveReport, type ReportQuery, type ReportSection, type ReportRow } from './reportApi'
 import { DriverDeliveryChart, RevenueChart, TopProductsChart } from './charts'
 import { autoGranularity, granularityLabels, groupRevenue, reportPresets, type Granularity } from './periods'
 import { previousRange } from './reportService'
@@ -30,12 +30,6 @@ const sections: Record<ReportSection, { title: string; key: string; columns: Rep
     { key: 'name', title: 'Khách hàng' }, { key: 'orders', title: 'Đơn giao trong kỳ' }, { key: 'revenue', title: 'Doanh thu sau hàng trả', money: true }, { key: 'lastOrder', title: 'Mua gần nhất' }, { key: 'daysSinceLastOrder', title: 'Ngày chưa mua' },
   ] },
 }
-/** Cách tính của từng bảng, xem qua ⓘ "Cách tính" thay vì đoạn chữ dài trên bảng. */
-const sectionNotes: Partial<Record<ReportSection, string>> = {
-  inventory: 'Tồn đầu + nhập NCC + hoàn nhập + điều chỉnh − xuất = tồn cuối. Hàng loại bỏ không nhập vào tồn. Số dư lịch sử được tính lùi từ tồn hiện tại và sổ kho. Giá trị tồn cuối = tồn cuối × giá nhập của hàng đạt từ phiếu đã xác nhận gần nhất đến cuối kỳ. Đây là giá trị vận hành, không phải giá vốn kế toán; chưa có giá nhập thì chưa định giá.',
-  delivery: 'Kết quả theo cả đơn và lần giao. Tỷ lệ thành công là số đơn có kết quả cuối trong kỳ là thành công chia cho tổng đơn có kết quả cuối là thành công hoặc thất bại; các cột “Lần” vẫn giữ số attempt để đối soát retry. Giao trễ chỉ tính lần giao thành công sau giờ hẹn.',
-  customers: 'Khách chưa gắn hồ sơ được gộp vào Khách vãng lai. “Ngày chưa mua” tính từ lần giao gần nhất đến ngày cuối kỳ; dùng để nhận diện khách cần chăm sóc lại.',
-}
 /** Bảng nhiều cột: mặc định chỉ hiện cột chính, cột còn lại bật thêm qua nút "Cột" (file Excel vẫn đủ cột). */
 const coreColumns: Partial<Record<ReportSection, string[]>> = {
   inventory: ['name', 'unit', 'opening', 'received', 'issued', 'closing', 'latestUnitCost', 'closingValue'],
@@ -43,44 +37,56 @@ const coreColumns: Partial<Record<ReportSection, string[]>> = {
 }
 
 const dailyColumns: ReportColumn[] = [{ key: 'date', title: 'Ngày' }, { key: 'revenue', title: 'Doanh thu', money: true }, { key: 'collected', title: 'Thanh toán ròng', money: true }, { key: 'orders', title: 'Đơn tạo' }]
+/** Tiêu đề ngắn trên màn hình cho cột có tên dài; file Excel vẫn dùng tên đầy đủ. */
+const shortTitles: Record<string, string> = {
+  latestUnitCost: 'Giá nhập',
+  ordersDispatched: 'Đơn xuất',
+  ordersSucceeded: 'Thành công',
+  ordersFailed: 'Thất bại',
+  successRate: 'Tỷ lệ',
+  cashDifference: 'Chênh lệch',
+  revenue: 'Doanh thu',
+}
 /**
- * Cột tên (sản phẩm, tài xế, khách) rộng nhất, một dòng, ghim trái khi cuộn ngang; cột số tự co vừa tiêu đề và
- * con số (bảng tự canh độ rộng), canh phải.
+ * Cột tên (sản phẩm, tài xế, khách) rộng nhất, một dòng, ghim trái khi cuộn ngang; cột số vừa tiêu đề một dòng,
+ * canh phải. Bảng cuộn trong khung nên cần độ rộng cố định cho từng cột.
  */
 const nameKeys = ['name', 'driver']
+const NAME_WIDTH = 240
+const titleOf = (column: ReportColumn) => shortTitles[column.key] ?? column.title
+const widthOf = (column: ReportColumn) =>
+  nameKeys.includes(column.key) ? NAME_WIDTH : Math.max(column.money ? 130 : column.key === 'sku' ? 130 : 90, Math.ceil(titleOf(column).length * 8.5) + 36)
 const columnsOf = (columns: ReportColumn[]) => columns.map(column => {
   const isName = nameKeys.includes(column.key)
   const format = (value: string | number | null) => column.money ? value == null ? 'Chưa có giá nhập' : currency(Number(value)) : value ?? '—'
   return {
-    title: column.title,
+    title: titleOf(column) === column.title ? column.title : <span title={column.title}>{titleOf(column)}</span>,
     dataIndex: column.key,
     key: column.key,
-    render: isName
-      ? (value: string | number | null) => <span className="af-report-name" title={String(value ?? '')}>{format(value)}</span>
-      : format,
+    // Cột tên không đặt độ rộng: nhận hết phần còn lại của bảng (tối thiểu NAME_WIDTH qua scroll.x).
+    width: isName ? undefined : widthOf(column),
+    ellipsis: isName ? { showTitle: true } : undefined,
+    render: format,
     fixed: isName ? ('left' as const) : undefined,
     className: isName ? undefined : 'af-nowrap',
     align: !isName && !['sku', 'unit', 'date', 'lastOrder'].includes(column.key) ? ('right' as const) : undefined,
   }
 })
+const tableWidthOf = (columns: ReportColumn[]) => columns.reduce((sum, column) => sum + widthOf(column), 0)
 /** Tên khách có hồ sơ mở được hồ sơ; khách vãng lai và khách chỉ có số điện thoại thì không. */
 const customerColumns = columnsOf(sections.customers.columns).map((column) => column.key !== 'name' ? column : {
   ...column,
-  render: (name: string | number | null, row: ReportRow) => (
-    <span className="af-report-name" title={String(name ?? '')}>
-      {row.key === 'guest' || String(row.key).startsWith('SĐT ') || !row.key
-        ? name
-        : <Link to={`/customers?customerId=${encodeURIComponent(String(row.key))}`}>{name}</Link>}
-    </span>
-  ),
+  render: (name: string | number | null, row: ReportRow) => row.key === 'guest' || String(row.key).startsWith('SĐT ') || !row.key
+    ? name
+    : <Link to={`/customers?customerId=${encodeURIComponent(String(row.key))}`}>{name}</Link>,
 })
 
-/** Chỉ số chính: nhãn ngắn, ý nghĩa đầy đủ nằm trong ⓘ. */
+/** Chỉ số chính, nhãn ngắn. */
 const kpis = [
-  { title: 'Doanh thu', hint: 'Doanh thu sau giảm giá và hàng khách trả, tính theo đơn đã giao trong kỳ.', key: 'revenue', money: true },
-  { title: 'Đã thu', hint: 'Thanh toán ròng đã xác nhận trong kỳ (thu trừ hoàn).', key: 'netPayments', money: true },
-  { title: 'Đơn đã giao', hint: 'Số đơn giao thành công trong kỳ.', key: 'ordersDelivered', money: false },
-  { title: 'Đơn tạo', hint: 'Số đơn được tạo trong kỳ, gồm cả đơn chưa giao.', key: 'ordersCreated', money: false },
+  { title: 'Doanh thu', key: 'revenue', money: true },
+  { title: 'Đã thu', key: 'netPayments', money: true },
+  { title: 'Đơn đã giao', key: 'ordersDelivered', money: false },
+  { title: 'Đơn tạo', key: 'ordersCreated', money: false },
 ] as const
 
 /** Mức tăng/giảm so với kỳ trước; kỳ trước chưa có số liệu thì không hiện gì. */
@@ -97,52 +103,89 @@ function Delta({ current, previous }: { current: number; previous?: number }) {
 }
 
 /** Một chỉ số trong hàng chỉ số chính: chữ và số, không đóng khung thẻ. */
-function Kpi({ title, hint, value, note, loading }: { title: string; hint: string; value: ReactNode; note?: ReactNode; loading: boolean }) {
+function Kpi({ title, value, note, loading }: { title: string; value: ReactNode; note?: ReactNode; loading: boolean }) {
   return (
     <div className="af-report-kpi">
-      <span className="af-report-kpi-label">
-        {title}
-        <Tooltip title={hint}>
-          <Info size={13} aria-label={hint} className="af-report-kpi-hint" />
-        </Tooltip>
-      </span>
+      <span className="af-report-kpi-label">{title}</span>
       <strong className="af-report-kpi-value">{loading ? '…' : value}</strong>
       {note}
     </div>
   )
 }
 
+type ReportLine = { label: string; value: number | null | undefined; money?: boolean; total?: boolean }
+
+/** Danh sách nhãn – số có đường kẻ: dòng tổng in đậm, số 0 làm mờ. */
+function ReportList({ title, lines, columns = false }: { title: string; lines: ReportLine[]; columns?: boolean }) {
+  return (
+    <section className="af-report-list">
+      <h3>{title}</h3>
+      <dl className={columns ? 'af-report-lines is-columns' : 'af-report-lines'}>
+        {lines.map(({ label, value, money, total }) => {
+          const number = Number(value ?? 0)
+          const className = [total ? 'is-total' : '', number ? '' : 'is-zero'].filter(Boolean).join(' ')
+          return (
+            <div key={label} className={className || undefined}>
+              <dt>{label}</dt>
+              <dd>{money ? currency(number) : number}</dd>
+            </div>
+          )
+        })}
+      </dl>
+    </section>
+  )
+}
+
+/** Doanh thu theo kênh kèm thanh tỉ lệ để thấy ngay kênh nào bán nhiều. */
+function ChannelList({ channels }: { channels: LiveReport['channels'] }) {
+  const top = Math.max(1, ...channels.map((item) => item.revenue))
+  const sorted = [...channels].sort((a, b) => b.revenue - a.revenue)
+  return (
+    <section className="af-report-list">
+      <h3>Theo kênh</h3>
+      <dl className="af-report-lines">
+        {sorted.map(({ channel, orders, revenue }) => (
+          <div key={channel} className={revenue ? 'af-report-channel' : 'af-report-channel is-zero'}>
+            <dt>
+              {channelLabels[channel] ?? channel} <small>{orders} đơn</small>
+            </dt>
+            <dd>{currency(revenue)}</dd>
+            <span className="af-report-channel-bar" aria-hidden>
+              <span style={{ width: `${(revenue / top) * 100}%` }} />
+            </span>
+          </div>
+        ))}
+        {!sorted.length && <Typography.Text type="secondary">Chưa có đơn trong kỳ.</Typography.Text>}
+      </dl>
+    </section>
+  )
+}
+
+/** Bảng chi tiết vừa phần còn lại của màn hình: danh sách cuộn trong bảng, trang không phải cuộn. */
+const reportTableHeight = 'max(240px, calc(100dvh - 540px))'
+
+/** Tab có biểu đồ: xem bằng nút Bảng | Biểu đồ thay vì để biểu đồ đẩy bảng xuống. */
+const chartTabs: string[] = ['products', 'delivery']
+
 const shownColumns = (columns: ReportColumn[], core?: string[], extra: string[] = []) =>
   core ? columns.filter((column) => core.includes(column.key) || extra.includes(column.key)) : columns
 
-/** Trên bảng: ⓘ "Cách tính" bên trái, nút "Cột" bên phải (chỉ bảng có cột phụ). */
-function ReportTableBar({ note, columns, core, extra, onExtraChange }: {
-  note?: string
+/** Nút "Cột" cạnh hàng tab, chỉ cho bảng có cột phụ. */
+function ColumnPicker({ columns, core, extra, onExtraChange }: {
   columns: ReportColumn[]
   core?: string[]
   extra: string[]
   onExtraChange: (keys: string[]) => void
 }) {
   const optional = core ? columns.filter((column) => !core.includes(column.key)) : []
-  if (!note && !optional.length) return null
+  if (!optional.length) return null
   return (
-    <div className="af-report-table-bar">
-      {note ? (
-        <Tooltip title={note} placement="bottomLeft">
-          <span className="af-report-howto" tabIndex={0}>
-            <Info size={14} aria-hidden /> Cách tính
-          </span>
-        </Tooltip>
-      ) : <span />}
-      {optional.length > 0 && (
-        <Popover trigger="click" placement="bottomRight" title="Cột thêm" content={
-          <Checkbox.Group className="af-report-column-picker" value={extra} onChange={(keys) => onExtraChange(keys as string[])}
-            options={optional.map((column) => ({ value: column.key, label: column.title }))} />
-        }>
-          <Button size="small" icon={<Columns3 size={15} />}>Cột{extra.length ? ` (+${extra.length})` : ''}</Button>
-        </Popover>
-      )}
-    </div>
+    <Popover trigger="click" placement="bottomRight" title="Cột thêm" content={
+        <Checkbox.Group className="af-report-column-picker" value={extra} onChange={(keys) => onExtraChange(keys as string[])}
+          options={optional.map((column) => ({ value: column.key, label: column.title }))} />
+      }>
+        <Button size="small" icon={<Columns3 size={15} />}>Cột{extra.length ? ` (+${extra.length})` : ''}</Button>
+    </Popover>
   )
 }
 
@@ -161,6 +204,7 @@ function LiveReportContent() {
   const [dates, setDates] = useState<[Dayjs, Dayjs]>([today.subtract(29, 'day'), today])
   const [rangeError, setRangeError] = useState<string>()
   const [customRange, setCustomRange] = useState(false)
+  const [view, setView] = useState<'table' | 'chart'>('table')
   const [extraColumns, setExtraColumns] = useState<Partial<Record<ReportSection, string[]>>>({})
   const [channel, setChannel] = useState<ReportQuery['channel']>()
   const [method, setMethod] = useState<ReportQuery['method']>()
@@ -207,50 +251,71 @@ function LiveReportContent() {
       <Select allowClear placeholder="Mọi hình thức" value={method} className={filterOn(Boolean(method))} style={{ width: 150 }} options={[{ value: 'DELIVERY', label: 'Giao tận nơi' }, { value: 'COUNTER', label: 'Tại quầy' }]} onChange={value => { setMethod(value); setPage(0) }} />
     </div>
     {rangeError && <Alert type="warning" showIcon title={rangeError} />}
-    <Typography.Text type="secondary" className="af-report-scope">Kênh và hình thức áp dụng cho doanh thu, thanh toán, sản phẩm, khách hàng và giao hàng. Kho, nhập hàng, sổ cọc và đối soát tài xế tính cho cả cửa hàng.</Typography.Text>
     {summary.isError ? <QueryError error={summary.error} onRetry={summary.refetch} /> : <>
       <div className="af-report-kpis">
-        {kpis.map(({ title, hint, key, money }) => {
+        {kpis.map(({ title, key, money }) => {
           const value = Number(report?.sales[key] ?? 0)
-          return <Kpi key={key} title={title} hint={hint} loading={summary.isPending} value={money ? currency(value) : value} note={report && <Delta current={value} previous={previous.data?.sales[key]} />} />
+          return <Kpi key={key} title={title} loading={summary.isPending} value={money ? currency(value) : value} note={report && <Delta current={value} previous={previous.data?.sales[key]} />} />
         })}
-        <Kpi title="Lãi gộp ước tính" hint="Doanh thu trừ giá vốn ước tính theo giá nhập xác nhận gần nhất đến cuối kỳ; không thay giá vốn kế toán." loading={summary.isPending}
+        <Kpi title="Lãi gộp ước tính" loading={summary.isPending}
           value={report && report.sales.unpricedCostLines === 0 ? currency(Number(report.sales.estimatedGrossProfit ?? 0)) : 'Chưa đủ giá nhập'}
           note={report && report.sales.totalCostLines > 0 && report.sales.unpricedCostLines > 0 && <span className="af-report-delta is-down">Thiếu giá nhập cho {report.sales.unpricedCostLines}/{report.sales.totalCostLines} dòng hàng</span>} />
       </div>
       {report && <Typography.Text type="secondary" className="af-report-scope">Kỳ trước: doanh thu {previous.isError ? 'không tải được' : previous.isPending ? '…' : currency(previous.data?.sales.revenue ?? 0)} · Đơn hủy trong kỳ: {report.sales.ordersCancelled}</Typography.Text>}
       {!!report?.sales.undatedDeliveredOrders && <Alert type="warning" showIcon title={`Có ${report.sales.undatedDeliveredOrders} đơn đã giao thiếu thời điểm giao, chưa thể tính vào doanh thu theo kỳ.`} />}
-      <Tabs activeKey={tab} onChange={key => { setSearch(params => { params.set('tab', key); return params }, { replace: true }); setPage(0) }} items={[
+      <Tabs activeKey={tab} tabBarExtraContent={tab !== 'overview' && <div className="af-report-tab-tools">
+        {chartTabs.includes(tab) && <Segmented<'table' | 'chart'> size="small" aria-label="Kiểu xem" value={view} onChange={setView} options={[{ value: 'table', label: 'Bảng' }, { value: 'chart', label: 'Biểu đồ' }]} />}
+        {(view === 'table' || !chartTabs.includes(tab)) && <ColumnPicker columns={sections[tab].columns} core={coreColumns[tab]} extra={extraColumns[tab] ?? []}
+          onExtraChange={(keys) => setExtraColumns((previous) => ({ ...previous, [tab]: keys }))} />}
+      </div>} onChange={key => { setSearch(params => { params.set('tab', key); return params }, { replace: true }); setPage(0) }} items={[
         { key: 'overview', label: 'Tổng quan', children: report && <>
           <Card title="Doanh thu và thanh toán theo kỳ" extra={<Segmented<Granularity> size="small" aria-label="Gom biểu đồ theo" value={unit} onChange={setGranularity} options={(Object.keys(granularityLabels) as Granularity[]).map((value) => ({ value, label: granularityLabels[value] }))} />}><RevenueChart data={groupRevenue(report.days, unit)} /></Card>
-          <Row gutter={[16, 16]} style={{ marginTop: 16 }}><Col xs={24} lg={12}><Card title="Đối chiếu doanh thu"><Descriptions column={1} items={[
-            { key: 'goods', label: 'Tiền hàng đã giao', children: currency(report.sales.goods) },
-            { key: 'discounts', label: 'Giảm giá', children: currency(report.sales.discounts) },
-            { key: 'fees', label: 'Phí giao', children: currency(report.sales.deliveryFees) },
-            { key: 'returns', label: 'Hàng khách trả trong kỳ', children: currency(report.sales.returnsValue) },
-          ]} /><Typography.Text type="secondary">Hoàn kho của đơn giao thất bại không trừ doanh thu lần nữa. Lãi gộp ở trên là ước tính theo giá nhập xác nhận gần nhất, không thay thế COGS kế toán theo cost layer.</Typography.Text></Card></Col>
-          <Col xs={24} lg={12}><Card title="Thanh toán đã xác nhận"><Descriptions column={1} items={[
-            { key: 'cash', label: 'Thu tiền mặt', children: currency(report.sales.cashIn) }, { key: 'bank', label: 'Thu chuyển khoản', children: currency(report.sales.transferIn) }, { key: 'refunds', label: 'Chi hoàn', children: currency(report.sales.refunds) },
-          ]} /><Typography.Text type="secondary">Tính theo thời điểm xác nhận thanh toán, có thể gồm tiền cọc trong khoản thu. Tiền tài xế bàn giao không được cộng lần nữa.</Typography.Text></Card></Col></Row>
-          <Card title="Theo kênh" style={{ marginTop: 16 }}><Table rowKey="channel" pagination={false} dataSource={report.channels} columns={[{ title: 'Kênh', dataIndex: 'channel', render: (v: keyof typeof channelLabels) => channelLabels[v] }, { title: 'Đơn tạo', dataIndex: 'orders' }, { title: 'Doanh thu', dataIndex: 'revenue', render: currency }]} /></Card>
-          <Card title="Nhập hàng và sổ cọc toàn cửa hàng" style={{ marginTop: 16 }}><Descriptions column={2} items={[
-            { key: 'receipts', label: 'Phiếu nhập xác nhận', children: report.receipts.count }, { key: 'value', label: 'Giá trị hàng đạt nhập', children: currency(report.receipts.value) },
-            { key: 'deposit', label: 'Số dư cọc cuối kỳ', children: currency(report.deposits.held) }, { key: 'bottles', label: 'Vỏ còn ngoài cửa hàng', children: report.deposits.bottlesHeld },
-            { key: 'collected', label: 'Thu cọc trong kỳ', children: currency(report.deposits.collected) }, { key: 'refunded', label: 'Hoàn cọc trong kỳ', children: currency(report.deposits.refunded) },
-            { key: 'forfeited', label: 'Cọc cấn trừ mất/vỡ', children: currency(report.deposits.forfeited ?? 0) },
-            { key: 'given', label: 'Vỏ giao kèm', children: report.deposits.bottlesGiven },
-            { key: 'received', label: 'Vỏ thu lại', children: report.deposits.bottlesReceived },
-            { key: 'lost', label: 'Vỏ mất / vỡ', children: report.deposits.bottlesLost },
-            { key: 'uncovered', label: 'Cọc chưa đủ nghĩa vụ vỏ', children: currency(report.deposits.uncoveredDeposit) },
-          ]} /><Typography.Text type="secondary">Sổ cọc/vỏ chỉ phản ánh giao dịch đã lưu; không suy từ đơn hàng.</Typography.Text></Card>
+          <Card className="af-report-overview">
+            <div className="af-report-overview-grid">
+              <ReportList title="Đối chiếu doanh thu" lines={[
+                { label: 'Tiền hàng đã giao', value: report.sales.goods, money: true },
+                { label: '− Giảm giá', value: report.sales.discounts, money: true },
+                { label: '+ Phí giao', value: report.sales.deliveryFees, money: true },
+                { label: '− Hàng khách trả', value: report.sales.returnsValue, money: true },
+                { label: 'Doanh thu', value: report.sales.revenue, money: true, total: true },
+              ]} />
+              <ReportList title="Thanh toán đã xác nhận" lines={[
+                { label: 'Tiền mặt', value: report.sales.cashIn, money: true },
+                { label: 'Chuyển khoản', value: report.sales.transferIn, money: true },
+                { label: '− Chi hoàn', value: report.sales.refunds, money: true },
+                { label: 'Đã thu', value: report.sales.netPayments, money: true, total: true },
+              ]} />
+              <ChannelList channels={report.channels} />
+            </div>
+          </Card>
+          <Card className="af-report-overview">
+            <ReportList title="Nhập hàng và sổ cọc toàn cửa hàng" columns lines={[
+              { label: 'Phiếu nhập xác nhận', value: report.receipts.count },
+              { label: 'Giá trị hàng đạt nhập', value: report.receipts.value, money: true },
+              { label: 'Số dư cọc cuối kỳ', value: report.deposits.held, money: true },
+              { label: 'Vỏ còn ngoài cửa hàng', value: report.deposits.bottlesHeld },
+              { label: 'Thu cọc trong kỳ', value: report.deposits.collected, money: true },
+              { label: 'Hoàn cọc trong kỳ', value: report.deposits.refunded, money: true },
+              { label: 'Cọc cấn trừ mất/vỡ', value: report.deposits.forfeited ?? 0, money: true },
+              { label: 'Cọc chưa đủ nghĩa vụ vỏ', value: report.deposits.uncoveredDeposit, money: true },
+              { label: 'Vỏ giao kèm', value: report.deposits.bottlesGiven },
+              { label: 'Vỏ thu lại', value: report.deposits.bottlesReceived },
+              { label: 'Vỏ mất / vỡ', value: report.deposits.bottlesLost },
+            ]} />
+          </Card>
         </> },
         ...Object.entries(sections).map(([key, section]) => ({ key, label: section.title, children: details.isError ? <QueryError error={details.error} onRetry={details.refetch} /> : <Card>
-          {key === 'products' && detailRows.some((row) => num(row.revenue) > 0) && <TopProductsChart rows={detailRows.map((row) => ({ name: String(row.name), unit: String(row.unit), sold: num(row.sold), revenue: num(row.revenue) }))} />}
-          {key === 'delivery' && detailRows.length > 0 && <DriverDeliveryChart rows={detailRows.map((row) => ({ driver: String(row.driver), delivered: num(row.delivered), late: num(row.late), failed: num(row.failed) }))} />}
-          <ReportTableBar note={sectionNotes[key as ReportSection]} columns={section.columns} core={coreColumns[key as ReportSection]} extra={extraColumns[key as ReportSection] ?? []}
-            onExtraChange={(keys) => setExtraColumns((previous) => ({ ...previous, [key]: keys }))} />
-          <Table<ReportRow> rowKey={section.key} loading={details.isPending} columns={key === 'customers' ? customerColumns : columnsOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection]))} dataSource={details.data?.content ?? []} scroll={{ x: 'max-content' }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : 'Chưa có dữ liệu trong kỳ.' }}
+          {chartTabs.includes(key) && view === 'chart' ? (
+            details.isPending ? <Typography.Text type="secondary">Đang tải báo cáo…</Typography.Text>
+              : !detailRows.length ? <Typography.Text type="secondary">Chưa có dữ liệu trong kỳ.</Typography.Text>
+              : <>
+                <Typography.Text type="secondary" className="af-report-chart-note">{key === 'products' ? '8 sản phẩm doanh thu cao nhất' : '8 tài xế nhiều lượt giao nhất'} trong trang đang xem. Đủ số liệu xem ở chế độ Bảng.</Typography.Text>
+                {key === 'products' ? <TopProductsChart rows={detailRows.map((row) => ({ name: String(row.name), unit: String(row.unit), sold: num(row.sold), revenue: num(row.revenue) }))} /> : <DriverDeliveryChart rows={detailRows.map((row) => ({ driver: String(row.driver), delivered: num(row.delivered), late: num(row.late), failed: num(row.failed) }))} />}
+              </>
+          ) : (
+            <Table<ReportRow> className="af-report-table" size="middle" rowKey={section.key} loading={details.isPending} columns={key === 'customers' ? customerColumns : columnsOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection]))} dataSource={details.data?.content ?? []} scroll={{ x: tableWidthOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection])), y: reportTableHeight }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : 'Chưa có dữ liệu trong kỳ.' }}
             pagination={{ current: page + 1, pageSize: size, total: details.data?.totalElements ?? 0, showSizeChanger: true, pageSizeOptions: [20, 50, 100], onChange: (next, nextSize) => { setPage(nextSize === size ? next - 1 : 0); setSize(nextSize) } }} />
+          )}
         </Card> })),
       ]} />
     </>}
