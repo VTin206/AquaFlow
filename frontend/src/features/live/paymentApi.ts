@@ -10,6 +10,8 @@ export type CustomerBalance = { customerId: number; name: string; active: boolea
 export const paymentApi = {
   list: (id: number) => api.get<{ balance: OrderBalance; payments: PaymentReceipt[] }>(`/sales/orders/${id}/payments`),
   create: (id: number, input: PaymentInput) => api.post<PaymentReceipt>(`/sales/orders/${id}/payments`, input),
+  /** Hủy phiếu ghi nhầm (chỉ ADMIN); trả số dư mới của đơn. */
+  void: (orderId: number, id: number, reason: string) => api.post<OrderBalance>(`/sales/orders/${orderId}/payments/${id}/void`, { reason: reason.trim() }),
   balances: () => api.get<OrderBalance[]>('/sales/order-balances'),
   /** Khách còn phải thu hoặc cần hoàn, nhiều tiền nhất trước. */
   customers: (query: PageQuery) => api.get<Page<CustomerBalance>>('/sales/customer-balances', { params: pageParams(query) }),

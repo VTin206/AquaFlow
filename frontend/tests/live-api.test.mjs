@@ -280,12 +280,12 @@ test('live API adapters match the backend contract and never fall back to demo d
   const created = await bottleTypeApi.create({ name: '  Vỏ mới  ', depositUnitAmount: 100000 })
   assert.equal(created.name, 'Vỏ mới')
   assert.deepEqual(requests.at(-1).body, { name: 'Vỏ mới', depositUnitAmount: 100000 })
-  const updated = await bottleTypeApi.update(7, 120000)
+  const updated = await bottleTypeApi.update(7, { name: '  Bình 19/20L  ', depositUnitAmount: 120000 })
   assert.equal(updated.depositUnitAmount, 120000)
   assert.deepEqual(
     requests.at(-1),
-    { method: 'PUT', url: '/api/v1/bottle-types/7', body: { depositUnitAmount: 120000 } },
-    'Update sends only the editable deposit, not name/active',
+    { method: 'PUT', url: '/api/v1/bottle-types/7', body: { name: 'Bình 19/20L', depositUnitAmount: 120000 } },
+    'Update sends the trimmed name and deposit, not active',
   )
   await assert.rejects(
     bottleTypeApi.create({ name: 'Trùng tên', depositUnitAmount: 0 }),

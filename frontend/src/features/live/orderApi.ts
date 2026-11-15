@@ -45,6 +45,10 @@ export type LiveOrder = {
 }
 export type OrderStatus = LiveOrder['status']
 /** Theo OrderCreateRequest; nhân viên không tạo đơn kênh WEB (đơn web đi luồng khách hàng). */
+export type OrderUpdateInput = Pick<
+  OrderInput,
+  'recipientName' | 'recipientPhone' | 'deliveryAddress' | 'deliveryArea' | 'requestedDeliveryAt' | 'items' | 'note'
+>
 export type OrderInput = {
   customerId: number | null
   channel: Exclude<LiveOrder['channel'], 'WEB'>
@@ -112,5 +116,7 @@ export const orderApi = {
   byCustomer: (customerId: number) => api.get<LiveOrderListItem[]>(`/sales/customers/${customerId}/orders`),
   detail: (id: number) => api.get<LiveOrder>(`/sales/orders/${id}`),
   create: (input: OrderInput) => api.post<LiveOrder>('/sales/orders', input),
+  /** Sửa đơn còn chờ xác nhận (người nhận, địa chỉ, giờ hẹn, ghi chú, hàng); kênh, hình thức nhận và phí giao giữ nguyên. */
+  update: (id: number, input: OrderUpdateInput) => api.put<LiveOrder>(`/sales/orders/${id}`, input),
   updateStatus: (id: number, status: OrderStatus) => api.patch<LiveOrder>(`/sales/orders/${id}/status`, { status }),
 }

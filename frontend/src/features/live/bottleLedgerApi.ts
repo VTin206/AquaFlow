@@ -20,6 +20,10 @@ export type BottleLedgerEntry = {
   note: string | null
   actor: string
   at: string
+  /** Đã có dòng VOID đảo dòng này. */
+  voided?: boolean
+  /** Dòng VOID: id dòng bị hủy. */
+  voidsId?: string | null
 }
 export type BottleLedger = { balance: BottleBalance; types: BottleTypeBalance[]; entries: BottleLedgerEntry[] }
 export type BottleInput = {
@@ -35,4 +39,7 @@ export const bottleLedgerApi = {
   balances: (query: PageQuery) => api.get<Page<BottleBalance>>('/sales/bottle-balances', { params: pageParams(query) }),
   ledger: (id: number) => api.get<BottleLedger>(`/sales/customers/${id}/bottle-ledger`),
   create: (id: number, input: BottleInput) => api.post<BottleLedgerEntry>(`/sales/customers/${id}/bottle-transactions`, input),
+  /** Hủy giao dịch ghi nhầm bằng một dòng đảo ngược (chỉ ADMIN). */
+  void: (id: number, entryId: string, requestId: string, reason: string) =>
+    api.post<BottleLedgerEntry>(`/sales/customers/${id}/bottle-transactions/${entryId}/void`, { requestId, reason: reason.trim() }),
 }

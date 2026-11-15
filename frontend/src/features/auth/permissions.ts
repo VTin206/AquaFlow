@@ -55,6 +55,11 @@ const actionRoles = {
   createOrder: ['ADMIN', 'SALES_STAFF'],
   /** Báo mất/vỡ, hoàn cọc làm đổi sổ cọc. */
   adjustBottles: ['ADMIN'],
+  /** Kiểm kê (sửa tồn), hủy phiếu thu ghi nhầm: đổi số liệu kế toán nên chỉ chủ cửa hàng. */
+  adjustStock: ['ADMIN'],
+  voidPayment: ['ADMIN'],
+  /** Sửa đơn còn chờ xác nhận. */
+  editOrder: ['ADMIN', 'SALES_STAFF'],
 } satisfies Record<string, RoleCode[]>
 
 export type GuardedAction = keyof typeof actionRoles

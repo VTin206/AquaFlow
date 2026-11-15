@@ -7,6 +7,9 @@ import { currency } from '@/shared/utils/format'
 import { invalidateLiveData } from './invalidateLiveData'
 import { paymentApi, useOrderPayments, type PaymentInput } from './paymentApi'
 import { TextArea } from '@/shared/components/TextArea'
+import { useStaff } from '@/features/auth/useStaff'
+import { can } from '@/features/auth/permissions'
+import type { PaymentReceipt } from './paymentApi'
 
 export function LiveOrderPayments({ orderId }: { orderId: number }) {
   const query = useOrderPayments(orderId)
@@ -17,6 +20,15 @@ export function LiveOrderPayments({ orderId }: { orderId: number }) {
   const [form] = Form.useForm<Pick<PaymentInput, 'amount' | 'method' | 'reference' | 'note'>>()
   const request = useRef<{ id: string; payload: string } | null>(null)
   const lock = useRef(false)
+  const role = useStaff()?.role
+  const canVoid = !!role && can(role, 'voidPayment')
+  const [voiding, setVoiding] = useState<PaymentReceipt | null>(null)
+  const [voidForm] = Form.useForm<{ reason: string }>()
+  const voidMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: number; reason: string }) => paymentApi.void(orderId, id, reason),
+    onSuccess: async () => { setVoiding(null); message.success('Đã hủy phiếu.'); await invalidateLiveData(client) },
+    onError: (error: Error) => message.error(error.message),
+  })
   const mutation = useMutation({
     mutationFn: (input: PaymentInput) => paymentApi.create(orderId, input),
     onSuccess: async () => { setDirection(null); message.success('Đã ghi nhận phiếu thanh toán.'); await invalidateLiveData(client) },
@@ -73,7 +85,17 @@ export function LiveOrderPayments({ orderId }: { orderId: number }) {
       { title: 'Người ghi nhận', render: (_, p) => <>{p.recordedByName}{p.source === 'DELIVERY' && <small> · Thu khi giao hàng</small>}</> },
       { title: 'Thời gian', dataIndex: 'createdAt', render: value => new Date(value).toLocaleString('vi-VN') },
       { title: 'Mã giao dịch / ghi chú', render: (_, p) => [p.reference, p.note].filter(Boolean).join(' · ') },
+      // Phiếu tài xế nộp khi đối soát chuyến không hủy ở đây (đã khớp tiền chuyến).
+      ...(canVoid ? [{ title: 'Thao tác', key: 'actions', width: 100, render: (_: unknown, p: PaymentReceipt) => p.source === 'DELIVERY' ? null : (
+        <Button size="small" type="text" danger onClick={() => { voidForm.resetFields(); setVoiding(p) }}>Hủy phiếu</Button>
+      ) }] : []),
     ]} />
+    <Modal open={voiding !== null} centered title={voiding ? `Hủy phiếu #${voiding.id} · ${currency(voiding.amount)}` : ''} okText="Hủy phiếu" okButtonProps={{ danger: true }} cancelText="Không"
+      onOk={() => voidForm.submit()} confirmLoading={voidMutation.isPending} onCancel={() => { if (!voidMutation.isPending) setVoiding(null) }}>
+      <Form form={voidForm} layout="vertical" disabled={voidMutation.isPending} onFinish={({ reason }) => voiding && voidMutation.mutate({ id: voiding.id, reason })}>
+        <Form.Item name="reason" label="Lý do hủy" rules={[{ required: true, whitespace: true, message: 'Nhập lý do hủy.' }, { max: 300 }]}><TextArea rows={2} maxLength={300} placeholder="Ví dụ: ghi nhầm vào đơn khác" /></Form.Item>
+      </Form>
+    </Modal>
     <Modal forceRender open={direction !== null} title={direction === 'IN' ? 'Ghi nhận thu tiền' : 'Ghi nhận hoàn tiền'} okText="Xác nhận đã giao dịch" cancelText="Hủy" onOk={() => form.submit()} confirmLoading={mutation.isPending} onCancel={() => { if (!mutation.isPending) setDirection(null) }} cancelButtonProps={{ disabled: mutation.isPending }}>
       <Alert type="info" showIcon title="Chỉ xác nhận khi đã thực nhận hoặc hoàn tiền. Hệ thống ghi sổ, không tự chuyển tiền qua ngân hàng." style={{ marginBottom: 16 }} />
       {mutation.isError && <Alert type="error" title={mutation.error.message} showIcon style={{ marginBottom: 16 }} />}
