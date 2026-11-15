@@ -15,7 +15,7 @@ import { useConfirm } from '@/shared/components/confirm'
 import { useColumnSort } from '@/shared/components/sortableColumn'
 import { downloadExcel, type ExcelColumn } from '@/shared/utils/excel'
 import { currency } from '@/shared/utils/format'
-import { serverTablePagination, tablePagination, tableScrollHeight, type ServerPagination } from '@/shared/utils/table'
+import { serverTablePagination, tablePagination, type ServerPagination } from '@/shared/utils/table'
 import { LiveReceivables } from './LiveReceivables'
 import { LiveBottleOverview } from './LiveBottleOverview'
 import { OrderIntakeModal } from '@/features/orders/components/OrderIntakeModal'
@@ -375,7 +375,7 @@ export function CustomersPage() {
                   loading={customersQuery.isPending}
                   pagination={serverTablePagination(server)}
                   locale={{ emptyText: filtered ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.' }}
-                  scroll={{ x: 1074, y: tableScrollHeight }}
+                  scroll={{ x: 1074 }}
                   rowSelection={{
                     selectedRowKeys: checked.map((customer) => customer.id),
                     preserveSelectedRowKeys: true,

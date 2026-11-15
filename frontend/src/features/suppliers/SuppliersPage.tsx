@@ -9,7 +9,7 @@ import { QueryError } from '@/shared/components/QueryError'
 import { useConfirm } from '@/shared/components/confirm'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { useColumnSort } from '@/shared/components/sortableColumn'
-import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
+import { tablePagination } from '@/shared/utils/table'
 import { SupplierFormModal } from './components/SupplierFormModal'
 import type { SupplierStatus } from './supplierService'
 import { useActivateSupplier, useCanManageSuppliers, useDeactivateSupplier, useSuppliers } from './useSuppliers'
@@ -28,7 +28,6 @@ export function SuppliersPage() {
   const sort = useColumnSort<Supplier>()
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
   const [editing, setEditing] = useState<Supplier | null>()
   const [viewingId, setViewingId] = useState<string>()
   const keyword = query.trim()
@@ -206,14 +205,10 @@ export function SuppliersPage() {
               pagination={{
                 ...tablePagination,
                 current: page,
-                pageSize,
-                onChange: (nextPage, nextSize) => {
-                  setPage(nextSize === pageSize ? nextPage : 1)
-                  setPageSize(nextSize)
-                },
+                onChange: setPage,
               }}
               rowClassName={(supplier) => (supplier.active ? '' : 'af-row-inactive')}
-              scroll={{ x: 962, y: tableScrollHeight }}
+              scroll={{ x: 962 }}
               locale={{
                 emptyText: (
                   <Empty

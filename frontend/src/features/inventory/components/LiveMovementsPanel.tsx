@@ -7,7 +7,6 @@ import { movementApi, movementLabels, type InventoryMovement, type MovementFilte
 import { OrderDetails } from '@/features/orders/components/OrderDetails'
 import { QueryError } from '@/shared/components/QueryError'
 import { ViewButton } from '@/shared/components/ViewButton'
-import { tableScrollHeight } from '@/shared/utils/table'
 import { isoToVnDate } from '../expiry'
 import { PeriodPicker } from '@/shared/components/PeriodPicker'
 
@@ -75,13 +74,12 @@ export function LiveMovementsPanel() {
           className="af-data-table af-table-flush"
           loading={query.isPending}
           dataSource={query.data?.content ?? []}
-          scroll={{ x: 1060, y: tableScrollHeight }}
+          scroll={{ x: 1060 }}
           pagination={{
             current: filter.page + 1,
             pageSize: filter.size,
             total: query.data?.totalElements ?? 0,
-            showSizeChanger: true,
-            pageSizeOptions: [20, 50, 100],
+            showSizeChanger: false,
             showTotal: (total) => `${total} giao dịch`,
             onChange: (page, size) => setFilter((previous) => ({ ...previous, page: size === previous.size ? page - 1 : 0, size })),
           }}

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Alert, App, Button, Descriptions, Form, Input, InputNumber, Modal, Select, Skeleton, Space, Table, Tag } from 'antd'
+import { Alert, App, Button, Form, Input, InputNumber, Modal, Select, Skeleton, Space, Table, Tag } from 'antd'
 import { QueryError } from '@/shared/components/QueryError'
 import { useConfirm } from '@/shared/components/confirm'
 import { currency } from '@/shared/utils/format'
@@ -68,17 +68,19 @@ export function LiveOrderPayments({ orderId }: { orderId: number }) {
   const maximum = direction === 'IN' ? balance.due : balance.refundDue
   return <>
     {query.isError && <Alert type="warning" showIcon title="Chưa làm mới được số dư. Dữ liệu đang hiển thị là lần tải gần nhất." action={<Button onClick={() => void query.refetch()}>Thử lại</Button>} />}
-    <Descriptions size="small" column={{ xs: 1, sm: 2 }} items={[
-      { key: 'received', label: 'Đã thu', children: currency(balance.received) },
-      { key: 'refunded', label: 'Đã hoàn', children: currency(balance.refunded) },
-      { key: 'due', label: 'Còn phải thu', children: currency(balance.due) },
-      { key: 'refund', label: 'Cần hoàn khách', children: currency(balance.refundDue) },
-    ]} />
-    <Space style={{ marginBottom: 12 }}>
-      {balance.status !== 'PENDING' && balance.status !== 'CANCELLED' && balance.due > 0 && <Button type="primary" onClick={() => start('IN')}>Ghi nhận thu tiền</Button>}
-      {balance.refundDue > 0 && <Button onClick={() => start('OUT')}>Ghi nhận hoàn tiền</Button>}
-    </Space>
-    <Table rowKey="id" size="small" dataSource={payments} pagination={{ pageSize: 5, hideOnSinglePage: true }} scroll={{ x: 620 }} locale={{ emptyText: 'Chưa có phiếu thanh toán.' }} columns={[
+    {/* Số còn phải thu đã nằm ở tiêu đề mục; ở đây chỉ hiện số đã thu và khoản hoàn khi có. */}
+    <div className="af-payment-summary">
+      <span>
+        Đã thu <strong>{currency(balance.received)}</strong>
+        {balance.refunded > 0 && <> · Đã hoàn <strong>{currency(balance.refunded)}</strong></>}
+        {balance.refundDue > 0 && <> · Cần hoàn khách <strong>{currency(balance.refundDue)}</strong></>}
+      </span>
+      <Space size={8}>
+        {balance.refundDue > 0 && <Button size="small" onClick={() => start('OUT')}>Ghi nhận hoàn tiền</Button>}
+        {balance.status !== 'PENDING' && balance.status !== 'CANCELLED' && balance.due > 0 && <Button size="small" type="primary" onClick={() => start('IN')}>Ghi nhận thu tiền</Button>}
+      </Space>
+    </div>
+    {payments.length === 0 ? <p className="af-order-more-empty">Chưa có phiếu thanh toán.</p> : <Table rowKey="id" size="small" dataSource={payments} pagination={{ pageSize: 5, hideOnSinglePage: true }} scroll={{ x: 620 }} locale={{ emptyText: 'Chưa có phiếu thanh toán.' }} columns={[
       { title: 'Phiếu', render: (_, p) => <span>#{p.id} <Tag color={p.direction === 'IN' ? 'green' : 'orange'}>{p.direction === 'IN' ? 'Thu' : 'Hoàn'}</Tag></span> },
       { title: 'Số tiền', dataIndex: 'amount', render: currency, align: 'right' },
       { title: 'Hình thức', render: (_, p) => p.method === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản' },
@@ -89,7 +91,7 @@ export function LiveOrderPayments({ orderId }: { orderId: number }) {
       ...(canVoid ? [{ title: 'Thao tác', key: 'actions', width: 100, render: (_: unknown, p: PaymentReceipt) => p.source === 'DELIVERY' ? null : (
         <Button size="small" type="text" danger onClick={() => { voidForm.resetFields(); setVoiding(p) }}>Hủy phiếu</Button>
       ) }] : []),
-    ]} />
+    ]} />}
     <Modal open={voiding !== null} centered title={voiding ? `Hủy phiếu #${voiding.id} · ${currency(voiding.amount)}` : ''} okText="Hủy phiếu" okButtonProps={{ danger: true }} cancelText="Không"
       onOk={() => voidForm.submit()} confirmLoading={voidMutation.isPending} onCancel={() => { if (!voidMutation.isPending) setVoiding(null) }}>
       <Form form={voidForm} layout="vertical" disabled={voidMutation.isPending} onFinish={({ reason }) => voiding && voidMutation.mutate({ id: voiding.id, reason })}>

@@ -45,9 +45,9 @@ export function TripsList({ trips, loading, dueLabel, onOpen }: TripsListProps) 
           value={group}
           onChange={setGroup}
           options={[
-            { value: 'settle', label: <CountLabel label="Chờ đối soát" count={count('settle')} tone="warning" /> },
-            { value: 'running', label: <CountLabel label="Đang giao" count={count('running')} /> },
-            { value: 'done', label: <CountLabel label="Đã xong" count={count('done')} /> },
+            { value: 'settle', label: <CountLabel label="Chờ đối soát" count={count('settle')} urgent tone="warning" /> },
+            { value: 'running', label: <CountLabel label="Đang giao" count={count('running')} tone="info" /> },
+            { value: 'done', label: <CountLabel label="Đã xong" count={count('done')} tone="success" /> },
             { value: 'all', label: <CountLabel label="Tất cả" count={count('all')} /> },
           ]}
         />
@@ -63,7 +63,9 @@ export function TripsList({ trips, loading, dueLabel, onOpen }: TripsListProps) 
           <Select<Range>
             aria-label="Khoảng ngày của chuyến đã xong"
             value={range}
-            onChange={setRange}
+            // Lọc nhỏ nên xóa ngay trong ô: bấm × quay về mặc định 7 ngày.
+            allowClear={range !== '7'}
+            onChange={(next) => setRange(next ?? '7')}
             options={[
               { value: 'today', label: 'Hôm nay' },
               { value: '7', label: '7 ngày qua' },
@@ -74,7 +76,7 @@ export function TripsList({ trips, loading, dueLabel, onOpen }: TripsListProps) 
       </div>
       <Table<DeliveryTrip>
         className="af-data-table af-table-flush"
-        size="middle"
+        size="small"
         rowKey="id"
         loading={loading}
         dataSource={visible}
@@ -95,28 +97,28 @@ export function TripsList({ trips, loading, dueLabel, onOpen }: TripsListProps) 
           {
             title: 'Chuyến',
             key: 'trip',
-            width: 140,
+            width: 190,
             render: (_, trip) => (
-              <div className="af-cell-stack">
-                <span className="af-strong af-nowrap">Chuyến #{trip.id}</span>
-                <small className="af-nowrap">{shortTime(trip.createdAt)}</small>
-              </div>
+              <span className="af-nowrap">
+                <span className="af-strong">Chuyến #{trip.id}</span> <small className="af-text-muted">{shortTime(trip.createdAt)}</small>
+              </span>
             ),
           },
           {
             title: 'Tài xế',
             key: 'driver',
+            ellipsis: true,
             render: (_, trip) => (
-              <div className="af-cell-stack">
-                <span className="af-cell-truncate">{trip.driverName ?? 'Chưa phân tài xế'}</span>
-                {trip.vehicle && <small className="af-cell-truncate">{trip.vehicle}</small>}
-              </div>
+              <>
+                {trip.driverName ?? 'Chưa phân tài xế'}
+                {trip.vehicle && <small className="af-text-muted"> · {trip.vehicle}</small>}
+              </>
             ),
           },
           {
             title: 'Tiến độ',
             key: 'progress',
-            width: 190,
+            width: 130,
             render: (_, trip) => {
               const finished = trip.orders.filter((stop) => stop.latestAttempt).length
               const total = trip.orders.length
@@ -130,8 +132,8 @@ export function TripsList({ trips, loading, dueLabel, onOpen }: TripsListProps) 
               )
             },
           },
-          { title: 'Cần thu', key: 'due', width: 170, align: 'right', render: (_, trip) => dueLabel(trip).replace(/^Cần thu /, '') },
-          { title: 'Trạng thái', key: 'status', width: 140, render: (_, trip) => <TripStatusTag status={liveTripStatus(trip)} /> },
+          { title: 'Cần thu', key: 'due', width: 130, align: 'right', render: (_, trip) => dueLabel(trip).replace(/^Cần thu /, '') },
+          { title: 'Trạng thái', key: 'status', width: 130, render: (_, trip) => <TripStatusTag status={liveTripStatus(trip)} /> },
           {
             title: 'Thao tác',
             key: 'actions',

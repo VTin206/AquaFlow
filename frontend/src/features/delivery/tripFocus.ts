@@ -49,7 +49,7 @@ export function liveTripFocus(trip: Pick<DeliveryTrip, 'status' | 'driverId' | '
       focus: {
         tone: 'waiting',
         title: `Đã có kết quả ${results}/${total} điểm giao`,
-        description: `${failedNote} Ghi đủ kết quả rồi mới đối soát được.`.trim(),
+        description: failedNote || undefined,
       },
     }
   }

@@ -7,7 +7,7 @@ import { Search } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
-import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
+import { tablePagination } from '@/shared/utils/table'
 import { useExpiryWarningDays } from '@/features/settings/settingsService'
 import { daysUntilExpiry, expiryStatus, isoToVnDate } from '../expiry'
 import { matchesSearch } from '@/shared/utils/search'
@@ -71,7 +71,7 @@ export function LotsPanel({ initialFilter = 'stock' }: { initialFilter?: LotFilt
         loading={lotsQuery.isPending}
         dataSource={visible}
         pagination={tablePagination}
-        scroll={{ x: 1040, y: tableScrollHeight }}
+        scroll={{ x: 1040 }}
         locale={{ emptyText: lots.length ? 'Không có lô phù hợp.' : 'Chưa có lô hàng. Lô được tạo khi xác nhận nhập kho.' }}
         columns={[
           {

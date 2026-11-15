@@ -7,7 +7,7 @@ import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
 import { usePendingReturns } from '@/features/live/returnApi'
 import { useColumnSort } from '@/shared/components/sortableColumn'
-import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
+import { tablePagination } from '@/shared/utils/table'
 import { LotsPanel, type LotFilter } from './components/LotsPanel'
 import { InventoryAttention, type AttentionItem } from './components/InventoryAttention'
 import { MovementsPanel } from './components/MovementsPanel'
@@ -326,7 +326,7 @@ export function InventoryPage() {
                       ? 'Không có sản phẩm phù hợp.'
                       : 'Chưa có sản phẩm. Thêm sản phẩm ở trang Sản phẩm trước khi nhập kho.',
                   }}
-                  scroll={{ x: 1044, y: tableScrollHeight }}
+                  scroll={{ x: 1044 }}
                   rowSelection={{
                     selectedRowKeys: checked.map((item) => item.id),
                     onChange: (keys) => setCheckedIds(keys.map(String)),

@@ -2210,13 +2210,27 @@ body {
   gap: 10px;
   max-width: 100%;
 }
+.af-payment-summary {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  color: var(--af-text-secondary);
+}
+.af-payment-summary strong {
+  color: var(--af-text-strong);
+}
 .af-filter-summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 0 20px 12px;
+  /* Cao cố định để dòng đếm nằm giữa đường kẻ và bảng, không nhảy khi hiện nút Xóa bộ lọc. */
+  min-height: 44px;
+  padding: 0 20px;
   color: var(--af-text-secondary);
   font-size: var(--af-fs-md);
 }
@@ -2971,13 +2985,6 @@ html:has(.af-shell) body {
 .af-shell .ant-tag {
   border-radius: 999px;
   font-weight: 600;
-}
-.af-toolbar {
-  margin-bottom: 16px;
-  border: 1px solid var(--af-border);
-  border-radius: 16px;
-  background: var(--af-surface);
-  box-shadow: 0 6px 20px var(--af-shadow-card);
 }
 .af-section-heading {
   margin-top: 34px;

@@ -13,15 +13,12 @@ export const serverTablePagination = ({ page, size, total, onChange }: ServerPag
 })
 
 export const tablePagination: TablePaginationConfig = {
+  // Số dòng cố định, không cho chọn: bảng hiện đủ dòng của trang và cả trang cuộn, không cuộn lồng trong bảng.
   defaultPageSize: 10,
-  pageSizeOptions: [10, 20, 50],
-  showSizeChanger: true,
+  showSizeChanger: false,
   responsive: true,
   showTotal: (total, range) => `${range[0]}–${range[1]} / ${total} dòng`,
 }
-
-// Giới hạn vùng cuộn để tiêu đề và thanh phân trang luôn nằm ngoài danh sách.
-export const tableScrollHeight = 'min(60vh, 640px)'
 
 /**
  * Bảng trong cửa sổ quản lý danh mục (loại sản phẩm, loại vỏ): chừa chỗ cho tiêu đề cửa sổ, thanh công cụ,
