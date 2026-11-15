@@ -25,8 +25,6 @@ type OrdersTableProps = {
    * vì sắp xếp trong một trang dễ bị hiểu nhầm là sắp xếp toàn bộ.
    */
   server?: ServerPagination
-  /** Số dòng mỗi trang khi phân trang phía FE. */
-  pageSize?: number
 }
 
 export function OrdersTable({
@@ -36,7 +34,6 @@ export function OrdersTable({
   emptyText = 'Chưa có đơn hàng nào.',
   filterKey,
   server,
-  pageSize,
 }: OrdersTableProps) {
   const screens = Grid.useBreakpoint()
   // Chưa có phiếu thu thì không tính "còn phải thu", dùng trạng thái thanh toán của BE.
@@ -181,7 +178,7 @@ export function OrdersTable({
                 ? false
                 : server
                   ? serverTablePagination(server)
-                  : { ...tablePagination, pageSize: pageSize ?? tablePagination.defaultPageSize }
+                  : tablePagination
             }
             locale={{ emptyText }}
             scroll={{ x: tableMinWidth }}
