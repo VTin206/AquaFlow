@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button, Card, Empty, Input, Progress, Segmented, Select, Table } from 'antd'
-import { FunnelX, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { ViewButton } from '@/shared/components/ViewButton'
 import { matchesSearch } from '@/shared/utils/search'
@@ -63,31 +63,20 @@ export function TripsList({ trips, loading, dueLabel, onOpen }: TripsListProps) 
           <Select<Range>
             aria-label="Khoảng ngày của chuyến đã xong"
             value={range}
-            onChange={setRange}
+            // Lọc nhỏ nên xóa ngay trong ô: bấm × quay về mặc định 7 ngày.
+            allowClear={range !== '7'}
+            onChange={(next) => setRange(next ?? '7')}
             options={[
               { value: 'today', label: 'Hôm nay' },
               { value: '7', label: '7 ngày qua' },
               { value: '30', label: '30 ngày qua' },
             ]}
           />
-          {(search.trim() || range !== '7') && (
-            <Button
-              type="link"
-              className="af-clear-filter"
-              icon={<FunnelX size={15} />}
-              onClick={() => {
-                setSearch('')
-                setRange('7')
-              }}
-            >
-              Xóa lọc
-            </Button>
-          )}
         </div>
       </div>
       <Table<DeliveryTrip>
         className="af-data-table af-table-flush"
-        size="middle"
+        size="small"
         rowKey="id"
         loading={loading}
         dataSource={visible}
@@ -108,28 +97,28 @@ export function TripsList({ trips, loading, dueLabel, onOpen }: TripsListProps) 
           {
             title: 'Chuyến',
             key: 'trip',
-            width: 140,
+            width: 190,
             render: (_, trip) => (
-              <div className="af-cell-stack">
-                <span className="af-strong af-nowrap">Chuyến #{trip.id}</span>
-                <small className="af-nowrap">{shortTime(trip.createdAt)}</small>
-              </div>
+              <span className="af-nowrap">
+                <span className="af-strong">Chuyến #{trip.id}</span> <small className="af-text-muted">{shortTime(trip.createdAt)}</small>
+              </span>
             ),
           },
           {
             title: 'Tài xế',
             key: 'driver',
+            ellipsis: true,
             render: (_, trip) => (
-              <div className="af-cell-stack">
-                <span className="af-cell-truncate">{trip.driverName ?? 'Chưa phân tài xế'}</span>
-                {trip.vehicle && <small className="af-cell-truncate">{trip.vehicle}</small>}
-              </div>
+              <>
+                {trip.driverName ?? 'Chưa phân tài xế'}
+                {trip.vehicle && <small className="af-text-muted"> · {trip.vehicle}</small>}
+              </>
             ),
           },
           {
             title: 'Tiến độ',
             key: 'progress',
-            width: 190,
+            width: 130,
             render: (_, trip) => {
               const finished = trip.orders.filter((stop) => stop.latestAttempt).length
               const total = trip.orders.length
@@ -143,8 +132,8 @@ export function TripsList({ trips, loading, dueLabel, onOpen }: TripsListProps) 
               )
             },
           },
-          { title: 'Cần thu', key: 'due', width: 170, align: 'right', render: (_, trip) => dueLabel(trip).replace(/^Cần thu /, '') },
-          { title: 'Trạng thái', key: 'status', width: 140, render: (_, trip) => <TripStatusTag status={liveTripStatus(trip)} /> },
+          { title: 'Cần thu', key: 'due', width: 130, align: 'right', render: (_, trip) => dueLabel(trip).replace(/^Cần thu /, '') },
+          { title: 'Trạng thái', key: 'status', width: 130, render: (_, trip) => <TripStatusTag status={liveTripStatus(trip)} /> },
           {
             title: 'Thao tác',
             key: 'actions',
