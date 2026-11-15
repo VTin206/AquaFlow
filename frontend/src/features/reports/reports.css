@@ -11,57 +11,6 @@
   display: block;
   margin: 12px 0 4px;
 }
-.af-report-delta {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 2px;
-  color: var(--af-text-tertiary);
-  font-size: var(--af-fs-sm);
-}
-.af-report-delta.is-up {
-  color: var(--af-success);
-}
-.af-report-delta.is-down {
-  color: var(--af-danger);
-}
-/* Hàng chỉ số chính: chữ và số ngăn bằng đường kẻ dọc, không đóng khung thẻ. */
-.af-report-kpis {
-  display: flex;
-  flex-wrap: wrap;
-  margin: 8px 0 4px;
-  padding: 16px 0;
-  border-top: 1px solid var(--af-border);
-  border-bottom: 1px solid var(--af-border);
-}
-.af-report-kpi {
-  display: flex;
-  flex: 1 1 180px;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  padding: 0 20px;
-  border-left: 1px solid var(--af-border);
-}
-.af-report-kpi:first-child {
-  padding-left: 0;
-  border-left: 0;
-}
-.af-report-kpi-label {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--af-text-secondary);
-  font-size: var(--af-fs-sm);
-}
-.af-report-kpi-value {
-  color: var(--af-text-strong);
-  font-size: var(--af-fs-2xl);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  line-height: 1.3;
-  white-space: nowrap;
-}
 .af-report-filter {
   min-width: 160px;
   max-width: 100%;
@@ -87,9 +36,6 @@
   .af-report-tabs .ant-card-extra {
     margin-inline-start: 0;
     padding-bottom: 8px;
-  }
-  .af-report-kpis .ant-statistic-content {
-    font-size: var(--af-fs-xl);
   }
 }
 .af-report-table-hint {
@@ -341,4 +287,104 @@
 /* Mã hàng, đơn vị, số tiền không xuống dòng. */
 .af-report-table td.af-nowrap {
   white-space: nowrap;
+}
+
+/* ---------- Tỷ lệ sản phẩm (vành khuyên + chú thích) ---------- */
+.af-share-chart {
+  flex-direction: row;
+  align-items: center;
+  gap: 20px;
+}
+.af-share-chart-pie {
+  position: relative;
+  flex: 0 0 200px;
+  width: 200px;
+}
+.af-share-chart-total {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.af-share-chart-total b {
+  color: var(--af-text-strong);
+  font-size: var(--af-fs-lg);
+}
+.af-share-chart-total small {
+  color: var(--af-text-tertiary);
+  font-size: var(--af-fs-xs);
+}
+.af-share-chart-legend {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--af-fs-sm);
+}
+.af-share-chart-legend li {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+}
+.af-share-chart-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.af-share-chart-legend span {
+  overflow: hidden;
+  color: var(--af-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.af-share-chart-legend b {
+  color: var(--af-text-strong);
+  font-weight: 600;
+  text-align: right;
+}
+.af-share-chart-legend small {
+  min-width: 56px;
+  color: var(--af-text-tertiary);
+  text-align: right;
+}
+@media (max-width: 640px) {
+  .af-share-chart {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .af-share-chart-pie {
+    align-self: center;
+  }
+}
+
+/* Biểu đồ sản phẩm trên trang Báo cáo: thanh xếp hạng bên trái, tỷ lệ bên phải. */
+.af-report-products-charts {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 24px;
+  align-items: start;
+}
+.af-report-products-charts h3 {
+  margin: 0 0 8px;
+  color: var(--af-text-strong);
+  font-size: var(--af-fs-md);
+  font-weight: 600;
+}
+@media (max-width: 1100px) {
+  .af-report-products-charts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.af-report-chart-tools {
+  margin-bottom: 12px;
+}
+.af-report-products-charts + .af-report-chart-note {
+  margin: 12px 0 0;
 }

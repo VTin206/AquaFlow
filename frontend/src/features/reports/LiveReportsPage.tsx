@@ -1,16 +1,18 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { filterOn } from '@/shared/utils/filterOn'
 import { useQuery } from '@tanstack/react-query'
 import { Alert, App, Button, Card, Checkbox, Popover, Segmented, Select, Table, Tabs, Typography } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { Link, useSearchParams } from 'react-router'
-import { ArrowDownRight, ArrowUpRight, Columns3, FileSpreadsheet, FunnelX } from 'lucide-react'
+import { Columns3, FileSpreadsheet, FunnelX } from 'lucide-react'
 import { Page } from '@/shared/components/Page'
 import { PeriodPicker } from '@/shared/components/PeriodPicker'
 import { QueryError } from '@/shared/components/QueryError'
+import { StatChange, StatTile, StatTiles, StatWarning } from '@/shared/components/StatTiles'
 import { currency } from '@/shared/utils/format'
 import { reportApi, channelLabels, type LiveReport, type ReportQuery, type ReportSection, type ReportRow } from './reportApi'
-import { DriverDeliveryChart, RevenueChart, TopProductsChart } from './charts'
+import { DriverDeliveryChart, ProductShareChart, RevenueChart, TopProductsChart } from './charts'
+import { metricLabels, rankProducts, useProductSales, type SalesMetric } from './productSales'
 import { autoGranularity, granularityLabels, groupRevenue, reportPresets, type Granularity } from './periods'
 import { previousRange } from './reportService'
 import type { ReportColumn } from './exportLiveReport'
@@ -90,30 +92,6 @@ const kpis = [
   { title: 'Đơn tạo', key: 'ordersCreated', money: false },
 ] as const
 
-/** Mức tăng/giảm so với kỳ trước; kỳ trước chưa có số liệu thì không hiện gì. */
-function Delta({ current, previous }: { current: number; previous?: number }) {
-  if (previous === undefined || previous === 0) return null
-  const change = Math.round(((current - previous) / Math.abs(previous)) * 100)
-  if (change === 0) return <span className="af-report-delta">Không đổi so với kỳ trước</span>
-  const Icon = change > 0 ? ArrowUpRight : ArrowDownRight
-  return (
-    <span className={`af-report-delta ${change > 0 ? 'is-up' : 'is-down'}`}>
-      <Icon size={14} aria-hidden /> {change > 0 ? 'Tăng' : 'Giảm'} {Math.abs(change)}% so với kỳ trước
-    </span>
-  )
-}
-
-/** Một chỉ số trong hàng chỉ số chính: chữ và số, không đóng khung thẻ. */
-function Kpi({ title, value, note, loading }: { title: string; value: ReactNode; note?: ReactNode; loading: boolean }) {
-  return (
-    <div className="af-report-kpi">
-      <span className="af-report-kpi-label">{title}</span>
-      <strong className="af-report-kpi-value">{loading ? '…' : value}</strong>
-      {note}
-    </div>
-  )
-}
-
 type ReportLine = { label: string; value: number | null | undefined; money?: boolean; total?: boolean }
 
 /** Danh sách nhãn – số có đường kẻ: dòng tổng in đậm, số 0 làm mờ. */
@@ -188,6 +166,35 @@ function ColumnPicker({ columns, core, extra, onExtraChange }: {
         <Button size="small" icon={<Columns3 size={15} />}>Cột{extra.length ? ` (+${extra.length})` : ''}</Button>
     </Popover>
   )
+}
+
+/**
+ * Biểu đồ tab Sản phẩm bán: xếp hạng và tỷ lệ tính trên mọi sản phẩm của kỳ (không theo trang bảng).
+ * Mặc định theo số lượng vì hàng bán nhiều mà giá thấp (bình 19L) dễ bị hàng giá cao che khi xếp theo tiền.
+ */
+function ProductCharts({ query }: { query: ReportQuery }) {
+  const [metric, setMetric] = useState<SalesMetric>('quantity')
+  const sales = useProductSales(query)
+  if (sales.isError) return <QueryError error={sales.error} onRetry={sales.refetch} />
+  if (sales.isPending) return <Typography.Text type="secondary">Đang tải báo cáo…</Typography.Text>
+  if (!rankProducts(sales.data ?? [], metric).length) return <Typography.Text type="secondary">Chưa có dữ liệu trong kỳ.</Typography.Text>
+  return <>
+    <div className="af-report-chart-tools">
+      <Segmented<SalesMetric> size="small" aria-label="Xếp hạng theo" value={metric} onChange={setMetric}
+        options={(Object.keys(metricLabels) as SalesMetric[]).map((value) => ({ value, label: `Theo ${metricLabels[value].toLowerCase()}` }))} />
+    </div>
+    <div className="af-report-products-charts">
+      <section>
+        <h3>8 sản phẩm bán chạy nhất</h3>
+        <TopProductsChart rows={sales.data ?? []} metric={metric} />
+      </section>
+      <section>
+        <h3>Tỷ lệ {metricLabels[metric].toLowerCase()}</h3>
+        <ProductShareChart rows={sales.data ?? []} metric={metric} />
+      </section>
+    </div>
+    {metric === 'quantity' && <Typography.Text type="secondary" className="af-report-chart-note">Số lượng đã trừ hàng khách trả, cộng theo đơn vị bán của từng sản phẩm (bình, thùng, chai…).</Typography.Text>}
+  </>
 }
 
 export function LiveReportsPage() {
@@ -280,18 +287,20 @@ function LiveReportContent() {
     </div>
     {rangeError && <Alert type="warning" showIcon title={rangeError} />}
     {summary.isError ? <QueryError error={summary.error} onRetry={summary.refetch} /> : <>
-      <div className="af-report-kpis">
+      <StatTiles label="Chỉ số chính của kỳ">
         {kpis.map(({ title, key, money }) => {
           const value = Number(report?.sales[key] ?? 0)
-          return <Kpi key={key} title={title} loading={summary.isPending} value={money ? currency(value) : value} note={report && <>
-            <Delta current={value} previous={previous.data?.sales[key]} />
-            {key === 'ordersCreated' && report.sales.ordersCancelled > 0 && <span className="af-report-delta">{report.sales.ordersCancelled} đơn đã hủy</span>}
+          return <StatTile key={key} title={title} loading={summary.isPending} money={money} value={report ? value : undefined} note={report && <>
+            <StatChange current={value} previous={previous.data?.sales[key]} />
+            {key === 'ordersCreated' && report.sales.ordersCancelled > 0 && <span>{report.sales.ordersCancelled} đơn đã hủy</span>}
           </>} />
         })}
-        <Kpi title="Lãi gộp ước tính" loading={summary.isPending}
-          value={report && report.sales.unpricedCostLines === 0 ? currency(Number(report.sales.estimatedGrossProfit ?? 0)) : 'Chưa đủ giá nhập'}
-          note={report && report.sales.totalCostLines > 0 && report.sales.unpricedCostLines > 0 && <span className="af-report-delta is-down">Thiếu giá nhập cho {report.sales.unpricedCostLines}/{report.sales.totalCostLines} dòng hàng</span>} />
-      </div>
+        <StatTile title="Lãi gộp ước tính" loading={summary.isPending}
+          money value={!report ? undefined : report.sales.unpricedCostLines === 0 ? Number(report.sales.estimatedGrossProfit ?? 0) : 'Chưa đủ giá nhập'}
+          note={report && (report.sales.unpricedCostLines > 0
+            ? report.sales.totalCostLines > 0 && <StatWarning label="Thiếu giá nhập">{report.sales.unpricedCostLines}/{report.sales.totalCostLines} dòng hàng</StatWarning>
+            : report.sales.revenue > 0 && <span>Biên lãi {(Number(report.sales.estimatedGrossProfit ?? 0) / report.sales.revenue * 100).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}% doanh thu</span>)} />
+      </StatTiles>
       {!!report?.sales.undatedDeliveredOrders && <Alert type="warning" showIcon title={`Có ${report.sales.undatedDeliveredOrders} đơn đã giao thiếu thời điểm giao, chưa thể tính vào doanh thu theo kỳ.`} />}
       <Tabs activeKey={tab} tabBarExtraContent={tab !== 'overview' && <div className="af-report-tab-tools">
         {chartTabs.includes(tab) && <Segmented<'table' | 'chart'> size="small" aria-label="Kiểu xem" value={view} onChange={setView} options={[{ value: 'table', label: 'Bảng' }, { value: 'chart', label: 'Biểu đồ' }]} />}
@@ -333,12 +342,14 @@ function LiveReportContent() {
           </Card>
         </> },
         ...Object.entries(sections).map(([key, section]) => ({ key, label: section.title, children: details.isError ? <QueryError error={details.error} onRetry={details.refetch} /> : <Card>
-          {chartTabs.includes(key) && view === 'chart' ? (
+          {key === 'products' && view === 'chart' ? (
+            <ProductCharts query={query} />
+          ) : chartTabs.includes(key) && view === 'chart' ? (
             details.isPending ? <Typography.Text type="secondary">Đang tải báo cáo…</Typography.Text>
               : !detailRows.length ? <Typography.Text type="secondary">Chưa có dữ liệu trong kỳ.</Typography.Text>
               : <>
-                <Typography.Text type="secondary" className="af-report-chart-note">{key === 'products' ? '8 sản phẩm doanh thu cao nhất' : '8 tài xế nhiều lượt giao nhất'} trong trang đang xem. Đủ số liệu xem ở chế độ Bảng.</Typography.Text>
-                {key === 'products' ? <TopProductsChart rows={detailRows.map((row) => ({ name: String(row.name), unit: String(row.unit), sold: num(row.sold), revenue: num(row.revenue) }))} /> : <DriverDeliveryChart rows={detailRows.map((row) => ({ driver: String(row.driver), delivered: num(row.delivered), late: num(row.late), failed: num(row.failed) }))} />}
+                <Typography.Text type="secondary" className="af-report-chart-note">8 tài xế nhiều lượt giao nhất trong trang đang xem. Đủ số liệu xem ở chế độ Bảng.</Typography.Text>
+                <DriverDeliveryChart rows={detailRows.map((row) => ({ driver: String(row.driver), delivered: num(row.delivered), late: num(row.late), failed: num(row.failed) }))} />
               </>
           ) : (
             <Table<ReportRow> className="af-report-table" size="middle" rowKey={section.key} loading={details.isPending} columns={key === 'customers' ? customerColumns : columnsOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection]))} dataSource={details.data?.content ?? []} scroll={{ x: tableWidthOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection])), y: reportTableHeight }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : 'Chưa có dữ liệu trong kỳ.' }}

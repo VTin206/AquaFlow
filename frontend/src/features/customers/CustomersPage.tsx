@@ -1,23 +1,7 @@
 import { useMemo, useState } from 'react'
 import { filterOn } from '@/shared/utils/filterOn'
 import { useSearchParams } from 'react-router'
-import {
-  App,
-  Button,
-  Card,
-  Col,
-  Dropdown,
-  Grid,
-  Input,
-  Row,
-  Segmented,
-  Select,
-  Statistic,
-  Table,
-  Tag,
-  Tooltip,
-  type TableColumnsType,
-} from 'antd'
+import { App, Button, Card, Dropdown, Grid, Input, Segmented, Select, Table, Tag, Tooltip, type TableColumnsType } from 'antd'
 import dayjs from 'dayjs'
 import { Ellipsis, FileSpreadsheet, Plus, Search } from 'lucide-react'
 import { ViewButton } from '@/shared/components/ViewButton'
@@ -26,6 +10,7 @@ import { BulkBar } from '@/shared/components/BulkBar'
 import { Page } from '@/shared/components/Page'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
+import { StatTile, StatTiles } from '@/shared/components/StatTiles'
 import { useConfirm } from '@/shared/components/confirm'
 import { useColumnSort } from '@/shared/components/sortableColumn'
 import { downloadExcel, type ExcelColumn } from '@/shared/utils/excel'
@@ -194,36 +179,6 @@ export function CustomersPage() {
     },
   ]
 
-  const stats = [
-    { key: 'count', node: <Statistic title="Khách hàng" value={totals?.customers ?? 0} /> },
-    {
-      key: 'debt',
-      node: (
-        <Statistic
-          className={totalDebt > 0 ? 'af-stat-due' : 'af-stat-paid'}
-          title="Còn phải thu"
-          value={totalDebt}
-          formatter={(value) => currency(Number(value))}
-        />
-      ),
-    },
-    {
-      key: 'bottles',
-      node: <Statistic title="Vỏ khách đang giữ" value={totalBottles} suffix="vỏ" />,
-    },
-    {
-      key: 'deposit',
-      node: (
-        <Statistic
-          className="af-stat-deposit"
-          title="Tiền cọc đang giữ"
-          value={totalDeposit}
-          formatter={(value) => currency(Number(value))}
-        />
-      ),
-    },
-  ]
-
   const columns: TableColumnsType<Customer> = [
     {
       ...sort.column('Khách hàng', 'name', 'text'),
@@ -333,13 +288,18 @@ export function CustomersPage() {
         </Card>
       ) : (
         <>
-          <Row gutter={[12, 12]} className="af-stat-row">
-            {stats.map((stat) => (
-              <Col key={stat.key} xs={24} sm={12} lg={6}>
-                <Card loading={customersQuery.isPending}>{stat.node}</Card>
-              </Col>
-            ))}
-          </Row>
+          <StatTiles label="Tổng quan khách hàng">
+            <StatTile title="Khách hàng" loading={customersQuery.isPending} value={totals?.customers ?? 0} unit="khách" />
+            <StatTile
+              title="Còn phải thu"
+              loading={customersQuery.isPending}
+              money
+              tone={totalDebt > 0 ? 'due' : 'paid'}
+              value={totalDebt}
+            />
+            <StatTile title="Vỏ khách đang giữ" loading={customersQuery.isPending} value={totalBottles} unit="vỏ" />
+            <StatTile title="Tiền cọc đang giữ" loading={customersQuery.isPending} money tone="deposit" value={totalDeposit} />
+          </StatTiles>
           <Card className="af-card" styles={{ body: { padding: 0 } }}>
             <div className="af-toolbar">
               <Segmented<'active' | 'archived'>
