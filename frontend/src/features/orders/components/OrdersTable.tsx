@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Button, Grid, Space, Table, type TableColumnsType } from 'antd'
 import { ViewButton } from '@/shared/components/ViewButton'
 import { Money } from '@/shared/components/Money'
-import { serverTablePagination, tablePagination, tableScrollHeight, type ServerPagination } from '@/shared/utils/table'
+import { pagedScroll, serverTablePagination, tablePagination, type ServerPagination } from '@/shared/utils/table'
 import { useColumnSort } from '@/shared/components/sortableColumn'
 import { amountDue, compareDeliveryDue, compareOrderPriority, deliveryTimingOf, type Order } from '../types'
 import { LateTag } from './LateTag'
@@ -182,7 +182,7 @@ export function OrdersTable({
                   : { ...tablePagination, pageSize, onShowSizeChange: (_, size) => setPageSize(size) }
             }
             locale={{ emptyText }}
-            scroll={{ x: tableMinWidth, ...(!compact && { y: tableScrollHeight }) }}
+            scroll={{ x: tableMinWidth, ...(!compact && pagedScroll(server ? server.size : pageSize)) }}
             rowSelection={
               compact
                 ? undefined

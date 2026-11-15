@@ -7,7 +7,7 @@ import { movementApi, movementLabels, type InventoryMovement, type MovementFilte
 import { OrderDetails } from '@/features/orders/components/OrderDetails'
 import { QueryError } from '@/shared/components/QueryError'
 import { ViewButton } from '@/shared/components/ViewButton'
-import { tableScrollHeight } from '@/shared/utils/table'
+import { pagedScroll } from '@/shared/utils/table'
 import { isoToVnDate } from '../expiry'
 import { PeriodPicker } from '@/shared/components/PeriodPicker'
 
@@ -75,7 +75,7 @@ export function LiveMovementsPanel() {
           className="af-data-table af-table-flush"
           loading={query.isPending}
           dataSource={query.data?.content ?? []}
-          scroll={{ x: 1060, y: tableScrollHeight }}
+          scroll={{ x: 1060, ...pagedScroll(filter.size, 20) }}
           pagination={{
             current: filter.page + 1,
             pageSize: filter.size,

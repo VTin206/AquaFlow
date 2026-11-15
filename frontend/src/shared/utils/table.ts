@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { TablePaginationConfig } from 'antd'
 
 /** Danh sách đã được BE phân trang: bảng chỉ hiện trang hiện tại và báo đổi trang ra ngoài. `page` tính từ 0. */
@@ -22,6 +23,20 @@ export const tablePagination: TablePaginationConfig = {
 
 // Giới hạn vùng cuộn để tiêu đề và thanh phân trang luôn nằm ngoài danh sách.
 export const tableScrollHeight = 'min(60vh, 640px)'
+
+/**
+ * Mức số dòng nhỏ nhất hiện đủ cả trang, chỉ cuộn trang như bình thường; chọn nhiều dòng hơn (20, 50…) thì danh sách
+ * cuộn bên trong để tiêu đề cột và thanh phân trang luôn thấy.
+ */
+export const pagedScroll = (pageSize: number, smallest = tablePagination.defaultPageSize ?? 10) =>
+  pageSize > smallest ? { y: tableScrollHeight } : {}
+
+/** Phân trang phía FE kèm cuộn theo số dòng đã chọn (xem `pagedScroll`). */
+export function usePagedTable() {
+  const [pageSize, setPageSize] = useState(tablePagination.defaultPageSize ?? 10)
+  const pagination: TablePaginationConfig = { ...tablePagination, pageSize, onShowSizeChange: (_, size) => setPageSize(size) }
+  return { pagination, scroll: pagedScroll(pageSize) }
+}
 
 /**
  * Bảng trong cửa sổ quản lý danh mục (loại sản phẩm, loại vỏ): chừa chỗ cho tiêu đề cửa sổ, thanh công cụ,

@@ -2216,7 +2216,9 @@ body {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 0 20px 12px;
+  /* Cao cố định để dòng đếm nằm giữa đường kẻ và bảng, không nhảy khi hiện nút Xóa bộ lọc. */
+  min-height: 44px;
+  padding: 0 20px;
   color: var(--af-text-secondary);
   font-size: var(--af-fs-md);
 }

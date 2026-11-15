@@ -9,7 +9,7 @@ import { QueryError } from '@/shared/components/QueryError'
 import { useConfirm } from '@/shared/components/confirm'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { useColumnSort } from '@/shared/components/sortableColumn'
-import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
+import { pagedScroll, tablePagination } from '@/shared/utils/table'
 import { SupplierFormModal } from './components/SupplierFormModal'
 import type { SupplierStatus } from './supplierService'
 import { useActivateSupplier, useCanManageSuppliers, useDeactivateSupplier, useSuppliers } from './useSuppliers'
@@ -213,7 +213,7 @@ export function SuppliersPage() {
                 },
               }}
               rowClassName={(supplier) => (supplier.active ? '' : 'af-row-inactive')}
-              scroll={{ x: 962, y: tableScrollHeight }}
+              scroll={{ x: 962, ...pagedScroll(pageSize) }}
               locale={{
                 emptyText: (
                   <Empty
