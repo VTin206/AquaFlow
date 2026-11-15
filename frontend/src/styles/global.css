@@ -2210,6 +2210,21 @@ body {
   gap: 10px;
   max-width: 100%;
 }
+.af-toolbar-end {
+  align-items: center;
+  display: flex;
+  flex: 1 1 320px;
+  gap: 12px;
+  justify-content: flex-end;
+  max-width: 100%;
+}
+.af-toolbar-end .af-search {
+  flex: 0 1 320px;
+}
+.af-toolbar-count {
+  color: var(--af-text-secondary);
+  white-space: nowrap;
+}
 .ant-table-wrapper.af-table-dense .ant-table .ant-table-tbody > tr > td {
   /* Dòng gọn để một trang 10 dòng vừa khung hình; chữ phụ sát chữ chính. */
   padding-block: 5px;
