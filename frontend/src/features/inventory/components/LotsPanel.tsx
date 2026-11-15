@@ -27,7 +27,7 @@ export function LotsPanel({ initialFilter = 'stock' }: { initialFilter?: LotFilt
   const [counting, setCounting] = useState<LotItem>()
   const role = useStaff()?.role
   const canAdjust = !!role && can(role, 'adjustStock')
-  const paged = usePagedTable()
+  const { pagination: pagedPagination, attach: attachTable, scroll: pagedScroll } = usePagedTable()
   const lots = [...(lotsQuery.data ?? [])].sort((a, b) => (a.expiryDate ?? '9999').localeCompare(b.expiryDate ?? '9999'))
   const inStock = lots.filter((lot) => lot.onHand > 0)
   const stateOf = (lot: LotItem) => expiryStatus(lot.expiryDate ? isoToVnDate(lot.expiryDate) : '—', warningDays)
@@ -71,8 +71,9 @@ export function LotsPanel({ initialFilter = 'stock' }: { initialFilter?: LotFilt
         rowKey="id"
         loading={lotsQuery.isPending}
         dataSource={visible}
-        pagination={paged.pagination}
-        scroll={{ x: 1040, ...paged.scroll }}
+        pagination={pagedPagination}
+        ref={attachTable}
+        scroll={{ x: 1040, ...pagedScroll }}
         locale={{ emptyText: lots.length ? 'Không có lô phù hợp.' : 'Chưa có lô hàng. Lô được tạo khi xác nhận nhập kho.' }}
         columns={[
           {

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Button, Grid, Space, Table, type TableColumnsType } from 'antd'
 import { ViewButton } from '@/shared/components/ViewButton'
 import { Money } from '@/shared/components/Money'
-import { pagedScroll, serverTablePagination, tablePagination, type ServerPagination } from '@/shared/utils/table'
+import { serverTablePagination, usePagedScroll, tablePagination, type ServerPagination } from '@/shared/utils/table'
 import { useColumnSort } from '@/shared/components/sortableColumn'
 import { amountDue, compareDeliveryDue, compareOrderPriority, deliveryTimingOf, type Order } from '../types'
 import { LateTag } from './LateTag'
@@ -42,6 +42,7 @@ export function OrdersTable({
   const [checkedIds, setCheckedIds] = useState<string[]>([])
   const checked = compact ? [] : orders.filter((order) => checkedIds.includes(order.id))
   const [pageSize, setPageSize] = useState(tablePagination.defaultPageSize ?? 10)
+  const { attach: attachTable, scroll: pagedScroll } = usePagedScroll(server ? server.size : pageSize)
   const sortable = !compact && !server
   // Mặc định sắp theo mức ưu tiên xử lý (gấp nhất lên đầu); bấm tiêu đề cột để sắp theo cột đó.
   // Danh sách phân trang ở BE đã được BE sắp theo cùng thứ tự.
@@ -182,7 +183,8 @@ export function OrdersTable({
                   : { ...tablePagination, pageSize, onShowSizeChange: (_, size) => setPageSize(size) }
             }
             locale={{ emptyText }}
-            scroll={{ x: tableMinWidth, ...(!compact && pagedScroll(server ? server.size : pageSize)) }}
+            ref={attachTable}
+            scroll={{ x: tableMinWidth, ...(!compact && pagedScroll) }}
             rowSelection={
               compact
                 ? undefined
