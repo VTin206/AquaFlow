@@ -1,6 +1,21 @@
 import { useState } from 'react'
 import { filterOn } from '@/shared/utils/filterOn'
-import { App, Avatar, Button, Card, DatePicker, Descriptions, Empty, Grid, Input, Modal, Segmented, Select, Skeleton, Switch, Tag } from 'antd'
+import {
+  App,
+  Avatar,
+  Button,
+  Card,
+  Descriptions,
+  Empty,
+  Grid,
+  Input,
+  Modal,
+  Segmented,
+  Select,
+  Skeleton,
+  Switch,
+  Tag,
+} from 'antd'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
 import {
@@ -28,6 +43,7 @@ import { csvSafeCell } from './activityApi'
 import { entityPages, groupByDay, initials, relativeTime, type ActivityItem, type ActivityRange } from './activityFeed'
 import { useActivityFeed, type ActivityFilter } from './useActivityFeed'
 import './activity.css'
+import { PeriodPicker } from '@/shared/components/PeriodPicker'
 
 const areaIcons: Record<string, LucideIcon> = {
   'Đơn hàng': ShoppingBag,
@@ -89,7 +105,14 @@ export function ActivityPage() {
       downloadCsv(`nhat-ky-${dayjs().format('YYYY-MM-DD')}.csv`, [
         ['Thời điểm', 'Người thực hiện', 'Khu vực', 'Đối tượng', 'Nội dung', 'Quan trọng'],
         ...rows.map((item) =>
-          [dayjs(item.at).format('DD/MM/YYYY HH:mm:ss'), item.actor, item.area, item.target, item.description, item.important ? 'Có' : ''].map(csvSafeCell),
+          [
+            dayjs(item.at).format('DD/MM/YYYY HH:mm:ss'),
+            item.actor,
+            item.area,
+            item.target,
+            item.description,
+            item.important ? 'Có' : '',
+          ].map(csvSafeCell),
         ),
       ])
       message.success(truncated ? `Đã xuất 5.000 dòng mới nhất. Thu hẹp khoảng ngày để xuất phần còn lại.` : `Đã xuất ${rows.length} dòng.`)
@@ -125,16 +148,20 @@ export function ActivityPage() {
         <div className="af-activity-toolbar">
           <div className="af-activity-row">
             {narrow ? (
-              <Select<ActivityRange> aria-label="Khoảng thời gian" className="af-activity-range" value={range} onChange={setRange} options={ranges} />
+              <Select<ActivityRange>
+                aria-label="Khoảng thời gian"
+                className="af-activity-range"
+                value={range}
+                onChange={setRange}
+                options={ranges}
+              />
             ) : (
               <Segmented<ActivityRange> aria-label="Khoảng thời gian" value={range} onChange={setRange} options={ranges} />
             )}
             {range === 'custom' && (
-              <DatePicker.RangePicker
+              <PeriodPicker
                 aria-label="Chọn khoảng ngày"
-                format="DD/MM/YYYY"
                 value={custom}
-                disabledDate={(date) => date.isAfter(dayjs(), 'day')}
                 onChange={(value) => setCustom(value?.[0] && value[1] ? [value[0], value[1]] : null)}
               />
             )}
@@ -159,7 +186,11 @@ export function ActivityPage() {
                 Mọi khu vực
               </Tag.CheckableTag>
               {feed.areaOptions.map((option) => (
-                <Tag.CheckableTag key={option.value} checked={area === option.value} onChange={(on) => setArea(on ? option.value : undefined)}>
+                <Tag.CheckableTag
+                  key={option.value}
+                  checked={area === option.value}
+                  onChange={(on) => setArea(on ? option.value : undefined)}
+                >
                   {option.label}
                 </Tag.CheckableTag>
               ))}
@@ -205,11 +236,7 @@ export function ActivityPage() {
           <Empty
             className="af-activity-empty"
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={
-              hasFilters
-                ? 'Không có hoạt động phù hợp bộ lọc.'
-                : `Không có hoạt động nào ${rangeText[range]}`.trim() + '.'
-            }
+            description={hasFilters ? 'Không có hoạt động phù hợp bộ lọc.' : `Không có hoạt động nào ${rangeText[range]}`.trim() + '.'}
           >
             {range !== 'all' && !hasFilters && <Button onClick={() => setRange('all')}>Xem tất cả</Button>}
           </Empty>

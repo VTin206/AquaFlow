@@ -6,22 +6,6 @@
   flex-wrap: wrap;
   gap: 8px;
 }
-/* Ô khoảng ngày tự rộng vừa hai ngày dd/mm/yyyy (theo cỡ chữ thật), không để khoảng trống giữa. */
-.af-report-range.ant-picker {
-  width: auto;
-  max-width: 100%;
-}
-.af-report-range .ant-picker-input > input {
-  width: 10ch;
-  min-width: 0;
-  font-variant-numeric: tabular-nums;
-}
-.af-report-range .ant-picker-range-separator {
-  display: inline-flex;
-  align-items: center;
-  padding: 0 6px;
-  color: var(--af-text-tertiary);
-}
 /* Báo cáo */
 .af-report-subhead {
   display: block;

@@ -1,11 +1,12 @@
 import { useState, type ReactNode } from 'react'
 import { filterOn } from '@/shared/utils/filterOn'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, App, Button, Card, Checkbox, ConfigProvider, DatePicker, Popover, Segmented, Select, Table, Tabs, Typography } from 'antd'
+import { Alert, App, Button, Card, Checkbox, Popover, Segmented, Select, Table, Tabs, Typography } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { Link, useSearchParams } from 'react-router'
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Columns3, FileSpreadsheet, FunnelX } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, Columns3, FileSpreadsheet, FunnelX } from 'lucide-react'
 import { Page } from '@/shared/components/Page'
+import { PeriodPicker } from '@/shared/components/PeriodPicker'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { reportApi, channelLabels, type LiveReport, type ReportQuery, type ReportSection, type ReportRow } from './reportApi'
@@ -204,9 +205,6 @@ function rangeFromParams(from: string | null, to: string | null, today: Dayjs): 
   return [start, end]
 }
 
-/** Lịch chọn kỳ gọn hơn ô lịch mặc định (ô cao theo controlHeight 42 của app). */
-const compactPicker = { components: { DatePicker: { cellHeight: 24, cellWidth: 32, textHeight: 32, presetsWidth: 110, presetsMaxWidth: 130 } } }
-
 const CUSTOM_RANGE = 'Tùy chọn'
 const quickRanges = ['Hôm nay', 'Tháng này', 'Tháng trước']
 
@@ -274,8 +272,8 @@ function LiveReportContent() {
         if (!preset) return
         setCustomRange(false); setRangeError(undefined); setDates([preset.value[0], preset.value[1]]); setPage(0)
       }} options={[...presets.map(({ label }) => label), CUSTOM_RANGE]} />
-      {rangeMode === CUSTOM_RANGE && <ConfigProvider theme={compactPicker}><DatePicker.RangePicker className="af-report-range" separator={<ArrowRight size={14} aria-hidden />} allowClear={false} value={dates} format="DD/MM/YYYY" presets={reportPresets(today).filter(({ label }) => !quickRanges.includes(label))} disabledDate={date => date.isAfter(today, 'day')}
-        onChange={value => { if (value?.[0] && value[1]) { if (value[1].diff(value[0], 'day') > 365 || value[1].isAfter(today, 'day')) { setRangeError('Chọn tối đa 366 ngày và không vượt quá hôm nay.'); return }; setRangeError(undefined); setDates([value[0], value[1]]); setPage(0) } }} /></ConfigProvider>}
+      {rangeMode === CUSTOM_RANGE && <PeriodPicker maxDays={366} allowClear={false} value={dates} presets={reportPresets(today).filter(({ label }) => !quickRanges.includes(label))}
+        onChange={value => { if (value?.[0] && value[1]) { if (value[1].diff(value[0], 'day') > 365 || value[1].isAfter(today, 'day')) { setRangeError('Chọn tối đa 366 ngày và không vượt quá hôm nay.'); return }; setRangeError(undefined); setDates([value[0], value[1]]); setPage(0) } }} />}
       <Select allowClear placeholder="Mọi kênh" disabled={!filtersApply} value={channel} className={filterOn(Boolean(channel))} style={{ width: 140 }} options={Object.entries(channelLabels).map(([value, label]) => ({ value, label }))} onChange={value => { setChannel(value); setPage(0) }} />
       <Select<NonNullable<ReportQuery['method']>> allowClear placeholder="Mọi hình thức" disabled={!filtersApply} value={method} className={filterOn(Boolean(method))} style={{ width: 150 }} options={[{ value: 'DELIVERY', label: 'Giao tận nơi' }, { value: 'COUNTER', label: 'Tại quầy' }]} onChange={value => { setMethod(value); setPage(0) }} />
       {(channel || method) && <Button type="link" icon={<FunnelX size={15} />} onClick={() => { updateParams({ channel: undefined, method: undefined }); setPage(0) }}>Xóa lọc</Button>}

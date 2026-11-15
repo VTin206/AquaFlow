@@ -66,6 +66,8 @@ const buildTheme = (p: Palette): ThemeConfig => ({
     Segmented: { trackBg: p.segmentTrack, itemSelectedColor: p.selectedText, itemSelectedBg: p.segmentSelected, trackPadding: 4 },
     Form: { labelColor: p.text, labelFontSize: fs.md, verticalLabelPadding: '0 0 4px', itemMarginBottom: 14 },
     Modal: { titleFontSize: fs.xl },
+    // Lịch chọn ngày gọn: ô ngày mặc định cao theo controlHeight 42 nên lịch to quá.
+    DatePicker: { cellHeight: 24, cellWidth: 32, textHeight: 32, presetsWidth: 110, presetsMaxWidth: 130 },
   },
 })
 

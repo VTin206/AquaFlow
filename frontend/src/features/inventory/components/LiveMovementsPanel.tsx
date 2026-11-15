@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Button, DatePicker, Descriptions, Empty, Input, Modal, Select, Space, Spin, Table, Tag } from 'antd'
+import { Button, Descriptions, Empty, Input, Modal, Select, Space, Spin, Table, Tag } from 'antd'
 import { Link } from 'react-router'
 import { useAuth } from '@/features/auth/useAuth'
 import { movementApi, movementLabels, type InventoryMovement, type MovementFilter, type MovementType } from '@/features/live/movementApi'
@@ -9,6 +9,7 @@ import { QueryError } from '@/shared/components/QueryError'
 import { ViewButton } from '@/shared/components/ViewButton'
 import { tableScrollHeight } from '@/shared/utils/table'
 import { isoToVnDate } from '../expiry'
+import { PeriodPicker } from '@/shared/components/PeriodPicker'
 
 const timestamp = (value: string) => new Date(value).toLocaleString('vi-VN')
 const signed = (row: InventoryMovement) => `${row.signedQuantity > 0 ? '+' : ''}${row.signedQuantity} ${row.unit}`
@@ -45,9 +46,8 @@ export function LiveMovementsPanel() {
             ]}
             style={{ minWidth: 200 }}
           />
-          <DatePicker.RangePicker
+          <PeriodPicker
             aria-label="Khoảng ngày xuất nhập"
-            format="DD/MM/YYYY"
             onChange={(dates) =>
               update({ from: dates?.[0]?.startOf('day').toISOString(), to: dates?.[1]?.add(1, 'day').startOf('day').toISOString() })
             }
