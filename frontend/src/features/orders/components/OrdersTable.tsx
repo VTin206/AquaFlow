@@ -25,6 +25,8 @@ type OrdersTableProps = {
    * vì sắp xếp trong một trang dễ bị hiểu nhầm là sắp xếp toàn bộ.
    */
   server?: ServerPagination
+  /** Số dòng mỗi trang khi phân trang phía FE. */
+  pageSize?: number
 }
 
 export function OrdersTable({
@@ -34,6 +36,7 @@ export function OrdersTable({
   emptyText = 'Chưa có đơn hàng nào.',
   filterKey,
   server,
+  pageSize,
 }: OrdersTableProps) {
   const screens = Grid.useBreakpoint()
   // Chưa có phiếu thu thì không tính "còn phải thu", dùng trạng thái thanh toán của BE.
@@ -167,18 +170,18 @@ export function OrdersTable({
           {!compact && <OrderBulkActions orders={checked} onSelect={setCheckedIds} />}
           <Table<Order>
             key={filterKey}
-            className="af-data-table af-table-flush"
+            className="af-data-table af-table-flush af-table-dense"
             rowKey="id"
             columns={columns}
             dataSource={rows}
             loading={loading}
-            size="middle"
+            size="small"
             pagination={
               compact
                 ? false
                 : server
                   ? serverTablePagination(server)
-                  : tablePagination
+                  : { ...tablePagination, pageSize: pageSize ?? tablePagination.defaultPageSize }
             }
             locale={{ emptyText }}
             scroll={{ x: tableMinWidth }}

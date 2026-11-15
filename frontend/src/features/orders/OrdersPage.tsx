@@ -16,7 +16,7 @@ import { inOrderGroup, orderGroups, statusesInGroup, type OrderGroupKey } from '
 import type { OrderStatus } from './types'
 import { ALL_ORDERS as ALL, useOrderFilters } from './useOrderFilters'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
-import { tablePagination, type ServerPagination } from '@/shared/utils/table'
+import { useFitPageSize, type ServerPagination } from '@/shared/utils/table'
 
 export function OrdersPage() {
   const countsQuery = useOrderStatusCounts()
@@ -69,13 +69,14 @@ export function OrdersPage() {
     [searched, activeGroup, statusValue, method, paymentFilter],
   )
   const filterKey = JSON.stringify(listFilters)
-  // Đổi bộ lọc thì về trang đầu; cỡ trang giữ nguyên.
-  const [paging, setPaging] = useState({ filterKey, page: 0, size: tablePagination.defaultPageSize ?? 10 })
-  const page = paging.filterKey === filterKey ? paging.page : 0
-  const listQuery = useOrderPage(listFilters, page, paging.size)
+  // Số dòng mỗi trang vừa khít màn hình; đổi bộ lọc hoặc số dòng thì về trang đầu.
+  const { attach: fitTable, pageSize } = useFitPageSize()
+  const [paging, setPaging] = useState({ filterKey, page: 0, size: pageSize })
+  const page = paging.filterKey === filterKey && paging.size === pageSize ? paging.page : 0
+  const listQuery = useOrderPage(listFilters, page, pageSize)
   const visible = listQuery.data?.orders ?? []
   const server: ServerPagination | undefined = listQuery.data?.serverPaged
-    ? { page, size: paging.size, total: listQuery.data.total, onChange: (next, size) => setPaging({ filterKey, page: next, size }) }
+    ? { page, size: pageSize, total: listQuery.data.total, onChange: (next) => setPaging({ filterKey, page: next, size: pageSize }) }
     : undefined
   const failed = countsQuery.isError ? countsQuery : listQuery.isError ? listQuery : undefined
   const loading = countsQuery.isPending || listQuery.isPending
@@ -187,21 +188,24 @@ export function OrdersPage() {
                 {loading ? 'Đang tải đơn hàng…' : `${listQuery.data?.total ?? 0} / ${countGroup(activeGroup)} đơn hàng`}
               </span>
             </div>
-            <OrdersTable
-              filterKey={filterKey}
-              orders={visible}
-              loading={loading}
-              server={server}
-              emptyText={
-                hasFilters
-                  ? 'Không có đơn phù hợp. Thử đổi từ khóa hoặc xóa bộ lọc.'
-                  : activeGroup === 'need'
-                    ? 'Không còn đơn nào cần xử lý.'
-                    : activeGroup === 'all'
-                      ? 'Chưa có đơn hàng nào.'
-                      : 'Không có đơn nào trong nhóm này.'
-              }
-            />
+            <div className="af-fit-rows" ref={fitTable}>
+              <OrdersTable
+                filterKey={filterKey}
+                pageSize={pageSize}
+                orders={visible}
+                loading={loading}
+                server={server}
+                emptyText={
+                  hasFilters
+                    ? 'Không có đơn phù hợp. Thử đổi từ khóa hoặc xóa bộ lọc.'
+                    : activeGroup === 'need'
+                      ? 'Không còn đơn nào cần xử lý.'
+                      : activeGroup === 'all'
+                        ? 'Chưa có đơn hàng nào.'
+                        : 'Không có đơn nào trong nhóm này.'
+                }
+              />
+            </div>
           </>
         )}
       </Card>

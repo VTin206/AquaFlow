@@ -2210,6 +2210,19 @@ body {
   gap: 10px;
   max-width: 100%;
 }
+.ant-table-wrapper.af-table-dense .ant-table .ant-table-tbody > tr > td {
+  /* Dòng gọn để một trang 10 dòng vừa khung hình; chữ phụ sát chữ chính. */
+  padding-block: 5px;
+  line-height: 1.3;
+}
+.ant-table-wrapper.af-table-dense .ant-table-tbody .ant-btn {
+  height: 28px;
+  min-width: 28px;
+}
+.af-fit-rows {
+  /* Chỉ để đo bảng (số dòng vừa màn hình), không tạo khung riêng. */
+  display: contents;
+}
 .af-payment-summary {
   align-items: center;
   display: flex;
