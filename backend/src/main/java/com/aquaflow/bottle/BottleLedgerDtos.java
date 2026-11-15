@@ -17,7 +17,12 @@ public class BottleLedgerDtos {
             BigDecimal depositHeld,BigDecimal requiredDeposit,BigDecimal refundable) {}
     public record TypeBalance(long bottleTypeId,String name,boolean active,long held,
             BigDecimal unitAmount,BigDecimal liability) {}
+    /** {@code voided}: đã có dòng VOID đảo dòng này; {@code voidsId}: dòng VOID đảo dòng nào. */
     public record Entry(String id,String kind,String bottleType,long bottles,BigDecimal deposit,
-            String note,String actor,OffsetDateTime at) {}
+            String note,String actor,OffsetDateTime at,boolean voided,String voidsId) {}
+    /** Hủy giao dịch ghi nhầm: requestId mới chống bấm hai lần, lý do bắt buộc. */
+    public record Void(@NotNull UUID requestId,@NotBlank @Size(max=300) String reason) {
+        public Void { reason = reason == null ? null : reason.trim(); }
+    }
     public record Ledger(Balance balance,List<TypeBalance> types,List<Entry> entries) {}
 }

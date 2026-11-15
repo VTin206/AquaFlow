@@ -24,9 +24,11 @@ public class BottleLedgerRepository {
     private static final RowMapper<Balance> BALANCE = (r,n) -> new Balance(r.getLong("id"),r.getString("full_name"),r.getBoolean("active"),
             r.getLong("held"),r.getBigDecimal("deposit"),r.getBigDecimal("liability"),r.getBigDecimal("deposit").subtract(r.getBigDecimal("liability")).max(BigDecimal.ZERO));
     private static final RowMapper<Entry> ENTRY = (r,n) -> new Entry(r.getString("id"),r.getString("kind"),r.getString("type_name"),
-            r.getLong("bottles"),r.getBigDecimal("deposit"),r.getString("note"),r.getString("actor"),r.getObject("at",OffsetDateTime.class));
+            r.getLong("bottles"),r.getBigDecimal("deposit"),r.getString("note"),r.getString("actor"),r.getObject("at",OffsetDateTime.class),
+            r.getBoolean("voided"),r.getString("voids_id"));
     private static final String ENTRIES = """
-        SELECT q.id::text id,q.kind,t.name type_name,q.bottles_delta bottles,q.deposit_delta deposit,q.note,u.full_name actor,q.created_at at
+        SELECT q.id::text id,q.kind,t.name type_name,q.bottles_delta bottles,q.deposit_delta deposit,q.note,u.full_name actor,q.created_at at,
+            EXISTS(SELECT 1 FROM bottle_ledger_requests v WHERE v.voids_request_id=q.id) voided,q.voids_request_id::text voids_id
         FROM bottle_ledger_requests q LEFT JOIN bottle_types t ON t.id=q.bottle_type_id JOIN users u ON u.id=q.actor_id
         """;
     public void lockCustomer(long id) {
@@ -54,11 +56,11 @@ public class BottleLedgerRepository {
     public List<Entry> entries(long id) {
         return jdbc.query(ENTRIES+" WHERE q.customer_id=? UNION ALL "+"""
             SELECT 'b-'||b.id,COALESCE(b.entry_kind,b.movement),t.name,
-                CASE WHEN b.movement IN ('GIVE','ADJUST_GIVE') THEN b.quantity ELSE -b.quantity END,0,b.condition_note,u.full_name,b.occurred_at
+                CASE WHEN b.movement IN ('GIVE','ADJUST_GIVE') THEN b.quantity ELSE -b.quantity END,0,b.condition_note,u.full_name,b.occurred_at,false,NULL
             FROM bottle_transactions b JOIN bottle_types t ON t.id=b.bottle_type_id JOIN users u ON u.id=b.performed_by
             WHERE b.customer_id=? AND b.ledger_request_id IS NULL
             UNION ALL SELECT 'd-'||d.id,COALESCE(d.entry_kind,d.direction),NULL,0,
-                CASE WHEN d.direction IN ('COLLECT','ADJUST_COLLECT') THEN d.amount ELSE -d.amount END,d.note,u.full_name,d.created_at
+                CASE WHEN d.direction IN ('COLLECT','ADJUST_COLLECT') THEN d.amount ELSE -d.amount END,d.note,u.full_name,d.created_at,false,NULL
             FROM deposit_transactions d JOIN users u ON u.id=d.created_by WHERE d.customer_id=? AND d.ledger_request_id IS NULL
             ORDER BY at DESC,id DESC
             """,ENTRY,id,id,id);
@@ -75,6 +77,45 @@ public class BottleLedgerRepository {
                 || (amount==null ? input.amount()!=null : input.amount()==null || amount.compareTo(input.amount())!=0))
             throw new ConflictException("Mã yêu cầu đã dùng cho giao dịch khác");
         return detail(customer,input.requestId());
+    }
+    /** Dòng gốc cần hủy (khóa để không hủy hai lần cùng lúc). */
+    public record Original(String kind,Long bottleTypeId,int bottles,BigDecimal deposit,BigDecimal liability,boolean voided) {}
+    public Original original(long customer,UUID id) {
+        return jdbc.query("""
+            SELECT q.kind,q.bottle_type_id,q.bottles_delta,q.deposit_delta,
+                COALESCE((SELECT SUM(b.liability_delta) FROM bottle_transactions b WHERE b.ledger_request_id=q.id),0) liability,
+                EXISTS(SELECT 1 FROM bottle_ledger_requests v WHERE v.voids_request_id=q.id) voided
+            FROM bottle_ledger_requests q WHERE q.customer_id=? AND q.id=? FOR UPDATE OF q
+            """,(r,n)->new Original(r.getString("kind"),r.getObject("bottle_type_id",Long.class),r.getInt("bottles_delta"),
+                r.getBigDecimal("deposit_delta"),r.getBigDecimal("liability"),r.getBoolean("voided")),customer,id)
+            .stream().findFirst().orElseThrow(()->new NotFoundException("Không tìm thấy giao dịch"));
+    }
+    /** Lần gửi lại cùng requestId hủy cùng dòng gốc: trả dòng VOID đã ghi. */
+    public Entry replayVoid(long customer,UUID original,UUID request) {
+        var rows=jdbc.queryForList("SELECT customer_id,voids_request_id FROM bottle_ledger_requests WHERE id=?",request);
+        if(rows.isEmpty()) return null;
+        var r=rows.getFirst();
+        if(((Number)r.get("customer_id")).longValue()!=customer || !original.equals(r.get("voids_request_id")))
+            throw new ConflictException("Mã yêu cầu đã dùng cho giao dịch khác");
+        return detail(customer,request);
+    }
+    /** Ghi dòng VOID đảo đúng số vỏ, cọc và nghĩa vụ cọc của dòng gốc (bút toán điều chỉnh, lịch sử giữ cả hai dòng). */
+    public Entry insertVoid(long customer,long actor,UUID original,Original o,UUID request,String reason) {
+        jdbc.update("""
+            INSERT INTO bottle_ledger_requests(id,customer_id,actor_id,kind,bottle_type_id,quantity,amount,note,bottles_delta,deposit_delta,voids_request_id)
+            VALUES (?,?,?,'VOID',?,?,?,?,?,?,?)
+            """,request,customer,actor,o.bottleTypeId(),o.bottles()==0 ? null : Math.abs(o.bottles()),
+            o.deposit().signum()==0 ? null : o.deposit().abs(),reason,-o.bottles(),o.deposit().negate(),original);
+        Long bottleId=null;
+        if(o.bottles()!=0) bottleId=jdbc.queryForObject("""
+            INSERT INTO bottle_transactions(customer_id,bottle_type_id,movement,quantity,condition_note,performed_by,entry_kind,ledger_request_id,liability_delta)
+            VALUES (?,?,?,?,?,?,'VOID',?,?) RETURNING id
+            """,Long.class,customer,o.bottleTypeId(),o.bottles()>0 ? "ADJUST_RECEIVE" : "ADJUST_GIVE",Math.abs(o.bottles()),reason,actor,request,o.liability().negate());
+        if(o.deposit().signum()!=0) jdbc.update("""
+            INSERT INTO deposit_transactions(customer_id,bottle_transaction_id,direction,amount,created_by,entry_kind,note,ledger_request_id)
+            VALUES (?,?,?,?,?,'VOID',?,?)
+            """,customer,bottleId,o.deposit().signum()>0 ? "ADJUST_REFUND" : "ADJUST_COLLECT",o.deposit().abs(),actor,reason,request);
+        return detail(customer,request);
     }
     public Entry insert(long customer,long actor,Create input,int bottles,BigDecimal deposit,BigDecimal liability) {
         jdbc.update("""

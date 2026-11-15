@@ -44,6 +44,13 @@ public class BottleTypeService {
     @Transactional
     public BottleTypeResponse update(Long id, UpdateBottleTypeRequest request) {
         BottleType bottleType = getBottleType(id);
+        if (request.name() != null && !request.name().isBlank()) {
+            String name = request.name().trim();
+            if (bottleTypeRepository.existsByNameIgnoreCaseAndIdNot(name, id)) {
+                throw new ConflictException("Đã có loại vỏ \"" + name + "\".");
+            }
+            bottleType.rename(name);
+        }
         bottleType.update(request.depositUnitAmount());
         return toResponse(bottleType);
     }

@@ -59,6 +59,7 @@ class AuthControllerIntegrationTest {
     @MockBean private com.aquaflow.customer.order.repository.OrderReturnRepository orderReturnRepository;
     @MockBean private com.aquaflow.customer.repository.CustomerQueryRepository customerQueryRepository;
     @MockBean private com.aquaflow.inventory.application.StockDispatchService stockDispatchService;
+    @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.inventory.application.StockAdjustmentService stockAdjustmentService;
     @MockBean private com.aquaflow.workspace.repository.StoreSettingsRepository storeSettingsRepository;
     @MockBean private com.aquaflow.workspace.repository.NotificationRepository notificationRepository;
 

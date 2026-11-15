@@ -15,6 +15,28 @@ public class BottleLedgerService {
     public PageResponse<Balance> balances(String q, PageRequestParams page) { return repository.balances(SearchKeyword.of(q),page); }
     public Ledger ledger(long customer) { return new Ledger(repository.balance(customer),repository.types(customer),repository.entries(customer)); }
     public Entry detail(long customer,UUID id) { return repository.detail(customer,id); }
+    /**
+     * Hủy giao dịch vỏ/cọc ghi nhầm bằng một dòng VOID đảo ngược. Mỗi dòng chỉ hủy một lần; không hủy dòng VOID;
+     * chặn nếu sau khi đảo, khách giữ âm vỏ loại đó hoặc cọc đang giữ âm.
+     */
+    @Transactional
+    public Entry voidEntry(long customer,UUID original,long actor,BottleLedgerDtos.Void input) {
+        repository.lockCustomer(customer);
+        var replay=repository.replayVoid(customer,original,input.requestId());
+        if(replay!=null) return replay;
+        var o=repository.original(customer,original);
+        if("VOID".equals(o.kind())) throw new ConflictException("Không hủy được dòng hủy");
+        if(o.voided()) throw new ConflictException("Giao dịch này đã được hủy");
+        if(o.bottles()>0) {
+            long held=repository.types(customer).stream().filter(t->o.bottleTypeId()!=null && t.bottleTypeId()==o.bottleTypeId())
+                    .mapToLong(TypeBalance::held).findFirst().orElse(0);
+            if(held<o.bottles()) throw new ConflictException("Khách đã trả bớt số vỏ này; không hủy được giao vỏ");
+        }
+        if(o.deposit().signum()>0 && repository.balance(customer).depositHeld().compareTo(o.deposit())<0)
+            throw new ConflictException("Cọc đang giữ ít hơn số tiền cần đảo; không hủy được thu cọc");
+        return repository.insertVoid(customer,actor,original,o,input.requestId(),input.reason());
+    }
+
     @Transactional
     public Entry create(long customer,long actor,boolean admin,Create input) {
         if(!admin && Set.of("LOSS","REFUND").contains(input.kind())) throw new org.springframework.security.access.AccessDeniedException("Chỉ chủ cửa hàng được hoàn cọc hoặc ghi nhận mất/vỡ");

@@ -16,6 +16,22 @@ public class PaymentService {
     public List<Balance> balances() { return repository.balances(); }
     public PageResponse<CustomerBalance> customers(String q, PageRequestParams page) { return repository.customerBalances(SearchKeyword.of(q), page); }
     public List<Balance> receivables(long id) { return repository.receivables(id); }
+    /**
+     * Hủy phiếu thu/hoàn ghi nhầm: phiếu chuyển REJECTED nên mọi số dư, công nợ và báo cáo (chỉ tính CONFIRMED) tự loại.
+     * Không hủy phiếu tài xế nộp trong đối soát chuyến; không hủy phiếu thu đã được hoàn lại một phần.
+     */
+    @Transactional
+    public Balance voidPayment(long orderId,long id,long actor,PaymentDtos.Void input) {
+        repository.lockOrder(orderId);
+        var payment=repository.voidable(orderId,id);
+        if (!"CONFIRMED".equals(payment.status())) throw new ConflictException("Phiếu này đã bị hủy trước đó.");
+        if (payment.fromDelivery()) throw new ConflictException("Phiếu do tài xế nộp khi đối soát chuyến, không hủy ở đây.");
+        if ("IN".equals(payment.direction()) && payment.amount().compareTo(repository.balance(orderId).paid())>0)
+            throw new ConflictException("Đơn đã hoàn lại một phần tiền; hủy phiếu hoàn trước.");
+        repository.voidPayment(orderId,id,actor,input.reason());
+        return repository.balance(orderId);
+    }
+
     @Transactional
     public Receipt create(long id,long actor,Create input) {
         repository.lockOrder(id);
