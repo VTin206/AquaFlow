@@ -63,6 +63,7 @@ export const entityPages: Record<string, { path: string; label: string }> = {
   DELIVERY_TRIP: { path: '/delivery', label: 'Mở trang Giao hàng' },
   STAFF_ACCOUNT: { path: '/staff', label: 'Mở trang Nhân viên' },
   SHOP_ARTICLE: { path: '/articles', label: 'Mở trang Bài viết' },
+  STOCK_ADJUSTMENT: { path: '/inventory', label: 'Mở trang Kho hàng' },
 }
 
 /** Nhóm theo ngày, giữ thứ tự mới nhất trước. */

@@ -33,7 +33,8 @@ public class ActivityAuditConfig {
         Map.entry("com.aquaflow.customer.application.CustomerAddressService","CUSTOMER_ADDRESS"),
         Map.entry("com.aquaflow.delivery.application.DeliveryService","DELIVERY_TRIP"),
         Map.entry("com.aquaflow.customer.order.application.OrderReturnService","ORDER_RETURN"),
-        Map.entry("com.aquaflow.content.application.ShopArticleService","SHOP_ARTICLE"));
+        Map.entry("com.aquaflow.content.application.ShopArticleService","SHOP_ARTICLE"),
+        Map.entry("com.aquaflow.inventory.application.StockAdjustmentService","STOCK_ADJUSTMENT"));
     private static final Map<String,String> LABELS=Map.ofEntries(
         Map.entry("create","Tạo mới"), Map.entry("createForStaff","Tạo đơn tại cửa hàng"),
         Map.entry("createForCustomer","Khách tạo đơn"), Map.entry("createForGuest","Khách vãng lai tạo đơn"),
@@ -43,7 +44,9 @@ public class ActivityAuditConfig {
         Map.entry("cancel","Hủy"), Map.entry("assignDriver","Phân tài xế"), Map.entry("addOrder","Thêm đơn vào chuyến"),
         Map.entry("removeOrder","Bỏ đơn khỏi chuyến"), Map.entry("start","Bắt đầu chuyến"),
         Map.entry("recordResult","Ghi kết quả giao hàng"), Map.entry("settle","Kết thúc / đối soát chuyến"),
-        Map.entry("reactivate","Mở lại / dùng lại"), Map.entry("receive","Nhận trả hàng sau giao"));
+        Map.entry("reactivate","Mở lại / dùng lại"), Map.entry("receive","Nhận trả hàng sau giao"),
+        Map.entry("updatePending","Sửa đơn chờ xác nhận"), Map.entry("cancelForCustomer","Khách hủy đơn"),
+        Map.entry("adjust","Kiểm kê, điều chỉnh tồn"));
 
     @Bean
     @org.springframework.context.annotation.Role(org.springframework.beans.factory.config.BeanDefinition.ROLE_INFRASTRUCTURE)

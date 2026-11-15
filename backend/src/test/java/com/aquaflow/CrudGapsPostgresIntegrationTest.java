@@ -114,6 +114,8 @@ class CrudGapsPostgresIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT on_hand FROM inventory_balances WHERE batch_id=?", Integer.class, lot)).isEqualTo(12);
         assertThat(jdbc.queryForObject("SELECT movement_type FROM inventory_movements WHERE reference_type='ADJUSTMENT' AND reference_id=?", String.class, up.id()))
                 .isEqualTo("ADJUST_UP");
+        assertThat(jdbc.queryForObject("SELECT reason FROM audit_logs WHERE entity_type='STOCK_ADJUSTMENT' AND entity_id=?", String.class, up.id()))
+                .isEqualTo("Kiểm kê, điều chỉnh tồn");
 
         var down = adjustments.adjust(new StockAdjustmentDtos.Create(lot, 5, "Vỡ 7 bình"), admin);
         assertThat(down.delta()).isEqualTo(-7);
@@ -184,6 +186,8 @@ class CrudGapsPostgresIntegrationTest {
         assertThat(updated.items()).hasSize(2);
         assertThat(updated.total()).isEqualByComparingTo("290000");
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_items WHERE order_id=?", Integer.class, order)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT reason FROM audit_logs WHERE entity_type='ORDER' AND order_id=? AND action='updatePending'", String.class, order))
+                .isEqualTo("Sửa đơn chờ xác nhận");
 
         mvc.perform(put("/api/v1/sales/orders/" + order).with(user("sales").roles("SALES_STAFF")).contentType("application/json")
                 .content("{\"recipientName\":\"A\",\"recipientPhone\":\"0901234567\",\"deliveryAddress\":\"B\",\"items\":[{\"productId\":" + product + ",\"quantity\":3}]}"))
