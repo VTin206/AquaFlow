@@ -45,9 +45,9 @@ export function TripsList({ trips, loading, dueLabel, onOpen }: TripsListProps) 
           value={group}
           onChange={setGroup}
           options={[
-            { value: 'settle', label: <CountLabel label="Chờ đối soát" count={count('settle')} tone="warning" /> },
-            { value: 'running', label: <CountLabel label="Đang giao" count={count('running')} /> },
-            { value: 'done', label: <CountLabel label="Đã xong" count={count('done')} /> },
+            { value: 'settle', label: <CountLabel label="Chờ đối soát" count={count('settle')} urgent tone="warning" /> },
+            { value: 'running', label: <CountLabel label="Đang giao" count={count('running')} tone="info" /> },
+            { value: 'done', label: <CountLabel label="Đã xong" count={count('done')} tone="success" /> },
             { value: 'all', label: <CountLabel label="Tất cả" count={count('all')} /> },
           ]}
         />
