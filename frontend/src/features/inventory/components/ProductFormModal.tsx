@@ -5,11 +5,7 @@ import { useSettings } from '@/features/settings/settingsService'
 import { useBottleTypeOptions, useProductCategories, useSaveProduct, type CatalogItem, type ProductForm } from '../useProductCatalog'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { FormSection } from '@/shared/components/FormSection'
-import { brandGroups, getCatalogDetails, suggestFromName } from '../catalogGroups'
-import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
-
-/** Quy cách đóng gói; backend chưa lưu nên hiện giá trị hệ thống đoán từ tên, chưa đổi được. */
-const PACKAGINGS = ['Bình có vòi', 'Bình úp máy', 'Thùng chai', 'Lốc chai', 'Thùng chai thủy tinh', 'Thùng lon', 'Vỏ bình']
+import { brandGroups, suggestFromName } from '../catalogGroups'
 
 // Vừa đủ để ô tên hiện trọn tên sản phẩm dài nhất.
 const MODAL_WIDTH = 680
@@ -180,27 +176,17 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
           {/* Sản phẩm là gì: đơn vị bán, dung tích, số đơn vị một thùng. */}
           <FormSection title="Quy cách">
             <Row gutter={12}>
-              <Col xs={12} sm={6}>
+              <Col xs={12} sm={8}>
                 <Form.Item name="unit" label="Đơn vị" rules={[{ required: true }]}>
                   <Select options={units.map((unit) => ({ value: unit, label: unit }))} />
                 </Form.Item>
               </Col>
-              <Col xs={12} sm={6}>
+              <Col xs={12} sm={8}>
                 <Form.Item name="volumeMl" label="Dung tích (ml)" tooltip="Dung tích mỗi chai/bình.">
                   <InputNumber min={1} max={100000} precision={0} style={{ width: '100%' }} placeholder="Ví dụ: 500 hoặc 19000" />
                 </Form.Item>
               </Col>
-              <Col xs={12} sm={6}>
-                <Form.Item label="Đóng gói" tooltip={UNSUPPORTED_HINT}>
-                  <Select
-                    disabled
-                    value={product ? getCatalogDetails(product).packaging : undefined}
-                    placeholder="Tự nhận theo tên"
-                    options={PACKAGINGS.map((value) => ({ value, label: value }))}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={12} sm={6}>
+              <Col xs={24} sm={8}>
                 <Form.Item name="unitsPerCase" label="Số đơn vị / thùng">
                   <InputNumber min={1} precision={0} style={{ width: '100%' }} placeholder="Không bắt buộc" />
                 </Form.Item>
