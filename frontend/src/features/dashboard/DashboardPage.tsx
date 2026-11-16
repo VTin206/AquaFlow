@@ -199,7 +199,7 @@ export function DashboardPage() {
             'Chưa tải được số đơn hôm nay.'
           ) : (
             <>
-              Hôm nay <b>{todayOrders}</b> đơn mới · hôm qua {yesterdayOrders} đơn
+              Hôm nay <b>{todayOrders}</b> đơn mới
             </>
           )}
         </p>
