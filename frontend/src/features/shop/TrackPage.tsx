@@ -11,7 +11,7 @@ import { accountDestination, isCustomer } from '@/features/auth/accountAccess'
 import { useAuth } from '@/features/auth/useAuth'
 import type { PublicOrder } from '@/features/orders/types'
 import { useSettings } from '@/features/settings/settingsService'
-import { useLookupOrder, useShopContact, useTrackedOrder } from './shopService'
+import { useLookupOrder, useShopContact, useTrackedOrder, useTransferAccount } from './shopService'
 
 const stepOf: Record<PublicOrder['status'], number> = {
   'Chờ xác nhận': 0,
@@ -120,9 +120,10 @@ function TrackedOrder({ token }: { token: string }) {
   const { message } = App.useApp()
   const location = useLocation()
   const navigate = useNavigate()
-  // Khách chưa đăng nhập không đọc được cài đặt cửa hàng: lấy số gọi từ hồ sơ công khai, không có tài khoản ngân hàng thì ẩn QR.
+  // Khách chưa đăng nhập không đọc được cài đặt cửa hàng: số gọi và tài khoản nhận chuyển khoản lấy từ hồ sơ công khai.
   const { data: settings } = useSettings()
   const storePhone = useShopContact()?.phone ?? settings?.phone
+  const account = useTransferAccount()
   const orderQuery = useTrackedOrder(token)
   const order = orderQuery.data
   const placed = (location.state as { placed?: boolean } | null)?.placed
@@ -148,7 +149,7 @@ function TrackedOrder({ token }: { token: string }) {
 
   const cancelled = order.status === 'Đã hủy'
   const failed = order.status === 'Giao thất bại'
-  const canTransfer = !cancelled && order.due > 0 && order.status !== 'Chờ xác nhận' && Boolean(settings?.bankAccount)
+  const canTransfer = !cancelled && order.due > 0 && order.status !== 'Chờ xác nhận'
 
   return (
     <div className="af-shop-track">
@@ -281,10 +282,14 @@ function TrackedOrder({ token }: { token: string }) {
 
       {canTransfer && (
         <Card className="af-shop-track-card" title="Chuyển khoản">
-          <TransferQr settings={settings} amount={order.due} note={order.id} />
-          <p className="af-form-hint">
-            Quét mã bằng ứng dụng ngân hàng, giữ nguyên nội dung để cửa hàng đối chiếu. Hoặc trả tiền mặt khi nhận hàng.
-          </p>
+          {account ? (
+            <>
+              <TransferQr settings={account} amount={order.due} note={order.id} />
+              <p className="af-form-hint">Giữ nguyên nội dung chuyển khoản để cửa hàng đối chiếu.</p>
+            </>
+          ) : (
+            <p className="af-shop-transfer-off">Chưa hỗ trợ. Vui lòng trả tiền khi nhận hàng.</p>
+          )}
         </Card>
       )}
       {order.status === 'Chờ xác nhận' && (

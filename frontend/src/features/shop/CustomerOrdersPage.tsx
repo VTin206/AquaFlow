@@ -7,16 +7,19 @@ import { useAuth } from '@/features/auth/useAuth'
 import { isCustomer } from '@/features/auth/accountAccess'
 import { orderStatusLabels, paymentStatusLabels, type LiveOrder } from '@/features/live/orderApi'
 import { catalogApi } from '@/features/live/catalogApi'
+import { orderTrackingApi } from '@/features/live/orderTrackingApi'
 import { OrderProgress } from '@/features/orders/OrderProgress'
 import { statusColor } from '@/features/orders/orderStatus'
 import type { OrderStatus as StaffOrderStatus } from '@/features/orders/types'
 import { ApiError } from '@/shared/api/client'
 import { Money } from '@/shared/components/Money'
+import { TransferQr } from '@/shared/payment/TransferQr'
+import { dueTone } from '@/shared/utils/money'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { useCartActions } from './cart'
 import { customerOrderApi } from './customerOrderApi'
-import { useShopContact } from './shopService'
+import { shopKeys, useShopContact, useTransferAccount } from './shopService'
 
 type Products = Awaited<ReturnType<typeof catalogApi.products>>
 const PAGE_SIZE = 10
@@ -153,6 +156,16 @@ export function CustomerOrderPage() {
   const catalog = useOrderProducts(valid && isCustomer(user))
   const storePhone = useShopContact()?.phone
   const cart = useCartActions()
+  const account = useTransferAccount()
+  // API đơn của khách chưa trả số đã trả/còn phải trả; lấy qua mã theo dõi đơn (cùng nguồn với trang tra cứu).
+  const trackingToken = query.data?.trackingToken ?? ''
+  const balance = useQuery({
+    queryKey: [...shopKeys.track(trackingToken), 'live'],
+    queryFn: () => orderTrackingApi.byToken(trackingToken),
+    enabled: Boolean(trackingToken),
+    retry: false,
+    refetchInterval: 20_000,
+  }).data
   // Trang nằm trong ShopLayout nên có nút mở giỏ; khi dựng riêng (test) thì không có.
   const openCart = useOutletContext<{ openCart?: () => void } | null>()?.openCart
   const placed = (useLocation().state as { placed?: boolean } | null)?.placed
@@ -288,14 +301,45 @@ export function CustomerOrderPage() {
                     <Money value={order.total} tone="due" />
                   </dd>
                 </div>
-                {order.status !== 'CANCELLED' && (
-                  <div>
-                    <dt>Thanh toán</dt>
-                    <dd>{paymentStatusLabels[order.paymentStatus]}</dd>
-                  </div>
-                )}
+                {order.status !== 'CANCELLED' &&
+                  (balance ? (
+                    <>
+                      {balance.paid > 0 && (
+                        <div>
+                          <dt>Đã thanh toán</dt>
+                          <dd>
+                            <Money value={balance.paid} tone="paid" />
+                          </dd>
+                        </div>
+                      )}
+                      <div>
+                        <dt>Còn phải trả</dt>
+                        <dd>
+                          <Money value={balance.due} tone={dueTone(balance.due)} />
+                        </dd>
+                      </div>
+                    </>
+                  ) : (
+                    <div>
+                      <dt>Thanh toán</dt>
+                      <dd>{paymentStatusLabels[order.paymentStatus]}</dd>
+                    </div>
+                  ))}
               </dl>
             </Card>
+            {/* Chuyển khoản trước chỉ mở sau khi cửa hàng xác nhận (giá đã chốt); cửa hàng đối chiếu rồi mới ghi nhận đã trả. */}
+            {balance && balance.due > 0 && !['PENDING', 'CANCELLED'].includes(order.status) && (
+              <Card className="af-shop-track-card" title="Chuyển khoản">
+                {account ? (
+                  <>
+                    <TransferQr settings={account} amount={balance.due} note={order.orderCode} />
+                    <p className="af-form-hint">Giữ nguyên nội dung chuyển khoản để cửa hàng đối chiếu.</p>
+                  </>
+                ) : (
+                  <p className="af-shop-transfer-off">Chưa hỗ trợ. Vui lòng trả tiền khi nhận hàng.</p>
+                )}
+              </Card>
+            )}
             {catalog.isError && (
               <Alert
                 type="warning"

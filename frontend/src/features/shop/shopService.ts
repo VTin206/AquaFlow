@@ -10,6 +10,7 @@ import type { Product } from '@/features/inventory/types'
 import { resolveProductImage } from '@/features/inventory/productImages'
 import type { PublicOrder } from '@/features/orders/types'
 import { settingsApi } from '@/features/settings/settingsApi'
+import { useSettings } from '@/features/settings/settingsService'
 import type { StoreSettings } from '@/features/settings/types'
 
 // Kênh công khai cho khách; live checkout gửi đơn qua guest order API.
@@ -23,7 +24,10 @@ export type ShopProduct = Pick<Product, 'id' | 'name' | 'brand' | 'unit' | 'pric
   bottleTypeId?: number | null
 }
 
-export type ShopContact = Partial<Pick<StoreSettings, 'storeName' | 'phone' | 'address' | 'email' | 'openingHours'>>
+export type ShopContact = Partial<
+  Pick<StoreSettings, 'storeName' | 'phone' | 'address' | 'email' | 'openingHours' | 'bankName' | 'bankAccount' | 'bankHolder'>
+>
+export type TransferAccount = Pick<StoreSettings, 'bankName' | 'bankAccount' | 'bankHolder'>
 
 /**
  * Mã sản phẩm "Bán chạy" theo thứ hạng. Chỉ để sắp xếp và gắn nhãn: lỗi thì coi như không có,
@@ -40,6 +44,17 @@ export const useBestSellerIds = (): string[] =>
 /** Thông tin liên hệ cửa hàng hiện trên trang khách. */
 export const useShopContact = (): ShopContact | undefined =>
   useQuery({ queryKey: ['live', 'store-profile'], queryFn: settingsApi.profile, staleTime: 60_000 }).data
+
+/**
+ * Tài khoản nhận chuyển khoản cho trang khách: lấy từ hồ sơ công khai của cửa hàng, nhân viên thì từ cài đặt.
+ * Chưa có số tài khoản thì trả undefined để trang báo "Chưa hỗ trợ" thay vì hiện mã QR sai.
+ */
+export function useTransferAccount(): TransferAccount | undefined {
+  const contact = useShopContact()
+  const { data: settings } = useSettings()
+  const source = settings?.bankAccount ? settings : contact
+  return source?.bankAccount ? { bankName: source.bankName, bankAccount: source.bankAccount, bankHolder: source.bankHolder } : undefined
+}
 
 export const toShopProduct = (product: CatalogProduct): ShopProduct => ({
   id: String(product.id),

@@ -395,7 +395,7 @@ export function CheckoutPage() {
               <div className="af-checkout-payment">
                 <Wallet size={20} aria-hidden />
                 <strong>Thanh toán khi nhận hàng</strong>
-                <span>Tiền mặt hoặc chuyển khoản cho nhân viên giao hàng</span>
+                <span>hoặc chuyển khoản trước sau khi cửa hàng xác nhận đơn</span>
               </div>
               <p className="af-form-hint af-checkout-next-phone">{nextStepHint}</p>
             </div>

@@ -7,7 +7,9 @@ export const canReadSettings = (role?: string) =>
 
 export type SettingsSnapshot = StoreSettings & { version?: number }
 type Response = { settings: StoreSettings; version: number; updatedAt: string; updatedBy: number | null }
-export type StoreProfile = Pick<StoreSettings, 'storeName' | 'address' | 'phone' | 'email' | 'openingHours'>
+/** Hồ sơ công khai; `bank*` chỉ có khi backend công bố tài khoản nhận chuyển khoản cho khách. */
+export type StoreProfile = Pick<StoreSettings, 'storeName' | 'address' | 'phone' | 'email' | 'openingHours'> &
+  Partial<Pick<StoreSettings, 'bankName' | 'bankAccount' | 'bankHolder'>>
 const snapshot = (response: Response): SettingsSnapshot =>
   ({
     ...Object.fromEntries(Object.entries(response.settings).map(([key, value]) => [key, value ?? ''])),

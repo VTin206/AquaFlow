@@ -2676,3 +2676,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+.af-shop-transfer-off {
+  margin: 0;
+  color: var(--af-text-secondary);
+}

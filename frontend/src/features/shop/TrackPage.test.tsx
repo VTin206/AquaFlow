@@ -12,6 +12,7 @@ vi.mock('./shopService', () => ({
   useLookupOrder: () => vi.fn(),
   useTrackedOrder: vi.fn(),
   useShopContact: () => ({ phone: '0283 456 7890' }),
+  useTransferAccount: () => undefined,
 }))
 
 const renderPage = () =>
