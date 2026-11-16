@@ -163,15 +163,17 @@ export function CustomerOrderPage() {
     queryFn: customerAccountApi.bottles,
     enabled: valid && isCustomer(user),
   })
-  // API đơn của khách chưa trả số đã trả/còn phải trả; lấy qua mã theo dõi đơn (cùng nguồn với trang tra cứu).
-  const trackingToken = query.data?.trackingToken ?? ''
-  const balance = useQuery({
+  // Chi tiết đơn trả kèm số đã trả/còn phải trả; backend cũ chưa có thì lấy qua mã theo dõi đơn như trước.
+  const ownBalance = query.data && query.data.paid != null && query.data.due != null ? { paid: query.data.paid, due: query.data.due } : undefined
+  const trackingToken = ownBalance ? '' : (query.data?.trackingToken ?? '')
+  const tracked = useQuery({
     queryKey: [...shopKeys.track(trackingToken), 'live'],
     queryFn: () => orderTrackingApi.byToken(trackingToken),
     enabled: Boolean(trackingToken),
     retry: false,
     refetchInterval: 20_000,
   }).data
+  const balance = ownBalance ?? tracked
   // Trang nằm trong ShopLayout nên có nút mở giỏ; khi dựng riêng (test) thì không có.
   const openCart = useOutletContext<{ openCart?: () => void } | null>()?.openCart
   const placed = (useLocation().state as { placed?: boolean } | null)?.placed
