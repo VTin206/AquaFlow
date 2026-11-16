@@ -5,7 +5,23 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { ShopLayout } from './ShopLayout'
 
 vi.mock('./cart', () => ({ useCart: () => [] }))
-vi.mock('./shopService', () => ({ shopKeys: { products: ['shop', 'products'] }, useShopContact: () => undefined }))
+vi.mock('./shopService', () => ({
+  shopKeys: { products: ['shop', 'products'] },
+  useShopContact: () => undefined,
+  useShopProducts: () => ({
+    data: [
+      {
+        id: '1',
+        name: 'LaVie 19L',
+        brand: 'LaVie',
+        price: 1,
+        unit: 'Bình',
+        available: null,
+        catalog: { packaging: 'Bình có vòi', category: 'Nước khoáng', volumeMl: 19000 },
+      },
+    ],
+  }),
+}))
 const auth = vi.hoisted(() => ({ user: null as { name: string; role: string } | null }))
 vi.mock('@/features/auth/useAuth', () => ({ useAuth: () => auth }))
 vi.mock('./components/AccountMenu', () => ({ AccountMenu: () => null }))
@@ -63,7 +79,7 @@ test('bấm "Nước uống" đóng menu; menu không tự mở lại khi focus 
 test('bấm một mục trong menu cũng đóng; focus bàn phím từ ngoài đi vào thì mở lại', () => {
   renderShop()
   fireEvent.mouseEnter(menuBox())
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Nước Lavie' }))
+  fireEvent.click(screen.getByRole('menuitem', { name: 'LaVie' }))
   expect(closed()).toBe(true)
   fireEvent.mouseLeave(menuBox())
   expect(closed()).toBe(true)
