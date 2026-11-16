@@ -177,21 +177,22 @@ function ColumnPicker({ columns, core, extra, onExtraChange }: {
 function ProductCharts({ query }: { query: ReportQuery }) {
   const [metric, setMetric] = useState<SalesMetric>('quantity')
   const sales = useProductSales(query)
-  const stock = useStockItems()
   if (sales.isError) return <QueryError error={sales.error} onRetry={sales.refetch} />
   if (sales.isPending) return <Typography.Text type="secondary">Đang tải báo cáo…</Typography.Text>
   const hasSales = rankProducts(sales.data ?? [], metric).length > 0
   return <>
     {hasSales ? <BestSellerCharts rows={sales.data ?? []} metric={metric} onMetricChange={setMetric} /> : <Typography.Text type="secondary">Chưa bán sản phẩm nào trong kỳ.</Typography.Text>}
-    {/* Bán chậm tính trên cả danh mục đang bán, nên sản phẩm chưa bán lần nào trong kỳ cũng có mặt. */}
-    <section className="af-report-slow">
-      <h3>8 sản phẩm bán chậm nhất</h3>
-      <Typography.Text type="secondary" className="af-report-chart-note">Sản phẩm đang bán, xếp từ bán ít nhất trong kỳ; bằng nhau thì sản phẩm tồn nhiều hơn đứng trước. Tồn kho tính tại thời điểm hiện tại.</Typography.Text>
-      {stock.isError ? <QueryError error={stock.error} onRetry={stock.refetch} />
-        : stock.isPending ? <Typography.Text type="secondary">Đang tải tồn kho…</Typography.Text>
-        : <SlowMovers rows={slowMovers(sales.data ?? [], stock.data ?? [])} />}
-    </section>
   </>
+}
+
+/** Bán chậm tính trên cả danh mục đang bán, nên sản phẩm chưa bán lần nào trong kỳ cũng có mặt. */
+function SlowMoversTable({ query }: { query: ReportQuery }) {
+  const sales = useProductSales(query)
+  const stock = useStockItems()
+  if (sales.isError) return <QueryError error={sales.error} onRetry={sales.refetch} />
+  if (stock.isError) return <QueryError error={stock.error} onRetry={stock.refetch} />
+  if (sales.isPending || stock.isPending) return <Typography.Text type="secondary">Đang tải báo cáo…</Typography.Text>
+  return <SlowMovers rows={slowMovers(sales.data ?? [], stock.data ?? [])} />
 }
 
 function BestSellerCharts({ rows, metric, onMetricChange: setMetric }: { rows: ProductSale[]; metric: SalesMetric; onMetricChange: (metric: SalesMetric) => void }) {
@@ -257,8 +258,10 @@ function LiveReportContent() {
   const setMethod = (value?: ReportQuery['method']) => updateParams({ method: value })
   const [customRange, setCustomRange] = useState(false)
   const [view, setView] = useState<'table' | 'chart'>('table')
+  const [productList, setProductList] = useState<'all' | 'slow'>('all')
   const [extraColumns, setExtraColumns] = useState<Partial<Record<ReportSection, string[]>>>({})
   const [page, setPage] = useState(0)
+  const productListSwitch = <Segmented<'all' | 'slow'> className="af-report-list-switch" aria-label="Danh sách sản phẩm" value={productList} onChange={setProductList} options={[{ value: 'all', label: 'Tất cả' }, { value: 'slow', label: 'Bán chậm' }]} />
   const [size, setSize] = useState(20)
   const [exporting, setExporting] = useState(false)
   const selected = search.get('tab') ?? 'overview'
@@ -361,6 +364,8 @@ function LiveReportContent() {
         ...Object.entries(sections).map(([key, section]) => ({ key, label: section.title, children: details.isError ? <QueryError error={details.error} onRetry={details.refetch} /> : <Card>
           {key === 'products' && view === 'chart' ? (
             <ProductCharts query={query} />
+          ) : key === 'products' && productList === 'slow' ? (
+            <>{productListSwitch}<SlowMoversTable query={query} /></>
           ) : chartTabs.includes(key) && view === 'chart' ? (
             details.isPending ? <Typography.Text type="secondary">Đang tải báo cáo…</Typography.Text>
               : !detailRows.length ? <Typography.Text type="secondary">Chưa có dữ liệu trong kỳ.</Typography.Text>
@@ -369,8 +374,8 @@ function LiveReportContent() {
                 <DriverDeliveryChart rows={detailRows.map((row) => ({ driver: String(row.driver), delivered: num(row.delivered), late: num(row.late), failed: num(row.failed) }))} />
               </>
           ) : (
-            <Table<ReportRow> className="af-report-table" size="middle" rowKey={section.key} loading={details.isPending} columns={key === 'customers' ? customerColumns : columnsOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection]))} dataSource={details.data?.content ?? []} scroll={{ x: tableWidthOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection])), y: reportTableHeight }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : 'Chưa có dữ liệu trong kỳ.' }}
-            pagination={{ current: page + 1, pageSize: size, total: details.data?.totalElements ?? 0, showSizeChanger: true, pageSizeOptions: [20, 50, 100], onChange: (next, nextSize) => { setPage(nextSize === size ? next - 1 : 0); setSize(nextSize) } }} />
+            <>{key === 'products' && productListSwitch}<Table<ReportRow> className="af-report-table" size="middle" rowKey={section.key} loading={details.isPending} columns={key === 'customers' ? customerColumns : columnsOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection]))} dataSource={details.data?.content ?? []} scroll={{ x: tableWidthOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection])), y: reportTableHeight }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : 'Chưa có dữ liệu trong kỳ.' }}
+            pagination={{ current: page + 1, pageSize: size, total: details.data?.totalElements ?? 0, showSizeChanger: true, pageSizeOptions: [20, 50, 100], onChange: (next, nextSize) => { setPage(nextSize === size ? next - 1 : 0); setSize(nextSize) } }} /></>
           )}
         </Card> })),
       ]} />
