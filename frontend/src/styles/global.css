@@ -2744,12 +2744,6 @@ body {
 .af-receipt-line .ant-form-item {
   margin-bottom: 12px;
 }
-.af-receipt-line-hint {
-  display: block;
-  margin: -4px 0 8px;
-  color: var(--af-text-secondary);
-  font-size: var(--af-fs-sm);
-}
 .af-receipt-note {
   margin: 8px 0 0;
 }

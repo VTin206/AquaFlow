@@ -5,6 +5,7 @@ import { DateField } from '@/shared/components/DateField'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { isoToVnDate, localToday } from '../expiry'
+import { suggestLotCode } from '../lotCode'
 import { receiptToForm, useReceiptOptions, useSaveReceipt, type ReceiptForm, type ReceiptLineView, type ReceiptView } from '../useInventory'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { useConfirm } from '@/shared/components/confirm'
@@ -190,6 +191,7 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                   // Mặc định là người đang nhập phiếu; sửa được nếu người khác kiểm hàng.
                   receiver: currentUser,
                   lines: (defaultLines ?? [{ productId: defaultProductId, received: 1 }]).map((line) => ({
+                    lotCode: suggestLotCode(productOf(line.productId)?.sku, today) || undefined,
                     ...line,
                     damaged: 0,
                     costPrice: 0,
@@ -275,6 +277,15 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                                 loading={options.loadingProducts}
                                 showSearch={{ optionFilterProp: 'label' }}
                                 placeholder="Chọn sản phẩm"
+                                // Điền sẵn mã lô gợi ý khi ô còn trống hoặc vẫn là gợi ý của sản phẩm chọn trước đó; mã tự gõ thì giữ nguyên.
+                                onChange={(productId: string) => {
+                                  const current: string | undefined = form.getFieldValue(['lines', field.name, 'lotCode'])
+                                  if (current && current !== suggestLotCode(product?.sku, receivedAt)) return
+                                  form.setFieldValue(
+                                    ['lines', field.name, 'lotCode'],
+                                    suggestLotCode(productOf(productId)?.sku, receivedAt),
+                                  )
+                                }}
                                 options={options.products.map((item) => ({
                                   value: item.id,
                                   label: `${item.name} (${item.sku}) · tồn ${item.onHand}`,
@@ -392,13 +403,6 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                             </Form.Item>
                           </Col>
                         </Row>
-                        {product && (
-                          <small className="af-receipt-line-hint">
-                            Đạt {Math.max(0, (line?.received ?? 0) - (line?.damaged ?? 0))} {product.unit?.toLowerCase() ?? 'đơn vị'} → tồn{' '}
-                            {product.onHand} → <strong>{product.onHand + Math.max(0, (line?.received ?? 0) - (line?.damaged ?? 0))}</strong>
-                            {' sau khi nhập kho'}
-                          </small>
-                        )}
                       </div>
                     )
                   })}
