@@ -177,6 +177,7 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
       ) : (
         <Form<ReceiptForm>
           name="receive-stock"
+          className="af-receipt-form"
           form={form}
           layout="vertical"
           disabled={save.isPending}
@@ -409,15 +410,9 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
               )}
             </Form.List>
           </FormSection>
-          <FormSection title="Ghi chú">
-            <Form.Item name="note" label="Ghi chú kiểm nhận" rules={[{ max: 500 }]}>
-              <TextArea rows={2} maxLength={500} placeholder="Thiếu so với hóa đơn, bao bì móp, nhiệt độ xe..." />
-            </Form.Item>
-            <Typography.Paragraph type="secondary" className="af-form-hint">
-              Chỉ hàng đạt mới cộng vào tồn bán được. Hàng hỏng, thiếu hoặc lô đã hết hạn được ghi trên phiếu để đối soát với nhà cung cấp.
-              {' Lưu nháp chưa cộng tồn; sau khi xác nhận nhập kho, phiếu không sửa hoặc hủy được nữa.'}
-            </Typography.Paragraph>
-          </FormSection>
+          <Form.Item name="note" label="Ghi chú kiểm nhận" className="af-receipt-note-field" rules={[{ max: 500 }]}>
+            <TextArea rows={1} maxLength={500} placeholder="Thiếu so với hóa đơn, bao bì móp, nhiệt độ xe..." />
+          </Form.Item>
         </Form>
       )}
     </Modal>
