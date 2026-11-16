@@ -104,6 +104,11 @@ class ReportPostgresIntegrationTest {
         mvc.perform(get(BASE+"/customers"+RANGE).with(user("owner").roles("ADMIN")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].revenue").value(101)).andExpect(jsonPath("$.content[0].orders").value(2))
             .andExpect(jsonPath("$.content[0].lastOrder").value("2026-01-02")).andExpect(jsonPath("$.content[0].daysSinceLastOrder").value(0));
+        // Tìm theo tên khách (không dấu, không phân biệt hoa thường); từ khóa không khớp thì rỗng.
+        mvc.perform(get(BASE+"/customers"+RANGE+"&q=report CUSTOMER").with(user("owner").roles("ADMIN")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(1)).andExpect(jsonPath("$.content[0].revenue").value(101));
+        mvc.perform(get(BASE+"/customers"+RANGE+"&q=không-có-ai").with(user("owner").roles("ADMIN")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
         mvc.perform(get(BASE+"/delivery"+RANGE).with(user("owner").roles("ADMIN")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].delivered").value(1))
             .andExpect(jsonPath("$.content[0].failed").value(1)).andExpect(jsonPath("$.content[0].ordersSucceeded").value(1))

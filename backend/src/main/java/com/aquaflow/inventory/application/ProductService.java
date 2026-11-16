@@ -25,14 +25,17 @@ public class ProductService {
     private final BottleTypeRepository bottleTypeRepository;
     private final com.aquaflow.workspace.repository.StoreSettingsRepository settings;
     private final ProductCategoryRepository categoryRepository;
+    private final com.aquaflow.inventory.brand.BrandService brands;
 
     public ProductService(ProductRepository productRepository, BottleTypeRepository bottleTypeRepository,
                           com.aquaflow.workspace.repository.StoreSettingsRepository settings,
-                          ProductCategoryRepository categoryRepository) {
+                          ProductCategoryRepository categoryRepository,
+                          com.aquaflow.inventory.brand.BrandService brands) {
         this.productRepository = productRepository;
         this.bottleTypeRepository = bottleTypeRepository;
         this.settings = settings;
         this.categoryRepository = categoryRepository;
+        this.brands = brands;
     }
 
     @Transactional
@@ -54,7 +57,10 @@ public class ProductService {
         product.setLowStockThreshold(request.lowStockThreshold()!=null?request.lowStockThreshold():settings.defaultLowStock());
         product.setCategory(resolveCategory(request.categoryId(), null));
         product.updateVolume(request.volumeMl());
-        return toResponse(productRepository.save(product));
+        Product saved = productRepository.save(product);
+        productRepository.flush();
+        brands.linkProduct(saved.getId());
+        return toResponse(saved);
     }
 
     /** Mã SP00001, SP00002... theo sequence; bỏ qua số trùng với mã đã nhập tay. */
@@ -146,6 +152,8 @@ public class ProductService {
         if (request.lowStockThreshold() != null) product.setLowStockThreshold(request.lowStockThreshold());
         product.setCategory(resolveCategory(request.categoryId(), product.getCategory()));
         product.updateVolume(request.volumeMl());
+        productRepository.flush();
+        brands.linkProduct(product.getId());
         return toResponse(product);
     }
 

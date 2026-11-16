@@ -35,6 +35,7 @@ class ProductServiceTest {
     private BottleTypeRepository bottleTypeRepository;
     @Mock private com.aquaflow.workspace.repository.StoreSettingsRepository settings;
     @Mock private com.aquaflow.inventory.repository.ProductCategoryRepository categoryRepository;
+    @Mock private com.aquaflow.inventory.brand.BrandService brands;
 
     @InjectMocks
     private ProductService productService;
