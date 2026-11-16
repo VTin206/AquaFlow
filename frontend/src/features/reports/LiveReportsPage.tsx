@@ -270,10 +270,14 @@ function LiveReportContent() {
   // Tiêu chí xếp hạng của biểu đồ Sản phẩm bán; bảng thì bấm tiêu đề cột để sắp xếp.
   const [salesMetric, setSalesMetric] = useState<SalesMetric>('quantity')
   const [page, setPage] = useState(0)
-  const [productSearch, setProductSearch] = useState('')
-  const productListSwitch = <div className="af-report-list-switch">
-    {productList === 'all' ? <Input className="af-report-search" aria-label="Tìm sản phẩm" allowClear prefix={<Search size={16} className="af-input-icon" />} placeholder="Tìm tên hoặc mã hàng" value={productSearch} onChange={(event) => { setProductSearch(event.target.value); setPage(0) }} /> : <span />}
-    <Segmented<'all' | 'slow'> aria-label="Danh sách sản phẩm" value={productList} onChange={setProductList} options={[{ value: 'all', label: 'Tất cả' }, { value: 'slow', label: 'Bán chậm' }]} />
+  // Từ khóa tìm của từng tab: Sản phẩm bán và Nhập – xuất – tồn lọc tại chỗ trên đủ dòng của kỳ.
+  const [searches, setSearches] = useState<Partial<Record<ReportSection, string>>>({})
+  const searchBox = (key: ReportSection) => key === 'customers'
+    ? customerSearchBox
+    : <Input className="af-report-search" aria-label={key === 'products' ? 'Tìm sản phẩm' : 'Tìm sản phẩm tồn kho'} allowClear prefix={<Search size={16} className="af-input-icon" />} placeholder="Tìm tên hoặc mã hàng" value={searches[key] ?? ''} onChange={(event) => { setSearches({ ...searches, [key]: event.target.value }); setPage(0) }} />
+  const tableToolbar = (key: ReportSection) => key === 'delivery' ? null : <div className="af-report-list-switch">
+    {key !== 'products' || productList === 'all' ? searchBox(key) : <span />}
+    {key === 'products' && <Segmented<'all' | 'slow'> aria-label="Danh sách sản phẩm" value={productList} onChange={setProductList} options={[{ value: 'all', label: 'Tất cả' }, { value: 'slow', label: 'Bán chậm' }]} />}
   </div>
   const [size, setSize] = useState(20)
   const [exporting, setExporting] = useState(false)
@@ -281,8 +285,6 @@ function LiveReportContent() {
   const tab = selected in sections ? selected as ReportSection : 'overview'
   const query: ReportQuery = { from: dates[0].format('YYYY-MM-DD'), to: dates[1].format('YYYY-MM-DD'), channel, method }
   const productSales = useProductSales(query, tab === 'products')
-  const productKeyword = normalizeSearch(productSearch.trim())
-  const productRows = (productSales.rows ?? []).filter((row) => !productKeyword || normalizeSearch(`${row.name ?? ''} ${row.sku ?? ''}`).includes(productKeyword))
   const [extraColumns, setExtraColumns] = useState<Partial<Record<ReportSection, string[]>>>({})
   const summary = useQuery({ queryKey: ['live', 'reports', 'summary', query], queryFn: () => reportApi.summary(query) })
   const priorQuery = { ...query, ...previousRange(query) }
@@ -290,7 +292,15 @@ function LiveReportContent() {
   const [customerSearch, setCustomerSearch] = useState('')
   const customerQ = useDebouncedValue(customerSearch.trim(), 300)
   const q = tab === 'customers' ? customerQ : ''
-  const details = useQuery({ queryKey: ['live', 'reports', tab, query, page, size, q], queryFn: () => (q ? reportApi.section(tab as ReportSection, query, page, size, q) : reportApi.section(tab as ReportSection, query, page, size)), enabled: tab !== 'overview' })
+  // Nhập – xuất – tồn lấy một lần đủ sản phẩm (tối đa 100) để tìm tại chỗ.
+  const [detailPage, detailSize] = tab === 'inventory' ? [0, 100] : [page, size]
+  const details = useQuery({ queryKey: ['live', 'reports', tab, query, detailPage, detailSize, q], queryFn: () => (q ? reportApi.section(tab as ReportSection, query, detailPage, detailSize, q) : reportApi.section(tab as ReportSection, query, detailPage, detailSize)), enabled: tab !== 'overview' })
+  const keyword = tab === 'products' || tab === 'inventory' ? normalizeSearch((searches[tab] ?? '').trim()) : ''
+  const matches = (row: ReportRow) => !keyword || normalizeSearch(`${row.name ?? ''} ${row.sku ?? ''}`).includes(keyword)
+  const productRows = (productSales.rows ?? []).filter(matches)
+  const inventoryRows = (tab === 'inventory' ? details.data?.content ?? [] : []).filter(matches)
+  // Bảng lấy đủ dòng của kỳ để tìm và sắp xếp tại chỗ; các tab khác phân trang ở máy chủ.
+  const localRows = (key: string) => key === 'products' ? productRows : key === 'inventory' ? inventoryRows : undefined
   const customerSearchBox = <Input className="af-report-search" aria-label="Tìm khách hàng" allowClear prefix={<Search size={16} className="af-input-icon" />} placeholder="Tìm tên hoặc số điện thoại" value={customerSearch} onChange={(event) => { setCustomerSearch(event.target.value); setPage(0) }} />
   const unit = granularity ?? autoGranularity(query)
   const detailRows = details.data?.content ?? []
@@ -386,7 +396,7 @@ function LiveReportContent() {
           {key === 'products' && view === 'chart' ? (
             <ProductCharts query={query} metric={salesMetric} onMetricChange={setSalesMetric} />
           ) : key === 'products' && productList === 'slow' ? (
-            <>{productListSwitch}<SlowMoversTable query={query} /></>
+            <>{tableToolbar('products')}<SlowMoversTable query={query} /></>
           ) : chartTabs.includes(key) && view === 'chart' ? (
             details.isPending ? <Typography.Text type="secondary">Đang tải báo cáo…</Typography.Text>
               : !detailRows.length ? <Typography.Text type="secondary">Chưa có dữ liệu trong kỳ.</Typography.Text>
@@ -395,8 +405,8 @@ function LiveReportContent() {
                 <DriverDeliveryChart rows={detailRows.map((row) => ({ driver: String(row.driver), delivered: num(row.delivered), late: num(row.late), failed: num(row.failed) }))} />
               </>
           ) : (
-            <>{key === 'products' && productListSwitch}{key === 'customers' && customerSearchBox}<Table<ReportRow> className="af-report-table" size="small" rowKey={section.key} loading={key === 'products' ? productSales.isPending : details.isPending} columns={key === 'customers' ? customerColumns : key === 'products' ? sortableSales(columnsOf(shownColumns(section.columns, coreColumns.products, extraColumns.products))) : columnsOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection]))} dataSource={key === 'products' ? productRows : details.data?.content ?? []} scroll={{ x: tableWidthOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection])), y: reportTableHeight }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : key === 'products' && productKeyword ? 'Không có sản phẩm phù hợp.' : key === 'customers' && customerQ ? 'Không có khách hàng phù hợp.' : 'Chưa có dữ liệu trong kỳ.' }}
-            pagination={{ current: page + 1, pageSize: size, total: key === 'products' ? productRows.length : details.data?.totalElements ?? 0, showSizeChanger: true, pageSizeOptions: [20, 50, 100], onChange: (next, nextSize) => { setPage(nextSize === size ? next - 1 : 0); setSize(nextSize) } }} /></>
+            <>{tableToolbar(key as ReportSection)}<Table<ReportRow> className="af-report-table" size="small" rowKey={section.key} loading={key === 'products' ? productSales.isPending : details.isPending} columns={key === 'customers' ? customerColumns : key === 'products' ? sortableSales(columnsOf(shownColumns(section.columns, coreColumns.products, extraColumns.products))) : columnsOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection]))} dataSource={localRows(key) ?? details.data?.content ?? []} scroll={{ x: tableWidthOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection])), y: reportTableHeight }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : keyword && localRows(key) ? 'Không có sản phẩm phù hợp.' : 'Chưa có dữ liệu trong kỳ.' }}
+            pagination={{ current: page + 1, pageSize: size, total: localRows(key)?.length ?? details.data?.totalElements ?? 0, showSizeChanger: true, pageSizeOptions: [20, 50, 100], onChange: (next, nextSize) => { setPage(nextSize === size ? next - 1 : 0); setSize(nextSize) } }} /></>
           )}
         </Card> })),
       ]} />
