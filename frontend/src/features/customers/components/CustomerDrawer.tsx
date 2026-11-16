@@ -71,8 +71,9 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
         ),
     })
 
+  // Chữ và nút "Quản lý địa chỉ" cùng một dòng, thẳng hàng với nhãn bên trái; có danh sách thì nút xuống dòng dưới.
   const addressView = (
-    <div className="af-cell-stack">
+    <div className="af-address-cell">
       {addressesFailed ? (
         'Không tải được địa chỉ.'
       ) : !addresses ? (
@@ -94,9 +95,9 @@ export function CustomerDrawer({ customerId, onClose, onEdit, onCreateOrder }: C
           ))}
         </ol>
       ) : (
-        'Chưa có địa chỉ giao'
+        <span className="af-text-muted">Chưa có địa chỉ giao</span>
       )}
-      <Button size="small" style={{ alignSelf: 'flex-start', marginTop: 4 }} onClick={() => setManagingAddresses(true)}>
+      <Button type="link" size="small" className="af-inline-link" onClick={() => setManagingAddresses(true)}>
         Quản lý địa chỉ
       </Button>
     </div>
