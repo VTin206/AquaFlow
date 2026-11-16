@@ -22,7 +22,12 @@ export function TripManifest({ trip, stops, settings }: { trip: Trip; stops: Ord
           Số điểm giao: <strong>{stops.length}</strong>
         </span>
         <span>
-          Tổng cần thu: <strong>{hasUnknownDue ? 'từ ' : ''}{currency(totalDue)}</strong> · Bình: <strong>{totalJugs}</strong>
+          Tổng cần thu:{' '}
+          <strong>
+            {hasUnknownDue ? 'từ ' : ''}
+            {currency(totalDue)}
+          </strong>{' '}
+          · Bình: <strong>{totalJugs}</strong>
         </span>
       </section>
       <table className="af-doc-table">

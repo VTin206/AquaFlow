@@ -236,3 +236,24 @@
 .af-driver-facts a {
   font-weight: 600;
 }
+
+/* Tách tiền hàng và cọc vỏ trong cửa sổ thu tiền của tài xế. */
+.af-collect-split {
+  margin: 0 0 12px;
+}
+.af-collect-split > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.af-collect-split dd {
+  margin: 0;
+}
+.af-collect-split .is-total {
+  font-weight: 600;
+  border-top: 1px solid var(--af-border, #e5e7eb);
+  padding-top: 4px;
+}
+.af-deposit-due {
+  margin: 8px 0 0;
+}

@@ -20,7 +20,8 @@ export function liveTripFocus(trip: Pick<DeliveryTrip, 'status' | 'driverId' | '
   if (trip.status === 'CANCELLED') return { focus: { tone: 'muted', title: 'Chuyến đã hủy' } }
   if (trip.status === 'COMPLETED') return { focus: { tone: 'done', title: 'Chuyến đã đối soát xong' } }
   if (trip.status === 'CREATED') {
-    if (!total) return { next: 'addOrders', focus: { tone: 'action', title: 'Cần thêm đơn vào chuyến', description: 'Chuyến chưa có đơn nào.' } }
+    if (!total)
+      return { next: 'addOrders', focus: { tone: 'action', title: 'Cần thêm đơn vào chuyến', description: 'Chuyến chưa có đơn nào.' } }
     if (!trip.driverId) {
       return { next: 'assignDriver', focus: { tone: 'action', title: 'Cần phân tài xế', description: 'Phải có tài xế mới xuất kho được.' } }
     }
@@ -32,14 +33,22 @@ export function liveTripFocus(trip: Pick<DeliveryTrip, 'status' | 'driverId' | '
       }
     }
     if (trip.orders.some((order) => order.orderStatus !== 'OUT_FOR_DELIVERY')) {
-      return { focus: { tone: 'alert', title: 'Có đơn không còn đủ điều kiện lên chuyến', description: 'Bỏ các đơn đó khỏi chuyến để tiếp tục.' } }
+      return {
+        focus: { tone: 'alert', title: 'Có đơn không còn đủ điều kiện lên chuyến', description: 'Bỏ các đơn đó khỏi chuyến để tiếp tục.' },
+      }
     }
-    return { next: 'depart', focus: { tone: 'action', title: 'Sẵn sàng khởi hành', description: 'Đã xuất kho đủ đơn. Xác nhận khi tài xế đã nhận hàng.' } }
+    return {
+      next: 'depart',
+      focus: { tone: 'action', title: 'Sẵn sàng khởi hành', description: 'Đã xuất kho đủ đơn. Xác nhận khi tài xế đã nhận hàng.' },
+    }
   }
   // Xuất kho từng đơn nên chuyến có thể đã chạy mà vẫn còn đơn chưa xuất.
   const undispatched = trip.orders.filter((order) => order.orderStatus === 'PREPARING').length
   if (undispatched) {
-    return { next: 'dispatch', focus: { tone: 'action', title: `Cần xuất kho ${undispatched} đơn`, description: 'Đơn đã xuất không bỏ khỏi chuyến được.' } }
+    return {
+      next: 'dispatch',
+      focus: { tone: 'action', title: `Cần xuất kho ${undispatched} đơn`, description: 'Đơn đã xuất không bỏ khỏi chuyến được.' },
+    }
   }
   const results = trip.orders.filter((order) => order.latestAttempt).length
   const failed = trip.orders.filter((order) => order.latestAttempt?.outcome === 'FAILED').length
@@ -74,9 +83,14 @@ export function driverTripFocus({ stage, total, pending, waitingDispatch, nextCu
   if (stage === 'settled') return { tone: 'done', title: 'Chuyến đã đối soát xong' }
   if (!total) return { tone: 'waiting', title: 'Chuyến chưa có đơn', description: 'Cửa hàng đang xếp đơn vào chuyến.' }
   if (waitingDispatch > 0) {
-    return { tone: 'waiting', title: `Chờ cửa hàng xuất kho ${waitingDispatch} đơn`, description: 'Nhận hàng tại cửa hàng sau khi nhân viên xuất kho.' }
+    return {
+      tone: 'waiting',
+      title: `Chờ cửa hàng xuất kho ${waitingDispatch} đơn`,
+      description: 'Nhận hàng tại cửa hàng sau khi nhân viên xuất kho.',
+    }
   }
   if (stage === 'preparing') return { tone: 'action', title: 'Nhận đủ hàng rồi bắt đầu chuyến' }
-  if (pending === 0) return { tone: 'action', title: 'Về cửa hàng đối soát', description: 'Đã có kết quả tất cả điểm giao. Bàn giao tiền và vỏ.' }
+  if (pending === 0)
+    return { tone: 'action', title: 'Về cửa hàng đối soát', description: 'Đã có kết quả tất cả điểm giao. Bàn giao tiền và vỏ.' }
   return { tone: 'action', title: `Điểm tiếp theo: ${nextCustomer}`, description: `Còn ${pending}/${total} điểm chưa có kết quả.` }
 }

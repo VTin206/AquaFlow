@@ -13,6 +13,7 @@ import { statusColor } from '@/features/orders/orderStatus'
 import type { OrderStatus as StaffOrderStatus } from '@/features/orders/types'
 import { ApiError } from '@/shared/api/client'
 import { Money } from '@/shared/components/Money'
+import { Unsupported } from '@/shared/components/Unsupported'
 import { TransferQr } from '@/shared/payment/TransferQr'
 import { dueTone } from '@/shared/utils/money'
 import { QueryError } from '@/shared/components/QueryError'
@@ -295,6 +296,14 @@ export function CustomerOrderPage() {
                   <dt>Phí giao</dt>
                   <dd>{order.deliveryFee ? <span className="af-money">{currency(order.deliveryFee)}</span> : 'Miễn phí'}</dd>
                 </div>
+                {order.items.some((item) => catalog.data?.find((p) => p.id === item.productId)?.bottleTypeId != null) && (
+                  <div>
+                    <dt>Vỏ đang giữ · cọc</dt>
+                    <dd>
+                      <Unsupported />
+                    </dd>
+                  </div>
+                )}
                 <div className="is-total">
                   <dt>{order.status === 'PENDING' ? 'Tạm tính' : 'Tổng cộng'}</dt>
                   <dd>
