@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { App, Button, Col, Form, Input, InputNumber, Modal, Result, Row, Select, Table, Typography } from 'antd'
 import { Plus, Trash2 } from 'lucide-react'
+import { DateField } from '@/shared/components/DateField'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { isoToVnDate, localToday } from '../expiry'
+import { suggestLotCode } from '../lotCode'
 import { receiptToForm, useReceiptOptions, useSaveReceipt, type ReceiptForm, type ReceiptLineView, type ReceiptView } from '../useInventory'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { useConfirm } from '@/shared/components/confirm'
@@ -99,6 +101,13 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
   const receivedAt: string | undefined = Form.useWatch('receivedAt', form)
   const today = localToday()
   const productOf = (id?: string) => options.products.find((product) => product.id === id)
+  // Thêm dòng hàng xong thì đưa con trỏ tới ô Sản phẩm của dòng mới (chờ form dựng xong dòng đó).
+  const focusLastLine = () =>
+    window.setTimeout(() => {
+      const line = [...document.querySelectorAll<HTMLElement>('.af-receipt-form .af-receipt-line')].pop()
+      line?.scrollIntoView({ block: 'nearest' })
+      line?.querySelector<HTMLInputElement>('input')?.focus()
+    })
   const good = lines.reduce((sum, line) => sum + Math.max(0, (line?.received ?? 0) - (line?.damaged ?? 0)), 0)
   const total = lines.reduce((sum, line) => sum + Math.max(0, (line?.received ?? 0) - (line?.damaged ?? 0)) * (line?.costPrice ?? 0), 0)
 
@@ -176,6 +185,7 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
       ) : (
         <Form<ReceiptForm>
           name="receive-stock"
+          className="af-receipt-form"
           form={form}
           layout="vertical"
           disabled={save.isPending}
@@ -188,6 +198,7 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                   // Mặc định là người đang nhập phiếu; sửa được nếu người khác kiểm hàng.
                   receiver: currentUser,
                   lines: (defaultLines ?? [{ productId: defaultProductId, received: 1 }]).map((line) => ({
+                    lotCode: suggestLotCode(productOf(line.productId)?.sku, today) || undefined,
                     ...line,
                     damaged: 0,
                     costPrice: 0,
@@ -219,7 +230,7 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                     },
                   ]}
                 >
-                  <Input type="date" max={today} />
+                  <DateField max={today} />
                 </Form.Item>
               </Col>
               <Col xs={12} md={8}>
@@ -273,6 +284,15 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                                 loading={options.loadingProducts}
                                 showSearch={{ optionFilterProp: 'label' }}
                                 placeholder="Chọn sản phẩm"
+                                // Điền sẵn mã lô gợi ý khi ô còn trống hoặc vẫn là gợi ý của sản phẩm chọn trước đó; mã tự gõ thì giữ nguyên.
+                                onChange={(productId: string) => {
+                                  const current: string | undefined = form.getFieldValue(['lines', field.name, 'lotCode'])
+                                  if (current && current !== suggestLotCode(product?.sku, receivedAt)) return
+                                  form.setFieldValue(
+                                    ['lines', field.name, 'lotCode'],
+                                    suggestLotCode(productOf(productId)?.sku, receivedAt),
+                                  )
+                                }}
                                 options={options.products.map((item) => ({
                                   value: item.id,
                                   label: `${item.name} (${item.sku}) · tồn ${item.onHand}`,
@@ -317,7 +337,7 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                                 },
                               ]}
                             >
-                              <Input type="date" max={receivedAt} />
+                              <DateField max={receivedAt} />
                             </Form.Item>
                           </Col>
                           <Col xs={12} md={6}>
@@ -339,7 +359,7 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                                 },
                               ]}
                             >
-                              <Input type="date" min={today} />
+                              <DateField min={today} />
                             </Form.Item>
                           </Col>
                           <Col xs={8} md={4}>
@@ -390,33 +410,28 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                             </Form.Item>
                           </Col>
                         </Row>
-                        {product && (
-                          <small className="af-receipt-line-hint">
-                            Đạt {Math.max(0, (line?.received ?? 0) - (line?.damaged ?? 0))} {product.unit?.toLowerCase() ?? 'đơn vị'} → tồn{' '}
-                            {product.onHand} → <strong>{product.onHand + Math.max(0, (line?.received ?? 0) - (line?.damaged ?? 0))}</strong>
-                            {' sau khi nhập kho'}
-                          </small>
-                        )}
                       </div>
                     )
                   })}
                   <Form.ErrorList errors={errors} />
-                  <Button type="dashed" block icon={<Plus size={16} />} onClick={() => add({ received: 1, damaged: 0, costPrice: 0 })}>
+                  <Button
+                    type="dashed"
+                    block
+                    icon={<Plus size={16} />}
+                    onClick={() => {
+                      add({ received: 1, damaged: 0, costPrice: 0 })
+                      focusLastLine()
+                    }}
+                  >
                     Thêm dòng hàng
                   </Button>
                 </>
               )}
             </Form.List>
           </FormSection>
-          <FormSection title="Ghi chú">
-            <Form.Item name="note" label="Ghi chú kiểm nhận" rules={[{ max: 500 }]}>
-              <TextArea rows={2} maxLength={500} placeholder="Thiếu so với hóa đơn, bao bì móp, nhiệt độ xe..." />
-            </Form.Item>
-            <Typography.Paragraph type="secondary" className="af-form-hint">
-              Chỉ hàng đạt mới cộng vào tồn bán được. Hàng hỏng, thiếu hoặc lô đã hết hạn được ghi trên phiếu để đối soát với nhà cung cấp.
-              {' Lưu nháp chưa cộng tồn; sau khi xác nhận nhập kho, phiếu không sửa hoặc hủy được nữa.'}
-            </Typography.Paragraph>
-          </FormSection>
+          <Form.Item name="note" label="Ghi chú kiểm nhận" className="af-receipt-note-field" rules={[{ max: 500 }]}>
+            <TextArea rows={1} maxLength={500} placeholder="Thiếu so với hóa đơn, bao bì móp, nhiệt độ xe..." />
+          </Form.Item>
         </Form>
       )}
     </Modal>

@@ -71,7 +71,6 @@ export function TripsPanel() {
 
       <div className="af-section-heading">
         <h2>Chuyến giao</h2>
-        <span>Ghi kết quả từng điểm, đối soát tiền và vỏ khi tài xế về</span>
       </div>
       {tripsQuery.isError && tripsQuery.error ? (
         <QueryError error={tripsQuery.error} onRetry={tripsQuery.refetch} />

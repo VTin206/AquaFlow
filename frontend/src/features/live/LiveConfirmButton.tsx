@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router'
 import type { Order } from '@/features/orders/types'
 import { invalidateLiveData } from './invalidateLiveData'
 import { confirmOrderHint, orderApi } from './orderApi'
+import { explainStockShortage } from './stockShortage'
 
 /** Xác nhận đơn chờ ngay trên danh sách, không cần mở chi tiết; `iconOnly` cho cột thao tác hẹp. */
 export function LiveConfirmButton({
@@ -21,7 +22,8 @@ export function LiveConfirmButton({
   const navigate = useNavigate()
   const code = order.code ?? order.id
   const confirm = useMutation({
-    mutationFn: () => orderApi.updateStatus(Number(order.id), 'CONFIRMED'),
+    // Thiếu hàng thì báo bằng tên sản phẩm thay cho mã.
+    mutationFn: () => orderApi.updateStatus(Number(order.id), 'CONFIRMED').catch((error) => explainStockShortage(error, queryClient)),
     onSuccess: () => {
       void invalidateLiveData(queryClient)
       const key = `confirmed-${order.id}`

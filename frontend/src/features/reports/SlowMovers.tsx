@@ -1,4 +1,4 @@
-import { Table, Tag, Typography, type TableColumnsType } from 'antd'
+import { Table, Tag, Tooltip, type TableColumnsType } from 'antd'
 import { shortDate } from '@/shared/utils/format'
 import type { SlowMover } from './productSales'
 
@@ -42,20 +42,23 @@ const columns: TableColumnsType<SlowMover> = [
   {
     title: 'Hạn gần nhất',
     dataIndex: 'nearestExpiry',
+    align: 'right',
     width: 120,
     render: (value?: string) => (value ? shortDate(value) : '—'),
   },
   {
     title: 'Gợi ý',
     key: 'status',
-    width: 360,
+    width: 150,
+    // Câu gợi ý nằm trong tooltip của thẻ để mỗi sản phẩm chỉ một dòng.
     render: (_, row) => {
       const tag = statusTags[row.status]
       return (
-        <span className="af-slow-hint">
-          <Tag color={tag.color}>{tag.label}</Tag>
-          <Typography.Text type="secondary">{tag.hint(row)}</Typography.Text>
-        </span>
+        <Tooltip title={tag.hint(row)}>
+          <Tag color={tag.color} style={{ margin: 0 }}>
+            {tag.label}
+          </Tag>
+        </Tooltip>
       )
     },
   },
@@ -70,7 +73,7 @@ export function SlowMovers({ rows }: { rows: SlowMover[] }) {
       columns={columns}
       dataSource={rows}
       pagination={false}
-      scroll={{ x: 820 }}
+      scroll={{ x: 620 }}
       locale={{ emptyText: 'Chưa có sản phẩm đang bán.' }}
     />
   )

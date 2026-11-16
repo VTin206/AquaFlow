@@ -12,6 +12,7 @@ import {
   type OrderPage,
   type OrderPageQuery,
 } from '@/features/live/orderApi'
+import { explainStockShortage } from '@/features/live/stockShortage'
 import { matchesSearch } from '@/shared/utils/search'
 import { amountDue, walkInName, type Order, type OrderStatus } from './types'
 import type { OrderBalance } from '@/features/live/paymentApi'
@@ -226,7 +227,8 @@ export function useCustomerOrders(customerId: string | undefined) {
 export function useConfirmOrderRequest() {
   const queryClient = useQueryClient()
   return {
-    confirm: (order: Order): Promise<unknown> => orderApi.updateStatus(Number(order.id), 'CONFIRMED'),
+    confirm: (order: Order): Promise<unknown> =>
+      orderApi.updateStatus(Number(order.id), 'CONFIRMED').catch((error) => explainStockShortage(error, queryClient)),
     refresh: () => void invalidateLiveData(queryClient),
   }
 }

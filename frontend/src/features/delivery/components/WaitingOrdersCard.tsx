@@ -36,10 +36,12 @@ export function WaitingOrdersCard({ orders, loading, selected, onSelect, onCreat
     if (target instanceof Element && target.closest('.ant-table-selection-column, button, a, input, label')) return
     onSelect(chosenIds.includes(id) ? chosenIds.filter((item) => item !== id) : [...chosenIds, id])
   }
+  // Không có đơn chờ thì thu khung về một dòng tiêu đề, nhường chỗ cho danh sách chuyến bên dưới.
+  const idle = !orders.length && !loading && !error
   return (
     <Card
       className="af-card"
-      styles={{ body: { padding: 0 } }}
+      styles={{ body: { padding: 0, display: idle ? 'none' : undefined }, header: idle ? { borderBottom: 0 } : undefined }}
       title={
         <span className="af-panel-title">
           Đơn chờ xếp chuyến <Tag>{orders.length}</Tag>
@@ -52,7 +54,7 @@ export function WaitingOrdersCard({ orders, loading, selected, onSelect, onCreat
             {`Tạo chuyến (${chosen.length} đơn)`}
           </Button>
         ) : (
-          <Typography.Text type="secondary">Chọn đơn để tạo chuyến</Typography.Text>
+          <Typography.Text type="secondary">{idle ? 'Không có đơn chờ giao' : 'Chọn đơn để tạo chuyến'}</Typography.Text>
         )
       }
     >

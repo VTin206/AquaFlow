@@ -22,6 +22,7 @@ import {
   paymentStatusLabels,
   channelLabels,
 } from './orderApi'
+import { explainStockShortage } from './stockShortage'
 import { invalidateLiveData } from './invalidateLiveData'
 import { canDispatch, canHandover, dispatchApi } from './dispatchApi'
 import { OrderDeliveryHistory } from '@/features/orders/OrderDeliveryHistory'
@@ -82,7 +83,8 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
   })
   const { allowed: canSeeTrips, query: trips } = useOrderDeliveryHistory(id)
   const update = useMutation({
-    mutationFn: (status: 'CONFIRMED' | 'PREPARING' | 'CANCELLED') => orderApi.updateStatus(id, status),
+    mutationFn: (status: 'CONFIRMED' | 'PREPARING' | 'CANCELLED') =>
+      orderApi.updateStatus(id, status).catch((error) => explainStockShortage(error, queryClient)),
     onSuccess: (order) => {
       void invalidateLiveData(queryClient)
       message.success(

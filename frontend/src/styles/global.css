@@ -1024,6 +1024,9 @@ body {
   color: inherit;
   font: inherit;
   font-weight: inherit;
+  /* Trình duyệt đặt lại hai thuộc tính này cho <button>; lấy theo ô tiêu đề để cột sắp xếp được cũng in hoa như cột thường. */
+  letter-spacing: inherit;
+  text-transform: inherit;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -2744,14 +2747,28 @@ body {
 .af-receipt-line .ant-form-item {
   margin-bottom: 12px;
 }
-.af-receipt-line-hint {
-  display: block;
-  margin: -4px 0 8px;
-  color: var(--af-text-secondary);
-  font-size: var(--af-fs-sm);
-}
 .af-receipt-note {
   margin: 8px 0 0;
+}
+/* Phiếu nhập: các ô xếp sát nhau để thấy cả phiếu mà ít phải cuộn. */
+.af-receipt-form .ant-form-item {
+  margin-bottom: 10px;
+}
+.af-receipt-form .af-form-section-title {
+  margin: 10px 0 6px;
+}
+.af-receipt-form .af-form-section:first-child > .af-form-section-title {
+  margin-top: 0;
+}
+.af-receipt-form .af-receipt-line {
+  margin-bottom: 8px;
+  padding: 8px 12px 0;
+}
+.af-receipt-form .af-receipt-line-head {
+  margin-bottom: 2px;
+}
+.af-receipt-form .af-receipt-note-field.ant-form-item {
+  margin: 10px 0 0;
 }
 
 /* ---------- Chuyến giao ---------- */
