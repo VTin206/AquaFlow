@@ -34,12 +34,23 @@ public class CustomerOrderController {
 
     private final OrderService orderService;
     private final CustomerService customerService;
+    private final com.aquaflow.customer.order.repository.OrderQueryRepository orderQueries;
 
     public CustomerOrderController(
             OrderService orderService,
-            CustomerService customerService) {
+            CustomerService customerService,
+            com.aquaflow.customer.order.repository.OrderQueryRepository orderQueries) {
         this.orderService = orderService;
         this.customerService = customerService;
+        this.orderQueries = orderQueries;
+    }
+
+    /** Thêm số đã trả/còn phải trả (view order_payment_balances) vào chi tiết đơn của khách. */
+    private com.aquaflow.customer.order.api.dto.MyOrderResponse withBalance(OrderResponse order) {
+        var balance = orderQueries.balances(java.util.List.of(order.id())).get(order.id());
+        return new com.aquaflow.customer.order.api.dto.MyOrderResponse(order,
+                balance == null ? java.math.BigDecimal.ZERO : balance.paid(),
+                balance == null ? order.total() : balance.due());
     }
 
     @GetMapping
@@ -59,7 +70,7 @@ public class CustomerOrderController {
     @GetMapping("/{id}")
     @Operation(summary = "Get an order belonging to the current customer")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<OrderResponse> findMyOrderById(
+    public ResponseEntity<com.aquaflow.customer.order.api.dto.MyOrderResponse> findMyOrderById(
             @PathVariable Long id,
             @AuthenticationPrincipal AuthUserDetails principal) {
 
@@ -70,6 +81,7 @@ public class CustomerOrderController {
                         orderService.findByIdAndCustomerId(
                                 id,
                                 customer.id()))
+                .map(this::withBalance)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

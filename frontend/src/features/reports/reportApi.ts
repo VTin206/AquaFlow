@@ -20,5 +20,7 @@ const params = (query: object) => {
 }
 export const reportApi = {
   summary: (query: ReportQuery) => api.get<LiveReport>(`/admin/reports/summary?${params(query)}`),
-  section: (section: ReportSection, query: ReportQuery, page = 0, size = 20) => api.get<ReportPage>(`/admin/reports/${section}?${params({ ...query, page, size })}`),
+  /** {@code q}: chỉ tab Khách hàng dùng, tìm theo tên hoặc số điện thoại. */
+  section: (section: ReportSection, query: ReportQuery, page = 0, size = 20, q?: string) =>
+    api.get<ReportPage>(`/admin/reports/${section}?${params({ ...query, page, size, q: q?.trim() || undefined })}`),
 }

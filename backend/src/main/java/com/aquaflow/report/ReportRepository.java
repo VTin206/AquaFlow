@@ -252,7 +252,10 @@ public class ReportRepository {
           """;
         return page(sql,"delivered DESC, \"driverId\"",p,page,size);
     }
-    public Page customers(MapSqlParameterSource p,int page,int size) {
+    public Page customers(MapSqlParameterSource p,int page,int size) { return customers(p,page,size,null); }
+    /** {@code keyword}: tìm theo tên hoặc số điện thoại khách; có từ khóa thì không gồm dòng "Khách vãng lai". */
+    public Page customers(MapSqlParameterSource p,int page,int size,com.aquaflow.shared.api.SearchKeyword keyword) {
+        String where=keyword==null ? "" : " WHERE "+keyword.condition("c.full_name","c.phone",p);
         String sql=ORDERS+"""
           , events AS (
             SELECT id,customer_id,subtotal-discount_amount AS revenue,1 AS orders FROM sold
@@ -267,6 +270,8 @@ public class ReportRepository {
             CASE WHEN lo.last_order IS NULL THEN NULL ELSE to_char(lo.last_order AT TIME ZONE 'Asia/Ho_Chi_Minh','YYYY-MM-DD') END AS "lastOrder",
             CASE WHEN lo.last_order IS NULL THEN NULL ELSE GREATEST(0,CAST(:toDate AS date)-(lo.last_order AT TIME ZONE 'Asia/Ho_Chi_Minh')::date) END AS "daysSinceLastOrder"
           FROM events e LEFT JOIN customers c ON c.id=e.customer_id LEFT JOIN last_orders lo ON lo.customer_id=e.customer_id
+          """+where+"""
+
           GROUP BY e.customer_id,c.full_name,lo.last_order
           """;
         return page(sql,"revenue DESC,key",p,page,size);

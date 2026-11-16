@@ -68,6 +68,9 @@ class CustomerOrderControllerTest {
     @MockBean
     private UserDetailsService userDetailsService;
 
+    @MockBean
+    private com.aquaflow.customer.order.repository.OrderQueryRepository orderQueries;
+
     @Test
     void createOrderReturns201ForAuthenticatedCustomer() throws Exception {
         when(customerService.findOrCreateForUser(
@@ -192,6 +195,22 @@ class CustomerOrderControllerTest {
                 .andExpect(status().isNotFound());
 
         verify(orderService).findByIdAndCustomerId(999L, 5L);
+    }
+
+    @Test
+    void orderDetailIncludesPaidAndDue() throws Exception {
+        when(customerService.findActiveByUserId(7L)).thenReturn(Optional.of(sampleCustomer()));
+        var order = sampleOrder();
+        when(orderService.findByIdAndCustomerId(order.id(), 5L)).thenReturn(Optional.of(order));
+        when(orderQueries.balances(java.util.List.of(order.id()))).thenReturn(java.util.Map.of(order.id(),
+                new com.aquaflow.customer.order.repository.OrderQueryRepository.Balance(
+                        new java.math.BigDecimal("10000"), new java.math.BigDecimal("5000"), java.math.BigDecimal.ZERO)));
+
+        mockMvc.perform(get(ORDERS_URL + "/" + order.id()).with(authentication(customerAuthentication())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orderCode").value(order.orderCode()))
+                .andExpect(jsonPath("$.paid").value(10000))
+                .andExpect(jsonPath("$.due").value(5000));
     }
 
     @Test

@@ -59,6 +59,7 @@ class ProductControllerIntegrationTest {
     @MockitoBean private com.aquaflow.inventory.repository.InventoryReturnRepository inventoryReturnRepository;
     @MockitoBean private com.aquaflow.activity.ActivityRepository activityRepository;
     @MockitoBean private com.aquaflow.report.ReportRepository reportRepository;
+    @MockitoBean private com.aquaflow.inventory.brand.BrandService brandService;
     @MockitoBean private com.aquaflow.inventory.repository.BestSellerRepository bestSellerRepository;
     @MockitoBean private com.aquaflow.delivery.repository.DeliveryRepository deliveryRepository;
     @MockitoBean private com.aquaflow.customer.order.repository.DispatchRepository dispatchRepository;

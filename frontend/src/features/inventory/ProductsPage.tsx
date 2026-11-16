@@ -28,7 +28,8 @@ import { currency } from '@/shared/utils/format'
 import { LiveBottleTypes } from '@/features/live/LiveBottleTypes'
 import { LiveProductCategories } from '@/features/live/LiveProductCategories'
 import { BrandsModal } from './components/BrandsModal'
-import { brandGroups, capacityGroups, getBrandGroup, getCatalogDetails, normalizeSearch, sortCategoryNames } from './catalogGroups'
+import { capacityGroups, getCatalogDetails, normalizeSearch, sortCategoryNames } from './catalogGroups'
+import { brandGroupOf, useBrandGroups } from './brandApi'
 import { ProductFormModal } from './components/ProductFormModal'
 import {
   useActivateProduct,
@@ -64,6 +65,7 @@ export function ProductsPage() {
   const { message, modal } = App.useApp()
   const ask = useConfirm()
   const canManage = useCanManageProducts()
+  const brandList = useBrandGroups()
   const [status, setStatus] = useState<ProductStatus>('active')
   // Quản lý tải hết một lần rồi lọc tại chỗ để đếm được từng trạng thái; nhân viên chỉ xem sản phẩm đang bán (BE cũng giới hạn như vậy).
   const productsQuery = useCatalog(canManage ? 'all' : 'active')
@@ -90,10 +92,10 @@ export function ProductsPage() {
     { value: 'all', label: <CountLabel label="Tất cả" count={allProducts.length} /> },
   ]
   const keyword = normalizeSearch(query.trim())
-  const brandName = (product: CatalogItem) => getBrandGroup(product.brand)?.name ?? product.brand
+  const brandName = (product: CatalogItem) => brandGroupOf(brandList, product.brand)?.name ?? product.brand
   const brands = [...new Set(products.map(brandName))].map((name) => ({
     name,
-    logo: brandGroups.find((group) => group.name === name)?.logo ?? products.find((product) => brandName(product) === name)?.image,
+    logo: brandList.find((group) => group.name === name)?.logo ?? products.find((product) => brandName(product) === name)?.image,
     count: products.filter((product) => brandName(product) === name).length,
   }))
   // Bộ lọc loại lấy từ chính danh sách sản phẩm, theo thứ tự cửa hàng tạo loại.

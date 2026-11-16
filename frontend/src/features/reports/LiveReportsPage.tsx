@@ -6,6 +6,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { Link, useSearchParams } from 'react-router'
 import { Columns3, FileSpreadsheet, FunnelX, Search } from 'lucide-react'
 import { normalizeSearch } from '@/shared/utils/search'
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import { Page } from '@/shared/components/Page'
 import { PeriodPicker } from '@/shared/components/PeriodPicker'
 import { QueryError } from '@/shared/components/QueryError'
@@ -286,7 +287,11 @@ function LiveReportContent() {
   const summary = useQuery({ queryKey: ['live', 'reports', 'summary', query], queryFn: () => reportApi.summary(query) })
   const priorQuery = { ...query, ...previousRange(query) }
   const previous = useQuery({ queryKey: ['live', 'reports', 'summary', priorQuery], queryFn: () => reportApi.summary(priorQuery) })
-  const details = useQuery({ queryKey: ['live', 'reports', tab, query, page, size], queryFn: () => reportApi.section(tab as ReportSection, query, page, size), enabled: tab !== 'overview' })
+  const [customerSearch, setCustomerSearch] = useState('')
+  const customerQ = useDebouncedValue(customerSearch.trim(), 300)
+  const q = tab === 'customers' ? customerQ : ''
+  const details = useQuery({ queryKey: ['live', 'reports', tab, query, page, size, q], queryFn: () => (q ? reportApi.section(tab as ReportSection, query, page, size, q) : reportApi.section(tab as ReportSection, query, page, size)), enabled: tab !== 'overview' })
+  const customerSearchBox = <Input className="af-report-search" aria-label="Tìm khách hàng" allowClear prefix={<Search size={16} className="af-input-icon" />} placeholder="Tìm tên hoặc số điện thoại" value={customerSearch} onChange={(event) => { setCustomerSearch(event.target.value); setPage(0) }} />
   const unit = granularity ?? autoGranularity(query)
   const detailRows = details.data?.content ?? []
   const num = (value: string | number | null) => Number(value ?? 0)
@@ -390,7 +395,7 @@ function LiveReportContent() {
                 <DriverDeliveryChart rows={detailRows.map((row) => ({ driver: String(row.driver), delivered: num(row.delivered), late: num(row.late), failed: num(row.failed) }))} />
               </>
           ) : (
-            <>{key === 'products' && productListSwitch}<Table<ReportRow> className="af-report-table" size="small" rowKey={section.key} loading={key === 'products' ? productSales.isPending : details.isPending} columns={key === 'customers' ? customerColumns : key === 'products' ? sortableSales(columnsOf(shownColumns(section.columns, coreColumns.products, extraColumns.products))) : columnsOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection]))} dataSource={key === 'products' ? productRows : details.data?.content ?? []} scroll={{ x: tableWidthOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection])), y: reportTableHeight }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : key === 'products' && productKeyword ? 'Không có sản phẩm phù hợp.' : 'Chưa có dữ liệu trong kỳ.' }}
+            <>{key === 'products' && productListSwitch}{key === 'customers' && customerSearchBox}<Table<ReportRow> className="af-report-table" size="small" rowKey={section.key} loading={key === 'products' ? productSales.isPending : details.isPending} columns={key === 'customers' ? customerColumns : key === 'products' ? sortableSales(columnsOf(shownColumns(section.columns, coreColumns.products, extraColumns.products))) : columnsOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection]))} dataSource={key === 'products' ? productRows : details.data?.content ?? []} scroll={{ x: tableWidthOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection])), y: reportTableHeight }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : key === 'products' && productKeyword ? 'Không có sản phẩm phù hợp.' : key === 'customers' && customerQ ? 'Không có khách hàng phù hợp.' : 'Chưa có dữ liệu trong kỳ.' }}
             pagination={{ current: page + 1, pageSize: size, total: key === 'products' ? productRows.length : details.data?.totalElements ?? 0, showSizeChanger: true, pageSizeOptions: [20, 50, 100], onChange: (next, nextSize) => { setPage(nextSize === size ? next - 1 : 0); setSize(nextSize) } }} /></>
           )}
         </Card> })),

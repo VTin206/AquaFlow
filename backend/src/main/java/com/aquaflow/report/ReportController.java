@@ -41,13 +41,15 @@ public class ReportController {
         @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate from,
         @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate to,
         @RequestParam(required=false) OrderChannel channel,@RequestParam(required=false) FulfillmentType method,
-        @RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size) {
+        @RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size,
+        @RequestParam(required=false) String q) {
         var p=params(from,to,channel,method,page,size);
         String path=request.getRequestURI();
+        if(q!=null && q.length()>100) throw new BadRequestException("Từ khóa tìm kiếm tối đa 100 ký tự");
         if(path.endsWith("/products")) return repository.products(p,page,size);
         if(path.endsWith("/inventory")) return repository.inventory(p,page,size);
         if(path.endsWith("/delivery")) return repository.delivery(p,page,size);
-        return repository.customers(p,page,size);
+        return repository.customers(p,page,size,com.aquaflow.shared.api.SearchKeyword.of(q));
     }
     private MapSqlParameterSource params(LocalDate from,LocalDate to,OrderChannel channel,FulfillmentType method,int page,int size) {
         if(from.isAfter(to) || ChronoUnit.DAYS.between(from,to)>365 || to.isAfter(LocalDate.now(clock.withZone(ZONE)))

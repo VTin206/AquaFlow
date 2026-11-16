@@ -78,6 +78,9 @@ public class SecurityConfig {
                         // Kiểm kê (điều chỉnh tồn) chỉ chủ cửa hàng.
                         .requestMatchers("/api/v1/inventory/adjustments/**", "/api/v1/inventory/adjustments").hasRole("ADMIN")
                         .requestMatchers("/api/v1/inventory/**").hasAnyRole("ADMIN", "SALES_STAFF")
+                        // Thương hiệu: nhân viên xem để lọc sản phẩm; chỉ chủ cửa hàng thêm/sửa/xóa.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/brands", "/api/v1/brands/*").hasAnyRole("ADMIN", "SALES_STAFF")
+                        .requestMatchers("/api/v1/brands", "/api/v1/brands/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/products/**", "/api/v1/bottle-types/**", "/api/v1/suppliers/**").hasAnyRole("ADMIN", "SALES_STAFF")
                         // Loại sản phẩm chỉ cho nhân viên cửa hàng; trang khách đọc tên loại trong ProductResponse.
                         .requestMatchers("/api/v1/product-categories", "/api/v1/product-categories/**").hasAnyRole("ADMIN", "SALES_STAFF")
