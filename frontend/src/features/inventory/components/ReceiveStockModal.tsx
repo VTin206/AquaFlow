@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { App, Button, Col, Form, Input, InputNumber, Modal, Result, Row, Select, Table, Typography } from 'antd'
 import { Plus, Trash2 } from 'lucide-react'
+import { DateField } from '@/shared/components/DateField'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { isoToVnDate, localToday } from '../expiry'
@@ -219,7 +220,7 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                     },
                   ]}
                 >
-                  <Input type="date" max={today} />
+                  <DateField max={today} />
                 </Form.Item>
               </Col>
               <Col xs={12} md={8}>
@@ -317,7 +318,7 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                                 },
                               ]}
                             >
-                              <Input type="date" max={receivedAt} />
+                              <DateField max={receivedAt} />
                             </Form.Item>
                           </Col>
                           <Col xs={12} md={6}>
@@ -339,7 +340,7 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                                 },
                               ]}
                             >
-                              <Input type="date" min={today} />
+                              <DateField min={today} />
                             </Form.Item>
                           </Col>
                           <Col xs={8} md={4}>
