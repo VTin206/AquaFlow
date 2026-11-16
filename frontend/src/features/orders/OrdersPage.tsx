@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { ToneLabel } from '@/shared/components/ToneLabel'
 import { filterOn } from '@/shared/utils/filterOn'
 import { Button, Card, Grid, Input, Segmented, Select } from 'antd'
@@ -85,9 +85,14 @@ export function OrdersPage() {
     <Page
       title="Đơn hàng"
       actions={
-        <Button type="primary" icon={<Plus size={16} />} onClick={() => setCreating(true)}>
-          Tạo đơn hàng
-        </Button>
+        <>
+          <Link to="/delivery">
+            <Button>Bảng giao hàng</Button>
+          </Link>
+          <Button type="primary" icon={<Plus size={16} />} onClick={() => setCreating(true)}>
+            Tạo đơn hàng
+          </Button>
+        </>
       }
     >
       <Card className="af-card" styles={{ body: { padding: 0 } }}>

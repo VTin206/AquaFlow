@@ -1,6 +1,7 @@
 import { useState, type KeyboardEvent, type ReactNode } from 'react'
 import { filterOn } from '@/shared/utils/filterOn'
 import { useLinkedQuery } from '@/shared/utils/useLinkedQuery'
+import { Link } from 'react-router'
 import {
   App,
   Button,
@@ -55,9 +56,11 @@ function ProductImage({ product }: { product: CatalogItem }) {
 function StockTag({ product }: { product: CatalogItem }) {
   if (!product.active || product.stock === undefined) return null
   return (
-    <Tag color={product.stock === 0 ? 'default' : product.lowStock ? 'orange' : 'green'}>
-      {product.stock === 0 ? 'Chưa có hàng' : `Còn ${product.stock}`}
-    </Tag>
+    <Link to={`/inventory?q=${encodeURIComponent(product.sku)}`} title="Xem tồn kho" onClick={(event) => event.stopPropagation()}>
+      <Tag color={product.stock === 0 ? 'default' : product.lowStock ? 'orange' : 'green'} className="af-tag-link">
+        {product.stock === 0 ? 'Chưa có hàng' : `Còn ${product.stock}`}
+      </Tag>
+    </Link>
   )
 }
 

@@ -3504,3 +3504,7 @@ html:has(.af-shell) body {
   object-fit: contain;
   flex-shrink: 0;
 }
+
+.af-tag-link {
+  cursor: pointer;
+}
