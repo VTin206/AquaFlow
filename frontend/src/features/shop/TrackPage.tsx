@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Alert, App, Button, Card, Form, Input, Result, Skeleton, Steps, Typography } from 'antd'
-import { Copy, Hash, LayoutDashboard, LogIn, Phone, RefreshCw, Search, ShoppingBag } from 'lucide-react'
+import { Copy, Hash, LayoutDashboard, LogIn, Phone, ReceiptText, RefreshCw, Search, ShoppingBag } from 'lucide-react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { Money } from '@/shared/components/Money'
 import { focusNextOnEnter } from '@/shared/utils/forms'
@@ -89,7 +89,7 @@ function LookupForm() {
             <>
               <p>Bạn đang đăng nhập với tên {user.name}.</p>
               <Link to={accountDestination(user, '/shop/orders')}>
-                <Button size="large" block icon={<LayoutDashboard size={18} />}>
+                <Button size="large" block icon={isCustomer(user) ? <ReceiptText size={18} /> : <LayoutDashboard size={18} />}>
                   {isCustomer(user) ? 'Đơn hàng của tôi' : 'Trang quản lý'}
                 </Button>
               </Link>

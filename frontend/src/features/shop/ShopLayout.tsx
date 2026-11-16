@@ -66,7 +66,7 @@ const drinkMenuHref = (filter: DrinkMenuFilter) => {
  */
 export function ShopLayout() {
   const settings = useShopContact()
-  // Khách đã đăng nhập có sẵn danh sách đơn nên không cần tra cứu bằng mã đơn và số điện thoại.
+  // Mục menu luôn là "Tra cứu đơn"; khách đã đăng nhập thì vào thẳng danh sách đơn của mình thay cho form nhập mã đơn.
   const ownOrders = isCustomer(useAuth().user)
   const navigate = useNavigate()
   const location = useLocation()
@@ -170,7 +170,7 @@ export function ShopLayout() {
               to={ownOrders ? '/shop/orders' : '/track'}
               className={({ isActive }) => `af-shop-nav-link${isActive ? ' is-active' : ''}`}
             >
-              {ownOrders ? 'Đơn của tôi' : 'Tra cứu đơn'}
+              Tra cứu đơn
             </NavLink>
           </nav>
           <div className="af-shop-icons">

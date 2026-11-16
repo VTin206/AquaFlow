@@ -73,13 +73,12 @@ test('bấm một mục trong menu cũng đóng; focus bàn phím từ ngoài đ
   expect(closed()).toBe(false)
 })
 
-test('menu dẫn khách đã đăng nhập tới đơn của mình, còn lại vào tra cứu đơn', () => {
+test('menu luôn ghi Tra cứu đơn; khách đã đăng nhập thì vào danh sách đơn của mình', () => {
   renderShop()
   expect(screen.getByRole('link', { name: 'Tra cứu đơn' }).getAttribute('href')).toBe('/track')
   cleanup()
   auth.user = { name: 'Khách Test', role: 'CUSTOMER' }
   renderShop()
-  expect(screen.getByRole('link', { name: 'Đơn của tôi' }).getAttribute('href')).toBe('/shop/orders')
-  expect(screen.queryByRole('link', { name: 'Tra cứu đơn' })).toBeNull()
+  expect(screen.getByRole('link', { name: 'Tra cứu đơn' }).getAttribute('href')).toBe('/shop/orders')
   auth.user = null
 })

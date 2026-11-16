@@ -7,6 +7,7 @@ import {
   LockKeyhole,
   LogOut,
   PackageSearch,
+  ReceiptText,
   ShoppingBag,
   UserRound,
   UserRoundPlus,
@@ -83,7 +84,11 @@ export function ShopAccountPage() {
             <small>{staff?.roleName ?? user.role}</small>
           </div>
           <div className="af-shop-account-actions">
-            <Button type="primary" icon={<LayoutDashboard size={16} />} onClick={() => navigate(accountDestination(user, '/shop/orders'))}>
+            <Button
+              type="primary"
+              icon={isCustomer(user) ? <ReceiptText size={16} /> : <LayoutDashboard size={16} />}
+              onClick={() => navigate(accountDestination(user, '/shop/orders'))}
+            >
               {isCustomer(user) ? 'Đơn hàng của tôi' : 'Trang quản lý'}
             </Button>
             <Button danger icon={<LogOut size={16} />} onClick={() => logout()}>
