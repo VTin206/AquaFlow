@@ -6,6 +6,8 @@ import { ShopLayout } from './ShopLayout'
 
 vi.mock('./cart', () => ({ useCart: () => [] }))
 vi.mock('./shopService', () => ({ shopKeys: { products: ['shop', 'products'] }, useShopContact: () => undefined }))
+const auth = vi.hoisted(() => ({ user: null as { name: string; role: string } | null }))
+vi.mock('@/features/auth/useAuth', () => ({ useAuth: () => auth }))
 vi.mock('./components/AccountMenu', () => ({ AccountMenu: () => null }))
 vi.mock('./components/CartDrawer', () => ({ CartDrawer: () => null }))
 vi.mock('./components/ShopFooter', () => ({ ShopFooter: () => null }))
@@ -69,4 +71,14 @@ test('bấm một mục trong menu cũng đóng; focus bàn phím từ ngoài đ
   act(() => screen.getByRole('link', { name: 'Trang chủ' }).focus())
   act(() => drinksLink().focus())
   expect(closed()).toBe(false)
+})
+
+test('menu luôn ghi Tra cứu đơn; khách đã đăng nhập thì vào danh sách đơn của mình', () => {
+  renderShop()
+  expect(screen.getByRole('link', { name: 'Tra cứu đơn' }).getAttribute('href')).toBe('/track')
+  cleanup()
+  auth.user = { name: 'Khách Test', role: 'CUSTOMER' }
+  renderShop()
+  expect(screen.getByRole('link', { name: 'Tra cứu đơn' }).getAttribute('href')).toBe('/shop/orders')
+  auth.user = null
 })

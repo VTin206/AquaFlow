@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, Card, Descriptions, Empty, InputNumber, Skeleton, Space, Tag, Typography } from 'antd'
 import { Droplets, Minus, Plus, ShoppingCart, Zap } from 'lucide-react'
 import { useNavigate, useOutletContext, useParams } from 'react-router'
@@ -17,6 +17,10 @@ export function ProductDetailPage() {
   const navigate = useNavigate()
   const [quantity, setQuantity] = useState(1)
   const product = query.data
+  const productName = product?.name
+  useEffect(() => {
+    document.title = productName ? `${productName} | AquaFlow` : 'Sản phẩm | AquaFlow'
+  }, [productName])
   return (
     <div className="af-shop-page af-shop-detail-page">
       <Card>

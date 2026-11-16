@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { App, Avatar, Button, Popover } from 'antd'
 import { useQueryClient } from '@tanstack/react-query'
-import { LayoutDashboard, LogOut, UserRound } from 'lucide-react'
+import { LayoutDashboard, LogOut, ReceiptText, UserRound } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { devAccounts, type DevAccount } from '@/features/auth/devAccounts'
 import { useAuth } from '@/features/auth/useAuth'
@@ -67,9 +67,20 @@ export function AccountMenu({ variant = 'icon' }: { variant?: 'icon' | 'text' })
           <small>{staff?.roleName ?? user.role}</small>
         </div>
       </div>
-      <Button block type="primary" icon={<LayoutDashboard size={16} />} onClick={() => go(accountDestination(user))}>
+      <Button
+        block
+        type="primary"
+        icon={isCustomer(user) ? <ReceiptText size={16} /> : <LayoutDashboard size={16} />}
+        onClick={() => go(accountDestination(user, '/shop/orders'))}
+      >
         {isCustomer(user) ? 'Đơn hàng của tôi' : 'Trang quản lý'}
       </Button>
+      {/* Hồ sơ và sổ địa chỉ của khách nằm ở trang tài khoản. */}
+      {isCustomer(user) && (
+        <Button block icon={<UserRound size={16} />} onClick={() => go('/shop/account')}>
+          Tài khoản của tôi
+        </Button>
+      )}
       {showSwitch && (
         <div className="af-shop-account-switch">
           <small>Đổi tài khoản (dev)</small>

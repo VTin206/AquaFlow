@@ -14,6 +14,10 @@ import { RequireAuth } from '@/app/RequireAuth'
 import { RequireCustomer } from '@/app/RequireCustomer'
 import { CustomerOrderPage, CustomerOrdersPage } from '@/features/shop/CustomerOrdersPage'
 import { customerOrderApi } from '@/features/shop/customerOrderApi'
+import { catalogApi } from '@/features/live/catalogApi'
+import { orderTrackingApi } from '@/features/live/orderTrackingApi'
+import { settingsApi } from '@/features/settings/settingsApi'
+import type { PublicOrder } from './types'
 import { OrderDeliveryHistory } from './OrderDeliveryHistory'
 import { orderDeliveryHistory } from './orderDeliveryApi'
 import { ApiError } from '@/shared/api/client'
@@ -246,7 +250,8 @@ describe('FE1 customer screens and role separation', () => {
     await waitFor(() => expect(refresh.className).not.toContain('ant-btn-loading'))
     fireEvent.click(refresh)
     expect(await screen.findByText('ORDER-12')).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Xem chi tiết' }).getAttribute('href')).toBe('/shop/orders/12')
+    expect(screen.getByRole('link', { name: /ORDER-12/ }).getAttribute('href')).toBe('/shop/orders/12')
+    expect(screen.getByText('Đang chuẩn bị')).toBeTruthy()
     expect(screen.queryByText('Xuất kho')).toBeNull()
     expect(orderDeliveryHistory).not.toHaveBeenCalled()
   })
@@ -383,5 +388,84 @@ describe('FE1 authentication', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Login customer' }))
     await waitFor(() => expect(screen.getByText('Signed in')).toBeTruthy())
     expect(screen.getByText('No staff role')).toBeTruthy()
+  })
+})
+
+describe('customer order detail', () => {
+  const renderOrder = (value: LiveOrder) => {
+    vi.mocked(customerOrderApi.detail).mockResolvedValue(value)
+    return render(
+      <Providers path="/shop/orders/12">
+        <Routes>
+          <Route path="/shop/orders/:id" element={<CustomerOrderPage />} />
+        </Routes>
+      </Providers>,
+    )
+  }
+  it('shows the ward with the address, hides the ground-floor note and sets the tab title', async () => {
+    renderOrder({ ...order, deliveryArea: 'Phường Bến Thành', note: 'Gọi trước khi giao\nSố tầng đi thang bộ: 0' })
+    expect(await screen.findByText('Address, Phường Bến Thành')).toBeTruthy()
+    expect(screen.getByText('Gọi trước khi giao')).toBeTruthy()
+    expect(screen.queryByText(/Số tầng đi thang bộ/)).toBeNull()
+    await waitFor(() => expect(document.title).toBe('Đơn ORDER-12 | AquaFlow'))
+  })
+  it('buy again puts the products still on sale back in the cart', async () => {
+    vi.mocked(catalogApi.products).mockResolvedValueOnce([{ id: 3, name: 'Nước 19L' }] as never)
+    renderOrder({
+      ...order,
+      status: 'DELIVERED',
+      items: [
+        { id: 1, productId: 3, quantity: 2, unitPrice: 5000, lineTotal: 10000 },
+        { id: 2, productId: 9, quantity: 1, unitPrice: 5000, lineTotal: 5000 },
+      ],
+    })
+    const again = await screen.findByRole('button', { name: /Mua lại/ })
+    await waitFor(() => expect((again as HTMLButtonElement).disabled).toBe(false))
+    fireEvent.click(again)
+    expect(await screen.findByText('Đã thêm 1 sản phẩm vào giỏ; 1 sản phẩm không còn bán.')).toBeTruthy()
+    expect(JSON.parse(localStorage.getItem('aquaflow.shop.cart.live') ?? '[]')).toEqual([{ productId: '3', quantity: 2 }])
+  })
+})
+
+describe('customer order transfer', () => {
+  const tracked = { id: 'ORDER-12', paid: 4000, due: 6000, total: 10000 } as PublicOrder
+  const renderOrder = (value: LiveOrder) => {
+    vi.mocked(customerOrderApi.detail).mockResolvedValue(value)
+    vi.spyOn(orderTrackingApi, 'byToken').mockResolvedValue(tracked)
+    return render(
+      <Providers path="/shop/orders/12">
+        <Routes>
+          <Route path="/shop/orders/:id" element={<CustomerOrderPage />} />
+        </Routes>
+      </Providers>,
+    )
+  }
+  it('shows paid and due amounts and the transfer QR once the order is confirmed', async () => {
+    vi.spyOn(settingsApi, 'profile').mockResolvedValue({
+      storeName: 'AquaFlow',
+      address: '',
+      phone: '',
+      email: '',
+      openingHours: '',
+      bankName: 'Vietcombank',
+      bankAccount: '0123456789',
+      bankHolder: 'AQUAFLOW',
+    } as never)
+    renderOrder({ ...order, status: 'CONFIRMED', trackingToken: 'tok' })
+    expect(await screen.findByText('Còn phải trả')).toBeTruthy()
+    expect(screen.getByText('Đã thanh toán')).toBeTruthy()
+    expect(await screen.findByText('0123456789')).toBeTruthy()
+    expect(screen.getByText('Chuyển khoản')).toBeTruthy()
+  })
+  it('says transfer is not supported when the store has not published a bank account', async () => {
+    vi.spyOn(settingsApi, 'profile').mockResolvedValue({ storeName: 'AquaFlow', address: '', phone: '', email: '', openingHours: '' } as never)
+    renderOrder({ ...order, status: 'CONFIRMED', trackingToken: 'tok' })
+    expect(await screen.findByText('Chưa hỗ trợ. Vui lòng trả tiền khi nhận hàng.')).toBeTruthy()
+  })
+  it('does not offer transfer before the store confirms the order', async () => {
+    vi.spyOn(settingsApi, 'profile').mockResolvedValue({ storeName: 'AquaFlow', address: '', phone: '', email: '', openingHours: '' } as never)
+    renderOrder({ ...order, status: 'PENDING', trackingToken: 'tok' })
+    expect(await screen.findByText('Còn phải trả')).toBeTruthy()
+    expect(screen.queryByText('Chuyển khoản')).toBeNull()
   })
 })

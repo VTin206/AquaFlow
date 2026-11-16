@@ -4,7 +4,8 @@ import { currency } from '../utils/format'
 import { bankBinOf, transferNote, vietQrPayload } from './vietqr'
 
 type TransferQrProps = {
-  settings?: StoreSettings
+  /** Tài khoản nhận tiền: cài đặt cửa hàng (nhân viên) hoặc hồ sơ công khai (khách). */
+  settings?: Pick<StoreSettings, 'bankName' | 'bankAccount' | 'bankHolder'>
   amount: number
   /** Nội dung chuyển khoản, thường là mã đơn. */
   note: string

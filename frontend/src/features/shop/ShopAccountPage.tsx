@@ -1,16 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Alert, App, Avatar, Button, Checkbox, Divider, Form, Input, Modal } from 'antd'
-import {
-  ArrowRight,
-  Headphones,
-  LayoutDashboard,
-  LockKeyhole,
-  LogOut,
-  PackageSearch,
-  ShoppingBag,
-  UserRound,
-  UserRoundPlus,
-} from 'lucide-react'
+import { ArrowRight, Headphones, LayoutDashboard, LockKeyhole, PackageSearch, ShoppingBag, UserRound, UserRoundPlus } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { focusNextOnEnter } from '@/shared/utils/forms'
 import type { LoginCredentials } from '@/features/auth/authService'
@@ -29,7 +19,7 @@ type LoginFormValues = LoginCredentials & { rememberMe?: boolean }
  * Khách vào đơn của mình, nhân viên vào không gian quản lý; bị chặn ở trang nào thì đăng nhập xong quay lại trang đó.
  */
 export function ShopAccountPage() {
-  const { login, logout, isAuthenticated, user } = useAuth()
+  const { login, isAuthenticated, user } = useAuth()
   const staff = useStaff()
   const { message } = App.useApp()
   const navigate = useNavigate()
@@ -39,7 +29,10 @@ export function ShopAccountPage() {
   const [redirectAfterLogin, setRedirectAfterLogin] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const rememberedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? ''
-  const returnTo = (location.state as { from?: string } | null)?.from ?? '/'
+  const routeState = location.state as { from?: string; email?: string } | null
+  const returnTo = routeState?.from ?? '/'
+  // Vừa tạo tài khoản xong thì điền sẵn email đó thay cho email đã ghi nhớ.
+  const initialEmail = routeState?.email || rememberedEmail
 
   useEffect(() => {
     document.title = 'Tài khoản | AquaFlow'
@@ -79,14 +72,14 @@ export function ShopAccountPage() {
             {user.email && <small>{user.email}</small>}
             <small>{staff?.roleName ?? user.role}</small>
           </div>
-          <div className="af-shop-account-actions">
-            <Button type="primary" icon={<LayoutDashboard size={16} />} onClick={() => navigate(accountDestination(user))}>
-              {isCustomer(user) ? 'Đơn hàng của tôi' : 'Trang quản lý'}
-            </Button>
-            <Button danger icon={<LogOut size={16} />} onClick={() => logout()}>
-              Đăng xuất
-            </Button>
-          </div>
+          {/* Đăng xuất và đơn hàng đã có trong menu tài khoản ở đầu trang; nhân viên không có hồ sơ ở đây nên giữ lối về trang quản lý. */}
+          {!isCustomer(user) && (
+            <div className="af-shop-account-actions">
+              <Button type="primary" icon={<LayoutDashboard size={16} />} onClick={() => navigate(accountDestination(user))}>
+                Trang quản lý
+              </Button>
+            </div>
+          )}
         </section>
         {isCustomer(user) && <CustomerAccountPanel />}
       </div>
@@ -101,7 +94,7 @@ export function ShopAccountPage() {
           {error && <Alert type="error" showIcon style={{ marginBottom: 20 }} title={error} />}
           <Form<LoginFormValues>
             name="shop-login"
-            initialValues={{ email: rememberedEmail, rememberMe: Boolean(rememberedEmail) }}
+            initialValues={{ email: initialEmail, rememberMe: Boolean(rememberedEmail) }}
             layout="vertical"
             requiredMark={false}
             autoComplete="on"

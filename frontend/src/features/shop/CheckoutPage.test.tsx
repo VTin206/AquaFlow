@@ -10,7 +10,7 @@ import { deliveryQuoteApi } from './deliveryQuoteApi'
 vi.mock('./deliveryQuoteApi', () => ({ deliveryQuoteApi: { quote: vi.fn() } }))
 vi.mock('./customerAccountApi', async original => ({
   ...(await original<typeof import('./customerAccountApi')>()),
-  customerAccountApi: { addresses: vi.fn().mockResolvedValue([]) },
+  customerAccountApi: { addresses: vi.fn().mockResolvedValue([]), createAddress: vi.fn().mockResolvedValue({}) },
 }))
 
 const mocks = vi.hoisted(() => ({
@@ -71,6 +71,7 @@ beforeEach(() => {
   mocks.user = null
   vi.mocked(deliveryQuoteApi.quote).mockReset().mockResolvedValue({ subtotal: 100000, baseFee: 15000, stairsFee: 0, deliveryFee: 15000, total: 115000 })
   vi.mocked(customerAccountApi.addresses).mockReset().mockResolvedValue([])
+  vi.mocked(customerAccountApi.createAddress).mockClear()
   mocks.profile = null
   mocks.mutateAsync.mockReset()
   mocks.mutateAsync.mockResolvedValue({ id: 5, orderCode: 'AF-5' })
@@ -81,11 +82,54 @@ test('chọn địa chỉ đã lưu điền người nhận và địa chỉ và
   vi.mocked(customerAccountApi.addresses).mockResolvedValue([{ id: 1, customerId: 2, recipientName: 'Người nhận khác', recipientPhone: '0905555555', addressLine: 'Địa chỉ đã lưu', area: 'Quận 3', isDefault: true }])
   renderPage()
   fireEvent.mouseDown(await screen.findByRole('combobox', { name: 'Chọn địa chỉ đã lưu' }))
-  fireEvent.click(await screen.findByText('Mặc định · Người nhận khác · Địa chỉ đã lưu, Quận 3'))
+  // Địa chỉ mặc định đã được điền sẵn nên ô chọn cũng đang hiện nó; bấm đúng mục trong danh sách thả xuống.
+  fireEvent.click((await screen.findAllByText('Mặc định · Người nhận khác · Địa chỉ đã lưu, Quận 3')).at(-1)!)
   expect((screen.getByLabelText('Tên người nhận') as HTMLInputElement).value).toBe('Người nhận khác')
   expect((screen.getByLabelText('Địa chỉ giao') as HTMLInputElement).value).toBe('Địa chỉ đã lưu')
   await placeOrder()
   await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ customer: 'Người nhận khác', phone: '0905555555', address: 'Địa chỉ đã lưu', area: 'Quận 3' })))
+})
+
+test('khách có sổ địa chỉ được điền sẵn địa chỉ mặc định và không bị mời lưu lại', async () => {
+  mocks.user = { name: 'Customer', role: 'CUSTOMER', email: 'k@example.com', phone: '0901234567' }
+  vi.mocked(customerAccountApi.addresses).mockResolvedValue([
+    { id: 1, customerId: 2, recipientName: 'Nhà', recipientPhone: '0905555555', addressLine: 'Địa chỉ phụ', area: 'Quận 1', isDefault: false },
+    { id: 2, customerId: 2, recipientName: 'Người nhận mặc định', recipientPhone: '0906666666', addressLine: 'Địa chỉ mặc định', area: 'Quận 3', isDefault: true },
+  ])
+  renderPage()
+  await waitFor(() => expect((screen.getByLabelText('Địa chỉ giao') as HTMLInputElement).value).toBe('Địa chỉ mặc định'))
+  expect((screen.getByLabelText('Tên người nhận') as HTMLInputElement).value).toBe('Người nhận mặc định')
+  expect(screen.queryByLabelText('Lưu địa chỉ này vào sổ địa chỉ')).toBeNull()
+  await placeOrder()
+  await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ address: 'Địa chỉ mặc định', area: 'Quận 3' })))
+  expect(customerAccountApi.createAddress).not.toHaveBeenCalled()
+})
+
+test('địa chỉ mới của khách được lưu vào sổ địa chỉ sau khi đặt đơn, bỏ tích thì không lưu', async () => {
+  mocks.user = { name: 'Khách Tài Khoản', role: 'CUSTOMER', email: 'k@example.com', phone: '0901234567' }
+  const first = renderPage()
+  await fillDelivery()
+  expect(((await screen.findByLabelText('Lưu địa chỉ này vào sổ địa chỉ')) as HTMLInputElement).checked).toBe(true)
+  await placeOrder()
+  await waitFor(() =>
+    expect(customerAccountApi.createAddress).toHaveBeenCalledWith({
+      recipientName: 'Khách Tài Khoản',
+      recipientPhone: '0901234567',
+      addressLine: '12 Đường Test',
+      area: 'Phường Bến Thành',
+      isDefault: true,
+    }),
+  )
+  first.unmount()
+  vi.mocked(customerAccountApi.createAddress).mockClear()
+  mocks.mutateAsync.mockClear()
+
+  renderPage()
+  await fillDelivery()
+  fireEvent.click(await screen.findByLabelText('Lưu địa chỉ này vào sổ địa chỉ'))
+  await placeOrder()
+  await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledTimes(1))
+  expect(customerAccountApi.createAddress).not.toHaveBeenCalled()
 })
 
 test('giao sớm nhất không gửi giờ hẹn, đơn gửi đúng thông tin đã nhập', async () => {
@@ -187,4 +231,13 @@ test('báo giá chưa có mức phí vẫn hiện cách tính chung, không đ�
   renderPage()
   expect(await screen.findByText('Miễn phí khi đơn đủ số sản phẩm cửa hàng quy định')).toBeTruthy()
   expect(screen.getByText(/Tính cho mỗi bình\/thùng theo số tầng đi thang bộ/)).toBeTruthy()
+})
+
+test('khách vãng lai thấy lối đăng nhập quay lại trang đặt hàng; khách đã đăng nhập thì không', () => {
+  const first = renderPage()
+  expect(screen.getByRole('link', { name: 'Đăng nhập' }).getAttribute('href')).toBe('/shop/account')
+  first.unmount()
+  mocks.user = { name: 'Khách', role: 'CUSTOMER', email: 'k@example.com', phone: '0901234567' }
+  renderPage()
+  expect(screen.queryByRole('link', { name: 'Đăng nhập' })).toBeNull()
 })
