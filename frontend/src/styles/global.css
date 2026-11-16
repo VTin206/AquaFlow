@@ -3516,3 +3516,32 @@ html:has(.af-shell) body {
 .af-dashboard-today b {
   color: var(--af-text-strong);
 }
+
+/* Tạo chuyến: tiêu đề nhỏ trên danh sách đơn, cách phần chọn tài xế bằng một đường kẻ. */
+.af-trip-stops-title {
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--af-border);
+  color: var(--af-text-secondary);
+  font-size: var(--af-fs-sm);
+  font-weight: 600;
+}
+.af-trip-stops-title + .af-trip-stops {
+  margin-top: 8px;
+}
+
+/* Hồ sơ khách: địa chỉ giao và nút Quản lý địa chỉ trên cùng dòng với nhãn. */
+.af-address-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+}
+.af-address-cell .af-address-view {
+  flex-basis: 100%;
+  margin: 0;
+}
+.af-inline-link.ant-btn {
+  height: auto;
+  padding: 0;
+}

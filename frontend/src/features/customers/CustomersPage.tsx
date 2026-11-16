@@ -260,7 +260,7 @@ export function CustomersPage() {
     {
       title: 'Thao tác',
       key: 'action',
-      width: 130,
+      width: 150,
       fixed: 'right',
       render: (_, customer) => (
         <span className="af-row-actions">
@@ -313,23 +313,26 @@ export function CustomersPage() {
                   },
                 ]}
               />
-              <Input
-                allowClear
-                prefix={<Search size={16} className="af-input-icon" />}
-                placeholder="Tìm mã, tên, số điện thoại, địa chỉ..."
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                className="af-search"
-              />
-              {view === 'active' && (
-                <Select<IdleFilter>
-                  aria-label="Lọc theo lần mua gần nhất"
-                  className={`af-customer-idle ${filterOn(idle !== 'all')}`}
-                  value={idle}
-                  onChange={setIdle}
-                  options={idleOptions}
+              {/* Bộ lọc và ô tìm gom về bên phải như trang Đơn hàng. */}
+              <div className="af-toolbar-end">
+                {view === 'active' && (
+                  <Select<IdleFilter>
+                    aria-label="Lọc theo lần mua gần nhất"
+                    className={`af-customer-idle ${filterOn(idle !== 'all')}`}
+                    value={idle}
+                    onChange={setIdle}
+                    options={idleOptions}
+                  />
+                )}
+                <Input
+                  allowClear
+                  prefix={<Search size={16} className="af-input-icon" />}
+                  placeholder="Tìm mã, tên, số điện thoại, địa chỉ..."
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  className="af-search"
                 />
-              )}
+              </div>
             </div>
             {view === 'archived' ? (
               archivedQuery.isError ? (
@@ -375,7 +378,7 @@ export function CustomersPage() {
                   loading={customersQuery.isPending}
                   pagination={serverTablePagination(server)}
                   locale={{ emptyText: filtered ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.' }}
-                  scroll={{ x: 1074 }}
+                  scroll={{ x: 1094 }}
                   rowSelection={{
                     selectedRowKeys: checked.map((customer) => customer.id),
                     preserveSelectedRowKeys: true,

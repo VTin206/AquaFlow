@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Alert, App, Form, Input, Modal, Select } from 'antd'
+import { Alert, App, Col, Form, Input, Modal, Row, Select } from 'antd'
 import { ModalTotalFooter } from '@/shared/components/ModalTotalFooter'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
@@ -51,26 +51,30 @@ export function CreateTripModal({
       onCancel={onClose}
     >
       <Form form={form} layout="vertical" onFinish={(values) => create.mutate(values)}>
-        <Form.Item
-          name="driverId"
-          label="Tài xế"
-          extra="Có thể phân sau, nhưng phải có tài xế mới xuất kho được."
-        >
-          <Select
-            allowClear
-            showSearch
-            optionFilterProp="label"
-            loading={drivers.isPending}
-            placeholder="Chọn tài xế đang hoạt động"
-            options={drivers.data?.map((driver) => ({ value: driver.id, label: driver.name }))}
-          />
-        </Form.Item>
+        {/* Tài xế và biển số cùng một hàng; tài xế có thể chọn sau, khi xuất kho mới bắt buộc. */}
+        <Row gutter={12}>
+          <Col xs={24} sm={14}>
+            <Form.Item name="driverId" label="Tài xế">
+              <Select
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                loading={drivers.isPending}
+                placeholder="Chọn sau cũng được"
+                options={drivers.data?.map((driver) => ({ value: driver.id, label: driver.name }))}
+              />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={10}>
+            <Form.Item name="vehicle" label="Biển số xe" rules={[{ max: 40 }]}>
+              <Input placeholder="Không bắt buộc" />
+            </Form.Item>
+          </Col>
+        </Row>
         {drivers.isError && drivers.error && <QueryError error={drivers.error} onRetry={drivers.refetch} />}
         {drivers.data && !drivers.data.length && <Alert type="info" title="Chưa có tài xế đang hoạt động." style={{ marginBottom: 16 }} />}
-        <Form.Item name="vehicle" label="Biển số xe" rules={[{ max: 40 }]}>
-          <Input placeholder="Không bắt buộc" />
-        </Form.Item>
       </Form>
+      <h4 className="af-trip-stops-title">Đơn trên chuyến</h4>
       <ul className="af-trip-stops">
         {orders.map((order, index) => (
           <li key={order.id}>
