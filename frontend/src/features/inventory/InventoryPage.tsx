@@ -54,6 +54,9 @@ export function InventoryPage() {
     (item) => item.expiredOnHand > 0 || (item.onHand > 0 && expiryStatus(expiryText(item), warningDays) === 'expired'),
   )
   const drafts = receiptsQuery.data?.statusCounts.DRAFT ?? 0
+  // Mặc định việc cần xử lý lên đầu: hết hạn → hết hàng → sắp hết → sắp hết hạn → còn lại.
+  const priority = (item: StockItem) =>
+    expired.includes(item) ? 0 : item.available === 0 ? 1 : isLow(item) ? 2 : expiring.includes(item) ? 3 : 4
   const lowLabel = hasThreshold ? 'Sắp hết' : 'Hết hàng'
   const visible = products
     .filter((item) =>
@@ -66,6 +69,7 @@ export function InventoryPage() {
             : true,
     )
     .filter((item) => matchesSearch(query, `${item.name} ${item.sku} ${item.brand ?? ''}`))
+    .sort((a, b) => priority(a) - priority(b) || a.name.localeCompare(b.name, 'vi'))
   // Chỉ tính các dòng còn hiện theo bộ lọc; số nhập gợi ý đủ gấp đôi ngưỡng tối thiểu, sửa được trong phiếu.
   const checked = visible.filter((item) => checkedIds.includes(item.id))
   const suggestedReceipt = (items: StockItem[]) =>
