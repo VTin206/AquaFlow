@@ -1,10 +1,10 @@
 import { Alert, App, Button, Card, Checkbox, DatePicker, Empty, Form, Input, InputNumber, Radio, Result, Skeleton, Typography } from 'antd'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { deliveryQuoteApi } from './deliveryQuoteApi'
 import { DeliveryFeeSummary } from './components/DeliveryFeeSummary'
 import dayjs, { type Dayjs } from 'dayjs'
 import { ChevronDown, Wallet } from 'lucide-react'
-import { useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Link, useNavigate, useOutletContext } from 'react-router'
 import type { LiveOrder } from '@/features/live/orderApi'
 import { Money } from '@/shared/components/Money'
@@ -18,6 +18,7 @@ import { disabledOutsideHours, formatOpeningHours, isWithinOpeningHours, parseOp
 import { usePlaceWebOrder, useShopContact, useShopProducts } from './shopService'
 import { useAuth } from '@/features/auth/useAuth'
 import { isCustomer } from '@/features/auth/accountAccess'
+import { accountKey, customerAccountApi, type SavedAddress } from './customerAccountApi'
 import { SavedAddressPicker } from './SavedAddressPicker'
 import { WardSelect } from '@/shared/address/WardSelect'
 import { TextArea } from '@/shared/components/TextArea'
@@ -31,6 +32,7 @@ type CheckoutForm = {
   appointment?: Dayjs
   note?: string
   remember: boolean
+  saveAddress?: boolean
   floor: number
 }
 
@@ -66,6 +68,33 @@ export function CheckoutPage() {
   // Tài khoản không có họ tên thì `name` là email, không dùng làm tên người nhận.
   const accountDefaults =
     user && isCustomer(user) ? { customer: user.name === user.email ? undefined : user.name, phone: user.phone ?? undefined } : undefined
+  const customer = isCustomer(user)
+  const queryClient = useQueryClient()
+  const addressKey = [...accountKey(user?.email), 'addresses']
+  const savedAddresses = useQuery({ queryKey: addressKey, queryFn: customerAccountApi.addresses, enabled: customer })
+  const applyAddress = (address: SavedAddress) =>
+    form.setFieldsValue({
+      customer: address.recipientName,
+      phone: address.recipientPhone,
+      address: address.addressLine,
+      area: address.area,
+    })
+  // Khách có sổ địa chỉ: điền sẵn địa chỉ mặc định một lần, trừ khi máy đã lưu thông tin hoặc khách đã tự nhập.
+  const hasProfile = Boolean(profile)
+  const prefilled = useRef(false)
+  useEffect(() => {
+    if (prefilled.current || !savedAddresses.data) return
+    prefilled.current = true
+    const address = savedAddresses.data.find((item) => item.isDefault) ?? savedAddresses.data[0]
+    if (address && !hasProfile && !form.isFieldsTouched(['address', 'area'])) applyAddress(address)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ chạy khi sổ địa chỉ tải xong
+  }, [savedAddresses.data])
+  const typedAddress: string = Form.useWatch('address', form) ?? ''
+  const typedArea: string = Form.useWatch('area', form) ?? ''
+  const inAddressBook = (address: string, area: string) =>
+    (savedAddresses.data ?? []).some((item) => item.addressLine.trim() === address.trim() && item.area.trim() === area.trim())
+  // Chỉ mời lưu khi địa chỉ đang nhập chưa có trong sổ.
+  const canSaveAddress = customer && savedAddresses.isSuccess && Boolean(typedAddress.trim() && typedArea.trim()) && !inAddressBook(typedAddress, typedArea)
   const lines = cart.map((line) => ({ ...line, product: products.data?.find((item) => item.id === line.productId) }))
   // Mã sản phẩm lạ (giỏ cũ, đổi nguồn dữ liệu) không có trong danh mục nên bị chặn ở `invalid` bên dưới.
   const invalidCartLine = cart.some((line) => !Number.isSafeInteger(line.quantity) || line.quantity < 1 || line.quantity > 99)
@@ -118,6 +147,17 @@ export function CheckoutPage() {
               }
             : null,
         )
+        if (customer && values.saveAddress && savedAddresses.data && !inAddressBook(draft.address, draft.area))
+          void customerAccountApi
+            .createAddress({
+              recipientName: draft.customer,
+              recipientPhone: draft.phone,
+              addressLine: draft.address,
+              area: draft.area,
+              isDefault: !savedAddresses.data.length,
+            })
+            .then(() => queryClient.invalidateQueries({ queryKey: accountKey(user?.email) }))
+            .catch(() => message.warning('Đơn đã đặt, nhưng chưa lưu được địa chỉ vào sổ địa chỉ.'))
         actions.clear()
         // Có mã tra cứu thì sang trang theo dõi đơn, chưa có thì báo thành công tại đây.
         if ('trackingToken' in order && order.trackingToken) navigate(`/track/${order.trackingToken}`, { state: { placed: true } })
@@ -213,7 +253,7 @@ export function CheckoutPage() {
             name="checkout"
             layout="vertical"
             scrollToFirstError={{ focus: true, block: 'center' }}
-            initialValues={{ ...accountDefaults, ...profile, when: 'asap', floor: 0, remember: Boolean(profile) }}
+            initialValues={{ ...accountDefaults, ...profile, when: 'asap', floor: 0, remember: Boolean(profile), saveAddress: true }}
             onFinish={submit}
             onKeyDown={handleFormKeys}
           >
@@ -244,7 +284,7 @@ export function CheckoutPage() {
                 </div>
               </Card>
               <Card title="Giao đến">
-                {isCustomer(user) && <SavedAddressPicker onSelect={address => form.setFieldsValue({ customer: address.recipientName, phone: address.recipientPhone, address: address.addressLine, area: address.area })} />}
+                {customer && <SavedAddressPicker onSelect={applyAddress} />}
                 <Form.Item
                   name="area"
                   label="Phường/Xã"
@@ -314,6 +354,11 @@ export function CheckoutPage() {
                 <Form.Item name="note" label="Ghi chú (không bắt buộc)" rules={[{ max: 500 }]}>
                   <TextArea rows={2} maxLength={500} placeholder="Ví dụ: gọi trước khi đến" />
                 </Form.Item>
+                {canSaveAddress && (
+                  <Form.Item name="saveAddress" valuePropName="checked" className="af-checkout-remember">
+                    <Checkbox>Lưu địa chỉ này vào sổ địa chỉ</Checkbox>
+                  </Form.Item>
+                )}
                 <Form.Item name="remember" valuePropName="checked" className="af-checkout-remember">
                   <Checkbox>Lưu thông tin trên máy này cho lần đặt sau</Checkbox>
                 </Form.Item>
