@@ -1024,6 +1024,9 @@ body {
   color: inherit;
   font: inherit;
   font-weight: inherit;
+  /* Trình duyệt đặt lại hai thuộc tính này cho <button>; lấy theo ô tiêu đề để cột sắp xếp được cũng in hoa như cột thường. */
+  letter-spacing: inherit;
+  text-transform: inherit;
   white-space: nowrap;
   cursor: pointer;
 }
