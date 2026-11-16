@@ -1,4 +1,4 @@
-import { Alert, Descriptions, Empty, Skeleton, Tag, Timeline } from 'antd'
+import { Alert, Descriptions, Skeleton, Tag, Timeline } from 'antd'
 import { Link } from 'react-router'
 import { QueryError } from '@/shared/components/QueryError'
 import { tripLabels } from '@/features/delivery/deliveryApi'
@@ -12,7 +12,7 @@ export function OrderDeliveryHistory({ orderId }: { orderId: number }) {
   if (!allowed) return null
   if (query.isError) return <QueryError error={query.error} onRetry={query.refetch} />
   if (query.isPending) return <Skeleton active />
-  if (!query.data.length) return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Đơn chưa được phân vào chuyến giao." />
+  if (!query.data.length) return <p className="af-order-more-empty">Đơn chưa được phân vào chuyến giao.</p>
   return (
     <div className="af-order-trips">
       {query.data.map(({ trip, assignment, attempts }) => {
