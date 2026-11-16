@@ -284,7 +284,7 @@ export function CheckoutPage() {
                 </div>
               </Card>
               <Card title="Giao đến">
-                {customer && <SavedAddressPicker onSelect={applyAddress} />}
+                {customer && <SavedAddressPicker onSelect={applyAddress} current={{ address: typedAddress, area: typedArea }} />}
                 <Form.Item
                   name="area"
                   label="Phường/Xã"

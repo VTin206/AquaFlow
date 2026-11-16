@@ -82,7 +82,8 @@ test('chọn địa chỉ đã lưu điền người nhận và địa chỉ và
   vi.mocked(customerAccountApi.addresses).mockResolvedValue([{ id: 1, customerId: 2, recipientName: 'Người nhận khác', recipientPhone: '0905555555', addressLine: 'Địa chỉ đã lưu', area: 'Quận 3', isDefault: true }])
   renderPage()
   fireEvent.mouseDown(await screen.findByRole('combobox', { name: 'Chọn địa chỉ đã lưu' }))
-  fireEvent.click(await screen.findByText('Mặc định · Người nhận khác · Địa chỉ đã lưu, Quận 3'))
+  // Địa chỉ mặc định đã được điền sẵn nên ô chọn cũng đang hiện nó; bấm đúng mục trong danh sách thả xuống.
+  fireEvent.click((await screen.findAllByText('Mặc định · Người nhận khác · Địa chỉ đã lưu, Quận 3')).at(-1)!)
   expect((screen.getByLabelText('Tên người nhận') as HTMLInputElement).value).toBe('Người nhận khác')
   expect((screen.getByLabelText('Địa chỉ giao') as HTMLInputElement).value).toBe('Địa chỉ đã lưu')
   await placeOrder()
