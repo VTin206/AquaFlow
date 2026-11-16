@@ -3504,3 +3504,12 @@ html:has(.af-shell) body {
   object-fit: contain;
   flex-shrink: 0;
 }
+
+/* Tổng quan của nhân viên không xem tiền: số đơn hôm nay là một dòng chữ dưới tiêu đề. */
+.af-dashboard-today {
+  margin: -8px 0 16px;
+  color: var(--af-text-secondary);
+}
+.af-dashboard-today b {
+  color: var(--af-text-strong);
+}

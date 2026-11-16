@@ -190,54 +190,69 @@ export function DashboardPage() {
         </>
       }
     >
-      <StatTiles label="Hôm nay">
-        <StatTile
-          title="Đơn tạo hôm nay"
-          loading={ordersQuery.isPending}
-          value={ordersQuery.isError ? undefined : todayOrders}
-          note={!ordersQuery.isError && <span>Hôm qua {yesterdayOrders} đơn</span>}
-        />
-        {showRevenue && (
-          <>
+      {/* Không xem được tiền thì chỉ còn số đơn: một dòng chữ thay cho thẻ kéo dài hết chiều ngang. */}
+      {!showRevenue && staff?.role !== 'ADMIN' ? (
+        <p className="af-dashboard-today">
+          {ordersQuery.isPending ? (
+            'Đang tải…'
+          ) : ordersQuery.isError ? (
+            'Chưa tải được số đơn hôm nay.'
+          ) : (
+            <>
+              Hôm nay <b>{todayOrders}</b> đơn mới
+            </>
+          )}
+        </p>
+      ) : (
+        <StatTiles label="Hôm nay">
+          <StatTile
+            title="Đơn tạo hôm nay"
+            loading={ordersQuery.isPending}
+            value={ordersQuery.isError ? undefined : todayOrders}
+            note={!ordersQuery.isError && <span>Hôm qua {yesterdayOrders} đơn</span>}
+          />
+          {showRevenue && (
+            <>
+              <StatTile
+                title="Doanh thu hôm nay"
+                money
+                loading={revenueQuery.isPending}
+                value={revenueToday?.revenue}
+                note={
+                  revenueToday &&
+                  revenueYesterday && (
+                    <>
+                      <StatChange current={revenueToday.revenue} previous={revenueYesterday.revenue} period="hôm qua" />
+                      <span>Hôm qua {currency(revenueYesterday.revenue)}</span>
+                    </>
+                  )
+                }
+              />
+              <StatTile
+                title="Thu ròng hôm nay"
+                money
+                loading={revenueQuery.isPending}
+                value={revenueToday?.collected}
+                note={revenueYesterday && <span>Hôm qua {currency(revenueYesterday.collected)}</span>}
+              />
+            </>
+          )}
+          {staff?.role === 'ADMIN' && (
             <StatTile
-              title="Doanh thu hôm nay"
+              title="Còn phải thu"
               money
-              loading={revenueQuery.isPending}
-              value={revenueToday?.revenue}
+              tone={unpaid.length ? 'due' : undefined}
+              loading={ordersQuery.isPending}
+              value={ordersQuery.isError ? undefined : unpaid.reduce((sum, order) => sum + amountDue(order), 0)}
               note={
-                revenueToday &&
-                revenueYesterday && (
-                  <>
-                    <StatChange current={revenueToday.revenue} previous={revenueYesterday.revenue} period="hôm qua" />
-                    <span>Hôm qua {currency(revenueYesterday.revenue)}</span>
-                  </>
+                !ordersQuery.isError && (
+                  <span>{unpaid.length ? `${unpaid.length} đơn đã giao chưa thu đủ` : 'Đã thu đủ các đơn đã giao'}</span>
                 )
               }
             />
-            <StatTile
-              title="Thu ròng hôm nay"
-              money
-              loading={revenueQuery.isPending}
-              value={revenueToday?.collected}
-              note={revenueYesterday && <span>Hôm qua {currency(revenueYesterday.collected)}</span>}
-            />
-          </>
-        )}
-        {staff?.role === 'ADMIN' && (
-          <StatTile
-            title="Còn phải thu"
-            money
-            tone={unpaid.length ? 'due' : undefined}
-            loading={ordersQuery.isPending}
-            value={ordersQuery.isError ? undefined : unpaid.reduce((sum, order) => sum + amountDue(order), 0)}
-            note={
-              !ordersQuery.isError && (
-                <span>{unpaid.length ? `${unpaid.length} đơn đã giao chưa thu đủ` : 'Đã thu đủ các đơn đã giao'}</span>
-              )
-            }
-          />
-        )}
-      </StatTiles>
+          )}
+        </StatTiles>
+      )}
 
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={16}>
