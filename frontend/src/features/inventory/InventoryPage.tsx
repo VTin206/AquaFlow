@@ -17,6 +17,8 @@ import { ReceiveStockModal } from './components/ReceiveStockModal'
 import { useExpiryWarningDays } from '@/features/settings/settingsService'
 import { daysUntilExpiry, expiryStatus, isoToVnDate } from './expiry'
 import { matchesSearch } from '@/shared/utils/search'
+import { useLinkedQuery } from '@/shared/utils/useLinkedQuery'
+import { Link } from 'react-router'
 import { useReceiptPage, useStockItems, type ReceiptView, type StockItem } from './useInventory'
 
 type Filter = 'all' | 'low' | 'expiring' | 'expired'
@@ -32,7 +34,7 @@ export function InventoryPage() {
   const receiptsQuery = useReceiptPage({ page: 0, size: 1 })
   const warningDays = useExpiryWarningDays()
   const returnsCount = usePendingReturns().data?.length ?? 0
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useLinkedQuery()
   const [filter, setFilter] = useState<Filter>('all')
   const [view, setView] = useState<View>('stock')
   // Bấm từ khung "Cần xử lý" thì tab Lô hàng mở sẵn bộ lọc tương ứng.
@@ -146,9 +148,9 @@ export function InventoryPage() {
       dataIndex: 'name',
       render: (_, product) => (
         <div className="af-cell-stack">
-          <span className="af-cell-truncate" title={product.name}>
+          <Link className="af-cell-truncate" title="Xem sản phẩm" to={`/products?q=${encodeURIComponent(product.sku)}`}>
             {product.name}
-          </span>
+          </Link>
           <small className="af-cell-truncate" title={[product.sku, product.brand].filter(Boolean).join(' · ')}>
             {[product.sku, product.brand].filter(Boolean).join(' · ')}
           </small>

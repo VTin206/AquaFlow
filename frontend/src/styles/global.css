@@ -3505,6 +3505,9 @@ html:has(.af-shell) body {
   flex-shrink: 0;
 }
 
+.af-tag-link {
+  cursor: pointer;
+}
 /* Tổng quan của nhân viên không xem tiền: số đơn hôm nay là một dòng chữ dưới tiêu đề. */
 .af-dashboard-today {
   margin: -8px 0 16px;

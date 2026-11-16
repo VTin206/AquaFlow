@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import { Ban, CircleArrowRight, CircleCheck, Clock3, TriangleAlert, type LucideIcon } from 'lucide-react'
+import { Link } from 'react-router'
 import { MapLink } from '@/shared/address/MapLink'
+import { useStaff } from '@/features/auth/useStaff'
 import { currency } from '@/shared/utils/format'
 import type { OrderFocus } from '../orderFocus'
 import type { Order, OrderLine } from '../types'
@@ -31,11 +33,21 @@ export function OrderFocusBanner({ focus }: { focus: OrderFocus }) {
 export function OrderParty({ order }: { order: Order }) {
   const tel = order.phone.replace(/[^\d+]/g, '')
   const delivery = order.method === 'Giao tận nơi'
+  const staff = useStaff()
+  const canOpenCustomer = Boolean(order.customerId) && staff?.role !== 'DELIVERY_STAFF'
   const place = [order.address, order.floor ? `lầu ${order.floor} (thang bộ)` : '', order.area].filter(Boolean).join(' · ')
   return (
     <section className="af-order-party" aria-label="Người nhận">
       <h3>{delivery ? 'Giao đến' : 'Nhận tại quầy'}</h3>
-      <strong>{order.customer}</strong>
+      <strong>
+        {canOpenCustomer ? (
+          <Link to={`/customers?customerId=${encodeURIComponent(order.customerId!)}`} title="Xem hồ sơ khách">
+            {order.customer}
+          </Link>
+        ) : (
+          order.customer
+        )}
+      </strong>
       {order.phone && <a href={`tel:${tel}`}>{order.phone}</a>}
       {delivery && place && (
         <p>
