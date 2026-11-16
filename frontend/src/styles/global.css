@@ -3492,3 +3492,15 @@ html:has(.af-shell) body {
 .af-staff-filters > .ant-input-affix-wrapper {
   width: 260px;
 }
+.af-brand-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.af-brand-cell img,
+.af-brand-cell-empty {
+  width: 32px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}

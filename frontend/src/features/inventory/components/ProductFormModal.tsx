@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { App, Col, Form, Input, InputNumber, Modal, Row, Select, Upload } from 'antd'
+import { App, AutoComplete, Col, Form, Input, InputNumber, Modal, Row, Select, Upload } from 'antd'
 import { ImagePlus } from 'lucide-react'
 import { useSettings } from '@/features/settings/settingsService'
 import { useBottleTypeOptions, useProductCategories, useSaveProduct, type CatalogItem, type ProductForm } from '../useProductCatalog'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { FormSection } from '@/shared/components/FormSection'
-import { suggestFromName } from '../catalogGroups'
+import { brandGroups, suggestFromName } from '../catalogGroups'
 
 // Vừa đủ để ô tên hiện trọn tên sản phẩm dài nhất.
 const MODAL_WIDTH = 680
@@ -162,7 +162,11 @@ export function ProductFormModal({ open, product, onClose }: ProductFormModalPro
                   />
                 </Form.Item>
                 <Form.Item name="brand" label="Thương hiệu" rules={[{ max: 150, message: 'Tối đa 150 ký tự.' }]}>
-                  <Input placeholder="Ví dụ: LaVie, Aquafina..." />
+                  <AutoComplete
+                    placeholder="Ví dụ: LaVie, Aquafina..."
+                    options={brandGroups.map((group) => ({ value: group.name }))}
+                    filterOption={(input, option) => (option?.value ?? '').toLowerCase().includes(input.trim().toLowerCase())}
+                  />
                 </Form.Item>
               </FormSection>
             </div>
