@@ -94,7 +94,8 @@ export function CheckoutPage() {
   const inAddressBook = (address: string, area: string) =>
     (savedAddresses.data ?? []).some((item) => item.addressLine.trim() === address.trim() && item.area.trim() === area.trim())
   // Chỉ mời lưu khi địa chỉ đang nhập chưa có trong sổ.
-  const canSaveAddress = customer && savedAddresses.isSuccess && Boolean(typedAddress.trim() && typedArea.trim()) && !inAddressBook(typedAddress, typedArea)
+  const canSaveAddress =
+    customer && savedAddresses.isSuccess && Boolean(typedAddress.trim() && typedArea.trim()) && !inAddressBook(typedAddress, typedArea)
   const lines = cart.map((line) => ({ ...line, product: products.data?.find((item) => item.id === line.productId) }))
   // Mã sản phẩm lạ (giỏ cũ, đổi nguồn dữ liệu) không có trong danh mục nên bị chặn ở `invalid` bên dưới.
   const invalidCartLine = cart.some((line) => !Number.isSafeInteger(line.quantity) || line.quantity < 1 || line.quantity > 99)
@@ -105,7 +106,11 @@ export function CheckoutPage() {
   const validFloor = Number.isInteger(floor) && floor >= 0 && floor <= 30
   const quote = useQuery({
     queryKey: ['shop', 'delivery-quote', cart, floor],
-    queryFn: () => deliveryQuoteApi.quote(cart.map(line => ({ productId: Number(line.productId), quantity: line.quantity })), floor),
+    queryFn: () =>
+      deliveryQuoteApi.quote(
+        cart.map((line) => ({ productId: Number(line.productId), quantity: line.quantity })),
+        floor,
+      ),
     enabled: !invalid && cart.length > 0 && validFloor,
     retry: false,
     staleTime: 0,
@@ -119,7 +124,8 @@ export function CheckoutPage() {
 
   const depositHint = <CheckoutDeposit lines={lines} />
   const submit = (values: CheckoutForm) => {
-    if (submitLock.current || mutation.isPending || invalid || quoteBlocked || !cart.length || products.isError || products.isPending) return
+    if (submitLock.current || mutation.isPending || invalid || quoteBlocked || !cart.length || products.isError || products.isPending)
+      return
     setSubmitError(undefined)
     const draft = {
       customer: values.customer.trim(),
