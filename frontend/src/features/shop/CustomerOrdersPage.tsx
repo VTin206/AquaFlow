@@ -67,7 +67,7 @@ export function CustomerOrdersPage() {
   })
   const catalog = useOrderProducts(isCustomer(user))
   useEffect(() => {
-    document.title = 'Đơn hàng của tôi | AquaFlow'
+    document.title = 'Tra cứu đơn | AquaFlow'
   }, [])
   const orders = [...(query.data ?? [])]
     .filter((order) => status === 'ALL' || order.status === status)
@@ -77,7 +77,7 @@ export function CustomerOrdersPage() {
   const visible = orders.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE)
   return (
     <div className="af-shop-page af-shop-account-page">
-      <h1>Đơn hàng của tôi</h1>
+      <h1>Tra cứu đơn</h1>
       <div className="af-shop-orders-bar">
         <Select
           aria-label="Lọc trạng thái đơn hàng"
