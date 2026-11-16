@@ -101,6 +101,13 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
   const receivedAt: string | undefined = Form.useWatch('receivedAt', form)
   const today = localToday()
   const productOf = (id?: string) => options.products.find((product) => product.id === id)
+  // Thêm dòng hàng xong thì đưa con trỏ tới ô Sản phẩm của dòng mới (chờ form dựng xong dòng đó).
+  const focusLastLine = () =>
+    window.setTimeout(() => {
+      const line = [...document.querySelectorAll<HTMLElement>('.af-receipt-form .af-receipt-line')].pop()
+      line?.scrollIntoView({ block: 'nearest' })
+      line?.querySelector<HTMLInputElement>('input')?.focus()
+    })
   const good = lines.reduce((sum, line) => sum + Math.max(0, (line?.received ?? 0) - (line?.damaged ?? 0)), 0)
   const total = lines.reduce((sum, line) => sum + Math.max(0, (line?.received ?? 0) - (line?.damaged ?? 0)) * (line?.costPrice ?? 0), 0)
 
@@ -407,7 +414,15 @@ function ReceiptDialog({ open, onClose, defaultProductId, defaultLines, receipt 
                     )
                   })}
                   <Form.ErrorList errors={errors} />
-                  <Button type="dashed" block icon={<Plus size={16} />} onClick={() => add({ received: 1, damaged: 0, costPrice: 0 })}>
+                  <Button
+                    type="dashed"
+                    block
+                    icon={<Plus size={16} />}
+                    onClick={() => {
+                      add({ received: 1, damaged: 0, costPrice: 0 })
+                      focusLastLine()
+                    }}
+                  >
                     Thêm dòng hàng
                   </Button>
                 </>
