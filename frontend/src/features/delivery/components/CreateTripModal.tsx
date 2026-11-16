@@ -51,7 +51,11 @@ export function CreateTripModal({
       onCancel={onClose}
     >
       <Form form={form} layout="vertical" onFinish={(values) => create.mutate(values)}>
-        <Form.Item name="driverId" label="Tài xế" extra="Có thể phân sau, nhưng phải có tài xế mới xuất kho được.">
+        <Form.Item
+          name="driverId"
+          label="Tài xế"
+          extra="Có thể phân sau, nhưng phải có tài xế mới xuất kho được."
+        >
           <Select
             allowClear
             showSearch
