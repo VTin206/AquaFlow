@@ -3,6 +3,8 @@ import { Badge, Button, Dropdown } from 'antd'
 import { ArrowLeft, ChevronDown, Clock3, Phone, Search, ShoppingCart } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
+import { isCustomer } from '@/features/auth/accountAccess'
+import { useAuth } from '@/features/auth/useAuth'
 import { useCart } from './cart'
 import { AccountMenu } from './components/AccountMenu'
 import { CartDrawer } from './components/CartDrawer'
@@ -64,6 +66,8 @@ const drinkMenuHref = (filter: DrinkMenuFilter) => {
  */
 export function ShopLayout() {
   const settings = useShopContact()
+  // Khách đã đăng nhập có sẵn danh sách đơn nên không cần tra cứu bằng mã đơn và số điện thoại.
+  const ownOrders = isCustomer(useAuth().user)
   const navigate = useNavigate()
   const location = useLocation()
   const goHome = useHomeLink('/shop', shopKeys.products)
@@ -162,8 +166,11 @@ export function ShopLayout() {
                 ))}
               </div>
             </div>
-            <NavLink to="/track" className={({ isActive }) => `af-shop-nav-link${isActive ? ' is-active' : ''}`}>
-              Tra cứu đơn
+            <NavLink
+              to={ownOrders ? '/shop/orders' : '/track'}
+              className={({ isActive }) => `af-shop-nav-link${isActive ? ' is-active' : ''}`}
+            >
+              {ownOrders ? 'Đơn của tôi' : 'Tra cứu đơn'}
             </NavLink>
           </nav>
           <div className="af-shop-icons">

@@ -83,7 +83,7 @@ export function ShopAccountPage() {
             <small>{staff?.roleName ?? user.role}</small>
           </div>
           <div className="af-shop-account-actions">
-            <Button type="primary" icon={<LayoutDashboard size={16} />} onClick={() => navigate(accountDestination(user))}>
+            <Button type="primary" icon={<LayoutDashboard size={16} />} onClick={() => navigate(accountDestination(user, '/shop/orders'))}>
               {isCustomer(user) ? 'Đơn hàng của tôi' : 'Trang quản lý'}
             </Button>
             <Button danger icon={<LogOut size={16} />} onClick={() => logout()}>

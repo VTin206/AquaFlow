@@ -67,7 +67,7 @@ export function AccountMenu({ variant = 'icon' }: { variant?: 'icon' | 'text' })
           <small>{staff?.roleName ?? user.role}</small>
         </div>
       </div>
-      <Button block type="primary" icon={<LayoutDashboard size={16} />} onClick={() => go(accountDestination(user))}>
+      <Button block type="primary" icon={<LayoutDashboard size={16} />} onClick={() => go(accountDestination(user, '/shop/orders'))}>
         {isCustomer(user) ? 'Đơn hàng của tôi' : 'Trang quản lý'}
       </Button>
       {showSwitch && (
