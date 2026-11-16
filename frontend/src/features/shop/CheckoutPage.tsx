@@ -63,6 +63,9 @@ export function CheckoutPage() {
   const [submitError, setSubmitError] = useState<string>()
   const [placedLiveOrder, setPlacedLiveOrder] = useState<LiveOrder>()
   const submitLock = useRef(false)
+  useEffect(() => {
+    document.title = 'Đặt hàng | AquaFlow'
+  }, [])
   const profile = readProfile()
   // Thông tin đã lưu trên máy được ưu tiên vì khách có thể đặt hộ người khác; chưa lưu thì lấy từ tài khoản.
   // Tài khoản không có họ tên thì `name` là email, không dùng làm tên người nhận.
@@ -166,8 +169,13 @@ export function CheckoutPage() {
             .catch(() => message.warning('Đơn đã đặt, nhưng chưa lưu được địa chỉ vào sổ địa chỉ.'))
         actions.clear()
         // Có mã tra cứu thì sang trang theo dõi đơn, chưa có thì báo thành công tại đây.
-        if ('trackingToken' in order && order.trackingToken) navigate(`/track/${order.trackingToken}`, { state: { placed: true } })
-        else setPlacedLiveOrder(order as LiveOrder)
+        // Khách có tài khoản sang thẳng đơn của mình; khách vãng lai có mã tra cứu thì sang trang theo dõi đơn.
+        if (customer && 'id' in order && Number.isSafeInteger(order.id)) navigate(`/shop/orders/${order.id}`, { state: { placed: true } })
+        else if ('trackingToken' in order && order.trackingToken) navigate(`/track/${order.trackingToken}`, { state: { placed: true } })
+        else {
+          setPlacedLiveOrder(order as LiveOrder)
+          window.scrollTo({ top: 0 })
+        }
       },
       (error) => {
         void quote.refetch()
@@ -221,7 +229,17 @@ export function CheckoutPage() {
 
   return (
     <div className="af-shop-page af-checkout-page">
-      <Typography.Title level={2}>Đặt hàng</Typography.Title>
+      <div className="af-checkout-head">
+        <Typography.Title level={2}>Đặt hàng</Typography.Title>
+        {!user && (
+          <span>
+            Đã có tài khoản?{' '}
+            <Link to="/shop/account" state={{ from: '/checkout' }}>
+              Đăng nhập
+            </Link>
+          </span>
+        )}
+      </div>
       {products.isPending ? (
         <Skeleton active />
       ) : products.isError ? (

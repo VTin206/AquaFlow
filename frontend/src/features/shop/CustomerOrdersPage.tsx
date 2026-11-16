@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, App, Button, Card, Empty, Pagination, Popconfirm, Result, Select, Skeleton, Tag } from 'antd'
-import { ChevronRight, Phone, RefreshCw, ShoppingBag } from 'lucide-react'
-import { useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { ChevronRight, Phone, RefreshCw, RotateCcw, ShoppingBag } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useOutletContext, useParams } from 'react-router'
 import { useAuth } from '@/features/auth/useAuth'
 import { isCustomer } from '@/features/auth/accountAccess'
 import { orderStatusLabels, paymentStatusLabels, type LiveOrder } from '@/features/live/orderApi'
@@ -14,6 +14,7 @@ import { ApiError } from '@/shared/api/client'
 import { Money } from '@/shared/components/Money'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
+import { useCartActions } from './cart'
 import { customerOrderApi } from './customerOrderApi'
 import { useShopContact } from './shopService'
 
@@ -27,6 +28,20 @@ const productName = (products: Products, id: number) => products.find((product) 
 const StatusTag = ({ status }: { status: LiveOrder['status'] }) => (
   <Tag color={statusColor[orderStatusLabels[status] as StaffOrderStatus]}>{orderStatusLabels[status]}</Tag>
 )
+/** Backend tự ghi số tầng vào ghi chú; giao tầng trệt (0) thì không cần hiện cho khách. */
+const visibleNote = (note: string | null) =>
+  (note ?? '')
+    .split('\n')
+    .filter((line) => line.trim() !== 'Số tầng đi thang bộ: 0')
+    .join('\n')
+    .trim()
+/** Địa chỉ giao kèm phường/xã (API trả hai trường riêng). */
+const fullAddress = (order: LiveOrder) => {
+  if (!order.deliveryAddress) return 'Nhận tại cửa hàng'
+  return order.deliveryArea && !order.deliveryAddress.includes(order.deliveryArea)
+    ? `${order.deliveryAddress}, ${order.deliveryArea}`
+    : order.deliveryAddress
+}
 /** Tên sản phẩm của khách dùng chung một cache cho danh sách và chi tiết đơn. */
 const useOrderProducts = (enabled: boolean) =>
   useQuery({ queryKey: ['shop', 'order-products', 'live'], queryFn: catalogApi.products, enabled, staleTime: 60_000 })
@@ -51,6 +66,9 @@ export function CustomerOrdersPage() {
     refetchInterval: 30000,
   })
   const catalog = useOrderProducts(isCustomer(user))
+  useEffect(() => {
+    document.title = 'Đơn hàng của tôi | AquaFlow'
+  }, [])
   const orders = [...(query.data ?? [])]
     .filter((order) => status === 'ALL' || order.status === status)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id - a.id)
@@ -134,6 +152,14 @@ export function CustomerOrderPage() {
   })
   const catalog = useOrderProducts(valid && isCustomer(user))
   const storePhone = useShopContact()?.phone
+  const cart = useCartActions()
+  // Trang nằm trong ShopLayout nên có nút mở giỏ; khi dựng riêng (test) thì không có.
+  const openCart = useOutletContext<{ openCart?: () => void } | null>()?.openCart
+  const placed = (useLocation().state as { placed?: boolean } | null)?.placed
+  const orderCode = query.data?.orderCode
+  useEffect(() => {
+    document.title = orderCode ? `Đơn ${orderCode} | AquaFlow` : 'Đơn hàng | AquaFlow'
+  }, [orderCode])
   const { message } = App.useApp()
   const client = useQueryClient()
   const cancel = useMutation({
@@ -162,6 +188,17 @@ export function CustomerOrderPage() {
       />
     )
   const order = query.data
+  // Mua lại: bỏ các sản phẩm còn bán của đơn vào giỏ; sản phẩm đã ngừng bán thì báo cho khách.
+  const reorder = () => {
+    if (!order || !catalog.data) return
+    const available = order.items.filter((line) => catalog.data.some((product) => product.id === line.productId))
+    available.forEach((line) => cart.add(String(line.productId), line.quantity))
+    const missing = order.items.length - available.length
+    if (!available.length) return void message.warning('Các sản phẩm của đơn này hiện không còn bán.')
+    if (missing) message.warning(`Đã thêm ${available.length} sản phẩm vào giỏ; ${missing} sản phẩm không còn bán.`)
+    else message.success('Đã thêm sản phẩm của đơn vào giỏ.')
+    openCart?.()
+  }
   return (
     <div className="af-shop-page af-shop-narrow">
       <div className="af-shop-track">
@@ -171,6 +208,14 @@ export function CustomerOrderPage() {
           <Skeleton active paragraph={{ rows: 8 }} />
         ) : (
           <>
+            {placed && (
+              <Alert
+                type="success"
+                showIcon
+                title={`Đã gửi đơn ${order.orderCode}`}
+                description="Cửa hàng sẽ gọi xác nhận trong giờ làm việc."
+              />
+            )}
             <Card
               className="af-shop-track-card"
               title={
@@ -193,7 +238,7 @@ export function CustomerOrderPage() {
                 <dt>Người nhận</dt>
                 <dd>{[order.recipientName, order.recipientPhone].filter(Boolean).join(' · ') || '—'}</dd>
                 <dt>Địa chỉ</dt>
-                <dd>{order.deliveryAddress || 'Nhận tại cửa hàng'}</dd>
+                <dd>{fullAddress(order)}</dd>
                 <dt>Ngày đặt</dt>
                 <dd>{time(order.createdAt)}</dd>
                 {order.requestedDeliveryAt && (
@@ -202,10 +247,10 @@ export function CustomerOrderPage() {
                     <dd>{time(order.requestedDeliveryAt)}</dd>
                   </>
                 )}
-                {order.note && (
+                {visibleNote(order.note) && (
                   <>
                     <dt>Ghi chú</dt>
-                    <dd>{order.note}</dd>
+                    <dd>{visibleNote(order.note)}</dd>
                   </>
                 )}
               </dl>
@@ -273,6 +318,14 @@ export function CustomerOrderPage() {
                   </Button>
                 </Popconfirm>
               )}
+              <Button
+                type={order.status === 'PENDING' ? 'default' : 'primary'}
+                icon={<RotateCcw size={16} />}
+                disabled={!catalog.data || !order.items.length}
+                onClick={reorder}
+              >
+                Mua lại
+              </Button>
               {storePhone && (
                 <Button icon={<Phone size={16} />} href={`tel:${storePhone.replace(/\s/g, '')}`}>
                   Gọi cửa hàng

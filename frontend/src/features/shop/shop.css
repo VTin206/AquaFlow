@@ -2642,3 +2642,14 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+/* Đặt hàng: tiêu đề và lối đăng nhập cho khách vãng lai trên cùng một hàng. */
+.af-checkout-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+.af-checkout-head > span {
+  color: var(--af-text-secondary);
+}

@@ -232,3 +232,12 @@ test('báo giá chưa có mức phí vẫn hiện cách tính chung, không đ�
   expect(await screen.findByText('Miễn phí khi đơn đủ số sản phẩm cửa hàng quy định')).toBeTruthy()
   expect(screen.getByText(/Tính cho mỗi bình\/thùng theo số tầng đi thang bộ/)).toBeTruthy()
 })
+
+test('khách vãng lai thấy lối đăng nhập quay lại trang đặt hàng; khách đã đăng nhập thì không', () => {
+  const first = renderPage()
+  expect(screen.getByRole('link', { name: 'Đăng nhập' }).getAttribute('href')).toBe('/shop/account')
+  first.unmount()
+  mocks.user = { name: 'Khách', role: 'CUSTOMER', email: 'k@example.com', phone: '0901234567' }
+  renderPage()
+  expect(screen.queryByRole('link', { name: 'Đăng nhập' })).toBeNull()
+})

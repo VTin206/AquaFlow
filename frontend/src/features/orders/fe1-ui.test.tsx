@@ -14,6 +14,7 @@ import { RequireAuth } from '@/app/RequireAuth'
 import { RequireCustomer } from '@/app/RequireCustomer'
 import { CustomerOrderPage, CustomerOrdersPage } from '@/features/shop/CustomerOrdersPage'
 import { customerOrderApi } from '@/features/shop/customerOrderApi'
+import { catalogApi } from '@/features/live/catalogApi'
 import { OrderDeliveryHistory } from './OrderDeliveryHistory'
 import { orderDeliveryHistory } from './orderDeliveryApi'
 import { ApiError } from '@/shared/api/client'
@@ -384,5 +385,41 @@ describe('FE1 authentication', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Login customer' }))
     await waitFor(() => expect(screen.getByText('Signed in')).toBeTruthy())
     expect(screen.getByText('No staff role')).toBeTruthy()
+  })
+})
+
+describe('customer order detail', () => {
+  const renderOrder = (value: LiveOrder) => {
+    vi.mocked(customerOrderApi.detail).mockResolvedValue(value)
+    return render(
+      <Providers path="/shop/orders/12">
+        <Routes>
+          <Route path="/shop/orders/:id" element={<CustomerOrderPage />} />
+        </Routes>
+      </Providers>,
+    )
+  }
+  it('shows the ward with the address, hides the ground-floor note and sets the tab title', async () => {
+    renderOrder({ ...order, deliveryArea: 'Phường Bến Thành', note: 'Gọi trước khi giao\nSố tầng đi thang bộ: 0' })
+    expect(await screen.findByText('Address, Phường Bến Thành')).toBeTruthy()
+    expect(screen.getByText('Gọi trước khi giao')).toBeTruthy()
+    expect(screen.queryByText(/Số tầng đi thang bộ/)).toBeNull()
+    await waitFor(() => expect(document.title).toBe('Đơn ORDER-12 | AquaFlow'))
+  })
+  it('buy again puts the products still on sale back in the cart', async () => {
+    vi.mocked(catalogApi.products).mockResolvedValueOnce([{ id: 3, name: 'Nước 19L' }] as never)
+    renderOrder({
+      ...order,
+      status: 'DELIVERED',
+      items: [
+        { id: 1, productId: 3, quantity: 2, unitPrice: 5000, lineTotal: 10000 },
+        { id: 2, productId: 9, quantity: 1, unitPrice: 5000, lineTotal: 5000 },
+      ],
+    })
+    const again = await screen.findByRole('button', { name: /Mua lại/ })
+    await waitFor(() => expect((again as HTMLButtonElement).disabled).toBe(false))
+    fireEvent.click(again)
+    expect(await screen.findByText('Đã thêm 1 sản phẩm vào giỏ; 1 sản phẩm không còn bán.')).toBeTruthy()
+    expect(JSON.parse(localStorage.getItem('aquaflow.shop.cart.live') ?? '[]')).toEqual([{ productId: '3', quantity: 2 }])
   })
 })
