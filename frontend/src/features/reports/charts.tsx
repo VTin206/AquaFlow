@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { fontSizes } from '@/app/typography'
 import { Grid } from 'antd'
 import {
@@ -224,6 +224,9 @@ export function ProductShareChart({
 }) {
   const data = productShares(rows, metric, Math.min(slices, shareColors.length))
   const total = data.reduce((sum, slice) => sum + slice.value, 0)
+  // Lát đang trỏ (trên vòng hoặc chú thích): làm nổi lát đó và hiện số của nó ở giữa vòng, không dùng tooltip nổi.
+  const [hovered, setHovered] = useState<number | null>(null)
+  const focus = hovered != null ? data[hovered] : undefined
   return (
     <div className="af-chart af-share-chart">
       <div
@@ -233,19 +236,6 @@ export function ProductShareChart({
       >
         <ResponsiveContainer width="100%" height={200}>
           <PieChart>
-            <Tooltip
-              content={({ active, payload }) => {
-                const slice = active ? (payload?.[0]?.payload as ProductShare | undefined) : undefined
-                if (!slice) return null
-                const index = data.indexOf(slice)
-                return (
-                  <ChartTooltip
-                    title={slice.name}
-                    rows={[{ label: percent(slice.share), color: sliceColor(slice, index), value: formatMetric(metric, slice.value) }]}
-                  />
-                )
-              }}
-            />
             <Pie
               data={data}
               dataKey="value"
@@ -257,21 +247,43 @@ export function ProductShareChart({
               stroke="var(--af-surface)"
               strokeWidth={2}
               isAnimationActive={false}
+              onMouseEnter={(_, index) => setHovered(index)}
+              onMouseLeave={() => setHovered(null)}
             >
               {data.map((slice, index) => (
-                <Cell key={slice.key} fill={sliceColor(slice, index)} />
+                <Cell
+                  key={slice.key}
+                  fill={sliceColor(slice, index)}
+                  className="af-share-slice"
+                  opacity={hovered == null || hovered === index ? 1 : 0.3}
+                />
               ))}
             </Pie>
           </PieChart>
         </ResponsiveContainer>
         <div className="af-share-chart-total" aria-hidden>
-          <b>{formatMetric(metric, total)}</b>
-          <small>{metric === 'quantity' ? 'đơn vị bán' : 'doanh thu'}</small>
+          {focus ? (
+            <>
+              <b>{percent(focus.share)}</b>
+              <span className="af-share-chart-name">{focus.name}</span>
+              <small>{formatMetric(metric, focus.value)}</small>
+            </>
+          ) : (
+            <>
+              <b>{formatMetric(metric, total)}</b>
+              <small>{metric === 'quantity' ? 'đơn vị bán' : 'doanh thu'}</small>
+            </>
+          )}
         </div>
       </div>
       <ul className="af-share-chart-legend">
         {data.map((slice, index) => (
-          <li key={slice.key}>
+          <li
+            key={slice.key}
+            className={hovered != null && hovered !== index ? 'is-dim' : undefined}
+            onMouseEnter={() => setHovered(index)}
+            onMouseLeave={() => setHovered(null)}
+          >
             <i style={{ background: sliceColor(slice, index) }} aria-hidden />
             <span title={slice.name}>{slice.name}</span>
             <b>{percent(slice.share)}</b>

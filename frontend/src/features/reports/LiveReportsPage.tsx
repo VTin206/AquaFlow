@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { filterOn } from '@/shared/utils/filterOn'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, App, Button, Card, Checkbox, Popover, Segmented, Select, Table, Tabs, Typography } from 'antd'
+import { Alert, App, Button, Card, Checkbox, Input, Popover, Segmented, Select, Table, Tabs, Typography } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { Link, useSearchParams } from 'react-router'
-import { Columns3, FileSpreadsheet, FunnelX } from 'lucide-react'
+import { Columns3, FileSpreadsheet, FunnelX, Search } from 'lucide-react'
+import { normalizeSearch } from '@/shared/utils/search'
 import { Page } from '@/shared/components/Page'
 import { PeriodPicker } from '@/shared/components/PeriodPicker'
 import { QueryError } from '@/shared/components/QueryError'
@@ -61,6 +62,12 @@ const NAME_WIDTH = 240
 const titleOf = (column: ReportColumn) => shortTitles[column.key] ?? column.title
 const widthOf = (column: ReportColumn) =>
   nameKeys.includes(column.key) ? NAME_WIDTH : Math.max(column.money ? 130 : column.key === 'sku' ? 130 : 90, Math.ceil(titleOf(column).length * 8.5) + 36)
+/** Bảng sản phẩm bán (đủ mọi sản phẩm trong kỳ): bấm tiêu đề SL đã giao hoặc Doanh thu để xếp; mặc định bán nhiều nhất trước. */
+const sortableSales = <T extends { key: string }>(columns: T[]) => columns.map((column) =>
+  column.key === 'sold' || column.key === 'revenue'
+    ? { ...column, sorter: (a: ReportRow, b: ReportRow) => Number(a[column.key] ?? 0) - Number(b[column.key] ?? 0), sortDirections: ['descend', 'ascend'] as ('descend' | 'ascend')[], defaultSortOrder: column.key === 'sold' ? ('descend' as const) : undefined }
+    : column)
+
 const columnsOf = (columns: ReportColumn[]) => columns.map(column => {
   const isName = nameKeys.includes(column.key)
   const format = (value: string | number | null) => column.money ? value == null ? 'Chưa có giá nhập' : currency(Number(value)) : value ?? '—'
@@ -143,7 +150,8 @@ function ChannelList({ channels }: { channels: LiveReport['channels'] }) {
 }
 
 /** Bảng chi tiết vừa phần còn lại của màn hình: danh sách cuộn trong bảng, trang không phải cuộn. */
-const reportTableHeight = 'max(240px, calc(100dvh - 540px))'
+// Luôn thấy ít nhất 10 dòng (dòng gọn ~39px); màn hình cao thì giãn theo màn hình.
+const reportTableHeight = 'max(390px, calc(100dvh - 540px))'
 
 /** Tab có biểu đồ: xem bằng nút Bảng | Biểu đồ thay vì để biểu đồ đẩy bảng xuống. */
 const chartTabs: string[] = ['products', 'delivery']
@@ -174,24 +182,24 @@ function ColumnPicker({ columns, core, extra, onExtraChange }: {
  * Biểu đồ tab Sản phẩm bán: xếp hạng và tỷ lệ tính trên mọi sản phẩm của kỳ (không theo trang bảng).
  * Mặc định theo số lượng vì hàng bán nhiều mà giá thấp (bình 19L) dễ bị hàng giá cao che khi xếp theo tiền.
  */
-function ProductCharts({ query }: { query: ReportQuery }) {
-  const [metric, setMetric] = useState<SalesMetric>('quantity')
+function ProductCharts({ query, metric, onMetricChange: setMetric }: { query: ReportQuery; metric: SalesMetric; onMetricChange: (metric: SalesMetric) => void }) {
   const sales = useProductSales(query)
-  const stock = useStockItems()
   if (sales.isError) return <QueryError error={sales.error} onRetry={sales.refetch} />
   if (sales.isPending) return <Typography.Text type="secondary">Đang tải báo cáo…</Typography.Text>
   const hasSales = rankProducts(sales.data ?? [], metric).length > 0
   return <>
     {hasSales ? <BestSellerCharts rows={sales.data ?? []} metric={metric} onMetricChange={setMetric} /> : <Typography.Text type="secondary">Chưa bán sản phẩm nào trong kỳ.</Typography.Text>}
-    {/* Bán chậm tính trên cả danh mục đang bán, nên sản phẩm chưa bán lần nào trong kỳ cũng có mặt. */}
-    <section className="af-report-slow">
-      <h3>8 sản phẩm bán chậm nhất</h3>
-      <Typography.Text type="secondary" className="af-report-chart-note">Sản phẩm đang bán, xếp từ bán ít nhất trong kỳ; bằng nhau thì sản phẩm tồn nhiều hơn đứng trước. Tồn kho tính tại thời điểm hiện tại.</Typography.Text>
-      {stock.isError ? <QueryError error={stock.error} onRetry={stock.refetch} />
-        : stock.isPending ? <Typography.Text type="secondary">Đang tải tồn kho…</Typography.Text>
-        : <SlowMovers rows={slowMovers(sales.data ?? [], stock.data ?? [])} />}
-    </section>
   </>
+}
+
+/** Bán chậm tính trên cả danh mục đang bán, nên sản phẩm chưa bán lần nào trong kỳ cũng có mặt. */
+function SlowMoversTable({ query }: { query: ReportQuery }) {
+  const sales = useProductSales(query)
+  const stock = useStockItems()
+  if (sales.isError) return <QueryError error={sales.error} onRetry={sales.refetch} />
+  if (stock.isError) return <QueryError error={stock.error} onRetry={stock.refetch} />
+  if (sales.isPending || stock.isPending) return <Typography.Text type="secondary">Đang tải báo cáo…</Typography.Text>
+  return <SlowMovers rows={slowMovers(sales.data ?? [], stock.data ?? [])} />
 }
 
 function BestSellerCharts({ rows, metric, onMetricChange: setMetric }: { rows: ProductSale[]; metric: SalesMetric; onMetricChange: (metric: SalesMetric) => void }) {
@@ -257,13 +265,24 @@ function LiveReportContent() {
   const setMethod = (value?: ReportQuery['method']) => updateParams({ method: value })
   const [customRange, setCustomRange] = useState(false)
   const [view, setView] = useState<'table' | 'chart'>('table')
-  const [extraColumns, setExtraColumns] = useState<Partial<Record<ReportSection, string[]>>>({})
+  const [productList, setProductList] = useState<'all' | 'slow'>('all')
+  // Tiêu chí xếp hạng của biểu đồ Sản phẩm bán; bảng thì bấm tiêu đề cột để sắp xếp.
+  const [salesMetric, setSalesMetric] = useState<SalesMetric>('quantity')
   const [page, setPage] = useState(0)
+  const [productSearch, setProductSearch] = useState('')
+  const productListSwitch = <div className="af-report-list-switch">
+    {productList === 'all' ? <Input className="af-report-search" aria-label="Tìm sản phẩm" allowClear prefix={<Search size={16} className="af-input-icon" />} placeholder="Tìm tên hoặc mã hàng" value={productSearch} onChange={(event) => { setProductSearch(event.target.value); setPage(0) }} /> : <span />}
+    <Segmented<'all' | 'slow'> aria-label="Danh sách sản phẩm" value={productList} onChange={setProductList} options={[{ value: 'all', label: 'Tất cả' }, { value: 'slow', label: 'Bán chậm' }]} />
+  </div>
   const [size, setSize] = useState(20)
   const [exporting, setExporting] = useState(false)
   const selected = search.get('tab') ?? 'overview'
   const tab = selected in sections ? selected as ReportSection : 'overview'
   const query: ReportQuery = { from: dates[0].format('YYYY-MM-DD'), to: dates[1].format('YYYY-MM-DD'), channel, method }
+  const productSales = useProductSales(query, tab === 'products')
+  const productKeyword = normalizeSearch(productSearch.trim())
+  const productRows = (productSales.rows ?? []).filter((row) => !productKeyword || normalizeSearch(`${row.name ?? ''} ${row.sku ?? ''}`).includes(productKeyword))
+  const [extraColumns, setExtraColumns] = useState<Partial<Record<ReportSection, string[]>>>({})
   const summary = useQuery({ queryKey: ['live', 'reports', 'summary', query], queryFn: () => reportApi.summary(query) })
   const priorQuery = { ...query, ...previousRange(query) }
   const previous = useQuery({ queryKey: ['live', 'reports', 'summary', priorQuery], queryFn: () => reportApi.summary(priorQuery) })
@@ -360,7 +379,9 @@ function LiveReportContent() {
         </> },
         ...Object.entries(sections).map(([key, section]) => ({ key, label: section.title, children: details.isError ? <QueryError error={details.error} onRetry={details.refetch} /> : <Card>
           {key === 'products' && view === 'chart' ? (
-            <ProductCharts query={query} />
+            <ProductCharts query={query} metric={salesMetric} onMetricChange={setSalesMetric} />
+          ) : key === 'products' && productList === 'slow' ? (
+            <>{productListSwitch}<SlowMoversTable query={query} /></>
           ) : chartTabs.includes(key) && view === 'chart' ? (
             details.isPending ? <Typography.Text type="secondary">Đang tải báo cáo…</Typography.Text>
               : !detailRows.length ? <Typography.Text type="secondary">Chưa có dữ liệu trong kỳ.</Typography.Text>
@@ -369,8 +390,8 @@ function LiveReportContent() {
                 <DriverDeliveryChart rows={detailRows.map((row) => ({ driver: String(row.driver), delivered: num(row.delivered), late: num(row.late), failed: num(row.failed) }))} />
               </>
           ) : (
-            <Table<ReportRow> className="af-report-table" size="middle" rowKey={section.key} loading={details.isPending} columns={key === 'customers' ? customerColumns : columnsOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection]))} dataSource={details.data?.content ?? []} scroll={{ x: tableWidthOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection])), y: reportTableHeight }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : 'Chưa có dữ liệu trong kỳ.' }}
-            pagination={{ current: page + 1, pageSize: size, total: details.data?.totalElements ?? 0, showSizeChanger: true, pageSizeOptions: [20, 50, 100], onChange: (next, nextSize) => { setPage(nextSize === size ? next - 1 : 0); setSize(nextSize) } }} />
+            <>{key === 'products' && productListSwitch}<Table<ReportRow> className="af-report-table" size="small" rowKey={section.key} loading={key === 'products' ? productSales.isPending : details.isPending} columns={key === 'customers' ? customerColumns : key === 'products' ? sortableSales(columnsOf(shownColumns(section.columns, coreColumns.products, extraColumns.products))) : columnsOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection]))} dataSource={key === 'products' ? productRows : details.data?.content ?? []} scroll={{ x: tableWidthOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection])), y: reportTableHeight }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : key === 'products' && productKeyword ? 'Không có sản phẩm phù hợp.' : 'Chưa có dữ liệu trong kỳ.' }}
+            pagination={{ current: page + 1, pageSize: size, total: key === 'products' ? productRows.length : details.data?.totalElements ?? 0, showSizeChanger: true, pageSizeOptions: [20, 50, 100], onChange: (next, nextSize) => { setPage(nextSize === size ? next - 1 : 0); setSize(nextSize) } }} /></>
           )}
         </Card> })),
       ]} />
