@@ -27,6 +27,7 @@ import { useConfirm } from '@/shared/components/confirm'
 import { currency } from '@/shared/utils/format'
 import { LiveBottleTypes } from '@/features/live/LiveBottleTypes'
 import { LiveProductCategories } from '@/features/live/LiveProductCategories'
+import { BrandsModal } from './components/BrandsModal'
 import { brandGroups, capacityGroups, getBrandGroup, getCatalogDetails, normalizeSearch, sortCategoryNames } from './catalogGroups'
 import { ProductFormModal } from './components/ProductFormModal'
 import {
@@ -79,6 +80,7 @@ export function ProductsPage() {
   const [editing, setEditing] = useState<CatalogItem | null>()
   const [bottlesOpen, setBottlesOpen] = useState(false)
   const [categoriesOpen, setCategoriesOpen] = useState(false)
+  const [brandsOpen, setBrandsOpen] = useState(false)
   const allProducts = productsQuery.data ?? []
   const products = status === 'all' ? allProducts : allProducts.filter((product) => product.active === (status === 'active'))
   const activeCount = allProducts.filter((product) => product.active).length
@@ -307,6 +309,7 @@ export function ProductsPage() {
       title="Sản phẩm"
       actions={
         <Space wrap>
+          {canManage && <Button onClick={() => setBrandsOpen(true)}>Thương hiệu</Button>}
           {canManage && <Button onClick={() => setCategoriesOpen(true)}>Loại sản phẩm</Button>}
           <Button onClick={() => setBottlesOpen(true)}>Loại vỏ bình</Button>
           {canManage && (
@@ -434,6 +437,7 @@ export function ProductsPage() {
       />
       {bottlesOpen && <LiveBottleTypes onClose={() => setBottlesOpen(false)} />}
       {categoriesOpen && <LiveProductCategories onClose={() => setCategoriesOpen(false)} />}
+      {brandsOpen && <BrandsModal products={allProducts} onClose={() => setBrandsOpen(false)} />}
     </Page>
   )
 }
