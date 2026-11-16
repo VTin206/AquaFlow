@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Alert, App, Button, Card, Form, Input, Result, Skeleton, Steps, Typography } from 'antd'
-import { Copy, Hash, LogIn, Phone, RefreshCw, Search, ShoppingBag } from 'lucide-react'
+import { Copy, Hash, LayoutDashboard, LogIn, Phone, RefreshCw, Search, ShoppingBag } from 'lucide-react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { Money } from '@/shared/components/Money'
 import { focusNextOnEnter } from '@/shared/utils/forms'
 import { TransferQr } from '@/shared/payment/TransferQr'
 import { dueTone } from '@/shared/utils/money'
 import { currency } from '@/shared/utils/format'
+import { accountDestination, isCustomer } from '@/features/auth/accountAccess'
+import { useAuth } from '@/features/auth/useAuth'
 import type { PublicOrder } from '@/features/orders/types'
 import { useSettings } from '@/features/settings/settingsService'
 import { useLookupOrder, useShopContact, useTrackedOrder } from './shopService'
@@ -26,6 +28,7 @@ const stepOf: Record<PublicOrder['status'], number> = {
 function LookupForm() {
   const navigate = useNavigate()
   const lookupOrder = useLookupOrder()
+  const { user } = useAuth()
   const [error, setError] = useState<string>()
   const [loading, setLoading] = useState(false)
   return (
@@ -69,18 +72,38 @@ function LookupForm() {
               <Input size="large" prefix={<Phone size={17} aria-hidden />} inputMode="tel" placeholder="0901 234 567" />
             </Form.Item>
             {error && <Alert type="error" showIcon title={error} style={{ marginBottom: 16 }} />}
-            <Button type="primary" size="large" htmlType="submit" loading={loading} icon={<Search size={18} />} className="af-shop-account-submit">
+            <Button
+              type="primary"
+              size="large"
+              htmlType="submit"
+              loading={loading}
+              icon={<Search size={18} />}
+              className="af-shop-account-submit"
+            >
               Tra cứu
             </Button>
           </Form>
         </section>
         <section className="af-shop-account-side" aria-label="Lựa chọn khác">
-          <p>Có tài khoản? Đăng nhập để xem mọi đơn đã đặt.</p>
-          <Link to="/shop/account">
-            <Button size="large" block icon={<LogIn size={18} />}>
-              Đăng nhập
-            </Button>
-          </Link>
+          {user ? (
+            <>
+              <p>Bạn đang đăng nhập với tên {user.name}.</p>
+              <Link to={accountDestination(user, '/shop/orders')}>
+                <Button size="large" block icon={<LayoutDashboard size={18} />}>
+                  {isCustomer(user) ? 'Đơn hàng của tôi' : 'Trang quản lý'}
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <>
+              <p>Có tài khoản? Đăng nhập để xem mọi đơn đã đặt.</p>
+              <Link to="/shop/account">
+                <Button size="large" block icon={<LogIn size={18} />}>
+                  Đăng nhập
+                </Button>
+              </Link>
+            </>
+          )}
           <p>Chưa đặt đơn nào?</p>
           <Link to="/shop">
             <Button size="large" block icon={<ShoppingBag size={18} />}>

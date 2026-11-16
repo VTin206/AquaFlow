@@ -39,7 +39,10 @@ export function ShopAccountPage() {
   const [redirectAfterLogin, setRedirectAfterLogin] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const rememberedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? ''
-  const returnTo = (location.state as { from?: string } | null)?.from ?? '/'
+  const routeState = location.state as { from?: string; email?: string } | null
+  const returnTo = routeState?.from ?? '/'
+  // Vừa tạo tài khoản xong thì điền sẵn email đó thay cho email đã ghi nhớ.
+  const initialEmail = routeState?.email || rememberedEmail
 
   useEffect(() => {
     document.title = 'Tài khoản | AquaFlow'
@@ -101,7 +104,7 @@ export function ShopAccountPage() {
           {error && <Alert type="error" showIcon style={{ marginBottom: 20 }} title={error} />}
           <Form<LoginFormValues>
             name="shop-login"
-            initialValues={{ email: rememberedEmail, rememberMe: Boolean(rememberedEmail) }}
+            initialValues={{ email: initialEmail, rememberMe: Boolean(rememberedEmail) }}
             layout="vertical"
             requiredMark={false}
             autoComplete="on"
