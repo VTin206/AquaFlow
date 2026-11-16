@@ -28,6 +28,17 @@ public class CustomerAccountController {
     public CustomerAccountService.Profile updateProfile(@AuthenticationPrincipal AuthUserDetails principal, @Valid @RequestBody MyProfileRequest request) {
         return service.updateProfile(principal.user().getId(), request);
     }
+    /** Đổi mật khẩu; thành công thì mọi phiên hết hạn, client chuyển về màn đăng nhập. */
+    @PostMapping("/password")
+    public ResponseEntity<Void> changePassword(@AuthenticationPrincipal AuthUserDetails principal, @Valid @RequestBody ChangePasswordRequest request) {
+        service.changePassword(principal.user().getId(), request);
+        return ResponseEntity.noContent().build();
+    }
+    /** Vỏ khách đang giữ theo loại và tiền cọc của khách. */
+    @GetMapping("/bottles")
+    public CustomerAccountService.Bottles bottles(@AuthenticationPrincipal AuthUserDetails principal) {
+        return service.bottles(principal.user().getId());
+    }
     @GetMapping("/addresses")
     public List<CustomerAddressResponse> addresses(@AuthenticationPrincipal AuthUserDetails principal) {
         return service.addresses(principal.user().getId());

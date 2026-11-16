@@ -13,12 +13,45 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class CustomerAccountService {
     public record Profile(String fullName, String email, String phone) {}
+    /** Một loại vỏ khách đang giữ và mức cọc/vỏ hiện hành. */
+    public record BottleHolding(long bottleTypeId, String name, long holding, java.math.BigDecimal unitDeposit) {}
+    /** Cọc tính theo khách (không theo loại vỏ): đã nộp, nghĩa vụ cọc cho số vỏ đang giữ, phần còn được hoàn. */
+    public record Bottles(List<BottleHolding> bottles, java.math.BigDecimal depositPaid,
+                          java.math.BigDecimal depositRequired, java.math.BigDecimal refundable) {}
     private final CustomerRepository customers;
     private final UserRepository users;
     private final CustomerAddressService addresses;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwords;
+    private final com.aquaflow.bottle.BottleLedgerRepository bottleLedger;
 
-    public CustomerAccountService(CustomerRepository customers, UserRepository users, CustomerAddressService addresses) {
+    public CustomerAccountService(CustomerRepository customers, UserRepository users, CustomerAddressService addresses,
+                                  org.springframework.security.crypto.password.PasswordEncoder passwords,
+                                  com.aquaflow.bottle.BottleLedgerRepository bottleLedger) {
         this.customers = customers; this.users = users; this.addresses = addresses;
+        this.passwords = passwords; this.bottleLedger = bottleLedger;
+    }
+    public Bottles bottles(Long userId) {
+        long id = own(userId).getId();
+        var balance = bottleLedger.balance(id);
+        var held = bottleLedger.types(id).stream().filter(t -> t.held() > 0)
+                .map(t -> new BottleHolding(t.bottleTypeId(), t.name(), t.held(), t.unitAmount())).toList();
+        return new Bottles(held, balance.depositHeld(), balance.requiredDeposit(), balance.refundable());
+    }
+    /**
+     * Đổi mật khẩu sau khi kiểm tra mật khẩu hiện tại. Tăng credentialsVersion nên mọi phiên (kể cả phiên đang dùng)
+     * hết hiệu lực; khách đăng nhập lại bằng mật khẩu mới, giống luồng quên mật khẩu.
+     */
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        own(userId);
+        if (request.newPassword().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72)
+            throw new BadRequestException("Mật khẩu không được vượt quá 72 byte UTF-8.");
+        var user = users.findById(userId).orElseThrow(() -> new NotFoundException("Không tìm thấy tài khoản"));
+        if (!passwords.matches(request.currentPassword(), user.getPasswordHash()))
+            throw new BadRequestException("Mật khẩu hiện tại không đúng.");
+        if (passwords.matches(request.newPassword(), user.getPasswordHash()))
+            throw new BadRequestException("Mật khẩu mới phải khác mật khẩu hiện tại.");
+        user.changePassword(passwords.encode(request.newPassword()));
     }
     private Customer own(Long userId) {
         return customers.findByUserIdAndActiveTrue(userId)
