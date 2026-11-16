@@ -2623,3 +2623,28 @@
     grid-template-columns: 1fr;
   }
 }
+/* Đặt hàng: các ô nhập xếp sát hơn để khách ít phải cuộn. */
+.af-checkout-main .ant-card-body .ant-form-item {
+  margin-bottom: 12px;
+}
+.af-checkout-main .af-checkout-pair .ant-form-item,
+.af-checkout-main .af-checkout-remember.ant-form-item {
+  margin-bottom: 0;
+}
+.af-checkout-place {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 0 16px;
+}
+.af-checkout-place .ant-input-number {
+  width: 100%;
+}
+.af-checkout-main .af-checkout-fee {
+  margin: 4px 0 12px;
+  padding: 10px 14px;
+}
+@media (max-width: 640px) {
+  .af-checkout-place {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
