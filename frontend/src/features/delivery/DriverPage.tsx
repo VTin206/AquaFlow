@@ -26,7 +26,6 @@ import {
 import { DeliveryBottlesButton } from './components/DeliveryBottlesButton'
 import { deliveryBottleApi } from './deliveryBottleApi'
 import { depositShortfall } from './bottleDeposit'
-import { Unsupported } from '@/shared/components/Unsupported'
 import { AttemptsTimeline } from './components/AttemptsTimeline'
 import { DeliveryActionModal } from './components/DeliveryActionModal'
 import { TripRouteButton } from './components/TripRouteButton'
@@ -236,7 +235,8 @@ function DriverTrip({ trip }: { trip: DeliveryTrip }) {
             <Button
               size="large"
               icon={<Wallet size={18} />}
-              disabled={!balance || balance.due <= 0 || change.isPending}
+              // Đơn đã giao thành công vẫn có thể còn cọc vỏ phải thu dù tiền hàng đã đủ.
+              disabled={!balance || (balance.due <= 0 && order.latestAttempt?.outcome !== 'SUCCESS') || change.isPending}
               onClick={() => setCollect(order)}
             >
               Thu tiền
@@ -393,9 +393,18 @@ function CollectionModal({
   const balance = data.balances.find((b) => b.orderId === order.orderId)!
   const method = Form.useWatch('method', form)
   const amount: number | undefined = Form.useWatch('amount', form)
+  const depositAmount: number | undefined = Form.useWatch('depositAmount', form)
   const { data: settings } = useSettings()
   const bottles = useQuery({ queryKey: ['live', 'delivery-bottles', 'deposit', order.id], queryFn: () => deliveryBottleApi.get(order.id) })
-  const deposit = bottles.data?.tracked ? depositShortfall(bottles.data.lines).total : 0
+  // Cọc chỉ thu được sau khi giao thành công (sổ vỏ đã ghi giao); trừ phần cọc đã thu ở các lần trước.
+  const collected = data.receipts.filter((r) => r.orderId === order.orderId).reduce((sum, r) => sum + (r.depositAmount ?? 0), 0)
+  const deposit =
+    bottles.data?.tracked && bottles.data.given ? Math.max(0, depositShortfall(bottles.data.lines).total - collected) : 0
+  const nothing = !bottles.isLoading && balance.due <= 0 && deposit <= 0
+  // Số cọc chỉ biết sau khi tải sổ vỏ: điền sẵn khi có, trừ khi tài xế đã tự sửa.
+  useEffect(() => {
+    if (!form.isFieldTouched('depositAmount')) form.setFieldValue('depositAmount', deposit)
+  }, [deposit, form])
   return (
     <Modal
       open
@@ -408,6 +417,7 @@ function CollectionModal({
       closable={!loading}
       maskClosable={!loading}
       cancelButtonProps={{ disabled: loading }}
+      okButtonProps={{ disabled: nothing || bottles.isLoading }}
       okText="Ghi nhận"
       cancelText="Hủy"
     >
@@ -420,9 +430,7 @@ function CollectionModal({
           <>
             <div>
               <dt>Cọc vỏ thiếu</dt>
-              <dd>
-                {currency(deposit)} <Unsupported label="(chưa ghi được)" />
-              </dd>
+              <dd>{currency(deposit)}</dd>
             </div>
             <div className="is-total">
               <dt>Tổng thu của khách</dt>
@@ -431,16 +439,29 @@ function CollectionModal({
           </>
         )}
       </dl>
+      {nothing && <p className="af-form-hint">Đơn này không còn tiền hàng hay cọc vỏ nào phải thu.</p>}
       <Form
         form={form}
         layout="vertical"
-        disabled={loading}
-        initialValues={{ amount: balance.due, method: 'CASH', bottlesReturned: 0 }}
-        onFinish={(values) => onSave({ ...values, bottlesReturned: 0, requestId })}
+        disabled={loading || nothing}
+        initialValues={{ amount: balance.due, method: 'CASH', bottlesReturned: 0, depositAmount: deposit }}
+        onFinish={(values) => {
+          const money = values.amount ?? 0
+          const depositPaid = deposit > 0 ? (values.depositAmount ?? 0) : 0
+          if (money <= 0 && depositPaid <= 0) {
+            form.setFields([{ name: 'amount', errors: ['Nhập tiền hàng hoặc tiền cọc nhận được.'] }])
+            return
+          }
+          return onSave({ ...values, amount: money, depositAmount: depositPaid, bottlesReturned: 0, requestId })
+        }}
       >
-        <Form.Item name="amount" label="Số tiền nhận" rules={[{ required: true }, { type: 'number', min: 1, max: balance.due }]}>
+        <Form.Item
+          name="amount"
+          label="Tiền hàng nhận"
+          rules={[{ required: true }, { type: 'number', min: deposit > 0 ? 0 : 1, max: balance.due }]}
+        >
           <InputNumber
-            min={1}
+            min={0}
             max={balance.due}
             precision={0}
             inputMode="numeric"
@@ -450,6 +471,25 @@ function CollectionModal({
             style={{ width: '100%' }}
           />
         </Form.Item>
+        {deposit > 0 && (
+          <Form.Item
+            name="depositAmount"
+            label="Cọc vỏ nhận"
+            extra="Cọc cho số vỏ khách chưa trả, ghi vào sổ cọc của khách. Khách trả vỏ sau thì chủ cửa hàng hoàn cọc."
+            rules={[{ required: true }, { type: 'number', min: 0, max: deposit }]}
+          >
+            <InputNumber
+              min={0}
+              max={deposit}
+              precision={0}
+              inputMode="numeric"
+              formatter={(value) => `${value ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
+              parser={(value) => Number((value ?? '').replace(/\D/g, ''))}
+              suffix="₫"
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+        )}
         <Form.Item name="method" label="Phương thức" rules={[{ required: true }]}>
           <Segmented
             block
@@ -461,7 +501,11 @@ function CollectionModal({
         </Form.Item>
         {method === 'BANK_TRANSFER' && (
           <div className="af-driver-qr">
-            <TransferQr settings={settings} amount={amount && amount > 0 ? amount : balance.due} note={order.orderCode} />
+            <TransferQr
+              settings={settings}
+              amount={(amount ?? 0) + (deposit > 0 ? (depositAmount ?? 0) : 0) || balance.due + deposit}
+              note={order.orderCode}
+            />
             <p className="af-form-hint">Đưa mã cho khách quét. Chỉ bấm Ghi nhận sau khi thấy tiền vào tài khoản cửa hàng.</p>
           </div>
         )}
@@ -471,7 +515,7 @@ function CollectionModal({
         .map((r) => (
           <p key={r.id}>
             {new Date(r.createdAt).toLocaleString('vi-VN')} · {currency(r.amount)} ({r.method === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}) ·{' '}
-            {r.bottlesReturned} vỏ
+            {r.bottlesReturned} vỏ{r.depositAmount > 0 ? ` · cọc ${currency(r.depositAmount)}` : ''}
           </p>
         ))}
     </Modal>

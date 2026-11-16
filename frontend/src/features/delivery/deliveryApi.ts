@@ -9,12 +9,23 @@ export type TripCollections = {
     bottlesReturned: number
     recordedBy: number
     createdAt: string
+    /** Cọc vỏ thu cùng lần này (0 nếu không thu cọc). */
+    depositAmount: number
   }[]
   balances: { orderId: number; total: number; paid: number; due: number; bottlesToExchange: number }[]
   cashExpected: number
   bottlesExpected: number
+  /** Cọc thu bằng tiền mặt, tài xế phải nộp cùng tiền hàng khi đối soát. */
+  depositExpected: number
 }
-export type CollectionInput = { requestId: string; amount: number; method: 'CASH' | 'BANK_TRANSFER'; bottlesReturned: number }
+export type CollectionInput = {
+  requestId: string
+  amount: number
+  method: 'CASH' | 'BANK_TRANSFER'
+  bottlesReturned: number
+  /** Cọc cho phần vỏ khách chưa đổi; ghi vào sổ cọc của khách. */
+  depositAmount?: number
+}
 export const collectionApi = {
   get: (tripId: number) => api.get<TripCollections>(`/delivery/trips/${tripId}/collections`),
   collect: (tripId: number, orderId: number, input: CollectionInput) =>
@@ -57,6 +68,9 @@ export type SettlementInput = {
   bottlesExpected: number
   bottlesConfirmed: number
   note?: string
+  /** Cọc tiền mặt tài xế báo nộp và chủ cửa hàng thực nhận. */
+  depositReported?: number
+  depositConfirmed?: number
 }
 export type DeliveryTrip = {
   id: number

@@ -42,6 +42,7 @@ const collections: TripCollections = {
   ],
   cashExpected: 0,
   bottlesExpected: 0,
+  depositExpected: 0,
 }
 
 vi.mock('./deliveryApi', async (original) => ({

@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Unsupported } from '@/shared/components/Unsupported'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Collapse, Descriptions, Dropdown, Modal, Popconfirm, Skeleton, Tag, type MenuProps } from 'antd'
 import { Ellipsis, MapPin, Phone, Truck } from 'lucide-react'
@@ -337,7 +336,7 @@ export function TripDrawer({ tripId, onClose }: { tripId: number; onClose: () =>
                         </strong>
                         <span>
                           {currency(receipt.amount)} · {receipt.method === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'} · {receipt.bottlesReturned}{' '}
-                          vỏ
+                          vỏ{receipt.depositAmount > 0 ? ` · cọc ${currency(receipt.depositAmount)}` : ''}
                         </span>
                       </li>
                     ))}
@@ -357,7 +356,11 @@ export function TripDrawer({ tripId, onClose }: { tripId: number; onClose: () =>
           action={action}
           expected={
             action.kind === 'settle' && collections.data && collections.data.receipts.length
-              ? { cash: collections.data.cashExpected, bottles: collections.data.bottlesExpected }
+              ? {
+                  cash: collections.data.cashExpected,
+                  bottles: collections.data.bottlesExpected,
+                  deposit: collections.data.depositExpected ?? 0,
+                }
               : undefined
           }
           loading={change.isPending}
@@ -439,7 +442,20 @@ function SettlementResult({ settlement }: { settlement: SettlementInput & { hand
             </>
           ),
         },
-        { key: 'deposit', label: 'Tiền cọc', children: <Unsupported /> },
+        {
+          key: 'deposit',
+          label: 'Cọc vỏ',
+          children: (
+            <>
+              <Money
+                value={settlement.depositConfirmed ?? 0}
+                tone={(settlement.depositConfirmed ?? 0) < (settlement.depositReported ?? 0) ? 'refund' : 'paid'}
+              />{' '}
+              / tài xế báo {currency(settlement.depositReported ?? 0)}{' '}
+              {(settlement.depositConfirmed ?? 0) !== (settlement.depositReported ?? 0) && <Tag color="red">Lệch</Tag>}
+            </>
+          ),
+        },
         ...(settlement.note ? [{ key: 'note', label: 'Ghi chú', children: settlement.note }] : []),
         { key: 'at', label: 'Thời điểm', children: dateTime(settlement.handedOverAt) },
       ]}

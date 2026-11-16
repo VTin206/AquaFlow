@@ -248,11 +248,13 @@ public class DeliveryService {
         }
         var collections = repository.collections(tripId);
         if (!collections.receipts().isEmpty() && (request.cashReported().compareTo(collections.cashExpected()) != 0
-                || request.bottlesExpected() != collections.bottlesExpected())) {
+                || request.bottlesExpected() != collections.bottlesExpected()
+                || request.depositReported().compareTo(collections.depositExpected()) != 0)) {
             throw new ConflictException("Collection totals changed; reload the trip before settlement");
         }
         if ((request.cashReported().compareTo(request.cashConfirmed()) != 0
-                || !request.bottlesExpected().equals(request.bottlesConfirmed()))
+                || !request.bottlesExpected().equals(request.bottlesConfirmed())
+                || request.depositReported().compareTo(request.depositConfirmed()) != 0)
                 && DeliveryRepository.clean(request.note()) == null) {
             throw new BadRequestException("Cần ghi lý do khi tiền hoặc vỏ bàn giao có chênh lệch");
         }
@@ -294,12 +296,20 @@ public class DeliveryService {
         requireStatus(trip, "IN_PROGRESS");
         var order = repository.lockOrder(orderId);
         if (!List.of("OUT_FOR_DELIVERY", "DELIVERED").contains(order.status())) throw new ConflictException("Order cannot receive collections");
-        if (request.amount().signum()==0 && request.bottlesReturned()==0) throw new BadRequestException("Enter an amount or returned bottles");
+        if (request.amount().signum()==0 && request.bottlesReturned()==0 && request.depositAmount().signum()==0)
+            throw new BadRequestException("Enter an amount or returned bottles");
         var balance = repository.balance(orderId);
         if (request.amount().compareTo(balance.due())>0) throw new ConflictException("Amount exceeds the outstanding balance");
         int returned = repository.collections(tripId).receipts().stream().filter(r -> r.orderId()==orderId).mapToInt(CollectionResponse::bottlesReturned).sum();
         if ((long)returned+request.bottlesReturned()>balance.bottlesToExchange()) throw new BadRequestException("Returned bottles exceed the order quantity");
-        repository.collect(assignment.id(), orderId, actorId, request);
+        java.util.UUID depositEntry = null;
+        if (request.depositAmount().signum()>0) {
+            // Cọc chỉ thu cho phần vỏ khách chưa đổi của đơn đã giao thành công, ghi vào sổ cọc của khách.
+            if (request.depositAmount().compareTo(bottleLedger.depositShortfall(assignment.id()))>0)
+                throw new ConflictException("Tiền cọc vượt số cọc còn phải thu cho số vỏ khách chưa đổi");
+            depositEntry = bottleLedger.collectDeposit(assignment.id(), orderId, actorId, request.requestId(), request.depositAmount());
+        }
+        repository.collect(assignment.id(), orderId, actorId, request, depositEntry);
         return repository.collections(tripId);
     }
 

@@ -65,6 +65,28 @@ public class DeliveryBottleService {
         }
         jdbc.update("UPDATE delivery_bottle_manifests SET given=true WHERE assignment_id=?",assignment);
     }
+    /**
+     * Cọc còn phải thu của phân công: (vỏ đã giao − vỏ đã thu) × cọc/vỏ chốt lúc khởi hành, trừ cọc đã thu ở các lần trước.
+     * Bằng 0 khi đơn không có vỏ, chưa giao thành công hoặc không gắn với hồ sơ khách (khách vãng lai).
+     */
+    public BigDecimal depositShortfall(long assignment) {
+        var rows=jdbc.queryForList("SELECT customer_id,given FROM delivery_bottle_manifests WHERE assignment_id=?",assignment);
+        if(rows.isEmpty() || rows.getFirst().get("customer_id")==null || !Boolean.TRUE.equals(rows.getFirst().get("given"))) return BigDecimal.ZERO;
+        BigDecimal due=BigDecimal.ZERO;
+        for(var line:lines(assignment)) due=due.add(line.unitDeposit().multiply(BigDecimal.valueOf(Math.max(0,line.given()-line.returned()))));
+        return due.subtract(delivery.depositCollected(assignment)).max(BigDecimal.ZERO);
+    }
+    /** Ghi COLLECT vào sổ cọc của khách cho một lần thu tại điểm giao; trả mã dòng sổ để gắn vào phiếu thu. */
+    @Transactional
+    public UUID collectDeposit(long assignment,long order,long actor,UUID collectionRequestId,BigDecimal amount) {
+        Long customer=jdbc.queryForObject("SELECT customer_id FROM delivery_bottle_manifests WHERE assignment_id=?",Long.class,assignment);
+        if(customer==null) throw new ConflictException("Đơn không gắn với hồ sơ khách nên không ghi được cọc");
+        ledger.lockCustomer(customer);
+        var input=new Create(key("delivery-deposit:"+collectionRequestId),"COLLECT",null,null,amount,"Thu cọc khi giao · đơn #"+order+" · phân công #"+assignment);
+        ledger.insert(customer,actor,input,0,amount,BigDecimal.ZERO);
+        jdbc.update("UPDATE deposit_transactions SET order_id=? WHERE ledger_request_id=?",order,input.requestId());
+        return input.requestId();
+    }
     private void linkOrder(UUID id,long order) { jdbc.update("UPDATE bottle_transactions SET order_id=? WHERE ledger_request_id=?",order,id); }
     private List<Line> lines(long assignment) {
         return jdbc.query("""

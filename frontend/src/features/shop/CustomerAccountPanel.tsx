@@ -4,11 +4,117 @@ import { Alert, App, Button, Checkbox, Form, Input, Modal, Popconfirm, Skeleton,
 import { Pencil, Plus, Star, Trash2 } from 'lucide-react'
 import { useAuth } from '@/features/auth/useAuth'
 import { QueryError } from '@/shared/components/QueryError'
-import { accountKey, customerAccountApi, phoneRules, type AddressInput, type SavedAddress } from './customerAccountApi'
+import { accountKey, customerAccountApi, phoneRules, type AddressInput, type PasswordChange, type SavedAddress } from './customerAccountApi'
+import { currency } from '@/shared/utils/format'
 import { WardSelect } from '@/shared/address/WardSelect'
 import { TextArea } from '@/shared/components/TextArea'
 
 const cleanPhone = (phone: string) => phone.replace(/[\s().-]/g, '')
+
+/** Vỏ khách đang giữ và tiền cọc; cọc còn được hoàn do cửa hàng trả khi khách trả vỏ. */
+function BottlesSection({ queryKey }: { queryKey: readonly unknown[] }) {
+  const bottles = useQuery({ queryKey, queryFn: customerAccountApi.bottles })
+  return (
+    <section aria-label="Vỏ bình và cọc">
+      <h2>Vỏ bình và cọc</h2>
+      {bottles.isPending ? (
+        <Skeleton active paragraph={{ rows: 2 }} />
+      ) : bottles.isError ? (
+        <QueryError error={bottles.error} onRetry={bottles.refetch} />
+      ) : (
+        <>
+          {bottles.data.bottles.length ? (
+            <ul className="af-account-bottles">
+              {bottles.data.bottles.map((line) => (
+                <li key={line.bottleTypeId}>
+                  <span>{line.name}</span>
+                  <strong>{line.holding} vỏ</strong>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="af-account-empty">Bạn không giữ vỏ nào của cửa hàng.</p>
+          )}
+          <dl className="af-account-deposit">
+            <div>
+              <dt>Cọc đã nộp</dt>
+              <dd>{currency(bottles.data.depositPaid)}</dd>
+            </div>
+            {bottles.data.refundable > 0 && (
+              <div>
+                <dt>Cọc còn được hoàn</dt>
+                <dd>{currency(bottles.data.refundable)}</dd>
+              </div>
+            )}
+          </dl>
+          {bottles.data.refundable > 0 && <p className="af-form-hint">Liên hệ cửa hàng để nhận lại phần cọc này.</p>}
+        </>
+      )}
+    </section>
+  )
+}
+
+/** Đổi mật khẩu: thành công thì mọi phiên hết hạn nên đăng xuất ngay và mời đăng nhập lại. */
+function PasswordSection() {
+  const { logout } = useAuth()
+  const { message } = App.useApp()
+  const [form] = Form.useForm<PasswordChange & { confirm: string }>()
+  const change = useMutation({
+    mutationFn: customerAccountApi.changePassword,
+    onSuccess: () => {
+      message.success('Đã đổi mật khẩu. Vui lòng đăng nhập lại bằng mật khẩu mới.')
+      logout()
+    },
+  })
+  return (
+    <section aria-label="Đổi mật khẩu">
+      <h2>Đổi mật khẩu</h2>
+      <Form
+        form={form}
+        layout="vertical"
+        requiredMark={false}
+        disabled={change.isPending}
+        onFinish={(values) => change.mutate({ currentPassword: values.currentPassword, newPassword: values.newPassword })}
+      >
+        <Form.Item name="currentPassword" label="Mật khẩu hiện tại" rules={[{ required: true, message: 'Nhập mật khẩu hiện tại.' }]}>
+          <Input.Password autoComplete="current-password" />
+        </Form.Item>
+        <div className="af-account-pair">
+          <Form.Item
+            name="newPassword"
+            label="Mật khẩu mới"
+            rules={[
+              { required: true, message: 'Nhập mật khẩu mới.' },
+              { min: 8, message: 'Ít nhất 8 ký tự.' },
+              { max: 128 },
+            ]}
+          >
+            <Input.Password autoComplete="new-password" />
+          </Form.Item>
+          <Form.Item
+            name="confirm"
+            label="Nhập lại mật khẩu mới"
+            dependencies={['newPassword']}
+            rules={[
+              { required: true, message: 'Nhập lại mật khẩu mới.' },
+              ({ getFieldValue }) => ({
+                validator: (_, value) =>
+                  !value || value === getFieldValue('newPassword') ? Promise.resolve() : Promise.reject(new Error('Hai mật khẩu chưa khớp.')),
+              }),
+            ]}
+          >
+            <Input.Password autoComplete="new-password" />
+          </Form.Item>
+        </div>
+        {change.isError && <Alert type="error" showIcon title={change.error.message} style={{ marginBottom: 12 }} />}
+        <p className="af-form-hint">Đổi xong bạn sẽ được đăng xuất khỏi mọi thiết bị.</p>
+        <Button htmlType="submit" loading={change.isPending}>
+          Đổi mật khẩu
+        </Button>
+      </Form>
+    </section>
+  )
+}
 
 /** Hồ sơ và sổ địa chỉ của khách: hai cột trên màn hình rộng, mỗi địa chỉ một dòng. */
 export function CustomerAccountPanel() {
@@ -183,6 +289,8 @@ export function CustomerAccountPanel() {
           <Alert type="error" showIcon title={remove.error?.message ?? makeDefault.error?.message} style={{ marginTop: 12 }} />
         )}
       </section>
+      <BottlesSection queryKey={[...key, 'bottles']} />
+      <PasswordSection />
       <Modal
         forceRender
         centered

@@ -325,10 +325,11 @@ public class DeliveryRepository {
         jdbc.update("""
                 INSERT INTO handover_records
                     (trip_id, driver_id, received_by, cash_reported, cash_confirmed,
-                     bottles_expected, bottles_confirmed, note)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                     bottles_expected, bottles_confirmed, note, deposit_reported, deposit_confirmed)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, tripId, driverId, ownerId, request.cashReported(), request.cashConfirmed(),
-                request.bottlesExpected(), request.bottlesConfirmed(), clean(request.note()));
+                request.bottlesExpected(), request.bottlesConfirmed(), clean(request.note()),
+                request.depositReported(), request.depositConfirmed());
         jdbc.update("""
                 UPDATE delivery_trips SET status = 'COMPLETED', ended_at = NOW()
                 WHERE id = ?
@@ -372,7 +373,8 @@ public class DeliveryRepository {
                     rs.getLong("id"), rs.getBigDecimal("cash_reported"),
                     rs.getBigDecimal("cash_confirmed"), rs.getInt("bottles_expected"),
                     rs.getInt("bottles_confirmed"), rs.getString("note"),
-                    rs.getLong("received_by"), rs.getObject("handed_over_at", OffsetDateTime.class)));
+                    rs.getLong("received_by"), rs.getObject("handed_over_at", OffsetDateTime.class),
+                    rs.getBigDecimal("deposit_reported"), rs.getBigDecimal("deposit_confirmed")));
         });
         Map<Long, List<AssignmentResponse>> assigned = new HashMap<>();
         for (Stop stop : stops) {
@@ -445,12 +447,16 @@ public class DeliveryRepository {
                 JOIN delivery_assignments a ON a.id=c.assignment_id WHERE a.trip_id=? ORDER BY c.id
                 """, (rs, i) -> new CollectionResponse(rs.getLong("id"), rs.getLong("order_id"),
                 rs.getBigDecimal("amount"), rs.getString("method"), rs.getInt("bottles_returned"),
-                rs.getLong("recorded_by"), rs.getObject("created_at", OffsetDateTime.class)), tripId);
+                rs.getLong("recorded_by"), rs.getObject("created_at", OffsetDateTime.class),
+                rs.getBigDecimal("deposit_amount")), tripId);
         var balances = jdbc.query("SELECT order_id FROM delivery_assignments WHERE trip_id=? ORDER BY id",
                 (rs, i) -> balance(rs.getLong(1)), tripId);
         BigDecimal cash = receipts.stream().filter(r -> r.method().equals("CASH"))
                 .map(CollectionResponse::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
-        return new CollectionsResponse(receipts, balances, cash, receipts.stream().mapToInt(CollectionResponse::bottlesReturned).sum());
+        BigDecimal deposit = receipts.stream().filter(r -> r.method().equals("CASH"))
+                .map(CollectionResponse::depositAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new CollectionsResponse(receipts, balances, cash,
+                receipts.stream().mapToInt(CollectionResponse::bottlesReturned).sum(), deposit);
     }
 
     public OrderBalance balance(long orderId) {
@@ -471,12 +477,24 @@ public class DeliveryRepository {
         if (((Number) row.get("assignment_id")).longValue()!=assignmentId
                 || ((BigDecimal) row.get("amount")).compareTo(request.amount())!=0
                 || !row.get("method").equals(request.method())
-                || ((Number) row.get("bottles_returned")).intValue()!=request.bottlesReturned())
+                || ((Number) row.get("bottles_returned")).intValue()!=request.bottlesReturned()
+                || ((BigDecimal) row.get("deposit_amount")).compareTo(request.depositAmount())!=0)
             throw new ConflictException("Request id already used with different collection details");
         return true;
     }
 
+    /** Tổng cọc đã thu tại các lần thu của một phân công. */
+    public BigDecimal depositCollected(long assignmentId) {
+        return jdbc.queryForObject("SELECT COALESCE(SUM(deposit_amount),0) FROM delivery_collections WHERE assignment_id=?",
+                BigDecimal.class, assignmentId);
+    }
+
     public void collect(long assignmentId, long orderId, long actorId, CollectionRequest request) {
+        collect(assignmentId, orderId, actorId, request, null);
+    }
+
+    /** {@code depositRequestId}: dòng COLLECT trong sổ cọc của khách (đã ghi trước), null nếu không thu cọc. */
+    public void collect(long assignmentId, long orderId, long actorId, CollectionRequest request, java.util.UUID depositRequestId) {
         Long paymentId = null;
         if (request.amount().signum()>0) {
             paymentId = jdbc.queryForObject("""
@@ -486,9 +504,11 @@ public class DeliveryRepository {
             jdbc.update("INSERT INTO payment_allocations(payment_id,allocation_type,amount) VALUES (?,'SALE',?)", paymentId, request.amount());
         }
         jdbc.update("""
-                INSERT INTO delivery_collections(assignment_id,payment_id,request_id,amount,method,bottles_returned,recorded_by)
-                VALUES (?,?,?,?,?,?,?)
-                """, assignmentId, paymentId, request.requestId(), request.amount(), request.method(), request.bottlesReturned(), actorId);
+                INSERT INTO delivery_collections(assignment_id,payment_id,request_id,amount,method,bottles_returned,recorded_by,
+                    deposit_amount,deposit_request_id)
+                VALUES (?,?,?,?,?,?,?,?,?)
+                """, assignmentId, paymentId, request.requestId(), request.amount(), request.method(), request.bottlesReturned(), actorId,
+                request.depositAmount(), depositRequestId);
         jdbc.queryForObject("SELECT refresh_order_payment_status(?)",Object.class,orderId);
     }
 }

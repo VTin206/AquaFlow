@@ -1,5 +1,4 @@
 import { Alert, Form, Input, InputNumber, Modal, Segmented, Select, Tag } from 'antd'
-import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 import { QueryError } from '@/shared/components/QueryError'
 import { modalWidth } from '@/shared/utils/modal'
 import type { DeliveryStop, ResultInput, SettlementInput } from '../deliveryApi'
@@ -22,7 +21,7 @@ export function DeliveryActionModal({
   onSubmit,
 }: {
   action: DeliveryAction
-  expected?: { cash: number; bottles: number }
+  expected?: { cash: number; bottles: number; deposit: number }
   drivers: { id: number; name: string }[]
   available: { id: number; orderCode: string; recipientName: string | null; deliveryFailed: boolean; redeliveryEligible: boolean }[]
   optionError: Error | null
@@ -65,6 +64,8 @@ export function DeliveryActionModal({
           cashConfirmed: expected?.cash ?? 0,
           bottlesExpected: expected?.bottles ?? 0,
           bottlesConfirmed: expected?.bottles ?? 0,
+          depositReported: expected?.deposit ?? 0,
+          depositConfirmed: expected?.deposit ?? 0,
         }}
       >
         {action.kind === 'driver' && (
@@ -159,9 +160,23 @@ export function DeliveryActionModal({
                 />
               </Form.Item>
             ))}
-            <Form.Item label="Tiền cọc tài xế nộp" tooltip={UNSUPPORTED_HINT}>
-              <InputNumber disabled placeholder="Chưa hỗ trợ" style={{ width: '100%' }} />
-            </Form.Item>
+            {(expected?.deposit ?? 0) > 0 &&
+              (
+              [
+                ['depositReported', 'Cọc vỏ tài xế báo'],
+                ['depositConfirmed', 'Cọc vỏ thực nhận'],
+              ] as const
+            ).map(([name, label]) => (
+              <Form.Item key={name} name={name} label={label} rules={[{ required: true, message: 'Nhập số tiền cọc.' }]}>
+                <InputNumber
+                  disabled={!!expected && name === 'depositReported'}
+                  min={0}
+                  max={999999999999.99}
+                  precision={2}
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+            ))}
           </>
         )}
         {(action.kind === 'result' || action.kind === 'settle') && (
