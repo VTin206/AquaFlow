@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, App, Button, Card, Empty, Pagination, Popconfirm, Result, Select, Skeleton, Tag } from 'antd'
-import { ArrowLeft, ChevronRight, Phone, RefreshCw, ShoppingBag } from 'lucide-react'
+import { ChevronRight, Phone, RefreshCw, ShoppingBag } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useAuth } from '@/features/auth/useAuth'
@@ -165,9 +165,6 @@ export function CustomerOrderPage() {
   return (
     <div className="af-shop-page af-shop-narrow">
       <div className="af-shop-track">
-        <Link to="/shop/orders" className="af-text-link af-shop-order-back">
-          <ArrowLeft size={16} aria-hidden /> Đơn hàng của tôi
-        </Link>
         {query.isError ? (
           <QueryError error={query.error} onRetry={query.refetch} />
         ) : !order ? (

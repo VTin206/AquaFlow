@@ -2492,12 +2492,6 @@
   justify-content: flex-end;
   margin-top: 16px;
 }
-.af-shop-order-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  align-self: flex-start;
-}
 .af-shop-order-title {
   display: inline-flex;
   flex-wrap: wrap;
