@@ -24,6 +24,9 @@ import {
   type DeliveryTrip,
 } from './deliveryApi'
 import { DeliveryBottlesButton } from './components/DeliveryBottlesButton'
+import { deliveryBottleApi } from './deliveryBottleApi'
+import { depositShortfall } from './bottleDeposit'
+import { Unsupported } from '@/shared/components/Unsupported'
 import { AttemptsTimeline } from './components/AttemptsTimeline'
 import { DeliveryActionModal } from './components/DeliveryActionModal'
 import { TripRouteButton } from './components/TripRouteButton'
@@ -391,6 +394,8 @@ function CollectionModal({
   const method = Form.useWatch('method', form)
   const amount: number | undefined = Form.useWatch('amount', form)
   const { data: settings } = useSettings()
+  const bottles = useQuery({ queryKey: ['live', 'delivery-bottles', 'deposit', order.id], queryFn: () => deliveryBottleApi.get(order.id) })
+  const deposit = bottles.data?.tracked ? depositShortfall(bottles.data.lines).total : 0
   return (
     <Modal
       open
@@ -406,7 +411,26 @@ function CollectionModal({
       okText="Ghi nhận"
       cancelText="Hủy"
     >
-      <p>Còn phải thu: {currency(balance.due)}. Chỉ ghi nhận tiền đã nhận thực tế. Thu vỏ theo từng loại tại nút Vỏ của đơn.</p>
+      <dl className="af-collect-split">
+        <div>
+          <dt>Tiền hàng còn thu</dt>
+          <dd>{currency(balance.due)}</dd>
+        </div>
+        {deposit > 0 && (
+          <>
+            <div>
+              <dt>Cọc vỏ thiếu</dt>
+              <dd>
+                {currency(deposit)} <Unsupported label="(chưa ghi được)" />
+              </dd>
+            </div>
+            <div className="is-total">
+              <dt>Tổng thu của khách</dt>
+              <dd>{currency(balance.due + deposit)}</dd>
+            </div>
+          </>
+        )}
+      </dl>
       <Form
         form={form}
         layout="vertical"

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Unsupported } from '@/shared/components/Unsupported'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Collapse, Descriptions, Dropdown, Modal, Popconfirm, Skeleton, Tag, type MenuProps } from 'antd'
 import { Ellipsis, MapPin, Phone, Truck } from 'lucide-react'
@@ -117,7 +118,9 @@ export function TripDrawer({ tripId, onClose }: { tripId: number; onClose: () =>
           },
         ]
       : []),
-    ...(editable && next !== 'addOrders' ? [{ key: 'add', label: 'Thêm đơn', onClick: () => setAction({ kind: 'add', tripId: trip.id }) }] : []),
+    ...(editable && next !== 'addOrders'
+      ? [{ key: 'add', label: 'Thêm đơn', onClick: () => setAction({ kind: 'add', tripId: trip.id }) }]
+      : []),
   ]
 
   const primary =
@@ -142,7 +145,12 @@ export function TripDrawer({ tripId, onClose }: { tripId: number; onClose: () =>
         </Button>
       </Popconfirm>
     ) : next === 'depart' ? (
-      <Popconfirm title="Tài xế đã nhận đủ hàng và khởi hành?" okText="Khởi hành" cancelText="Chưa" onConfirm={() => execute(() => ops.depart(trip))}>
+      <Popconfirm
+        title="Tài xế đã nhận đủ hàng và khởi hành?"
+        okText="Khởi hành"
+        cancelText="Chưa"
+        onConfirm={() => execute(() => ops.depart(trip))}
+      >
         <Button type="primary" loading={change.isPending}>
           Khởi hành
         </Button>
@@ -247,12 +255,17 @@ export function TripDrawer({ tripId, onClose }: { tripId: number; onClose: () =>
                   {stop.items.length > 0 && (
                     <small className="af-text-muted">
                       {stop.items
-                        .map((line) => `${line.productName} × ${line.quantity} ${line.unit.toLowerCase()}${line.lotCode ? ` (lô ${line.lotCode})` : ''}`)
+                        .map(
+                          (line) =>
+                            `${line.productName} × ${line.quantity} ${line.unit.toLowerCase()}${line.lotCode ? ` (lô ${line.lotCode})` : ''}`,
+                        )
                         .join(' · ')}
                     </small>
                   )}
                   <div className="af-trip-stop-foot">
-                    <small>{balance && balance.due > 0 ? <Money value={balance.due} tone={dueTone(balance.due)} prefix="Thu " /> : null}</small>
+                    <small>
+                      {balance && balance.due > 0 ? <Money value={balance.due} tone={dueTone(balance.due)} prefix="Thu " /> : null}
+                    </small>
                     <div className="af-trip-stop-actions">
                       {stop.latestAttempt && (
                         <Button size="small" type="text" onClick={() => setHistory(stop)}>
@@ -319,9 +332,12 @@ export function TripDrawer({ tripId, onClose }: { tripId: number; onClose: () =>
                   <ul className="af-return-list">
                     {collections.data.receipts.map((receipt) => (
                       <li key={receipt.id}>
-                        <strong>{trip.orders.find((stop) => stop.orderId === receipt.orderId)?.orderCode ?? `Đơn #${receipt.orderId}`}</strong>
+                        <strong>
+                          {trip.orders.find((stop) => stop.orderId === receipt.orderId)?.orderCode ?? `Đơn #${receipt.orderId}`}
+                        </strong>
                         <span>
-                          {currency(receipt.amount)} · {receipt.method === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'} · {receipt.bottlesReturned} vỏ
+                          {currency(receipt.amount)} · {receipt.method === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'} · {receipt.bottlesReturned}{' '}
+                          vỏ
                         </span>
                       </li>
                     ))}
@@ -407,8 +423,9 @@ function SettlementResult({ settlement }: { settlement: SettlementInput & { hand
           label: 'Tiền mặt',
           children: (
             <>
-              <Money value={settlement.cashConfirmed} tone={settlement.cashConfirmed < settlement.cashReported ? 'refund' : 'paid'} /> / tài xế báo{' '}
-              {currency(settlement.cashReported)} {settlement.cashConfirmed !== settlement.cashReported && <Tag color="red">Lệch</Tag>}
+              <Money value={settlement.cashConfirmed} tone={settlement.cashConfirmed < settlement.cashReported ? 'refund' : 'paid'} /> / tài
+              xế báo {currency(settlement.cashReported)}{' '}
+              {settlement.cashConfirmed !== settlement.cashReported && <Tag color="red">Lệch</Tag>}
             </>
           ),
         },
@@ -422,6 +439,7 @@ function SettlementResult({ settlement }: { settlement: SettlementInput & { hand
             </>
           ),
         },
+        { key: 'deposit', label: 'Tiền cọc', children: <Unsupported /> },
         ...(settlement.note ? [{ key: 'note', label: 'Ghi chú', children: settlement.note }] : []),
         { key: 'at', label: 'Thời điểm', children: dateTime(settlement.handedOverAt) },
       ]}

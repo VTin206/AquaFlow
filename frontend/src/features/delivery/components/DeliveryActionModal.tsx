@@ -1,4 +1,5 @@
 import { Alert, Form, Input, InputNumber, Modal, Segmented, Select, Tag } from 'antd'
+import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 import { QueryError } from '@/shared/components/QueryError'
 import { modalWidth } from '@/shared/utils/modal'
 import type { DeliveryStop, ResultInput, SettlementInput } from '../deliveryApi'
@@ -158,6 +159,9 @@ export function DeliveryActionModal({
                 />
               </Form.Item>
             ))}
+            <Form.Item label="Tiền cọc tài xế nộp" tooltip={UNSUPPORTED_HINT}>
+              <InputNumber disabled placeholder="Chưa hỗ trợ" style={{ width: '100%' }} />
+            </Form.Item>
           </>
         )}
         {(action.kind === 'result' || action.kind === 'settle') && (
