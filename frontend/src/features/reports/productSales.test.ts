@@ -48,3 +48,15 @@ test('lists slow movers from the active catalogue, including products that never
   expect(result.some((row) => row.productId === 'a')).toBe(false)
   expect(slowMovers([], stock, 1)).toHaveLength(1)
 })
+
+test('ranks slow movers by revenue when that metric is chosen', () => {
+  const stock = [
+    { id: 'a', name: 'Bình 19L', unit: 'bình', onHand: 40, available: 40, threshold: 10 },
+    { id: 'b', name: 'Thùng chai', unit: 'thùng', onHand: 10, available: 10, threshold: 2 },
+    { id: 'c', name: 'Lốc lon', unit: 'lốc', onHand: 10, available: 10, threshold: 2 },
+  ]
+  // Bình bán nhiều nhưng rẻ; thùng chai bán ít mà đắt: theo doanh thu thì bình mới là hàng chậm.
+  const sales = [sale('a', 30, 600_000), sale('b', 5, 1_500_000), sale('c', 20, 1_400_000)]
+  expect(slowMovers(sales, stock, 8, 'quantity').map((row) => row.productId)).toEqual(['b'])
+  expect(slowMovers(sales, stock, 8, 'revenue').map((row) => row.productId)).toEqual(['a'])
+})

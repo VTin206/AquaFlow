@@ -174,8 +174,7 @@ function ColumnPicker({ columns, core, extra, onExtraChange }: {
  * Biểu đồ tab Sản phẩm bán: xếp hạng và tỷ lệ tính trên mọi sản phẩm của kỳ (không theo trang bảng).
  * Mặc định theo số lượng vì hàng bán nhiều mà giá thấp (bình 19L) dễ bị hàng giá cao che khi xếp theo tiền.
  */
-function ProductCharts({ query }: { query: ReportQuery }) {
-  const [metric, setMetric] = useState<SalesMetric>('quantity')
+function ProductCharts({ query, metric, onMetricChange: setMetric }: { query: ReportQuery; metric: SalesMetric; onMetricChange: (metric: SalesMetric) => void }) {
   const sales = useProductSales(query)
   if (sales.isError) return <QueryError error={sales.error} onRetry={sales.refetch} />
   if (sales.isPending) return <Typography.Text type="secondary">Đang tải báo cáo…</Typography.Text>
@@ -186,13 +185,15 @@ function ProductCharts({ query }: { query: ReportQuery }) {
 }
 
 /** Bán chậm tính trên cả danh mục đang bán, nên sản phẩm chưa bán lần nào trong kỳ cũng có mặt. */
-function SlowMoversTable({ query }: { query: ReportQuery }) {
+const salesValue = (row: ReportRow, metric: SalesMetric) => (metric === 'revenue' ? Number(row.revenue ?? 0) : Number(row.sold ?? 0) - Number(row.returned ?? 0))
+
+function SlowMoversTable({ query, metric }: { query: ReportQuery; metric: SalesMetric }) {
   const sales = useProductSales(query)
   const stock = useStockItems()
   if (sales.isError) return <QueryError error={sales.error} onRetry={sales.refetch} />
   if (stock.isError) return <QueryError error={stock.error} onRetry={stock.refetch} />
   if (sales.isPending || stock.isPending) return <Typography.Text type="secondary">Đang tải báo cáo…</Typography.Text>
-  return <SlowMovers rows={slowMovers(sales.data ?? [], stock.data ?? [])} />
+  return <SlowMovers rows={slowMovers(sales.data ?? [], stock.data ?? [], 8, metric)} />
 }
 
 function BestSellerCharts({ rows, metric, onMetricChange: setMetric }: { rows: ProductSale[]; metric: SalesMetric; onMetricChange: (metric: SalesMetric) => void }) {
@@ -259,14 +260,21 @@ function LiveReportContent() {
   const [customRange, setCustomRange] = useState(false)
   const [view, setView] = useState<'table' | 'chart'>('table')
   const [productList, setProductList] = useState<'all' | 'slow'>('all')
-  const [extraColumns, setExtraColumns] = useState<Partial<Record<ReportSection, string[]>>>({})
+  // Tiêu chí xếp hạng dùng chung cho Bảng và Biểu đồ của tab Sản phẩm bán.
+  const [salesMetric, setSalesMetric] = useState<SalesMetric>('quantity')
   const [page, setPage] = useState(0)
-  const productListSwitch = <Segmented<'all' | 'slow'> className="af-report-list-switch" aria-label="Danh sách sản phẩm" value={productList} onChange={setProductList} options={[{ value: 'all', label: 'Tất cả' }, { value: 'slow', label: 'Bán chậm' }]} />
+  const productListSwitch = <div className="af-report-list-switch">
+    <Segmented<SalesMetric> aria-label="Xếp hạng theo" value={salesMetric} onChange={setSalesMetric} options={(Object.keys(metricLabels) as SalesMetric[]).map((value) => ({ value, label: `Theo ${metricLabels[value].toLowerCase()}` }))} />
+    <Segmented<'all' | 'slow'> aria-label="Danh sách sản phẩm" value={productList} onChange={setProductList} options={[{ value: 'all', label: 'Tất cả' }, { value: 'slow', label: 'Bán chậm' }]} />
+  </div>
   const [size, setSize] = useState(20)
   const [exporting, setExporting] = useState(false)
   const selected = search.get('tab') ?? 'overview'
   const tab = selected in sections ? selected as ReportSection : 'overview'
   const query: ReportQuery = { from: dates[0].format('YYYY-MM-DD'), to: dates[1].format('YYYY-MM-DD'), channel, method }
+  const productSales = useProductSales(query, tab === 'products')
+  const productRows = [...(productSales.rows ?? [])].sort((a, b) => salesValue(b, salesMetric) - salesValue(a, salesMetric) || String(a.name).localeCompare(String(b.name), 'vi'))
+  const [extraColumns, setExtraColumns] = useState<Partial<Record<ReportSection, string[]>>>({})
   const summary = useQuery({ queryKey: ['live', 'reports', 'summary', query], queryFn: () => reportApi.summary(query) })
   const priorQuery = { ...query, ...previousRange(query) }
   const previous = useQuery({ queryKey: ['live', 'reports', 'summary', priorQuery], queryFn: () => reportApi.summary(priorQuery) })
@@ -363,9 +371,9 @@ function LiveReportContent() {
         </> },
         ...Object.entries(sections).map(([key, section]) => ({ key, label: section.title, children: details.isError ? <QueryError error={details.error} onRetry={details.refetch} /> : <Card>
           {key === 'products' && view === 'chart' ? (
-            <ProductCharts query={query} />
+            <ProductCharts query={query} metric={salesMetric} onMetricChange={setSalesMetric} />
           ) : key === 'products' && productList === 'slow' ? (
-            <>{productListSwitch}<SlowMoversTable query={query} /></>
+            <>{productListSwitch}<SlowMoversTable query={query} metric={salesMetric} /></>
           ) : chartTabs.includes(key) && view === 'chart' ? (
             details.isPending ? <Typography.Text type="secondary">Đang tải báo cáo…</Typography.Text>
               : !detailRows.length ? <Typography.Text type="secondary">Chưa có dữ liệu trong kỳ.</Typography.Text>
@@ -374,8 +382,8 @@ function LiveReportContent() {
                 <DriverDeliveryChart rows={detailRows.map((row) => ({ driver: String(row.driver), delivered: num(row.delivered), late: num(row.late), failed: num(row.failed) }))} />
               </>
           ) : (
-            <>{key === 'products' && productListSwitch}<Table<ReportRow> className="af-report-table" size="middle" rowKey={section.key} loading={details.isPending} columns={key === 'customers' ? customerColumns : columnsOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection]))} dataSource={details.data?.content ?? []} scroll={{ x: tableWidthOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection])), y: reportTableHeight }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : 'Chưa có dữ liệu trong kỳ.' }}
-            pagination={{ current: page + 1, pageSize: size, total: details.data?.totalElements ?? 0, showSizeChanger: true, pageSizeOptions: [20, 50, 100], onChange: (next, nextSize) => { setPage(nextSize === size ? next - 1 : 0); setSize(nextSize) } }} /></>
+            <>{key === 'products' && productListSwitch}<Table<ReportRow> className="af-report-table" size="middle" rowKey={section.key} loading={key === 'products' ? productSales.isPending : details.isPending} columns={key === 'customers' ? customerColumns : columnsOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection]))} dataSource={key === 'products' ? productRows : details.data?.content ?? []} scroll={{ x: tableWidthOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection])), y: reportTableHeight }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : 'Chưa có dữ liệu trong kỳ.' }}
+            pagination={{ current: page + 1, pageSize: size, total: key === 'products' ? productRows.length : details.data?.totalElements ?? 0, showSizeChanger: true, pageSizeOptions: [20, 50, 100], onChange: (next, nextSize) => { setPage(nextSize === size ? next - 1 : 0); setSize(nextSize) } }} /></>
           )}
         </Card> })),
       ]} />

@@ -1,5 +1,5 @@
 import { Table, Tag, Tooltip, type TableColumnsType } from 'antd'
-import { shortDate } from '@/shared/utils/format'
+import { currency, shortDate } from '@/shared/utils/format'
 import type { SlowMover } from './productSales'
 
 const statusTags: Record<SlowMover['status'], { label: string; color: string; hint: (row: SlowMover) => string }> = {
@@ -31,6 +31,13 @@ const columns: TableColumnsType<SlowMover> = [
     align: 'right',
     width: 120,
     render: (_, row) => `${row.quantity.toLocaleString('vi-VN')} ${row.unit.toLowerCase()}`,
+  },
+  {
+    title: 'Doanh thu',
+    dataIndex: 'revenue',
+    align: 'right',
+    width: 130,
+    render: (value: number) => currency(value),
   },
   {
     title: 'Tồn kho',

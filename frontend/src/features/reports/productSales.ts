@@ -25,7 +25,7 @@ export function useProductSales(query: ReportQuery, enabled = true) {
     queryFn: () => reportApi.section('products', query, 0, ALL_PRODUCTS),
     enabled,
   })
-  return { ...result, data: result.data?.content.map(toSale) }
+  return { ...result, data: result.data?.content.map(toSale), rows: result.data?.content }
 }
 
 /** Sản phẩm có số dương theo tiêu chí, lớn nhất trước; bằng nhau thì theo tên để thứ tự không nhảy. */
@@ -64,7 +64,7 @@ type StockLike = { id: string; name: string; unit?: string; onHand: number; avai
  * Ghép số bán trong kỳ với danh mục đang bán: sản phẩm không có dòng nào trong báo cáo (chưa bán) vẫn được tính với số 0.
  * Hàng đã ngừng bán (không có ngưỡng tối thiểu) bỏ qua. Bằng số bán thì sản phẩm tồn nhiều hơn đứng trước.
  */
-export function slowMovers(sales: ProductSale[], stock: StockLike[], limit = 8): SlowMover[] {
+export function slowMovers(sales: ProductSale[], stock: StockLike[], limit = 8, metric: SalesMetric = 'quantity'): SlowMover[] {
   const sold = new Map(sales.map((row) => [row.productId, row]))
   const rows = stock
     .filter((item) => item.threshold !== undefined)
@@ -84,9 +84,9 @@ export function slowMovers(sales: ProductSale[], stock: StockLike[], limit = 8):
       }
     })
   // Danh mục ít sản phẩm thì hàng bán đạt từ mức trung bình trở lên không tính là chậm, kể cả khi đứng cuối bảng.
-  const average = rows.reduce((sum, row) => sum + row.quantity, 0) / Math.max(1, rows.length)
+  const average = rows.reduce((sum, row) => sum + row[metric], 0) / Math.max(1, rows.length)
   return rows
-    .filter((row) => row.status !== 'slow' || row.quantity < average)
-    .sort((a, b) => a.quantity - b.quantity || b.onHand - a.onHand || a.name.localeCompare(b.name, 'vi'))
+    .filter((row) => row.status !== 'slow' || row[metric] < average)
+    .sort((a, b) => a[metric] - b[metric] || b.onHand - a.onHand || a.name.localeCompare(b.name, 'vi'))
     .slice(0, limit)
 }
