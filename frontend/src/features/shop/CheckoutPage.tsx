@@ -282,8 +282,10 @@ export function CheckoutPage() {
             onKeyDown={handleFormKeys}
           >
             <div className="af-checkout-main">
-              <Card title="Người nhận">
-                <div className="af-checkout-pair">
+              {/* Người nhận và nơi giao chung một khung để khách điền liền một mạch. */}
+              <Card title="Giao đến">
+                {customer && <SavedAddressPicker onSelect={applyAddress} current={{ address: typedAddress, area: typedArea }} />}
+                <div className="af-checkout-who">
                   <Form.Item
                     name="customer"
                     label="Tên người nhận"
@@ -306,9 +308,6 @@ export function CheckoutPage() {
                     <Input inputMode="tel" autoComplete="tel" />
                   </Form.Item>
                 </div>
-              </Card>
-              <Card title="Giao đến">
-                {customer && <SavedAddressPicker onSelect={applyAddress} current={{ address: typedAddress, area: typedArea }} />}
                 {/* Phường/xã và số tầng chung một hàng; phần giải thích nằm trong dấu (?) cạnh nhãn để form ngắn lại. */}
                 <div className="af-checkout-place">
                   <Form.Item
@@ -393,15 +392,11 @@ export function CheckoutPage() {
                   <Checkbox>Lưu thông tin trên máy này cho lần đặt sau</Checkbox>
                 </Form.Item>
               </Card>
-              <Card title="Thanh toán">
-                <div className="af-checkout-payment">
-                  <Wallet size={22} aria-hidden />
-                  <div>
-                    <strong>Thanh toán khi nhận hàng</strong>
-                    <p>Trả tiền mặt hoặc chuyển khoản cho nhân viên giao hàng. Không cần trả trước.</p>
-                  </div>
-                </div>
-              </Card>
+              <div className="af-checkout-payment">
+                <Wallet size={20} aria-hidden />
+                <strong>Thanh toán khi nhận hàng</strong>
+                <span>Tiền mặt hoặc chuyển khoản cho nhân viên giao hàng</span>
+              </div>
               <p className="af-form-hint af-checkout-next-phone">{nextStepHint}</p>
             </div>
             <aside className="af-checkout-aside">

@@ -2653,3 +2653,26 @@
 .af-checkout-head > span {
   color: var(--af-text-secondary);
 }
+/* Đặt hàng: tên và số điện thoại người nhận một hàng; thanh toán gói trong một dòng. */
+.af-checkout-who {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+.af-checkout-main > .af-checkout-payment {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 12px 18px;
+  border: 1px solid var(--af-border);
+  border-radius: 16px;
+  background: var(--af-surface);
+}
+.af-checkout-main > .af-checkout-payment span {
+  color: var(--af-text-secondary);
+}
+@media (max-width: 640px) {
+  .af-checkout-who {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
