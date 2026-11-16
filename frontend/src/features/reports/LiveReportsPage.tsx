@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { filterOn } from '@/shared/utils/filterOn'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, App, Button, Card, Checkbox, Popover, Segmented, Select, Table, Tabs, Typography } from 'antd'
+import { Alert, App, Button, Card, Checkbox, Input, Popover, Segmented, Select, Table, Tabs, Typography } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { Link, useSearchParams } from 'react-router'
-import { Columns3, FileSpreadsheet, FunnelX } from 'lucide-react'
+import { Columns3, FileSpreadsheet, FunnelX, Search } from 'lucide-react'
+import { normalizeSearch } from '@/shared/utils/search'
 import { Page } from '@/shared/components/Page'
 import { PeriodPicker } from '@/shared/components/PeriodPicker'
 import { QueryError } from '@/shared/components/QueryError'
@@ -268,7 +269,9 @@ function LiveReportContent() {
   // Tiêu chí xếp hạng của biểu đồ Sản phẩm bán; bảng thì bấm tiêu đề cột để sắp xếp.
   const [salesMetric, setSalesMetric] = useState<SalesMetric>('quantity')
   const [page, setPage] = useState(0)
+  const [productSearch, setProductSearch] = useState('')
   const productListSwitch = <div className="af-report-list-switch">
+    {productList === 'all' ? <Input className="af-report-search" aria-label="Tìm sản phẩm" allowClear prefix={<Search size={16} className="af-input-icon" />} placeholder="Tìm tên hoặc mã hàng" value={productSearch} onChange={(event) => { setProductSearch(event.target.value); setPage(0) }} /> : <span />}
     <Segmented<'all' | 'slow'> aria-label="Danh sách sản phẩm" value={productList} onChange={setProductList} options={[{ value: 'all', label: 'Tất cả' }, { value: 'slow', label: 'Bán chậm' }]} />
   </div>
   const [size, setSize] = useState(20)
@@ -277,7 +280,8 @@ function LiveReportContent() {
   const tab = selected in sections ? selected as ReportSection : 'overview'
   const query: ReportQuery = { from: dates[0].format('YYYY-MM-DD'), to: dates[1].format('YYYY-MM-DD'), channel, method }
   const productSales = useProductSales(query, tab === 'products')
-  const productRows = productSales.rows ?? []
+  const productKeyword = normalizeSearch(productSearch.trim())
+  const productRows = (productSales.rows ?? []).filter((row) => !productKeyword || normalizeSearch(`${row.name ?? ''} ${row.sku ?? ''}`).includes(productKeyword))
   const [extraColumns, setExtraColumns] = useState<Partial<Record<ReportSection, string[]>>>({})
   const summary = useQuery({ queryKey: ['live', 'reports', 'summary', query], queryFn: () => reportApi.summary(query) })
   const priorQuery = { ...query, ...previousRange(query) }
@@ -386,7 +390,7 @@ function LiveReportContent() {
                 <DriverDeliveryChart rows={detailRows.map((row) => ({ driver: String(row.driver), delivered: num(row.delivered), late: num(row.late), failed: num(row.failed) }))} />
               </>
           ) : (
-            <>{key === 'products' && productListSwitch}<Table<ReportRow> className="af-report-table" size="small" rowKey={section.key} loading={key === 'products' ? productSales.isPending : details.isPending} columns={key === 'customers' ? customerColumns : key === 'products' ? sortableSales(columnsOf(shownColumns(section.columns, coreColumns.products, extraColumns.products))) : columnsOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection]))} dataSource={key === 'products' ? productRows : details.data?.content ?? []} scroll={{ x: tableWidthOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection])), y: reportTableHeight }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : 'Chưa có dữ liệu trong kỳ.' }}
+            <>{key === 'products' && productListSwitch}<Table<ReportRow> className="af-report-table" size="small" rowKey={section.key} loading={key === 'products' ? productSales.isPending : details.isPending} columns={key === 'customers' ? customerColumns : key === 'products' ? sortableSales(columnsOf(shownColumns(section.columns, coreColumns.products, extraColumns.products))) : columnsOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection]))} dataSource={key === 'products' ? productRows : details.data?.content ?? []} scroll={{ x: tableWidthOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection])), y: reportTableHeight }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : key === 'products' && productKeyword ? 'Không có sản phẩm phù hợp.' : 'Chưa có dữ liệu trong kỳ.' }}
             pagination={{ current: page + 1, pageSize: size, total: key === 'products' ? productRows.length : details.data?.totalElements ?? 0, showSizeChanger: true, pageSizeOptions: [20, 50, 100], onChange: (next, nextSize) => { setPage(nextSize === size ? next - 1 : 0); setSize(nextSize) } }} /></>
           )}
         </Card> })),

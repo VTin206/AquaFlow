@@ -428,3 +428,6 @@
 .af-share-chart-legend li.is-dim {
   opacity: 0.4;
 }
+.af-report-search {
+  width: min(100%, 280px);
+}
