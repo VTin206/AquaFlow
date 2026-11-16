@@ -70,6 +70,12 @@ export function AccountMenu({ variant = 'icon' }: { variant?: 'icon' | 'text' })
       <Button block type="primary" icon={<LayoutDashboard size={16} />} onClick={() => go(accountDestination(user, '/shop/orders'))}>
         {isCustomer(user) ? 'Đơn hàng của tôi' : 'Trang quản lý'}
       </Button>
+      {/* Hồ sơ và sổ địa chỉ của khách nằm ở trang tài khoản. */}
+      {isCustomer(user) && (
+        <Button block icon={<UserRound size={16} />} onClick={() => go('/shop/account')}>
+          Tài khoản của tôi
+        </Button>
+      )}
       {showSwitch && (
         <div className="af-shop-account-switch">
           <small>Đổi tài khoản (dev)</small>
