@@ -13,7 +13,7 @@ import { statusColor } from '@/features/orders/orderStatus'
 import type { OrderStatus as StaffOrderStatus } from '@/features/orders/types'
 import { ApiError } from '@/shared/api/client'
 import { Money } from '@/shared/components/Money'
-import { Unsupported } from '@/shared/components/Unsupported'
+import { accountKey, customerAccountApi } from './customerAccountApi'
 import { TransferQr } from '@/shared/payment/TransferQr'
 import { dueTone } from '@/shared/utils/money'
 import { QueryError } from '@/shared/components/QueryError'
@@ -158,6 +158,11 @@ export function CustomerOrderPage() {
   const storePhone = useShopContact()?.phone
   const cart = useCartActions()
   const account = useTransferAccount()
+  const bottles = useQuery({
+    queryKey: [...accountKey(user?.email), 'bottles'],
+    queryFn: customerAccountApi.bottles,
+    enabled: valid && isCustomer(user),
+  })
   // API đơn của khách chưa trả số đã trả/còn phải trả; lấy qua mã theo dõi đơn (cùng nguồn với trang tra cứu).
   const trackingToken = query.data?.trackingToken ?? ''
   const balance = useQuery({
@@ -300,7 +305,9 @@ export function CustomerOrderPage() {
                   <div>
                     <dt>Vỏ đang giữ · cọc</dt>
                     <dd>
-                      <Unsupported />
+                      {bottles.data
+                        ? `${bottles.data.bottles.reduce((sum, line) => sum + line.holding, 0)} vỏ · cọc ${currency(bottles.data.depositPaid)}`
+                        : '—'}
                     </dd>
                   </div>
                 )}

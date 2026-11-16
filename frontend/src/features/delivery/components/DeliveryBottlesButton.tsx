@@ -7,7 +7,6 @@ import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { QueryError } from '@/shared/components/QueryError'
 import { useConfirm } from '@/shared/components/confirm'
 import { currency } from '@/shared/utils/format'
-import { Unsupported } from '@/shared/components/Unsupported'
 import { deliveryBottleApi, type BottleReturnInput } from '../deliveryBottleApi'
 import { depositShortfall } from '../bottleDeposit'
 
@@ -128,8 +127,7 @@ export function DeliveryBottlesModal({
               />
               {deposit && deposit.bottles > 0 && (
                 <p className="af-deposit-due">
-                  Thiếu {deposit.bottles} vỏ → cọc phải thu <strong>{currency(deposit.total)}</strong> · Ghi thu cọc tại điểm giao:{' '}
-                  <Unsupported />
+                  Thiếu {deposit.bottles} vỏ → cọc phải thu <strong>{currency(deposit.total)}</strong> · Thu cọc ở nút Thu tiền sau khi ghi số vỏ.
                 </p>
               )}
               {data.canReturn && data.lines.some((l) => l.returned < l.given) && (
