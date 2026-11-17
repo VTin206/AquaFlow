@@ -163,7 +163,24 @@ function TrackedOrder({ token }: { token: string }) {
       )}
       <Card
         className="af-shop-track-card"
-        title={`Đơn ${order.id}`}
+        title={
+          <span className="af-shop-track-code">
+            Đơn {order.id}
+            <Button
+              type="text"
+              size="small"
+              icon={<Copy size={15} />}
+              aria-label="Sao chép mã đơn"
+              title="Sao chép mã đơn"
+              onClick={() =>
+                navigator.clipboard
+                  ?.writeText(order.id)
+                  .then(() => message.success(`Đã sao chép mã đơn ${order.id}.`))
+                  .catch(() => message.info(`Mã đơn của bạn: ${order.id}`))
+              }
+            />
+          </span>
+        }
         extra={
           <Button
             type="text"
@@ -302,17 +319,6 @@ function TrackedOrder({ token }: { token: string }) {
       )}
 
       <div className="af-shop-track-actions">
-        <Button
-          icon={<Copy size={16} />}
-          onClick={() =>
-            navigator.clipboard
-              ?.writeText(window.location.href)
-              .then(() => message.success('Đã chép liên kết theo dõi đơn.'))
-              .catch(() => message.info('Hãy lưu lại địa chỉ trang này để theo dõi đơn.'))
-          }
-        >
-          Chép liên kết
-        </Button>
         {storePhone && (
           <Button icon={<Phone size={16} />} href={`tel:${storePhone.replace(/\s/g, '')}`}>
             Gọi cửa hàng

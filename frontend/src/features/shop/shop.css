@@ -1031,11 +1031,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 32px;
 }
+/* Rộng bằng nút Google bên dưới để hai cách đăng nhập thẳng hàng. */
 .af-shop-account-submit {
   display: flex;
-  min-width: 200px;
+  width: 100%;
 }
 .af-shop-account-side {
   display: flex;
@@ -2697,4 +2698,9 @@
 .af-shop-transfer-off {
   margin: 0;
   color: var(--af-text-secondary);
+}
+.af-shop-track-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
