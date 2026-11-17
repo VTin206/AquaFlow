@@ -2704,3 +2704,11 @@
   align-items: center;
   gap: 4px;
 }
+/* Trang đơn của khách: tên bước giữ một dòng, không xuống hàng. */
+.af-shop-track-card .ant-steps-item-title {
+  white-space: nowrap;
+}
+/* Ô tổng nhô ra hai bên để chữ và số thẳng hàng với các dòng trên, dưới. */
+.af-shop-track-card .af-checkout-totals .is-total {
+  margin: 8px -16px;
+}
