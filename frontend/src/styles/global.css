@@ -3020,6 +3020,10 @@ html:has(.af-shell) body {
   border: 1px solid var(--af-border);
   border-radius: 14px;
 }
+/* Bảng con trong dòng mở rộng: Ant Design kéo lề âm, khung overflow:hidden ở trên cắt mất dòng cuối. */
+.af-shell .ant-table-wrapper .ant-table-expanded-row .ant-table-wrapper.ant-table-wrapper .ant-table.ant-table {
+  margin: 0;
+}
 .af-shell .ant-table-thead > tr > th {
   background: var(--af-surface-muted);
   color: var(--af-text-secondary);
