@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, App, Button, Card, Empty, Pagination, Popconfirm, Result, Select, Skeleton, Tag } from 'antd'
+import { CopyOrderCode } from './components/CopyOrderCode'
 import { ChevronRight, Phone, RefreshCw, RotateCcw, ShoppingBag } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useOutletContext, useParams } from 'react-router'
@@ -164,7 +165,8 @@ export function CustomerOrderPage() {
     enabled: valid && isCustomer(user),
   })
   // Chi tiết đơn trả kèm số đã trả/còn phải trả; backend cũ chưa có thì lấy qua mã theo dõi đơn như trước.
-  const ownBalance = query.data && query.data.paid != null && query.data.due != null ? { paid: query.data.paid, due: query.data.due } : undefined
+  const ownBalance =
+    query.data && query.data.paid != null && query.data.due != null ? { paid: query.data.paid, due: query.data.due } : undefined
   const trackingToken = ownBalance ? '' : (query.data?.trackingToken ?? '')
   const tracked = useQuery({
     queryKey: [...shopKeys.track(trackingToken), 'live'],
@@ -241,7 +243,9 @@ export function CustomerOrderPage() {
               className="af-shop-track-card"
               title={
                 <span className="af-shop-order-title">
-                  Đơn {order.orderCode} <StatusTag status={order.status} />
+                  Đơn {order.orderCode}
+                  <CopyOrderCode code={order.orderCode} />
+                  <StatusTag status={order.status} />
                 </span>
               }
               extra={

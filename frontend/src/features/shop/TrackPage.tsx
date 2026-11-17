@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Alert, App, Button, Card, Form, Input, Result, Skeleton, Steps, Typography } from 'antd'
-import { Copy, Hash, LayoutDashboard, LogIn, Phone, ReceiptText, RefreshCw, Search, ShoppingBag } from 'lucide-react'
+import { Alert, Button, Card, Form, Input, Result, Skeleton, Steps, Typography } from 'antd'
+import { Hash, LayoutDashboard, LogIn, Phone, ReceiptText, RefreshCw, Search, ShoppingBag } from 'lucide-react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { Money } from '@/shared/components/Money'
 import { focusNextOnEnter } from '@/shared/utils/forms'
@@ -11,6 +11,7 @@ import { accountDestination, isCustomer } from '@/features/auth/accountAccess'
 import { useAuth } from '@/features/auth/useAuth'
 import type { PublicOrder } from '@/features/orders/types'
 import { useSettings } from '@/features/settings/settingsService'
+import { CopyOrderCode } from './components/CopyOrderCode'
 import { useLookupOrder, useShopContact, useTrackedOrder, useTransferAccount } from './shopService'
 
 const stepOf: Record<PublicOrder['status'], number> = {
@@ -117,7 +118,6 @@ function LookupForm() {
 }
 
 function TrackedOrder({ token }: { token: string }) {
-  const { message } = App.useApp()
   const location = useLocation()
   const navigate = useNavigate()
   // Khách chưa đăng nhập không đọc được cài đặt cửa hàng: số gọi và tài khoản nhận chuyển khoản lấy từ hồ sơ công khai.
@@ -166,19 +166,7 @@ function TrackedOrder({ token }: { token: string }) {
         title={
           <span className="af-shop-track-code">
             Đơn {order.id}
-            <Button
-              type="text"
-              size="small"
-              icon={<Copy size={15} />}
-              aria-label="Sao chép mã đơn"
-              title="Sao chép mã đơn"
-              onClick={() =>
-                navigator.clipboard
-                  ?.writeText(order.id)
-                  .then(() => message.success(`Đã sao chép mã đơn ${order.id}.`))
-                  .catch(() => message.info(`Mã đơn của bạn: ${order.id}`))
-              }
-            />
+            <CopyOrderCode code={order.id} />
           </span>
         }
         extra={
