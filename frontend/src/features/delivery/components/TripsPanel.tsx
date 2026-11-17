@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { App } from 'antd'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
 import { useOrderList } from '@/features/orders/orderData'
-import { jugCount, knownAmountDue, orderedAtOf } from '@/features/orders/types'
+import { knownAmountDue } from '@/features/orders/types'
 import type { DeliveryTrip } from '../deliveryApi'
 import { stopOrderId, useTripBackend } from '../tripBackend'
+import { toWaitingOrder } from '../waitingOrders'
+import { useTripCreatedNotice } from '../useTripCreatedNotice'
 import { CreateTripModal } from './CreateTripModal'
 import { TripDrawer } from './TripDrawer'
 import { TripsList } from './TripsList'
@@ -15,7 +16,7 @@ import { WaitingOrdersCard, type WaitingOrder } from './WaitingOrdersCard'
 /** Xếp đơn chờ giao vào chuyến và theo dõi các chuyến. */
 export function TripsPanel() {
   const [searchParams] = useSearchParams()
-  const { message, modal } = App.useApp()
+  const notifyCreated = useTripCreatedNotice()
   const backend = useTripBackend()
   const tripsQuery = backend.useTrips()
   const availableQuery = backend.useAvailable()
@@ -29,21 +30,7 @@ export function TripsPanel() {
 
   const orders = ordersQuery.data ?? []
   const orderOf = (id: string) => orders.find((order) => order.id === id)
-  const waiting: WaitingOrder[] = (availableQuery.data ?? []).map((item) => {
-    const id = String(item.id)
-    const order = orderOf(id)
-    return {
-      id,
-      code: item.orderCode,
-      customer: item.recipientName || order?.customer || 'Khách hàng',
-      address: item.deliveryAddress ?? '',
-      appointment: order?.appointment,
-      jugs: order ? jugCount(order) : 0,
-      due: order ? knownAmountDue(order) : null,
-      redelivery: item.redeliveryEligible,
-      orderedAt: order ? orderedAtOf(order) : undefined,
-    }
-  })
+  const waiting: WaitingOrder[] = (availableQuery.data ?? []).map((item) => toWaitingOrder(item, orderOf(String(item.id))))
   const chosen = waiting.filter((order) => selected.includes(order.id))
   const dueLabel = (trip: DeliveryTrip) => {
     const dues = trip.orders.map((stop) => {
@@ -86,22 +73,7 @@ export function TripsPanel() {
             setCreating(false)
             setSelected([])
             setTripId(id)
-            if (!failed.length) {
-              message.success(`Đã tạo chuyến #${id} với ${chosen.length} đơn.`)
-              return
-            }
-            modal.warning({
-              title: `Đã tạo chuyến #${id}, còn ${failed.length}/${chosen.length} đơn chưa thêm được`,
-              content: (
-                <ul className="af-bulk-errors">
-                  {failed.map(({ item, error }) => (
-                    <li key={item.id}>
-                      <strong>{item.code}</strong>: {error}
-                    </li>
-                  ))}
-                </ul>
-              ),
-            })
+            notifyCreated(id, chosen.length, failed)
           }}
         />
       )}

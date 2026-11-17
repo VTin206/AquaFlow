@@ -2982,7 +2982,7 @@ body {
 .af-shell .ant-btn:not(:disabled):hover {
   transform: translateY(-1px);
 }
-.af-shell .ant-btn-primary {
+.af-shell .ant-btn-primary:not(:disabled) {
   background: var(--af-primary);
   border-color: var(--af-primary);
   box-shadow: 0 6px 14px var(--af-shadow-primary);

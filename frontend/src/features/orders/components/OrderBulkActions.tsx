@@ -1,30 +1,69 @@
 import { useOrderDepositLabel } from '@/features/live/bottleDeposits'
 import { useState } from 'react'
+import { useNavigate } from 'react-router'
 import { App, Button, Dropdown } from 'antd'
-import { CheckCheck, FileSpreadsheet, Printer } from 'lucide-react'
+import { CheckCheck, FileSpreadsheet, Printer, Truck } from 'lucide-react'
 import { BulkBar } from '@/shared/components/BulkBar'
 import { usePrinter } from '@/shared/print/usePrinter'
 import { runEach } from '@/shared/utils/bulk'
 import { downloadExcel, type ExcelColumn } from '@/shared/utils/excel'
 import { useSettings } from '@/features/settings/settingsService'
+import { CreateTripModal } from '@/features/delivery/components/CreateTripModal'
+import { useTripCreatedNotice } from '@/features/delivery/useTripCreatedNotice'
+import type { WaitingOrder } from '@/features/delivery/components/WaitingOrdersCard'
+import { useAvailableOrders } from '@/features/delivery/useLiveTrips'
+import { toWaitingOrder } from '@/features/delivery/waitingOrders'
 import { useConfirmOrderRequest } from '../orderData'
 import { DeliverySlipDocument, InvoiceDocument } from '../print/OrderDocuments'
-import { amountDue, orderedAtOf, type Order } from '../types'
+import { amountDue, awaitingReturnInspection, orderedAtOf, type Order } from '../types'
 
 const codeOf = (order: Order) => order.code ?? order.id
 
-/** Thao tác cho các đơn đã tích chọn: xác nhận đơn chờ, in chứng từ, xuất Excel. */
+/** Đơn giao tận nơi đang chuẩn bị, hoặc giao thất bại đã kiểm hàng trả về: bước tiếp theo là xếp vào chuyến. */
+const awaitsTrip = (order: Order) =>
+  order.method === 'Giao tận nơi' &&
+  (order.status === 'Đang chuẩn bị' || (order.status === 'Giao thất bại' && !awaitingReturnInspection(order)))
+
+/**
+ * Thao tác cho các đơn đã tích chọn: nút chính đổi theo bước tiếp theo của đơn (xác nhận đơn chờ, xếp chuyến
+ * cho đơn chờ giao), kèm in chứng từ và xuất Excel. Bước không làm hàng loạt được thì không hiện nút chính.
+ */
 export function OrderBulkActions({ orders, onSelect }: { orders: Order[]; onSelect: (ids: string[]) => void }) {
   const { message, modal } = App.useApp()
+  const navigate = useNavigate()
   const { confirm, refresh } = useConfirmOrderRequest()
   const printer = usePrinter()
   const depositOf = useOrderDepositLabel()
+  const notifyTripCreated = useTripCreatedNotice()
   const { data: settings } = useSettings()
   const [confirming, setConfirming] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [tripOrders, setTripOrders] = useState<WaitingOrder[] | null>(null)
   const pending = orders.filter((order) => order.status === 'Chờ xác nhận')
+  const tripCandidates = orders.filter(awaitsTrip)
+  // Chỉ hỏi BE danh sách chờ xếp chuyến khi đang chọn đơn cần xếp; BE quyết định đơn nào còn thêm được.
+  const available = useAvailableOrders(tripCandidates.length > 0)
   const deliveries = orders.filter((order) => order.method === 'Giao tận nơi' && order.status !== 'Đã hủy')
   const printable = orders.filter((order) => order.status !== 'Đã hủy')
+
+  const openTrip = () => {
+    if (available.isError) {
+      message.error(available.error?.message ?? 'Không tải được danh sách đơn chờ xếp chuyến.')
+      return
+    }
+    const ready = (available.data ?? []).flatMap((item) => {
+      const order = tripCandidates.find((candidate) => candidate.id === String(item.id))
+      return order ? [toWaitingOrder(item, order)] : []
+    })
+    if (!ready.length) {
+      message.warning('Các đơn đã chọn không còn chờ xếp chuyến (có thể đã nằm trên một chuyến khác).')
+      return
+    }
+    if (ready.length < tripCandidates.length) {
+      message.info(`${tripCandidates.length - ready.length} đơn đã nằm trên chuyến khác hoặc chưa thể xếp nên được bỏ qua.`)
+    }
+    setTripOrders(ready)
+  }
 
   const confirmPending = () =>
     modal.confirm({
@@ -94,9 +133,16 @@ export function OrderBulkActions({ orders, onSelect }: { orders: Order[]; onSele
   return (
     <>
       <BulkBar count={orders.length} noun="đơn" onClear={() => onSelect([])}>
-        <Button type="primary" icon={<CheckCheck size={16} />} disabled={!pending.length} loading={confirming} onClick={confirmPending}>
-          Xác nhận{pending.length ? ` (${pending.length})` : ''}
-        </Button>
+        {pending.length > 0 && (
+          <Button type="primary" icon={<CheckCheck size={16} />} loading={confirming} onClick={confirmPending}>
+            Xác nhận{orders.length > pending.length ? ` (${pending.length})` : ''}
+          </Button>
+        )}
+        {tripCandidates.length > 0 && (
+          <Button type="primary" icon={<Truck size={16} />} loading={available.isPending} onClick={openTrip}>
+            Xếp chuyến{orders.length > tripCandidates.length ? ` (${tripCandidates.length})` : ''}
+          </Button>
+        )}
         <Dropdown
           trigger={['click']}
           menu={{
@@ -140,6 +186,18 @@ export function OrderBulkActions({ orders, onSelect }: { orders: Order[]; onSele
         </Button>
       </BulkBar>
       {printer.portal}
+      {tripOrders && (
+        <CreateTripModal
+          orders={tripOrders}
+          onClose={() => setTripOrders(null)}
+          onCreated={(tripId, failed) => {
+            setTripOrders(null)
+            onSelect([])
+            notifyTripCreated(tripId, tripOrders.length, failed)
+            navigate(`/delivery?tripId=${tripId}`)
+          }}
+        />
+      )}
     </>
   )
 }
