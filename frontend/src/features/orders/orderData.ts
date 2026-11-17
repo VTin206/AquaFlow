@@ -73,7 +73,8 @@ export function fromLiveOrder(
     note: order.note ?? undefined,
     payments: [],
     paymentBalance: balance ? { paid: Number(balance.paid), due: Number(balance.due), refundDue: Number(balance.refundDue) } : undefined,
-    paymentStatusLabel: order.status === 'CANCELLED' && order.paymentStatus === 'UNPAID' ? 'Đã hủy' : paymentStatusLabels[order.paymentStatus],
+    paymentStatusLabel:
+      order.status === 'CANCELLED' && order.paymentStatus === 'UNPAID' ? 'Đã hủy' : paymentStatusLabels[order.paymentStatus],
     history: [{ at: order.createdAt, message: 'Tạo đơn' }],
     stockReserved: ['CONFIRMED', 'PREPARING'].includes(order.status),
   }
@@ -139,12 +140,10 @@ export type OrderPageView = { orders: Order[]; total: number; serverPaged: boole
  */
 export const isServerPagedGroup = (group: OrderGroupKey) => group === 'done' || group === 'all'
 
-
 const toStatusCounts = (counts: OrderPage['statusCounts']) =>
-  Object.fromEntries(
-    Object.entries(counts).map(([live, count]) => [statusOf[live as LiveOrder['status']], count]),
-  ) as Partial<Record<OrderStatus, number>>
-
+  Object.fromEntries(Object.entries(counts).map(([live, count]) => [statusOf[live as LiveOrder['status']], count])) as Partial<
+    Record<OrderStatus, number>
+  >
 
 /**
  * Số đơn theo trạng thái trên mọi đơn, cho nhãn nhóm và ô chọn trạng thái của trang Đơn hàng.
@@ -223,12 +222,14 @@ export function useCustomerOrders(customerId: string | undefined) {
   })
 }
 
-/** Xác nhận đơn; `refresh` làm mới danh sách sau khi xác nhận xong một loạt. */
-export function useConfirmOrderRequest() {
+/** Xác nhận đơn, chuyển đơn sang chuẩn bị hàng; `refresh` làm mới danh sách sau khi xử lý xong một loạt. */
+export function useOrderStepRequests() {
   const queryClient = useQueryClient()
+  const update = (order: Order, status: 'CONFIRMED' | 'PREPARING'): Promise<unknown> =>
+    orderApi.updateStatus(Number(order.id), status).catch((error) => explainStockShortage(error, queryClient))
   return {
-    confirm: (order: Order): Promise<unknown> =>
-      orderApi.updateStatus(Number(order.id), 'CONFIRMED').catch((error) => explainStockShortage(error, queryClient)),
+    confirm: (order: Order) => update(order, 'CONFIRMED'),
+    prepare: (order: Order) => update(order, 'PREPARING'),
     refresh: () => void invalidateLiveData(queryClient),
   }
 }
