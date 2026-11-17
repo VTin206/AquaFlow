@@ -2699,3 +2699,8 @@
   margin: 0;
   color: var(--af-text-secondary);
 }
+.af-shop-track-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
