@@ -33,9 +33,9 @@ export function useTripCollections(id: number) {
   return useQuery({ queryKey: ['live', 'delivery-collections', ...who, id], queryFn: () => collectionApi.get(id), refetchInterval: 15000 })
 }
 
-export function useAvailableOrders() {
+export function useAvailableOrders(enabled = true) {
   const who = useWho()
-  return useQuery({ queryKey: ['live', 'delivery-available', ...who], queryFn: deliveryApi.available, refetchInterval: 15000 })
+  return useQuery({ queryKey: ['live', 'delivery-available', ...who], queryFn: deliveryApi.available, refetchInterval: 15000, enabled })
 }
 
 export function useDeliveryDrivers(enabled = true) {
