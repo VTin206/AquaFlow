@@ -105,6 +105,7 @@ export function ShopAccountPage() {
               label="Địa chỉ email"
               name="email"
               rules={[{ required: true, type: 'email', whitespace: true, message: 'Nhập email hợp lệ.' }]}
+              style={{ marginBottom: 12 }}
             >
               <Input
                 type="email"
