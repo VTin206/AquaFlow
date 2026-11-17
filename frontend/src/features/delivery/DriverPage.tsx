@@ -315,12 +315,18 @@ function DriverTrip({ trip }: { trip: DeliveryTrip }) {
           />
         )}
       </Card>
-      {pending.length > 0 && <ol className="af-driver-stops">{pending.map(stop)}</ol>}
-      {done > 0 && (
-        <details className="af-driver-finished">
-          <summary>Đã có kết quả {done} điểm</summary>
-          <ol className="af-driver-stops">{trip.orders.filter((o) => o.latestAttempt).map(stop)}</ol>
-        </details>
+      {trip.orders.length > 0 && (
+        // Điểm giao lùi vào, có vạch nối với thẻ chuyến để thấy rõ điểm thuộc chuyến nào.
+        <div className="af-driver-group">
+          <small className="af-driver-group-label">Điểm giao · Chuyến #{trip.id}</small>
+          {pending.length > 0 && <ol className="af-driver-stops">{pending.map(stop)}</ol>}
+          {done > 0 && (
+            <details className="af-driver-finished">
+              <summary>Đã có kết quả {done} điểm</summary>
+              <ol className="af-driver-stops">{trip.orders.filter((o) => o.latestAttempt).map(stop)}</ol>
+            </details>
+          )}
+        </div>
       )}
       {result && (
         <DeliveryActionModal
