@@ -137,10 +137,10 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
         />
       )}
       <Row gutter={[16, 16]}>
-        <Col xs={24} xl={15}>
+        <Col xs={24} xl={15} className="af-settings-col">
           <Card className="af-card af-settings-card" title="Thông tin cửa hàng">
             <Row gutter={16}>
-              <Col xs={24} md={14}>
+              <Col xs={24} md={12}>
                 <Form.Item
                   name="storeName"
                   label="Tên cửa hàng"
@@ -149,7 +149,7 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
                   <Input />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={10}>
+              <Col xs={24} md={12}>
                 <Form.Item
                   name="taxCode"
                   label="Mã số thuế"
@@ -196,101 +196,59 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
           </Card>
 
           <Card className="af-card af-settings-card" title="Chuyển khoản & hóa đơn">
-            <Row gutter={16}>
-              <Col xs={24} md={8}>
-                <Form.Item
-                  name="bankName"
-                  label="Ngân hàng"
-                  tooltip="Ngân hàng trong danh sách VietQR để tạo mã QR chuyển khoản theo đơn."
-                  dependencies={['bankAccount', 'bankHolder']}
-                  rules={[
-                    ({ getFieldValue }) => ({
-                      validator: (_, value) => {
-                        const filled = [value, getFieldValue('bankAccount'), getFieldValue('bankHolder')].filter((item) =>
-                          item?.trim(),
-                        ).length
-                        return filled === 0 || filled === 3
-                          ? Promise.resolve()
-                          : Promise.reject(new Error('Nhập đủ ngân hàng, số tài khoản và chủ tài khoản.'))
-                      },
-                    }),
-                  ]}
-                >
-                  <Select
-                    showSearch
-                    allowClear
-                    placeholder="Chọn ngân hàng"
-                    options={vietQrBanks.map((bank) => ({ value: bank.name, label: bank.name }))}
-                  />
+            <Row gutter={24}>
+              <Col xs={24} md={14}>
+                <Row gutter={16}>
+                  <Col xs={24} md={12}>
+                    <Form.Item
+                      name="bankName"
+                      label="Ngân hàng"
+                      tooltip="Ngân hàng trong danh sách VietQR để tạo mã QR chuyển khoản theo đơn."
+                      dependencies={['bankAccount', 'bankHolder']}
+                      rules={[
+                        ({ getFieldValue }) => ({
+                          validator: (_, value) => {
+                            const filled = [value, getFieldValue('bankAccount'), getFieldValue('bankHolder')].filter((item) =>
+                              item?.trim(),
+                            ).length
+                            return filled === 0 || filled === 3
+                              ? Promise.resolve()
+                              : Promise.reject(new Error('Nhập đủ ngân hàng, số tài khoản và chủ tài khoản.'))
+                          },
+                        }),
+                      ]}
+                    >
+                      <Select
+                        showSearch
+                        allowClear
+                        placeholder="Chọn ngân hàng"
+                        options={vietQrBanks.map((bank) => ({ value: bank.name, label: bank.name }))}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Form.Item name="bankAccount" label="Số tài khoản" rules={[{ pattern: /^\d{6,20}$/, message: 'Chỉ gồm 6–20 chữ số.' }]}>
+                      <Input inputMode="numeric" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24}>
+                    <Form.Item name="bankHolder" label="Chủ tài khoản" normalize={(value?: string) => value?.toUpperCase()}>
+                      <Input />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Form.Item name="invoiceNote" label="Ghi chú cuối hóa đơn" rules={[{ max: 200 }]}>
+                  <TextArea rows={2} showCount maxLength={200} />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={8}>
-                <Form.Item name="bankAccount" label="Số tài khoản" rules={[{ pattern: /^\d{6,20}$/, message: 'Chỉ gồm 6–20 chữ số.' }]}>
-                  <Input inputMode="numeric" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={8}>
-                <Form.Item name="bankHolder" label="Chủ tài khoản" normalize={(value?: string) => value?.toUpperCase()}>
-                  <Input />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Form.Item name="invoiceNote" label="Ghi chú cuối hóa đơn" rules={[{ max: 200 }]}>
-              <TextArea rows={2} showCount maxLength={200} />
-            </Form.Item>
-          </Card>
-
-          <Card className="af-card af-settings-card" title="Cảnh báo kho">
-            <Row gutter={16}>
-              <Col xs={24} md={12}>
-                <Form.Item
-                  name="expiryWarningDays"
-                  label="Cảnh báo khi hạn dùng còn dưới (ngày)"
-                  tooltip="Áp dụng cho bộ lọc Sắp hết hạn ở Kho hàng và Lô hàng."
-                  rules={[{ required: true }, { type: 'integer', min: 1, max: 730, message: 'Từ 1 đến 730 ngày.' }]}
-                >
-                  <InputNumber min={1} max={730} precision={0} style={{ width: '100%' }} />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={12}>
-                <Form.Item
-                  name="defaultLowStock"
-                  label="Tồn tối thiểu mặc định cho sản phẩm mới"
-                  rules={[{ required: true }, { type: 'integer', min: 0, max: 1000000, message: 'Số nguyên không âm.' }]}
-                >
-                  <InputNumber min={0} max={1000000} precision={0} style={{ width: '100%' }} />
-                </Form.Item>
+              <Col xs={24} md={10}>
+                <TransferQr settings={preview} size={140} />
               </Col>
             </Row>
           </Card>
         </Col>
 
-        <Col xs={24} xl={9}>
-          <Card className="af-card af-settings-card" title="Xem trước đầu hóa đơn">
-            <div className="af-invoice-preview" aria-label="Xem trước đầu hóa đơn">
-              <strong>{preview.storeName || 'Tên cửa hàng'}</strong>
-              <span>{preview.address || 'Địa chỉ'}</span>
-              <span>
-                ĐT: {preview.phone || '—'}
-                {preview.taxCode ? ` · MST: ${preview.taxCode}` : ''}
-              </span>
-              {preview.bankAccount && (
-                <span>
-                  CK: {preview.bankName} {preview.bankAccount} · {preview.bankHolder}
-                </span>
-              )}
-              <em>{preview.invoiceNote}</em>
-            </div>
-          </Card>
-
-          <Card className="af-card af-settings-card" title="Mã QR chuyển khoản (thử)">
-            <TransferQr settings={preview} amount={100000} note="AF1000" size={140} />
-            <p className="af-form-hint">
-              Mỗi đơn có mã QR riêng với số tiền còn phải thu và nội dung là mã đơn. Quét thử bằng ứng dụng ngân hàng để kiểm tra tên tài
-              khoản.
-            </p>
-          </Card>
-
+        <Col xs={24} xl={9} className="af-settings-col">
           <Card className="af-card af-settings-card" title="Phí giao hàng">
             <Row gutter={12}>
               <Col xs={12}>
@@ -336,9 +294,26 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
               ))}
             </Row>
             <Typography.Paragraph type="secondary" className="af-form-hint">
-              Áp dụng cho báo giá ở trang đặt hàng và đơn giao tận nơi tạo sau khi lưu; đơn đã tạo giữ phí cũ. Chỉ tính bình giao lên lầu
-              bằng thang bộ.
+              Áp dụng cho đơn tạo sau khi lưu.
             </Typography.Paragraph>
+          </Card>
+
+          <Card className="af-card af-settings-card" title="Cảnh báo kho">
+            <Form.Item
+              name="expiryWarningDays"
+              label="Cảnh báo khi hạn dùng còn dưới (ngày)"
+              tooltip="Áp dụng cho bộ lọc Sắp hết hạn ở Kho hàng và Lô hàng."
+              rules={[{ required: true }, { type: 'integer', min: 1, max: 730, message: 'Từ 1 đến 730 ngày.' }]}
+            >
+              <InputNumber min={1} max={730} precision={0} style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item
+              name="defaultLowStock"
+              label="Tồn tối thiểu mặc định cho sản phẩm mới"
+              rules={[{ required: true }, { type: 'integer', min: 0, max: 1000000, message: 'Số nguyên không âm.' }]}
+            >
+              <InputNumber min={0} max={1000000} precision={0} style={{ width: '100%' }} />
+            </Form.Item>
           </Card>
 
           <Card className="af-card af-settings-card" title="Chính sách vỏ">
@@ -362,8 +337,7 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
               ]}
             />
             <Typography.Paragraph type="secondary" className="af-form-hint">
-              Tiền cọc sửa ở Danh mục loại vỏ (trang Khách hàng › Vỏ bình), áp dụng theo loại vỏ của sản phẩm. Đổi bù vỏ và thu hồi tận nơi
-              chưa áp dụng.
+              Sửa tiền cọc ở Khách hàng › Vỏ bình.
             </Typography.Paragraph>
           </Card>
         </Col>
