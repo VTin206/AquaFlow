@@ -83,7 +83,7 @@ export function ReceiptsPanel({ onEdit }: { onEdit: (receipt: ReceiptView) => vo
                 dataSource={receipt.lines}
                 columns={[
                   { title: 'Sản phẩm', dataIndex: 'productName', ellipsis: true },
-                  { title: 'Mã lô', dataIndex: 'lotCode', width: 140, render: (code?: string) => code ?? '—' },
+                  { title: 'Mã lô', dataIndex: 'lotCode', width: 200, ellipsis: true, render: (code?: string) => code ?? '—' },
                   { title: 'Hạn dùng', dataIndex: 'expiryDate', width: 110, render: (date?: string) => (date ? isoToVnDate(date) : '—') },
                   { title: 'Thực nhận', dataIndex: 'received', width: 95, align: 'right' },
                   {
