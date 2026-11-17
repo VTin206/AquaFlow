@@ -70,6 +70,7 @@ export function TripsList({ trips, loading, dueLabel, onOpen }: TripsListProps) 
               { value: 'today', label: 'Hôm nay' },
               { value: '7', label: '7 ngày qua' },
               { value: '30', label: '30 ngày qua' },
+              { value: 'all', label: 'Tất cả' },
             ]}
           />
         </div>
