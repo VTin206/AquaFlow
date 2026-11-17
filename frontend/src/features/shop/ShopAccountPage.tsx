@@ -125,7 +125,7 @@ export function ShopAccountPage() {
                 { min: 8, message: 'Mật khẩu tối thiểu 8 ký tự.' },
                 { max: 128, message: 'Mật khẩu tối đa 128 ký tự.' },
               ]}
-              style={{ marginBottom: 8 }}
+              style={{ marginBottom: 14 }}
             >
               <Input.Password
                 size="large"
