@@ -31,6 +31,7 @@ describe('trip groups', () => {
     expect(inTripRange(trip('COMPLETED', '2026-11-14T20:00:00'), 'today', now)).toBe(false)
     expect(inTripRange(trip('COMPLETED', '2026-11-09T08:00:00'), '7', now)).toBe(true)
     expect(inTripRange(trip('COMPLETED', '2026-11-01T08:00:00'), '7', now)).toBe(false)
+    expect(inTripRange(trip('COMPLETED', '2025-01-01T08:00:00'), 'all', now)).toBe(true)
     // Chuyến chưa xong luôn hiện dù tạo từ lâu.
     expect(inTripRange(trip('CREATED', null), 'today', now)).toBe(true)
   })
