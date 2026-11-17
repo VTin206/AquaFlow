@@ -3138,7 +3138,7 @@ html:has(.af-shell) body {
 }
 /* Chỉ ô cuối cùng của thẻ bỏ khoảng dưới; ô cuối mỗi cột trong hàng vẫn giữ để hàng sau không dính. */
 .af-settings-card .ant-card-body > .ant-form-item:last-child,
-.af-settings-card .ant-card-body > .ant-row:last-child .ant-form-item {
+.af-settings-card .ant-card-body > .ant-row:last-child > .ant-col > .ant-form-item {
   margin-bottom: 0;
 }
 .af-settings-actions {
@@ -3548,4 +3548,17 @@ html:has(.af-shell) body {
 .af-inline-link.ant-btn {
   height: auto;
   padding: 0;
+}
+/* Ô có bộ đếm ký tự ở cuối thẻ: chừa chỗ cho bộ đếm, không dính mép thẻ. */
+.af-settings-card .ant-card-body > .ant-form-item:last-child:has(.ant-input-textarea-show-count),
+.af-settings-card .ant-card-body > .ant-row:last-child > .ant-col > .ant-form-item:has(.ant-input-textarea-show-count) {
+  margin-bottom: 20px;
+}
+/* Thẻ cuối mỗi cột kéo dài để mép dưới hai cột bằng nhau. */
+.af-settings-col {
+  display: flex;
+  flex-direction: column;
+}
+.af-settings-col > .af-settings-card:last-child {
+  flex: 1;
 }

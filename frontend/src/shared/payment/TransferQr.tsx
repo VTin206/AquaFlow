@@ -6,9 +6,10 @@ import { bankBinOf, transferNote, vietQrPayload } from './vietqr'
 type TransferQrProps = {
   /** Tài khoản nhận tiền: cài đặt cửa hàng (nhân viên) hoặc hồ sơ công khai (khách). */
   settings?: Pick<StoreSettings, 'bankName' | 'bankAccount' | 'bankHolder'>
-  amount: number
+  /** Bỏ trống: mã QR chỉ có tài khoản, người chuyển tự nhập số tiền. */
+  amount?: number
   /** Nội dung chuyển khoản, thường là mã đơn. */
-  note: string
+  note?: string
   size?: number
   /** Bản in: không viền, không cảnh báo. */
   compact?: boolean
@@ -27,7 +28,7 @@ export function TransferQr({ settings, amount, note, size = 168, compact }: Tran
       />
     )
   }
-  const content = transferNote(note)
+  const content = note ? transferNote(note) : undefined
   return (
     <div className={`af-transfer-qr${compact ? ' is-compact' : ''}`}>
       <QRCode
@@ -50,14 +51,22 @@ export function TransferQr({ settings, amount, note, size = 168, compact }: Tran
             <dd>{settings.bankHolder}</dd>
           </>
         )}
-        <dt>Số tiền</dt>
-        <dd>
-          <strong>{currency(amount)}</strong>
-        </dd>
-        <dt>Nội dung</dt>
-        <dd>
-          <strong>{content}</strong>
-        </dd>
+        {amount !== undefined && (
+          <>
+            <dt>Số tiền</dt>
+            <dd>
+              <strong>{currency(amount)}</strong>
+            </dd>
+          </>
+        )}
+        {content && (
+          <>
+            <dt>Nội dung</dt>
+            <dd>
+              <strong>{content}</strong>
+            </dd>
+          </>
+        )}
       </dl>
     </div>
   )
