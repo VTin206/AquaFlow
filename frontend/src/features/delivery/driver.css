@@ -64,6 +64,22 @@
 .af-driver-trip {
   margin-top: 16px;
 }
+.af-driver-trip + .af-driver-trip {
+  margin-top: 32px;
+}
+.af-driver-group {
+  margin: 0 0 0 14px;
+  padding: 10px 0 0 14px;
+  border-left: 2px solid var(--af-border);
+}
+.af-driver-group-label {
+  color: var(--af-text-secondary);
+  font-size: var(--af-fs-sm);
+  font-weight: 600;
+}
+.af-driver-group > .af-driver-stops {
+  margin-top: 8px;
+}
 .af-driver-summary .ant-card-body {
   display: flex;
   flex-direction: column;
