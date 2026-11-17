@@ -1,5 +1,5 @@
 ﻿// @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { App } from 'antd'
 import { MemoryRouter } from 'react-router'
 import { afterEach, expect, test, vi } from 'vitest'
@@ -17,7 +17,8 @@ vi.mock('@/features/delivery/components/CreateTripModal', () => ({
   ),
 }))
 vi.mock('@/features/delivery/useTripCreatedNotice', () => ({ useTripCreatedNotice: () => () => undefined }))
-vi.mock('../orderData', () => ({ useConfirmOrderRequest: () => ({ confirm: vi.fn(), refresh: vi.fn() }) }))
+const steps = vi.hoisted(() => ({ confirm: vi.fn(), prepare: vi.fn(), refresh: vi.fn() }))
+vi.mock('../orderData', () => ({ useOrderStepRequests: () => steps }))
 vi.mock('@/features/settings/settingsService', () => ({ useSettings: () => ({ data: {} }) }))
 vi.mock('@/features/live/bottleDeposits', () => ({ useOrderDepositLabel: () => () => undefined }))
 vi.mock('@/shared/print/usePrinter', () => ({ usePrinter: () => ({ print: vi.fn(), portal: null }) }))
@@ -54,7 +55,25 @@ const mount = (orders: Order[]) =>
 test('đơn chờ xác nhận chỉ hiện nút Xác nhận', () => {
   mount([order('1', 'Chờ xác nhận')])
   expect(screen.getByRole('button', { name: /Xác nhận/ })).toBeTruthy()
-  expect(screen.queryByRole('button', { name: /Xếp chuyến/ })).toBeNull()
+  expect(screen.queryByRole('button', { name: /Xếp chuyến|Chuẩn bị hàng/ })).toBeNull()
+})
+
+test('đơn đã xác nhận hiện Chuẩn bị hàng và chỉ chuyển các đơn đã xác nhận', async () => {
+  steps.prepare.mockClear()
+  steps.prepare.mockResolvedValue(undefined)
+  const onSelect = vi.fn()
+  render(
+    <MemoryRouter>
+      <App>
+        <OrderBulkActions orders={[order('6', 'Đã xác nhận'), order('7', 'Đã xác nhận'), order('8', 'Chờ xác nhận')]} onSelect={onSelect} />
+      </App>
+    </MemoryRouter>,
+  )
+  fireEvent.click(screen.getByRole('button', { name: /Chuẩn bị hàng \(2\)/ }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Chuẩn bị' }))
+  await waitFor(() => expect(onSelect).toHaveBeenCalledWith([]))
+  expect(steps.prepare.mock.calls.map(([item]) => item.id)).toEqual(['6', '7'])
+  expect(steps.confirm).not.toHaveBeenCalled()
 })
 
 test('đơn giao tận nơi đang chuẩn bị hiện Xếp chuyến và mở tạo chuyến với đơn BE còn cho xếp', () => {
