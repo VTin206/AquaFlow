@@ -1033,9 +1033,10 @@
   gap: 12px;
   margin-bottom: 20px;
 }
+/* Rộng bằng nút Google bên dưới để hai cách đăng nhập thẳng hàng. */
 .af-shop-account-submit {
   display: flex;
-  min-width: 200px;
+  width: 100%;
 }
 .af-shop-account-side {
   display: flex;
