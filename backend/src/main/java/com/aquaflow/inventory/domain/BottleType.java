@@ -38,8 +38,17 @@ public class BottleType {
         this.depositUnitAmount = depositUnitAmount;
     }
 
+    /** Đổi tên hiển thị; số vỏ và cọc đã ghi theo id nên không đổi. */
+    public void rename(String name){
+        this.name = name;
+    }
+
     public void deactivate(){
         this.active = false;
+    }
+
+    public void activate() {
+        this.active = true;
     }
 
     public Long getId() {

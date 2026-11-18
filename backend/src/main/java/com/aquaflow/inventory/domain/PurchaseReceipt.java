@@ -50,6 +50,9 @@ public class PurchaseReceipt {
     @Column(columnDefinition = "TEXT")
     private String note;
 
+    @Column(name = "receiver_name", length = 150)
+    private String receiverName;
+
     @OneToMany(mappedBy = "receipt", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PurchaseItem> items = new ArrayList<>();
 
@@ -111,5 +114,12 @@ public class PurchaseReceipt {
     public Long getConfirmedBy() { return confirmedBy; }
     public Instant getConfirmedAt() { return confirmedAt; }
     public String getNote() { return note; }
+    public String getReceiverName() { return receiverName; }
+
+    /** Người kiểm nhận; chỉ đổi được khi phiếu còn nháp. Chuỗi trống coi như chưa ghi. */
+    public void assignReceiver(String receiverName) {
+        ensureDraft();
+        this.receiverName = receiverName == null || receiverName.isBlank() ? null : receiverName.trim();
+    }
     public List<PurchaseItem> getItems() { return Collections.unmodifiableList(items); }
 }

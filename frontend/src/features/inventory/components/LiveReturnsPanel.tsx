@@ -1,137 +1,90 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Empty, Form, Input, InputNumber, Modal, Space, Table, Tabs } from 'antd'
+import { App, Button, Form, InputNumber, Modal, Table } from 'antd'
 import { returnApi, usePendingReturns, type PendingReturn, type ReturnInspection } from '@/features/live/returnApi'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { OrderFocusBanner } from '@/features/orders/components/OrderSheet'
 import { QueryError } from '@/shared/components/QueryError'
-import { ViewButton } from '@/shared/components/ViewButton'
+import { useConfirm } from '@/shared/components/confirm'
+import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { modalWidth } from '@/shared/utils/modal'
+import { isoToVnDate } from '../expiry'
+import { ReturnsView, type ReturnHistoryRow } from './ReturnsView'
+import { TextArea } from '@/shared/components/TextArea'
 
 export function LiveReturnsPanel() {
   const pending = usePendingReturns()
   const [page, setPage] = useState(0)
   const history = useQuery({ queryKey: ['live', 'returns', 'history', page], queryFn: () => returnApi.list(page) })
   const [selected, setSelected] = useState<PendingReturn | null>(null)
-  const [detail, setDetail] = useState<ReturnInspection | null>(null)
-  const waiting = pending.data?.length ?? 0
+  const rows = pending.data ?? []
   return (
-    <>
-      <Tabs
-        items={[
-          {
-            key: 'pending',
-            label: `Chờ kiểm (${waiting})`,
-            children: pending.isError ? (
-              <QueryError error={pending.error} onRetry={pending.refetch} />
-            ) : (
-              <>
-                {waiting > 0 && (
-                  <OrderFocusBanner
-                    focus={{
-                      tone: 'action',
-                      title: `Có ${waiting} đơn cần kiểm hàng hoàn`,
-                      description: 'Kiểm đủ hàng thì đơn mới giao lại hoặc hủy được. Phiếu hoàn không tự hoàn tiền.',
-                    }}
-                  />
-                )}
-                <Table
-                  rowKey="orderId"
-                  loading={pending.isPending}
-                  dataSource={pending.data}
-                  scroll={{ x: 650 }}
-                  locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có đơn chờ kiểm. Đơn giao thất bại sẽ hiện ở đây." /> }}
-                  columns={[
-                    { title: 'Đơn hàng', dataIndex: 'orderCode' },
-                    { title: 'Người nhận', dataIndex: 'recipientName' },
-                    { title: 'Lý do giao thất bại', dataIndex: 'failureReason' },
-                    {
-                      title: 'Thao tác',
-                      render: (_, row) => (
-                        <Button size="small" type="primary" onClick={() => setSelected(row)}>
-                          Kiểm hàng
-                        </Button>
-                      ),
-                    },
-                  ]}
-                />
-              </>
-            ),
-          },
-          {
-            key: 'history',
-            label: 'Đã kiểm',
-            children: history.isError ? (
-              <QueryError error={history.error} onRetry={history.refetch} />
-            ) : (
-              <>
-                <Table
-                  rowKey="id"
-                  loading={history.isPending}
-                  dataSource={history.data}
-                  pagination={false}
-                  locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có phiếu hoàn nào." /> }}
-                  columns={[
-                    { title: 'Phiếu', dataIndex: 'id' },
-                    { title: 'Đơn', dataIndex: 'orderCode' },
-                    { title: 'Ngày kiểm', dataIndex: 'createdAt', render: (v: string) => new Date(v).toLocaleString('vi-VN') },
-                    { title: 'Thao tác', width: 112, align: 'center' as const, render: (_, row) => <ViewButton subject={`phiếu hoàn #${row.id}`} onClick={() => setDetail(row)} /> },
-                  ]}
-                />
-                <Space style={{ padding: 12 }}>
-                  <Button disabled={page === 0} onClick={() => setPage(page - 1)}>
-                    Trước
-                  </Button>
-                  Trang {page + 1}
-                  <Button disabled={!history.data || history.data.length < 20} onClick={() => setPage(page + 1)}>
-                    Sau
-                  </Button>
-                </Space>
-              </>
-            ),
-          },
-        ]}
-      />
-      {selected && <InspectionModal key={selected.orderId} order={selected} onClose={() => setSelected(null)} />}
-      <Modal
-        open={!!detail}
-        centered
-        onCancel={() => setDetail(null)}
-        footer={null}
-        title={`Phiếu hoàn #${detail?.id ?? ''} · ${detail?.orderCode ?? ''}`}
-        width={modalWidth.medium}
-      >
-        <Table
-          rowKey="loadItemId"
-          size="small"
-          dataSource={detail?.lines}
-          pagination={false}
-          scroll={{ x: 600 }}
-          columns={[
-            { title: 'Sản phẩm', dataIndex: 'productName' },
-            { title: 'Lô', dataIndex: 'lotCode' },
-            { title: 'Thực nhận đợt này', dataIndex: 'quantity', align: 'right' },
-            { title: 'Nhập kho', dataIndex: 'sellable', align: 'right' },
-            { title: 'Loại bỏ', align: 'right', render: (_, row) => row.quantity - (row.sellable ?? 0) },
-          ]}
+    <ReturnsView
+      pending={rows.map((row) => ({
+        key: row.orderId,
+        orderCode: row.orderCode,
+        recipient: row.recipientName,
+        reason: row.failureReason,
+        goods: row.lines.map((line) => `${line.quantity} × ${line.productName}`).join(', '),
+      }))}
+      pendingLoading={pending.isPending}
+      pendingError={pending.isError ? <QueryError error={pending.error} onRetry={pending.refetch} /> : undefined}
+      onInspect={(row) => setSelected(rows.find((item) => item.orderId === row.key) ?? null)}
+      history={(history.data ?? []).map(toHistoryRow)}
+      historyLoading={history.isPending}
+      historyError={history.isError ? <QueryError error={history.error} onRetry={history.refetch} /> : undefined}
+      paging={{ page, hasNext: (history.data?.length ?? 0) >= 20, onChange: setPage }}
+    >
+      {selected && (
+        <InspectionModal
+          key={selected.orderId}
+          order={selected}
+          onSave={(input) => returnApi.inspectAttempt({ ...input, attemptId: selected.attemptId })}
+          onClose={() => setSelected(null)}
         />
-        {detail?.note && <p className="af-form-hint">Ghi chú: {detail.note}</p>}
-      </Modal>
-    </>
+      )}
+    </ReturnsView>
   )
 }
 
-function InspectionModal({ order, onClose }: { order: PendingReturn; onClose: () => void }) {
+const toHistoryRow = (row: ReturnInspection): ReturnHistoryRow => ({
+  id: row.id,
+  orderCode: row.orderCode,
+  createdAt: row.createdAt,
+  note: row.note,
+  lines: row.lines.map((line) => ({
+    key: String(line.loadItemId),
+    productName: line.productName,
+    lotCode: line.lotCode,
+    quantity: line.quantity,
+    sellable: line.sellable ?? null,
+  })),
+})
+
+export type InspectionInput = { requestId: string; note?: string; lines: { loadItemId: number; quantity: number; sellable: number }[] }
+
+/** Form kiểm hàng hoàn; nhận được từng đợt, lô chưa mang về thì để 0. */
+export function InspectionModal({
+  order,
+  onSave,
+  onClose,
+}: {
+  order: Pick<PendingReturn, 'orderCode' | 'lines'>
+  onSave: (input: InspectionInput) => Promise<unknown>
+  onClose: () => void
+}) {
   const { message } = App.useApp()
+  const ask = useConfirm()
   const client = useQueryClient()
   const [requestId] = useState(() => crypto.randomUUID())
   const [form] = Form.useForm<{ lines: { quantity: number; sellable: number }[]; note?: string }>()
+  const discard = useConfirmDiscard(form, onClose)
   const values: { quantity: number; sellable: number }[] = Form.useWatch('lines', form) ?? []
   const received = values.reduce((sum, line) => sum + (line?.quantity ?? 0), 0)
   const outstanding = order.lines.reduce((sum, line) => sum + line.quantity, 0) - received
   const damaged = values.some((line) => (line?.sellable ?? 0) < (line?.quantity ?? 0))
   const mutation = useMutation({
-    mutationFn: returnApi.inspectAttempt,
+    mutationFn: onSave,
     onSuccess: async () => {
       await invalidateLiveData(client)
       message.success(
@@ -149,7 +102,7 @@ function InspectionModal({ order, onClose }: { order: PendingReturn; onClose: ()
     month: '2-digit',
     day: '2-digit',
   }).format(new Date())
-  const expired = (expiresOn: string) => expiresOn <= today
+  const expired = (expiresOn: string) => Boolean(expiresOn) && expiresOn <= today
   // Việc hay gặp nhất là hàng về đủ và còn tốt: bấm một lần rồi chỉ sửa lô khác đi. Lô đã hết hạn không tính bán lại được.
   const fillAll = () =>
     form.setFieldsValue({
@@ -160,7 +113,7 @@ function InspectionModal({ order, onClose }: { order: PendingReturn; onClose: ()
       open
       title={`Kiểm hàng hoàn · ${order.orderCode}`}
       width={modalWidth.medium}
-      onCancel={onClose}
+      onCancel={discard}
       okText="Lưu đợt nhận hàng"
       cancelText="Đóng"
       confirmLoading={mutation.isPending}
@@ -179,7 +132,7 @@ function InspectionModal({ order, onClose }: { order: PendingReturn; onClose: ()
         layout="vertical"
         disabled={mutation.isPending}
         initialValues={{ lines: order.lines.map(() => ({ quantity: 0, sellable: 0 })) }}
-        onFinish={(input) => {
+        onFinish={async (input) => {
           const lines = order.lines
             .map((line, i) => ({ loadItemId: line.loadItemId, quantity: input.lines[i].quantity, sellable: input.lines[i].sellable }))
             .filter((line) => line.quantity > 0)
@@ -187,7 +140,21 @@ function InspectionModal({ order, onClose }: { order: PendingReturn; onClose: ()
             message.error('Nhập ít nhất một lô có hàng thực nhận.')
             return
           }
-          mutation.mutate({ attemptId: order.attemptId, requestId, note: input.note, lines })
+          // Hàng bán lại được cộng vào tồn, phần loại bỏ ghi hủy; phiếu đã lưu không sửa được.
+          const sellable = lines.reduce((sum, line) => sum + line.sellable, 0)
+          const ok = await ask({
+            title: `Lưu đợt nhận ${received} đơn vị hàng hoàn?`,
+            content: (
+              <>
+                <p>
+                  Bán lại được <strong>{sellable}</strong> (cộng vào tồn) · loại bỏ <strong>{received - sellable}</strong>.
+                </p>
+                <p className="af-confirm-warning">Phiếu đã lưu không sửa được.</p>
+              </>
+            ),
+            okText: 'Lưu phiếu',
+          })
+          if (ok) mutation.mutate({ requestId, note: input.note, lines })
         }}
       >
         <div className="af-return-fill">
@@ -209,7 +176,7 @@ function InspectionModal({ order, onClose }: { order: PendingReturn; onClose: ()
                 <div className="af-cell-stack">
                   <span>{row.productName}</span>
                   <small className={expired(row.expiresOn) ? 'af-text-danger' : undefined}>
-                    Lô {row.lotCode} · HSD {row.expiresOn}
+                    Lô {row.lotCode} · HSD {row.expiresOn ? isoToVnDate(row.expiresOn) : '—'}
                     {expired(row.expiresOn) ? ' (đã hết hạn)' : ''}
                   </small>
                 </div>
@@ -262,7 +229,7 @@ function InspectionModal({ order, onClose }: { order: PendingReturn; onClose: ()
           style={{ marginTop: 16 }}
           rules={[{ required: damaged, whitespace: true, message: 'Ghi rõ tình trạng hàng loại bỏ' }, { max: 300 }]}
         >
-          <Input.TextArea rows={2} maxLength={300} />
+          <TextArea rows={2} maxLength={300} />
         </Form.Item>
       </Form>
     </Modal>

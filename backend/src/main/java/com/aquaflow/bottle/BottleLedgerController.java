@@ -14,9 +14,17 @@ import java.util.*;
 public class BottleLedgerController {
     private final BottleLedgerService service;
     public BottleLedgerController(BottleLedgerService service) { this.service=service; }
-    @GetMapping("/bottle-balances") public List<Balance> balances() { return service.balances(); }
+    @GetMapping("/bottle-balances") public com.aquaflow.shared.api.PageResponse<Balance> balances(@RequestParam(required=false) Integer page,
+            @RequestParam(required=false) Integer size,@RequestParam(required=false) String q) {
+        return service.balances(q,com.aquaflow.shared.api.PageRequestParams.of(page,size));
+    }
     @GetMapping("/customers/{id}/bottle-ledger") public Ledger ledger(@PathVariable long id) { return service.ledger(id); }
     @GetMapping("/customers/{id}/bottle-transactions/{requestId}") public Entry detail(@PathVariable long id,@PathVariable UUID requestId) { return service.detail(id,requestId); }
+    /** Hủy giao dịch vỏ/cọc ghi nhầm (chỉ ADMIN, xem SecurityConfig). */
+    @PostMapping("/customers/{id}/bottle-transactions/{requestId}/void") public Entry voidEntry(@PathVariable long id,@PathVariable UUID requestId,
+            @Valid @RequestBody BottleLedgerDtos.Void input,@AuthenticationPrincipal AuthUserDetails user) {
+        return service.voidEntry(id,requestId,user.user().getId(),input);
+    }
     @PostMapping("/customers/{id}/bottle-transactions") public ResponseEntity<Entry> create(@PathVariable long id,@Valid @RequestBody Create input,@AuthenticationPrincipal AuthUserDetails user) {
         boolean admin=user.getAuthorities().stream().anyMatch(a->a.getAuthority().equals("ROLE_ADMIN"));
         var entry=service.create(id,user.user().getId(),admin,input);

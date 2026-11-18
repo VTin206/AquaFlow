@@ -20,6 +20,7 @@ class WorkspacePostgresIntegrationTest {
     @Autowired StoreSettingsService settings;
     @Autowired NotificationService notifications;
     @Autowired NotificationRepository notificationRepository;
+    @Autowired com.aquaflow.workspace.repository.StoreSettingsRepository settingsRepository;
 
     private long account(String email) {
         jdbc.update("INSERT INTO roles(code, name) VALUES ('ADMIN', 'Administrator') ON CONFLICT (code) DO NOTHING");
@@ -35,11 +36,29 @@ class WorkspacePostgresIntegrationTest {
         var value = new StoreSettingsData("Cửa hàng", "Địa chỉ", "0901234567", "store@example.com",
                 "6:00–21:00", null, null, null, null, "Cảm ơn", 60, 15);
         var saved = settings.update(new UpdateStoreSettingsRequest(value, before.version()), admin);
-        assertThat(saved.settings()).isEqualTo(value);
+        // Client cũ không gửi phí giao: giữ nguyên mức đang áp dụng.
+        assertThat(saved.settings()).isEqualTo(value.withDeliveryFees(before.settings().deliveryFees()));
         assertThat(saved.version()).isEqualTo(before.version() + 1);
         assertThat(saved.updatedBy()).isEqualTo(admin);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_logs WHERE actor_id = ? AND entity_type = 'STORE_SETTINGS'",
                 Long.class, admin)).isEqualTo(1);
+    }
+
+    @Test void deliveryFeesAreSavedAndUsedForQuotes() {
+        long admin = account("workspace-fees-" + java.util.UUID.randomUUID() + "@example.com");
+        var before = settings.get();
+        var fees = new DeliveryFees(5, 20_000, java.util.List.of(1_000, 7_000));
+        try {
+            var saved = settings.update(new UpdateStoreSettingsRequest(before.settings().withDeliveryFees(fees), before.version()), admin);
+            assertThat(saved.settings().deliveryFees()).isEqualTo(fees);
+            assertThat(settingsRepository.deliveryFees()).isEqualTo(fees);
+            assertThat(com.aquaflow.customer.order.application.DeliveryPricing
+                    .calculate(java.math.BigDecimal.ONE, 4, 2, 3, settingsRepository.deliveryFees()).deliveryFee()).isEqualByComparingTo("34000");
+        } finally {
+            // Database dùng chung giữa các test: trả lại mức cũ.
+            var current = settings.get();
+            settings.update(new UpdateStoreSettingsRequest(current.settings().withDeliveryFees(before.settings().deliveryFees()), current.version()), admin);
+        }
     }
 
     @Test void inboxIsolationPaginationAndReadIdempotency() {

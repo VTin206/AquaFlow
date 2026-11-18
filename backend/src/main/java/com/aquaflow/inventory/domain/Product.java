@@ -38,6 +38,14 @@ public class Product {
 
     public static final int DEFAULT_LOW_STOCK_THRESHOLD = 10;
 
+    /** null: chưa phân loại. */
+    @ManyToOne(optional = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private ProductCategory category;
+
+    @Column(name = "volume_ml")
+    private Integer volumeMl;
+
     @Column(nullable = false, length = 40)
     private String unit;
 
@@ -85,6 +93,10 @@ public class Product {
         this.active = false;
     }
 
+    public void activate() {
+        this.active = true;
+    }
+
     public Long getId() { return id; }
     public String getSku() { return sku; }
     public String getName() { return name; }
@@ -93,6 +105,14 @@ public class Product {
     public void setImage(String image) { this.image = image; }
     public int getLowStockThreshold() { return lowStockThreshold; }
     public void setLowStockThreshold(int lowStockThreshold) { this.lowStockThreshold = lowStockThreshold; }
+    public ProductCategory getCategory() { return category; }
+    public void setCategory(ProductCategory category) { this.category = category; }
+    public Integer getVolumeMl() { return volumeMl; }
+
+    /** null giữ nguyên giá trị đang lưu; 0 xóa dung tích. */
+    public void updateVolume(Integer volumeMl) {
+        if (volumeMl != null) this.volumeMl = volumeMl == 0 ? null : volumeMl;
+    }
     public String getUnit() { return unit; }
     public Integer getUnitsPerCase() { return unitsPerCase; }
     public BottleType getBottleType() { return bottleType; }

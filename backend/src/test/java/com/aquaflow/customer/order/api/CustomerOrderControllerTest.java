@@ -68,6 +68,9 @@ class CustomerOrderControllerTest {
     @MockBean
     private UserDetailsService userDetailsService;
 
+    @MockBean
+    private com.aquaflow.customer.order.repository.OrderQueryRepository orderQueries;
+
     @Test
     void createOrderReturns201ForAuthenticatedCustomer() throws Exception {
         when(customerService.findOrCreateForUser(
@@ -86,7 +89,7 @@ class CustomerOrderControllerTest {
                     "recipientName": "Nguyen Van An",
                     "recipientPhone": "0901234567",
                     "deliveryAddress": "123 Nguyen Trai",
-                    "deliveryArea": "Quan 5",
+                    "deliveryArea": "Phường Chợ Quán",
                     "items": [
                         {
                             "productId": 101,
@@ -121,7 +124,7 @@ class CustomerOrderControllerTest {
                                     "recipientName": "Nguyen Van An",
                                     "recipientPhone": "0901234567",
                                     "deliveryAddress": "123 Nguyen Trai",
-                                    "deliveryArea": "Quan 5",
+                                    "deliveryArea": "Phường Chợ Quán",
                                     "items": [
                                         {
                                             "productId": 101,
@@ -195,6 +198,22 @@ class CustomerOrderControllerTest {
     }
 
     @Test
+    void orderDetailIncludesPaidAndDue() throws Exception {
+        when(customerService.findActiveByUserId(7L)).thenReturn(Optional.of(sampleCustomer()));
+        var order = sampleOrder();
+        when(orderService.findByIdAndCustomerId(order.id(), 5L)).thenReturn(Optional.of(order));
+        when(orderQueries.balances(java.util.List.of(order.id()))).thenReturn(java.util.Map.of(order.id(),
+                new com.aquaflow.customer.order.repository.OrderQueryRepository.Balance(
+                        new java.math.BigDecimal("10000"), new java.math.BigDecimal("5000"), java.math.BigDecimal.ZERO)));
+
+        mockMvc.perform(get(ORDERS_URL + "/" + order.id()).with(authentication(customerAuthentication())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orderCode").value(order.orderCode()))
+                .andExpect(jsonPath("$.paid").value(10000))
+                .andExpect(jsonPath("$.due").value(5000));
+    }
+
+    @Test
     void anonymousUserCannotCreateOnlineOrder() throws Exception {
         mockMvc.perform(post(ORDERS_URL)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -251,7 +270,7 @@ class CustomerOrderControllerTest {
                 "Nguyen Van An",
                 "0901234567",
                 "123 Nguyen Trai",
-                "Quan 5",
+                "Phường Chợ Quán",
                 OffsetDateTime.parse("2027-01-15T09:00:00+07:00"),
                 new BigDecimal("250.00"),
                 BigDecimal.ZERO,
@@ -277,7 +296,7 @@ class CustomerOrderControllerTest {
                 "Nguyen Van An",
                 "0901234567",
                 "123 Nguyen Trai",
-                "Quan 5",
+                "Phường Chợ Quán",
                 null,
                 new BigDecimal("250.00"),
                 BigDecimal.ZERO,

@@ -107,12 +107,14 @@ class WorkspaceControllerTest {
                 .contentType("application/json").content(SETTINGS)).andExpect(status().isConflict());
     }
 
-    @Test void publicProfileDoesNotExposePrivateSettings() throws Exception {
+    @Test void publicProfileShowsTransferAccountButNotPrivateSettings() throws Exception {
         var data = new StoreSettingsData("Store", "Address", "0901234567", null, "8-18", "1234567890", "Bank", "12345678", "OWNER", null, 30, 20);
         when(settings.get()).thenReturn(new StoreSettingsResponse(data, 4L, java.time.Instant.now(), 1L));
         mvc.perform(get("/api/v1/store-profile")).andExpect(status().isOk())
             .andExpect(jsonPath("$.storeName").value("Store"))
-            .andExpect(jsonPath("$.bankAccount").doesNotExist())
+            .andExpect(jsonPath("$.bankName").value("Bank"))
+            .andExpect(jsonPath("$.bankAccount").value("12345678"))
+            .andExpect(jsonPath("$.bankHolder").value("OWNER"))
             .andExpect(jsonPath("$.taxCode").doesNotExist())
             .andExpect(jsonPath("$.defaultLowStock").doesNotExist());
     }

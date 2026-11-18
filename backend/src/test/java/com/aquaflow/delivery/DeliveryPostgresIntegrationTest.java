@@ -107,6 +107,43 @@ class DeliveryPostgresIntegrationTest {
         assertThat(bottleLedger.ledger(ids[0]).balance().depositHeld()).isZero();
     }
 
+    @Test void depositForUnreturnedBottlesGoesToCustomerLedgerAndSettlement() throws Exception {
+        var ids=bottleCustomer();
+        long trip=service.create(new CreateTripRequest(driverId,null),ownerId,true).id();
+        long assignment=service.addOrder(trip,new AddOrderRequest(orderId),ownerId,true).orders().getFirst().id();
+        dispatch(trip); service.start(trip,driverId,false);
+        jdbc.update("UPDATE bottle_types SET deposit_unit_amount=99000 WHERE id=?",ids[1]);
+        // Chưa giao thành công thì chưa có vỏ nào để thu cọc.
+        assertThatThrownBy(()->service.collect(trip,orderId,new CollectionRequest(UUID.randomUUID(),BigDecimal.ZERO,"CASH",0,new BigDecimal("50000")),driverId,false))
+            .isInstanceOf(ConflictException.class);
+        service.recordResult(trip,orderId,new DeliveryResultRequest(Outcome.SUCCESS,"Recipient",null,null),driverId,false);
+        deliveryBottles.receive(assignment,driverId,false,bottleReturn(ids[1],1));
+        // Giao 2, khách đổi 1: còn 1 vỏ × 50.000 (mức cọc chốt lúc khởi hành, không theo giá mới 99.000).
+        assertThat(deliveryBottles.depositShortfall(assignment)).isEqualByComparingTo("50000");
+        assertThatThrownBy(()->service.collect(trip,orderId,new CollectionRequest(UUID.randomUUID(),BigDecimal.ZERO,"CASH",0,new BigDecimal("50001")),driverId,false))
+            .isInstanceOf(ConflictException.class);
+        var request=new CollectionRequest(UUID.randomUUID(),BigDecimal.ZERO,"CASH",0,new BigDecimal("50000"));
+        service.collect(trip,orderId,request,driverId,false);
+        service.collect(trip,orderId,request,driverId,false); // gửi lại cùng requestId không ghi hai lần
+        assertThat(bottleLedger.ledger(ids[0]).balance().depositHeld()).isEqualByComparingTo("50000");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM deposit_transactions WHERE customer_id=? AND order_id=? AND direction='COLLECT'",Long.class,ids[0],orderId)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM payments WHERE order_id=?",Long.class,orderId)).isZero();
+        assertThat(deliveryBottles.depositShortfall(assignment)).isZero();
+        assertThatThrownBy(()->service.collect(trip,orderId,new CollectionRequest(UUID.randomUUID(),BigDecimal.ZERO,"CASH",0,BigDecimal.ONE),driverId,false))
+            .isInstanceOf(ConflictException.class);
+        var collections=service.collections(trip,driverId,false);
+        assertThat(collections.depositExpected()).isEqualByComparingTo("50000");
+        assertThat(collections.cashExpected()).isZero();
+        assertThat(collections.receipts()).anyMatch(r->r.depositAmount().compareTo(new BigDecimal("50000"))==0);
+        assertThatThrownBy(()->service.settle(trip,new SettleTripRequest(BigDecimal.ZERO,BigDecimal.ZERO,1,1,null),ownerId,true))
+            .isInstanceOf(ConflictException.class);
+        assertThatThrownBy(()->service.settle(trip,new SettleTripRequest(BigDecimal.ZERO,BigDecimal.ZERO,1,1,null,new BigDecimal("50000"),new BigDecimal("40000")),ownerId,true))
+            .isInstanceOf(com.aquaflow.shared.api.BadRequestException.class);
+        var settled=service.settle(trip,new SettleTripRequest(BigDecimal.ZERO,BigDecimal.ZERO,1,1,"Thiếu 10.000 cọc",new BigDecimal("50000"),new BigDecimal("40000")),ownerId,true);
+        assertThat(settled.settlement().depositReported()).isEqualByComparingTo("50000");
+        assertThat(settled.settlement().depositConfirmed()).isEqualByComparingTo("40000");
+    }
+
     @Test void bottleReturnRollbackAndConcurrencyProtectCustomerAndTripTotals() throws Exception {
         var ids=bottleCustomer();
         long trip=service.create(new CreateTripRequest(driverId,null),ownerId,true).id();

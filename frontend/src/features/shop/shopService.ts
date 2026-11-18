@@ -1,21 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { db } from '@/mocks/db'
-import { mockError, mockRequest } from '@/mocks/mockRequest'
 import { useAuth } from '@/features/auth/useAuth'
 import { isCustomer } from '@/features/auth/accountAccess'
 import { customerOrderApi } from './customerOrderApi'
 import { catalogApi, type CatalogProduct } from '@/features/live/catalogApi'
 import { guestOrderApi, type GuestOrderInput } from '@/features/live/guestOrderApi'
-import { daysUntilExpiry } from '@/features/inventory/expiry'
-import { inferCatalog } from '@/features/inventory/catalogGroups'
+import { orderTrackingApi } from '@/features/live/orderTrackingApi'
+import { catalogFromApi } from '@/features/inventory/catalogGroups'
 import type { Product } from '@/features/inventory/types'
 import { resolveProductImage } from '@/features/inventory/productImages'
-import { orderService } from '@/features/orders/orderService'
 import type { PublicOrder } from '@/features/orders/types'
-import { useSettings } from '@/features/settings/settingsService'
 import { settingsApi } from '@/features/settings/settingsApi'
+import { useSettings } from '@/features/settings/settingsService'
 import type { StoreSettings } from '@/features/settings/types'
-import { backendFeatures, type BackendFeature } from '@/shared/features'
 
 // Kênh công khai cho khách; live checkout gửi đơn qua guest order API.
 
@@ -28,26 +24,36 @@ export type ShopProduct = Pick<Product, 'id' | 'name' | 'brand' | 'unit' | 'pric
   bottleTypeId?: number | null
 }
 
-/** Dữ liệu mẫu khi đăng nhập bản dùng thử, hoặc khi dev chọn "xem như khách". */
-export const useShopDemo = () => {
-  const { user, demoGuest } = useAuth()
-  return Boolean(user?.isDemo || demoGuest)
-}
+export type ShopContact = Partial<
+  Pick<StoreSettings, 'storeName' | 'phone' | 'address' | 'email' | 'openingHours' | 'bankName' | 'bankAccount' | 'bankHolder'>
+>
+export type TransferAccount = Pick<StoreSettings, 'bankName' | 'bankAccount' | 'bankHolder'>
 
-/** Như `useFeature` nhưng cho trang khách, gồm cả chế độ dev "xem như khách". */
-export const useShopFeature = (feature: BackendFeature) => {
-  const demo = useShopDemo()
-  return demo || backendFeatures[feature]
-}
-
-export type ShopContact = Partial<Pick<StoreSettings, 'storeName' | 'phone' | 'address' | 'email' | 'openingHours'>>
+/**
+ * Mã sản phẩm "Bán chạy" theo thứ hạng. Chỉ để sắp xếp và gắn nhãn: lỗi thì coi như không có,
+ * trang vẫn hiện đủ sản phẩm theo thứ tự thường.
+ */
+export const useBestSellerIds = (): string[] =>
+  useQuery({
+    queryKey: [...shopKeys.products, 'best-sellers'],
+    queryFn: () => catalogApi.bestSellers().then((ids) => ids.map(String)),
+    staleTime: 5 * 60_000,
+    retry: false,
+  }).data ?? []
 
 /** Thông tin liên hệ cửa hàng hiện trên trang khách. */
-export const useShopContact = (): ShopContact | undefined => {
-  const demo = useShopDemo()
-  const settings = useSettings(demo)
-  const profile = useQuery({ queryKey: ['live', 'store-profile'], queryFn: settingsApi.profile, enabled: !demo, staleTime: 60_000 })
-  return demo ? settings.data : profile.data
+export const useShopContact = (): ShopContact | undefined =>
+  useQuery({ queryKey: ['live', 'store-profile'], queryFn: settingsApi.profile, staleTime: 60_000 }).data
+
+/**
+ * Tài khoản nhận chuyển khoản cho trang khách: lấy từ hồ sơ công khai của cửa hàng, nhân viên thì từ cài đặt.
+ * Chưa có số tài khoản thì trả undefined để trang báo "Chưa hỗ trợ" thay vì hiện mã QR sai.
+ */
+export function useTransferAccount(): TransferAccount | undefined {
+  const contact = useShopContact()
+  const { data: settings } = useSettings()
+  const source = settings?.bankAccount ? settings : contact
+  return source?.bankAccount ? { bankName: source.bankName, bankAccount: source.bankAccount, bankHolder: source.bankHolder } : undefined
 }
 
 export const toShopProduct = (product: CatalogProduct): ShopProduct => ({
@@ -62,37 +68,16 @@ export const toShopProduct = (product: CatalogProduct): ShopProduct => ({
   bottleTypeName: product.bottleTypeName,
   bottleTypeId: product.bottleTypeId,
   image: resolveProductImage(product),
-  catalog: inferCatalog(product.name, product.unit),
+  catalog: catalogFromApi(product),
 })
-
-export const shopService = {
-  products: () =>
-    mockRequest(() =>
-      db.products
-        .filter((product) => product.sku !== 'VO-20L' && product.price > 0)
-        .map(({ id, sku, name, brand, unit, price, image, catalog, stock, expiry }) => ({
-          id,
-          sku,
-          name,
-          brand,
-          unit,
-          price,
-          image,
-          catalog,
-          available: stock > 0 && (daysUntilExpiry(expiry) ?? 0) >= 0,
-        })),
-    ),
-}
 
 export const shopKeys = { products: ['shop', 'products'] as const, track: (token: string) => ['shop', 'track', token] as const }
 
-export const useShopProducts = () => {
-  const demo = useShopDemo()
-  return useQuery<ShopProduct[]>({
-    queryKey: [...shopKeys.products, demo ? 'demo' : 'live'],
-    queryFn: () => (demo ? shopService.products() : catalogApi.products().then((products) => products.map(toShopProduct))),
+export const useShopProducts = () =>
+  useQuery<ShopProduct[]>({
+    queryKey: [...shopKeys.products, 'live'],
+    queryFn: () => catalogApi.products().then((products) => products.map(toShopProduct)),
   })
-}
 
 export type WebOrderDraft = {
   customer: string
@@ -119,43 +104,39 @@ export const toGuestOrderInput = (draft: WebOrderDraft): GuestOrderInput => ({
 })
 
 export function useShopProduct(id: string) {
-  const demo = useShopDemo()
   return useQuery<ShopProduct>({
-    queryKey: ['shop', 'product', demo ? 'demo' : 'live', id],
-    queryFn: async () => {
-      if (!demo) return toShopProduct(await catalogApi.product(id))
-      const product = (await shopService.products()).find((item) => item.id === id)
-      if (!product) throw mockError(404, 'Không tìm thấy sản phẩm.')
-      return product
-    },
+    queryKey: ['shop', 'product', 'live', id],
+    queryFn: async () => toShopProduct(await catalogApi.product(id)),
     retry: false,
   })
 }
 
 export function usePlaceWebOrder() {
   const { user } = useAuth()
-  const demo = useShopDemo()
   const queryClient = useQueryClient()
-  return useMutation<PublicOrder | Awaited<ReturnType<typeof guestOrderApi.create>>, Error, WebOrderDraft>({
+  return useMutation<Awaited<ReturnType<typeof guestOrderApi.create>>, Error, WebOrderDraft>({
     mutationFn: (draft) => {
-      if (demo) return orderService.placeWebOrder(draft)
       if (isCustomer(user)) return customerOrderApi.create(toGuestOrderInput(draft))
       return guestOrderApi.create(toGuestOrderInput(draft))
     },
     onSuccess: () => {
-      if (demo) {
-        // Làm mới các màn quản lý dùng chung dữ liệu mẫu.
-        for (const key of [['orders'], ['customers'], ['products'], ['activity'], shopKeys.products])
-          queryClient.invalidateQueries({ queryKey: key })
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['live', 'orders-view'] })
-        queryClient.invalidateQueries({ queryKey: ['live', 'customer-orders'] })
-      }
+      queryClient.invalidateQueries({ queryKey: ['live', 'orders-view'] })
+      queryClient.invalidateQueries({ queryKey: ['live', 'customer-orders'] })
     },
   })
 }
 
-export const useTrackedOrder = (token: string) =>
-  useQuery({ queryKey: shopKeys.track(token), queryFn: () => orderService.track({ token }), retry: false, refetchInterval: 20_000 })
+/** Theo dõi đơn qua liên kết riêng; tự cập nhật mỗi 20 giây. */
+export function useTrackedOrder(token: string) {
+  return useQuery<PublicOrder>({
+    queryKey: [...shopKeys.track(token), 'live'],
+    queryFn: () => orderTrackingApi.byToken(token),
+    retry: false,
+    refetchInterval: 20_000,
+  })
+}
 
-export const lookupOrder = (id: string, phone: string) => orderService.track({ id, phone })
+/** Tra cứu bằng mã đơn + số điện thoại đặt hàng. */
+export function useLookupOrder() {
+  return (id: string, phone: string): Promise<PublicOrder> => orderTrackingApi.lookup(id, phone)
+}

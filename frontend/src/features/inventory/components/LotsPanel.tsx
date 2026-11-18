@@ -1,25 +1,32 @@
 import { useState } from 'react'
-import { Input, Segmented, Table, Tag, Typography } from 'antd'
+import { Button, Input, Segmented, Table, Tag, Typography } from 'antd'
+import { useStaff } from '@/features/auth/useStaff'
+import { can } from '@/features/auth/permissions'
+import { StocktakeModal } from './StocktakeModal'
 import { Search } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
-import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
+import { tablePagination } from '@/shared/utils/table'
 import { useExpiryWarningDays } from '@/features/settings/settingsService'
 import { daysUntilExpiry, expiryStatus, isoToVnDate } from '../expiry'
 import { matchesSearch } from '@/shared/utils/search'
 import { useLotItems, type LotItem } from '../useInventory'
 
-type LotFilter = 'stock' | 'expiring' | 'expired' | 'all'
+export type LotFilter = 'stock' | 'expiring' | 'expired' | 'all'
 
 const daysLeft = (lot: LotItem) => (lot.expiryDate ? daysUntilExpiry(isoToVnDate(lot.expiryDate)) : null)
 
 /** Tồn theo lô, sắp theo hạn dùng; lô hết hạn sớm được xuất trước (FEFO). */
-export function LotsPanel() {
+/** `initialFilter`: mở sẵn một bộ lọc, ví dụ lô hết hạn khi bấm từ khung "Cần xử lý". */
+export function LotsPanel({ initialFilter = 'stock' }: { initialFilter?: LotFilter }) {
   const lotsQuery = useLotItems()
   const warningDays = useExpiryWarningDays()
-  const [filter, setFilter] = useState<LotFilter>('stock')
+  const [filter, setFilter] = useState<LotFilter>(initialFilter)
   const [query, setQuery] = useState('')
+  const [counting, setCounting] = useState<LotItem>()
+  const role = useStaff()?.role
+  const canAdjust = !!role && can(role, 'adjustStock')
   const lots = [...(lotsQuery.data ?? [])].sort((a, b) => (a.expiryDate ?? '9999').localeCompare(b.expiryDate ?? '9999'))
   const inStock = lots.filter((lot) => lot.onHand > 0)
   const stateOf = (lot: LotItem) => expiryStatus(lot.expiryDate ? isoToVnDate(lot.expiryDate) : '—', warningDays)
@@ -58,13 +65,13 @@ export function LotsPanel() {
       </div>
       <Table<LotItem>
         key={`${filter}:${query}`}
-        className="af-data-table af-table-flush"
+        className="af-data-table af-table-flush af-table-dense"
         size="middle"
         rowKey="id"
         loading={lotsQuery.isPending}
         dataSource={visible}
         pagination={tablePagination}
-        scroll={{ x: 1040, y: tableScrollHeight }}
+        scroll={{ x: 1000 }}
         locale={{ emptyText: lots.length ? 'Không có lô phù hợp.' : 'Chưa có lô hàng. Lô được tạo khi xác nhận nhập kho.' }}
         columns={[
           {
@@ -79,11 +86,11 @@ export function LotsPanel() {
               </div>
             ),
           },
-          { title: 'Ngày SX', dataIndex: 'mfgDate', width: 110, render: (date?: string) => (date ? isoToVnDate(date) : '—') },
+          { title: 'Ngày SX', dataIndex: 'mfgDate', width: 100, render: (date?: string) => (date ? isoToVnDate(date) : '—') },
           {
             title: 'Hạn dùng',
             dataIndex: 'expiryDate',
-            width: 150,
+            width: 125,
             render: (_, lot) => {
               const days = daysLeft(lot)
               if (days === null) return <Typography.Text type="secondary">Không áp dụng</Typography.Text>
@@ -100,7 +107,7 @@ export function LotsPanel() {
           {
             title: 'Còn / nhập',
             key: 'qty',
-            width: 130,
+            width: 95,
             align: 'right',
             render: (_, lot) => (
               <span className="af-money">
@@ -113,7 +120,7 @@ export function LotsPanel() {
                 {
                   title: 'Đã giữ',
                   dataIndex: 'reserved',
-                  width: 90,
+                  width: 75,
                   align: 'right' as const,
                   render: (value: number) => (value ? <Typography.Text type="warning">{value}</Typography.Text> : 0),
                 },
@@ -122,14 +129,14 @@ export function LotsPanel() {
           {
             title: 'Giá vốn',
             dataIndex: 'costPrice',
-            width: 120,
+            width: 105,
             align: 'right',
             render: (cost?: number) => (cost === undefined ? '—' : currency(cost)),
           },
           {
             title: 'Nguồn',
             key: 'source',
-            width: 150,
+            width: 115,
             render: (_, lot) =>
               lot.receiptCode ? (
                 <div className="af-cell-stack">
@@ -143,7 +150,7 @@ export function LotsPanel() {
           {
             title: 'Xuất',
             key: 'state',
-            width: 120,
+            width: 105,
             render: (_, lot) =>
               lot.onHand === 0 ? (
                 <Tag>Đã hết</Tag>
@@ -157,8 +164,23 @@ export function LotsPanel() {
                 <Tag color="default">Chờ</Tag>
               ),
           },
+          ...(canAdjust
+            ? [
+                {
+                  title: 'Thao tác',
+                  key: 'actions',
+                  width: 95,
+                  render: (_: unknown, lot: LotItem) => (
+                    <Button size="small" onClick={() => setCounting(lot)}>
+                      Kiểm kê
+                    </Button>
+                  ),
+                },
+              ]
+            : []),
         ]}
       />
+      {counting && <StocktakeModal lot={counting} onClose={() => setCounting(undefined)} />}
     </>
   )
 }

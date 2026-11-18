@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
+    @Query(value = "SELECT nextval('order_code_sequence')", nativeQuery = true)
+    long nextOrderCodeNumber();
     Optional<Order> findByOrderCode(String orderCode);
     List<Order> findAllByCustomerId(Long customerId);
     Optional<Order> findByIdAndCustomerId(Long id, Long customerId);

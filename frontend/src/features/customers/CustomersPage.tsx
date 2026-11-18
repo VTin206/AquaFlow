@@ -1,21 +1,7 @@
-import { useState } from 'react'
-import {
-  App,
-  Button,
-  Card,
-  Col,
-  Dropdown,
-  Grid,
-  Input,
-  Row,
-  Segmented,
-  Select,
-  Statistic,
-  Table,
-  Tag,
-  Tooltip,
-  type TableColumnsType,
-} from 'antd'
+import { useMemo, useState } from 'react'
+import { filterOn } from '@/shared/utils/filterOn'
+import { useSearchParams } from 'react-router'
+import { App, Button, Card, Dropdown, Grid, Input, Segmented, Select, Table, Tag, Tooltip, type TableColumnsType } from 'antd'
 import dayjs from 'dayjs'
 import { Ellipsis, FileSpreadsheet, Plus, Search } from 'lucide-react'
 import { ViewButton } from '@/shared/components/ViewButton'
@@ -23,63 +9,93 @@ import { useLinkedQuery } from '@/shared/utils/useLinkedQuery'
 import { BulkBar } from '@/shared/components/BulkBar'
 import { Page } from '@/shared/components/Page'
 import { CountLabel } from '@/shared/components/CountLabel'
-import { ToneLabel } from '@/shared/components/ToneLabel'
 import { QueryError } from '@/shared/components/QueryError'
+import { StatTile, StatTiles } from '@/shared/components/StatTiles'
+import { useConfirm } from '@/shared/components/confirm'
 import { useColumnSort } from '@/shared/components/sortableColumn'
 import { downloadExcel, type ExcelColumn } from '@/shared/utils/excel'
 import { currency } from '@/shared/utils/format'
-import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
-import { useFeature, useLiveOnly } from '@/shared/features'
+import { serverTablePagination, tablePagination, type ServerPagination } from '@/shared/utils/table'
 import { LiveReceivables } from './LiveReceivables'
 import { LiveBottleOverview } from './LiveBottleOverview'
-import { Unsupported } from '@/shared/components/Unsupported'
 import { OrderIntakeModal } from '@/features/orders/components/OrderIntakeModal'
 import { CustomerDrawer } from './components/CustomerDrawer'
 import { CustomerFormModal } from './components/CustomerFormModal'
 import { CustomerCards } from './components/CustomerCards'
 import { customerCode, type Customer } from './types'
-import { useActivateCustomer, useArchivedCustomers, useCustomers } from './useCustomers'
+import {
+  cardSortOrder,
+  useActivateCustomer,
+  useArchivedCustomers,
+  useCustomerPage,
+  type CustomerCardSort,
+  type CustomerSort,
+} from './useCustomers'
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import { matchesSearch } from '@/shared/utils/search'
 import { CustomerDebt } from './components/CustomerDebt'
-import { idleOptions, lastOrderLabel, matchesIdle, type IdleFilter } from './lastOrder'
+import { idleOptions, lastOrderLabel, type IdleFilter } from './lastOrder'
 
 export function CustomersPage() {
-  const live = useLiveOnly()
   const screens = Grid.useBreakpoint()
-  const showArea = useFeature('customerProfileExtras')
-  const showDebt = useFeature('customerDebt')
-  const showBottles = useFeature('bottleLedger')
-  const customersQuery = useCustomers()
   const { message } = App.useApp()
-  const canReactivate = useFeature('reactivate')
-  const [checkedIds, setCheckedIds] = useState<string[]>([])
+  const ask = useConfirm()
   const [exporting, setExporting] = useState(false)
-  // Khách đã lưu trữ chỉ xem được khi BE có API (bản dùng thử thì luôn có).
+  // Khách đã lưu trữ chỉ xem được khi BE có API.
   const [view, setView] = useState<'active' | 'archived'>('active')
   // Tải sẵn để hiện số đếm trên bộ lọc.
-  const archivedQuery = useArchivedCustomers(canReactivate)
+  const archivedQuery = useArchivedCustomers()
   const activate = useActivateCustomer()
   const [query, setQuery] = useLinkedQuery()
-  const [profileId, setProfileId] = useState<string | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const profileId = searchParams.get('customerId')
+  const setProfileId = (id: string | null) =>
+    setSearchParams(
+      (previous) => {
+        const next = new URLSearchParams(previous)
+        if (id) next.set('customerId', id)
+        else next.delete('customerId')
+        return next
+      },
+      { replace: true },
+    )
   // undefined: đóng; null: thêm mới; Customer: sửa.
   const [editing, setEditing] = useState<Customer | null | undefined>(undefined)
   const [orderFor, setOrderFor] = useState<Customer | null>(null)
   // Lọc khách lâu chưa mua để gọi mời đặt nước.
   const [idle, setIdle] = useState<IdleFilter>('all')
-
-  const customers = customersQuery.data ?? []
-  const visible = customers.filter(
-    (customer) =>
-      matchesIdle(customer.lastOrderAt, idle) &&
-      matchesSearch(
-        query,
-        `${customerCode(customer)} ${customer.name} ${customer.phone} ${customer.area} ${customer.mainAddress ?? ''}`,
-        customer.phone,
-      ),
-  )
+  // Bảng sắp xếp theo cột (mặc định nhiều đơn trước), thẻ trên điện thoại có ô chọn riêng; BE sắp xếp trên toàn bộ khách.
+  const sort = useColumnSort<Customer>({ key: 'orders', order: 'descend' })
+  const [cardSort, setCardSort] = useState<CustomerCardSort>('recent')
+  const narrow = screens.md === false
+  const sortOrder = narrow ? cardSortOrder[cardSort] : (sort.state as CustomerSort)
+  // Tìm ở BE: chờ ngừng gõ rồi mới gửi.
+  const searched = useDebouncedValue(query)
+  const pageFilters = useMemo(() => ({ query: searched, idle, sort: sortOrder }), [searched, idle, sortOrder])
+  const filterKey = JSON.stringify(pageFilters)
+  // Đổi bộ lọc hoặc cách sắp xếp thì về trang đầu và bỏ các khách đã tích; cỡ trang giữ nguyên.
+  const [paging, setPaging] = useState({ filterKey, page: 0, size: tablePagination.defaultPageSize ?? 10 })
+  const page = paging.filterKey === filterKey ? paging.page : 0
+  const customersQuery = useCustomerPage(pageFilters, page, paging.size)
+  const visible = customersQuery.data?.customers ?? []
+  const totals = customersQuery.data?.totals
+  const server: ServerPagination = {
+    page,
+    size: paging.size,
+    total: customersQuery.data?.total ?? 0,
+    onChange: (next, size) => setPaging({ filterKey, page: next, size }),
+  }
   const filtered = Boolean(query.trim()) || idle !== 'all'
-  // Chỉ tính các khách còn hiện theo ô tìm kiếm.
-  const checked = visible.filter((customer) => checkedIds.includes(customer.id))
+  // Khách đã tích được giữ khi lật trang (lưu cả hồ sơ để xuất Excel), xóa khi đổi bộ lọc.
+  const [checkedState, setCheckedState] = useState<{ filterKey: string; customers: Customer[] }>({ filterKey, customers: [] })
+  const checked = checkedState.filterKey === filterKey ? checkedState.customers : []
+  const setCheckedIds = (ids: string[]) => {
+    const onPage = new Set(visible.map((customer) => customer.id))
+    setCheckedState({
+      filterKey,
+      customers: [...checked.filter((customer) => !onPage.has(customer.id)), ...visible.filter((customer) => ids.includes(customer.id))],
+    })
+  }
   const exportChecked = async () => {
     setExporting(true)
     const columns: ExcelColumn<Customer>[] = [
@@ -87,7 +103,7 @@ export function CustomersPage() {
       { title: 'Tên khách', width: 26, value: (customer) => customer.name },
       { title: 'Số điện thoại', width: 15, value: (customer) => customer.phone },
       { title: 'Loại', width: 14, value: (customer) => customer.type },
-      ...(showArea ? [{ title: 'Khu vực', width: 20, value: (customer: Customer) => customer.area }] : []),
+      { title: 'Khu vực', width: 20, value: (customer) => customer.area },
       { title: 'Địa chỉ giao', width: 40, value: (customer) => customer.addresses.join('; ') },
       { title: 'Số đơn', width: 10, format: 'count', value: (customer) => customer.orders },
       {
@@ -95,13 +111,9 @@ export function CustomersPage() {
         width: 18,
         value: (customer) => (customer.lastOrderAt ? dayjs(customer.lastOrderAt).format('DD/MM/YYYY') : ''),
       },
-      ...(showBottles
-        ? [
-            { title: 'Vỏ đang giữ', width: 12, format: 'count', value: (customer: Customer) => customer.bottlesHeld } as const,
-            { title: 'Tiền cọc đang giữ', width: 18, format: 'money', value: (customer: Customer) => customer.depositHeld } as const,
-          ]
-        : []),
-      ...(showDebt ? [{ title: 'Còn phải thu', width: 16, format: 'money', value: (customer: Customer) => customer.debt } as const] : []),
+      { title: 'Vỏ đang giữ', width: 12, format: 'count', value: (customer) => customer.bottlesHeld },
+      { title: 'Tiền cọc đang giữ', width: 18, format: 'money', value: (customer) => customer.depositHeld },
+      { title: 'Còn phải thu', width: 16, format: 'money', value: (customer) => customer.debt },
       { title: 'Ghi chú', width: 30, value: (customer) => customer.note },
     ]
     try {
@@ -112,14 +124,19 @@ export function CustomersPage() {
       setExporting(false)
     }
   }
-  const totalBottles = customers.reduce((sum, customer) => sum + customer.bottlesHeld, 0)
-  const totalDeposit = customers.reduce((sum, customer) => sum + customer.depositHeld, 0)
-  const totalDebt = customers.reduce((sum, customer) => sum + customer.debt, 0)
+  const totalBottles = totals?.bottlesHeld ?? 0
+  const totalDeposit = totals?.depositHeld ?? 0
+  const totalDebt = totals?.due ?? 0
 
   const archived = (archivedQuery.data ?? []).filter((customer) =>
     matchesSearch(query, `${customerCode(customer)} ${customer.name} ${customer.phone} ${customer.area}`, customer.phone),
   )
-  const restore = (customer: Customer) =>
+  const restore = async (customer: Customer) =>
+    (await ask({
+      title: `Khôi phục hồ sơ ${customer.name}?`,
+      content: <p>Khách hiện lại trong danh sách và đặt đơn được.</p>,
+      okText: 'Khôi phục',
+    })) &&
     activate.mutateAsync(customer.id).then(
       () => {
         message.success(`Đã khôi phục hồ sơ ${customer.name}.`)
@@ -162,42 +179,6 @@ export function CustomersPage() {
     },
   ]
 
-  const sort = useColumnSort<Customer>({ key: 'orders', order: 'descend' })
-  const unsupported = (title: string) => <Statistic title={title} valueRender={() => <Unsupported />} />
-  const stats = [
-    { key: 'count', node: <Statistic title="Khách hàng" value={customers.length} /> },
-    {
-      key: 'debt',
-      node: showDebt ? (
-        <Statistic
-          className={totalDebt > 0 ? 'af-stat-due' : 'af-stat-paid'}
-          title="Còn phải thu"
-          value={totalDebt}
-          formatter={(value) => currency(Number(value))}
-        />
-      ) : (
-        unsupported('Còn phải thu')
-      ),
-    },
-    {
-      key: 'bottles',
-      node: showBottles ? <Statistic title="Vỏ khách đang giữ" value={totalBottles} suffix="vỏ" /> : unsupported('Vỏ khách đang giữ'),
-    },
-    {
-      key: 'deposit',
-      node: showBottles ? (
-        <Statistic
-          className="af-stat-deposit"
-          title="Tiền cọc đang giữ"
-          value={totalDeposit}
-          formatter={(value) => currency(Number(value))}
-        />
-      ) : (
-        unsupported('Tiền cọc đang giữ')
-      ),
-    },
-  ]
-
   const columns: TableColumnsType<Customer> = [
     {
       ...sort.column('Khách hàng', 'name', 'text'),
@@ -226,7 +207,7 @@ export function CustomersPage() {
       key: 'address',
       minWidth: 246,
       render: (_, customer) => {
-        const address = customer.mainAddress || (showArea ? customer.area : '')
+        const address = customer.mainAddress || customer.area
         return address ? (
           <span className="af-cell-clamp" title={address}>
             {address}
@@ -254,36 +235,32 @@ export function CustomersPage() {
         </div>
       ),
     },
-    showDebt
-      ? {
-          ...sort.column('Còn phải thu', 'debt', 'number'),
-          dataIndex: 'debt',
-          align: 'right',
-          width: 150,
-          sorter: (a, b) => a.debt - b.debt,
-          render: (debt: number, customer) => <CustomerDebt debt={debt} orders={customer.orders} />,
-        }
-      : { title: 'Còn phải thu', key: 'debt', align: 'right', width: 150, render: () => <Unsupported /> },
-    showBottles
-      ? {
-          ...sort.column('Vỏ đang giữ', 'bottlesHeld', 'number'),
-          dataIndex: 'bottlesHeld',
-          width: 145,
-          sorter: (a, b) => a.bottlesHeld - b.bottlesHeld,
-          render: (count: number, customer) => (
-            <div className="af-cell-stack">
-              <span>
-                <Tag color={count > 0 ? 'orange' : undefined}>{count} vỏ</Tag>
-              </span>
-              {customer.depositHeld > 0 && <small>Cọc {currency(customer.depositHeld)}</small>}
-            </div>
-          ),
-        }
-      : { title: 'Vỏ đang giữ', key: 'bottlesHeld', width: 145, render: () => <Unsupported /> },
+    {
+      ...sort.column('Còn phải thu', 'debt', 'number'),
+      dataIndex: 'debt',
+      align: 'right',
+      width: 150,
+      sorter: (a, b) => a.debt - b.debt,
+      render: (debt: number, customer) => <CustomerDebt debt={debt} orders={customer.orders} />,
+    },
+    {
+      ...sort.column('Vỏ đang giữ', 'bottlesHeld', 'number'),
+      dataIndex: 'bottlesHeld',
+      width: 145,
+      sorter: (a, b) => a.bottlesHeld - b.bottlesHeld,
+      render: (count: number, customer) => (
+        <div className="af-cell-stack">
+          <span>
+            <Tag color={count > 0 ? 'orange' : undefined}>{count} vỏ</Tag>
+          </span>
+          {customer.depositHeld > 0 && <small>Cọc {currency(customer.depositHeld)}</small>}
+        </div>
+      ),
+    },
     {
       title: 'Thao tác',
       key: 'action',
-      width: 130,
+      width: 150,
       fixed: 'right',
       render: (_, customer) => (
         <span className="af-row-actions">
@@ -299,7 +276,6 @@ export function CustomersPage() {
   return (
     <Page
       title="Khách hàng"
-      description="Hồ sơ liên hệ, lịch sử mua, công nợ và sổ vỏ bình của từng khách."
       actions={
         <Button type="primary" icon={<Plus size={16} />} onClick={() => setEditing(null)}>
           Thêm khách hàng
@@ -312,59 +288,58 @@ export function CustomersPage() {
         </Card>
       ) : (
         <>
-          <Row gutter={[12, 12]} className="af-stat-row">
-            {stats.map((stat) => (
-              <Col key={stat.key} xs={24} sm={12} lg={6}>
-                <Card loading={customersQuery.isPending}>{stat.node}</Card>
-              </Col>
-            ))}
-          </Row>
+          <StatTiles label="Tổng quan khách hàng">
+            <StatTile title="Khách hàng" loading={customersQuery.isPending} value={totals?.customers ?? 0} unit="khách" />
+            <StatTile
+              title="Còn phải thu"
+              loading={customersQuery.isPending}
+              money
+              tone={totalDebt > 0 ? 'due' : 'paid'}
+              value={totalDebt}
+            />
+            <StatTile title="Vỏ khách đang giữ" loading={customersQuery.isPending} value={totalBottles} unit="vỏ" />
+            <StatTile title="Tiền cọc đang giữ" loading={customersQuery.isPending} money tone="deposit" value={totalDeposit} />
+          </StatTiles>
           <Card className="af-card" styles={{ body: { padding: 0 } }}>
             <div className="af-toolbar">
               <Segmented<'active' | 'archived'>
                 value={view}
                 onChange={setView}
                 options={[
-                  { value: 'active', label: <CountLabel label="Đang hoạt động" count={customers.length} tone="success" /> },
+                  { value: 'active', label: <CountLabel label="Đang hoạt động" count={totals?.customers ?? 0} tone="success" /> },
                   {
                     value: 'archived',
-                    label: canReactivate ? (
-                      <CountLabel label="Đã lưu trữ" count={archivedQuery.data?.length ?? 0} tone="danger" />
-                    ) : (
-                      <Tooltip title="Backend chưa hỗ trợ xem khách đã lưu trữ">
-                        <span>
-                          <ToneLabel tone="danger">Đã lưu trữ</ToneLabel>
-                        </span>
-                      </Tooltip>
-                    ),
-                    disabled: !canReactivate,
+                    label: <CountLabel label="Đã lưu trữ" count={archivedQuery.data?.length ?? 0} tone="danger" />,
                   },
                 ]}
               />
-              <Input
-                allowClear
-                prefix={<Search size={16} className="af-input-icon" />}
-                placeholder="Tìm mã, tên, số điện thoại, địa chỉ..."
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                className="af-search"
-              />
-              {view === 'active' && (
-                <Select<IdleFilter>
-                  aria-label="Lọc theo lần mua gần nhất"
-                  className="af-customer-idle"
-                  value={idle}
-                  onChange={setIdle}
-                  options={idleOptions}
+              {/* Bộ lọc và ô tìm gom về bên phải như trang Đơn hàng. */}
+              <div className="af-toolbar-end">
+                {view === 'active' && (
+                  <Select<IdleFilter>
+                    aria-label="Lọc theo lần mua gần nhất"
+                    className={`af-customer-idle ${filterOn(idle !== 'all')}`}
+                    value={idle}
+                    onChange={setIdle}
+                    options={idleOptions}
+                  />
+                )}
+                <Input
+                  allowClear
+                  prefix={<Search size={16} className="af-input-icon" />}
+                  placeholder="Tìm mã, tên, số điện thoại, địa chỉ..."
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  className="af-search"
                 />
-              )}
+              </div>
             </div>
             {view === 'archived' ? (
               archivedQuery.isError ? (
                 <QueryError error={archivedQuery.error} onRetry={archivedQuery.refetch} />
               ) : (
                 <Table<Customer>
-                  className="af-data-table af-table-flush"
+                  className="af-data-table af-table-flush af-table-dense"
                   size="middle"
                   rowKey="id"
                   rowClassName="af-row-inactive"
@@ -376,35 +351,37 @@ export function CustomersPage() {
                   scroll={{ x: 670 }}
                 />
               )
-            ) : screens.md === false ? (
+            ) : narrow ? (
               <CustomerCards
-                key={query + idle}
                 customers={visible}
                 loading={customersQuery.isPending}
                 emptyText={filtered ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.'}
                 onProfile={setProfileId}
                 onCreateOrder={setOrderFor}
+                sort={cardSort}
+                onSortChange={setCardSort}
+                server={server}
               />
             ) : (
               <>
-                <BulkBar count={checked.length} noun="khách" onClear={() => setCheckedIds([])}>
+                <BulkBar count={checked.length} noun="khách" onClear={() => setCheckedState({ filterKey, customers: [] })}>
                   <Button icon={<FileSpreadsheet size={16} />} loading={exporting} onClick={() => void exportChecked()}>
                     Xuất Excel
                   </Button>
                 </BulkBar>
                 <Table<Customer>
-                  key={query + idle}
-                  className="af-data-table af-table-flush"
+                  className="af-data-table af-table-flush af-table-dense"
                   size="middle"
                   rowKey="id"
                   columns={columns}
                   dataSource={visible}
                   loading={customersQuery.isPending}
-                  pagination={tablePagination}
+                  pagination={serverTablePagination(server)}
                   locale={{ emptyText: filtered ? 'Không tìm thấy khách hàng phù hợp.' : 'Chưa có khách hàng nào.' }}
-                  scroll={{ x: 1074, y: tableScrollHeight }}
+                  scroll={{ x: 1094 }}
                   rowSelection={{
                     selectedRowKeys: checked.map((customer) => customer.id),
+                    preserveSelectedRowKeys: true,
                     onChange: (keys) => setCheckedIds(keys.map(String)),
                     fixed: 'left',
                     columnWidth: 44,
@@ -431,8 +408,8 @@ export function CustomersPage() {
         onSaved={(customer) => editing === null && setProfileId(customer.id)}
       />
       {orderFor && <OrderIntakeModal key={orderFor.id} defaultCustomer={orderFor} onClose={() => setOrderFor(null)} />}
-      {live && <LiveReceivables />}
-      {live && <LiveBottleOverview />}
+      <LiveReceivables />
+      <LiveBottleOverview />
     </Page>
   )
 }

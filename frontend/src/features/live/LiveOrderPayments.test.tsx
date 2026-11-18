@@ -24,6 +24,17 @@ beforeEach(() => {
   const style = window.getComputedStyle.bind(window)
   vi.spyOn(window, 'getComputedStyle').mockImplementation(element => style(element))
 })
+// Hộp xác nhận cũ còn trong DOM sau khi đóng: chỉ bấm nút của hộp mới mở.
+const clickedConfirms = new WeakSet<HTMLElement>()
+const confirmDialog = async (name: string) => {
+  const button = await waitFor(() => {
+    const fresh = screen.getAllByRole('button', { name }).filter((item) => !clickedConfirms.has(item))
+    if (!fresh.length) throw new Error(`Chưa thấy hộp xác nhận "${name}"`)
+    return fresh[fresh.length - 1]
+  })
+  clickedConfirms.add(button)
+  fireEvent.click(button)
+}
 afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 test('shows driver receipts and uses the API outstanding balance when collecting the remainder', async () => {
@@ -34,6 +45,7 @@ test('shows driver receipts and uses the API outstanding balance when collecting
   expect((screen.getByLabelText('Số tiền') as HTMLInputElement).value).toBe('75000.00')
   vi.mocked(paymentApi.list).mockResolvedValue({ balance: { ...balance, paid: 100000, due: 0 }, payments: [receipt] })
   fireEvent.click(screen.getByRole('button', { name: 'Xác nhận đã giao dịch' }))
+  await confirmDialog('Ghi nhận thu')
   await waitFor(() => expect(paymentApi.create).toHaveBeenCalledWith(1, expect.objectContaining({ amount: 75000, direction: 'IN', method: 'CASH', requestId: expect.any(String) })))
   await waitFor(() => expect(screen.queryByRole('button', { name: 'Ghi nhận thu tiền' })).toBeNull())
 })
@@ -43,9 +55,11 @@ test('retries an uncertain network failure with the same idempotency key', async
   fireEvent.click(await screen.findByRole('button', { name: 'Ghi nhận thu tiền' }))
   vi.mocked(paymentApi.list).mockRejectedValueOnce(new Error('Không tải lại được số dư'))
   fireEvent.click(screen.getByRole('button', { name: 'Xác nhận đã giao dịch' }))
+  await confirmDialog('Ghi nhận thu')
   expect(await screen.findByText('Mất kết nối')).toBeTruthy()
   await waitFor(() => expect((screen.getByLabelText('Số tiền') as HTMLInputElement).disabled).toBe(false))
   fireEvent.click(screen.getByRole('button', { name: 'Xác nhận đã giao dịch' }))
+  await confirmDialog('Ghi nhận thu')
   await waitFor(() => expect(paymentApi.create).toHaveBeenCalledTimes(2))
   expect(vi.mocked(paymentApi.create).mock.calls[0][1].requestId).toBe(vi.mocked(paymentApi.create).mock.calls[1][1].requestId)
 })
@@ -68,4 +82,19 @@ test('does not allow collection before order confirmation', async () => {
   show()
   await screen.findByText('Chưa có phiếu thanh toán.')
   expect(screen.queryByRole('button', { name: 'Ghi nhận thu tiền' })).toBeNull()
+})
+test('asks for confirmation and records nothing when the cashier goes back to review', async () => {
+  show()
+  fireEvent.click(await screen.findByRole('button', { name: 'Ghi nhận thu tiền' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Xác nhận đã giao dịch' }))
+  expect((await screen.findAllByText(/Ghi nhận đã thu .*75\.000/)).length).toBeGreaterThan(0)
+  fireEvent.click(screen.getByRole('button', { name: 'Xem lại' }))
+  // Quay lại form: không ghi phiếu, form mở lại để sửa.
+  await waitFor(() => expect((screen.getByLabelText('Số tiền') as HTMLInputElement).disabled).toBe(false))
+  expect(paymentApi.create).not.toHaveBeenCalled()
+  // Hộp vừa bỏ qua vẫn nằm trong DOM: không tính là hộp mới.
+  screen.queryAllByRole('button', { name: 'Ghi nhận thu' }).forEach((button) => clickedConfirms.add(button))
+  fireEvent.click(screen.getByRole('button', { name: 'Xác nhận đã giao dịch' }))
+  await confirmDialog('Ghi nhận thu')
+  await waitFor(() => expect(paymentApi.create).toHaveBeenCalledTimes(1))
 })

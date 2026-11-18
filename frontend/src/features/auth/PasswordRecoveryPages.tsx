@@ -40,7 +40,7 @@ export function ForgotPasswordPage() {
           {cooldown ? `Gửi lại sau ${cooldown}s` : 'Gửi liên kết khôi phục'}
         </Button>
       </Form>
-      <p><Link to="/login">Quay lại đăng nhập</Link></p>
+      <p><Link to="/shop/account">Quay lại đăng nhập</Link></p>
     </Card>
   </div>
 }
@@ -71,7 +71,7 @@ export function ResetPasswordPage() {
   }
   return <div className="af-shop-page af-shop-narrow">
     <Card title={<h1>Đặt lại mật khẩu</h1>}>
-      {done ? <Result status="success" title="Đã đặt mật khẩu mới" subTitle="Các phiên đăng nhập cũ đã kết thúc. Hãy đăng nhập bằng mật khẩu mới." extra={<Link to="/login"><Button type="primary">Đăng nhập</Button></Link>} /> : !/^[A-Za-z0-9_-]{43}$/.test(token) ? (
+      {done ? <Result status="success" title="Đã đặt mật khẩu mới" subTitle="Các phiên đăng nhập cũ đã kết thúc. Hãy đăng nhập bằng mật khẩu mới." extra={<Link to="/shop/account"><Button type="primary">Đăng nhập</Button></Link>} /> : !/^[A-Za-z0-9_-]{43}$/.test(token) ? (
         <Alert type="warning" showIcon title="Liên kết khôi phục không hợp lệ" description={<Link to="/forgot-password">Yêu cầu liên kết mới</Link>} />
       ) : <>
         {error && <Alert type="error" showIcon title={error} style={{ marginBottom: 16 }} />}

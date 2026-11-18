@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Button, Card, Input, Modal, Skeleton, Table, Tag } from 'antd'
 import { ViewButton } from '@/shared/components/ViewButton'
 import { modalWidth } from '@/shared/utils/modal'
@@ -8,7 +8,8 @@ import { bottleLedgerApi, type BottleBalance } from '@/features/live/bottleLedge
 import { LiveBottleTypes } from '@/features/live/LiveBottleTypes'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
-import { matchesSearch } from '@/shared/utils/search'
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
+import { serverTablePagination } from '@/shared/utils/table'
 import { LiveBottleLedger } from './LiveBottleLedger'
 
 export function LiveBottleOverview() {
@@ -16,12 +17,22 @@ export function LiveBottleOverview() {
   const [search, setSearch] = useState('')
   const [customer, setCustomer] = useState<BottleBalance>()
   const [types, setTypes] = useState(false)
-  const query = useQuery({ queryKey: ['live', 'bottle-balances', staff?.name, staff?.role], queryFn: bottleLedgerApi.balances })
+  // Tìm ở BE: chờ ngừng gõ rồi mới gửi; đổi từ khóa thì về trang đầu.
+  const q = useDebouncedValue(search)
+  const [paging, setPaging] = useState({ q, page: 0, size: 8 })
+  const page = paging.q === q ? paging.page : 0
+  const filters = { page, size: paging.size, q }
+  const query = useQuery({
+    queryKey: ['live', 'bottle-balances', staff?.name, staff?.role, filters],
+    queryFn: () => bottleLedgerApi.balances(filters),
+    placeholderData: keepPreviousData,
+  })
   return (
     <Card title="Quản lý vỏ bình / tiền cọc" extra={<Button onClick={() => setTypes(true)}>Danh mục loại vỏ</Button>}>
       <p>Sổ theo khách hàng, bao gồm hồ sơ đã lưu trữ. Chọn khách để ghi nhận giao/thu vỏ, thu/hoàn cọc và xem lịch sử.</p>
       <Input
-        placeholder="Tìm khách trong sổ vỏ"
+        placeholder="Tìm khách theo tên hoặc số điện thoại"
+        aria-label="Tìm khách trong sổ vỏ"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         allowClear
@@ -34,8 +45,14 @@ export function LiveBottleOverview() {
       ) : (
         <Table
           rowKey="customerId"
-          dataSource={query.data.filter((c) => matchesSearch(search, c.name))}
-          pagination={{ pageSize: 8 }}
+          loading={query.isFetching && query.isPlaceholderData}
+          dataSource={query.data.items}
+          pagination={serverTablePagination({
+            page,
+            size: paging.size,
+            total: query.data.total,
+            onChange: (next, size) => setPaging({ q, page: next, size }),
+          })}
           scroll={{ x: 760 }}
           locale={{ emptyText: 'Chưa có khách hàng phù hợp.' }}
           columns={[
@@ -64,7 +81,14 @@ export function LiveBottleOverview() {
         />
       )}
       {customer && (
-        <Modal open centered title={`Vỏ & cọc · ${customer.name}`} width={modalWidth.large} footer={null} onCancel={() => setCustomer(undefined)}>
+        <Modal
+          open
+          centered
+          title={`Vỏ & cọc · ${customer.name}`}
+          width={modalWidth.large}
+          footer={null}
+          onCancel={() => setCustomer(undefined)}
+        >
           <LiveBottleLedger customerId={customer.customerId} />
         </Modal>
       )}

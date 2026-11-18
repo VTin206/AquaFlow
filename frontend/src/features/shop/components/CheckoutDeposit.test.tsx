@@ -7,7 +7,6 @@ import { bottleTypeApi } from '@/features/live/bottleTypeApi'
 import type { CheckoutLine } from './CheckoutReview'
 import { currency } from '@/shared/utils/format'
 
-vi.mock('../shopService', () => ({ useShopDemo: () => false }))
 const clients: QueryClient[] = []
 const lines: CheckoutLine[] = [
   { productId: '1', quantity: 2, product: { id: '1', sku: 'A', name: 'Nước A', brand: '', unit: 'Bình', price: 20000, available: true, bottleTypeId: 1 } },

@@ -16,7 +16,11 @@ import java.util.List;
 @RequestMapping("/api/v1/delivery-quotes")
 public class DeliveryQuoteController {
     private final ProductRepository products;
-    public DeliveryQuoteController(ProductRepository products) { this.products = products; }
+    private final com.aquaflow.workspace.repository.StoreSettingsRepository settings;
+    public DeliveryQuoteController(ProductRepository products, com.aquaflow.workspace.repository.StoreSettingsRepository settings) {
+        this.products = products;
+        this.settings = settings;
+    }
 
     public record Request(@NotEmpty @Size(max = 100) List<@NotNull @Valid OrderItemRequest> items,
                           @Min(0) @Max(30) int stairFloor) {}
@@ -25,14 +29,14 @@ public class DeliveryQuoteController {
     @Transactional(readOnly = true)
     public DeliveryPricing.Quote quote(@Valid @RequestBody Request request) {
         BigDecimal subtotal = BigDecimal.ZERO;
-        long units = 0, jugs = 0;
+        long units = 0, stairsUnits = 0;
         for (var line : request.items()) {
             Product product = products.findById(line.productId()).filter(Product::isActive)
                     .orElseThrow(() -> new NotFoundException("Active product not found: " + line.productId()));
             subtotal = subtotal.add(product.getSalePrice().multiply(BigDecimal.valueOf(line.quantity())));
             units += line.quantity();
-            if (DeliveryPricing.isJug(product.getUnit())) jugs += line.quantity();
+            if (DeliveryPricing.carriesStairsFee(product.getUnit())) stairsUnits += line.quantity();
         }
-        return DeliveryPricing.calculate(subtotal, units, jugs, request.stairFloor());
+        return DeliveryPricing.calculate(subtotal, units, stairsUnits, request.stairFloor(), settings.deliveryFees());
     }
 }

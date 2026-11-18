@@ -9,12 +9,23 @@ export type TripCollections = {
     bottlesReturned: number
     recordedBy: number
     createdAt: string
+    /** Cọc vỏ thu cùng lần này (0 nếu không thu cọc). */
+    depositAmount: number
   }[]
   balances: { orderId: number; total: number; paid: number; due: number; bottlesToExchange: number }[]
   cashExpected: number
   bottlesExpected: number
+  /** Cọc thu bằng tiền mặt, tài xế phải nộp cùng tiền hàng khi đối soát. */
+  depositExpected: number
 }
-export type CollectionInput = { requestId: string; amount: number; method: 'CASH' | 'BANK_TRANSFER'; bottlesReturned: number }
+export type CollectionInput = {
+  requestId: string
+  amount: number
+  method: 'CASH' | 'BANK_TRANSFER'
+  bottlesReturned: number
+  /** Cọc cho phần vỏ khách chưa đổi; ghi vào sổ cọc của khách. */
+  depositAmount?: number
+}
 export const collectionApi = {
   get: (tripId: number) => api.get<TripCollections>(`/delivery/trips/${tripId}/collections`),
   collect: (tripId: number, orderId: number, input: CollectionInput) =>
@@ -43,12 +54,23 @@ export type DeliveryStop = {
   latestAttempt: DeliveryAttempt | null
   items: { productId: number; productName: string; unit: string; lotCode: string; quantity: number }[]
 }
+export type AvailableOrder = {
+  id: number
+  orderCode: string
+  recipientName: string | null
+  deliveryAddress: string | null
+  deliveryFailed: boolean
+  redeliveryEligible: boolean
+}
 export type SettlementInput = {
   cashReported: number
   cashConfirmed: number
   bottlesExpected: number
   bottlesConfirmed: number
   note?: string
+  /** Cọc tiền mặt tài xế báo nộp và chủ cửa hàng thực nhận. */
+  depositReported?: number
+  depositConfirmed?: number
 }
 export type DeliveryTrip = {
   id: number
@@ -66,25 +88,19 @@ export type DeliveryTrip = {
 export type ResultInput = { outcome: 'SUCCESS' | 'FAILED'; recipientName?: string; failureReason?: string; note?: string }
 export const tripLabels = { CREATED: 'Chờ khởi hành', IN_PROGRESS: 'Đang giao', COMPLETED: 'Đã đối soát', CANCELLED: 'Đã hủy' }
 const base = '/delivery/trips'
+/** `orderId`: chỉ chuyến chở đơn đó (mọi lúc). `days`: chỉ chuyến chưa xong hoặc có hoạt động trong số ngày này. */
+export type TripListQuery = { orderId?: number; days?: number }
+/** Màn hình vận hành (bảng giao, danh sách chuyến, tài xế) xem cùng khoảng với tập đơn đang xử lý. */
+export const RECENT_TRIP_DAYS = 30
 export const deliveryApi = {
   dispatchAssignment: (id: number) =>
     api.post<import('@/features/live/dispatchApi').DispatchReceipt>(`/delivery/assignments/${id}/dispatch`),
   assignmentResult: (id: number, input: ResultInput) => api.post<DeliveryAttempt>(`/delivery/assignments/${id}/attempts`, input),
   assignmentAttempts: (id: number) => api.get<DeliveryAttempt[]>(`/delivery/assignments/${id}/attempts`),
-  list: () => api.get<DeliveryTrip[]>(base),
+  list: (query: TripListQuery = {}) => api.get<DeliveryTrip[]>(base, { params: query }),
   detail: (id: number) => api.get<DeliveryTrip>(`${base}/${id}`),
   drivers: () => api.get<{ id: number; name: string }[]>('/delivery/drivers'),
-  available: () =>
-    api.get<
-      {
-        id: number
-        orderCode: string
-        recipientName: string | null
-        deliveryAddress: string | null
-        deliveryFailed: boolean
-        redeliveryEligible: boolean
-      }[]
-    >('/delivery/available-orders'),
+  available: () => api.get<AvailableOrder[]>('/delivery/available-orders'),
   create: (input: { driverId?: number; vehicle?: string }) => api.post<DeliveryTrip>(base, input),
   assign: (id: number, driverId: number) => api.put<DeliveryTrip>(`${base}/${id}/driver`, { driverId }),
   add: (id: number, orderId: number, redelivery = false) => api.post<DeliveryStop>(`${base}/${id}/orders`, { orderId, redelivery }),

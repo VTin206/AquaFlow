@@ -1,23 +1,24 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Button, DatePicker, Descriptions, Empty, Input, Modal, Select, Space, Spin, Table, Tag } from 'antd'
+import { Button, Descriptions, Empty, Input, Modal, Select, Space, Spin, Table, Tag } from 'antd'
 import { Link } from 'react-router'
 import { useAuth } from '@/features/auth/useAuth'
 import { movementApi, movementLabels, type InventoryMovement, type MovementFilter, type MovementType } from '@/features/live/movementApi'
-import { LiveOrderDetails } from '@/features/live/LiveOrderDetails'
+import { OrderDetails } from '@/features/orders/components/OrderDetails'
 import { QueryError } from '@/shared/components/QueryError'
 import { ViewButton } from '@/shared/components/ViewButton'
-import { tableScrollHeight } from '@/shared/utils/table'
 import { isoToVnDate } from '../expiry'
+import { PeriodPicker } from '@/shared/components/PeriodPicker'
 
 const timestamp = (value: string) => new Date(value).toLocaleString('vi-VN')
 const signed = (row: InventoryMovement) => `${row.signedQuantity > 0 ? '+' : ''}${row.signedQuantity} ${row.unit}`
 
+/** Lịch sử xuất nhập kho. */
 export function LiveMovementsPanel() {
   const { user } = useAuth()
-  const [filter, setFilter] = useState<MovementFilter>({ page: 0, size: 20 })
+  const [filter, setFilter] = useState<MovementFilter>({ page: 0, size: 10 })
   const [selected, setSelected] = useState<number | null>(null)
-  const [orderId, setOrderId] = useState<number | null>(null)
+  const [orderId, setOrderId] = useState<string | null>(null)
   const query = useQuery({
     queryKey: ['live', 'inventory-movements', user?.email, user?.role, filter],
     queryFn: () => movementApi.list(filter),
@@ -44,9 +45,8 @@ export function LiveMovementsPanel() {
             ]}
             style={{ minWidth: 200 }}
           />
-          <DatePicker.RangePicker
+          <PeriodPicker
             aria-label="Khoảng ngày xuất nhập"
-            format="DD/MM/YYYY"
             onChange={(dates) =>
               update({ from: dates?.[0]?.startOf('day').toISOString(), to: dates?.[1]?.add(1, 'day').startOf('day').toISOString() })
             }
@@ -71,16 +71,15 @@ export function LiveMovementsPanel() {
       ) : (
         <Table<InventoryMovement>
           rowKey="id"
-          className="af-data-table af-table-flush"
+          className="af-data-table af-table-flush af-table-dense"
           loading={query.isPending}
           dataSource={query.data?.content ?? []}
-          scroll={{ x: 1212, y: tableScrollHeight }}
+          scroll={{ x: 1060 }}
           pagination={{
             current: filter.page + 1,
             pageSize: filter.size,
             total: query.data?.totalElements ?? 0,
-            showSizeChanger: true,
-            pageSizeOptions: [20, 50, 100],
+            showSizeChanger: false,
             showTotal: (total) => `${total} giao dịch`,
             onChange: (page, size) => setFilter((previous) => ({ ...previous, page: size === previous.size ? page - 1 : 0, size })),
           }}
@@ -93,7 +92,18 @@ export function LiveMovementsPanel() {
             ),
           }}
           columns={[
-            { title: 'Thời điểm', dataIndex: 'occurredAt', width: 170, render: timestamp },
+            {
+              title: 'Thời điểm',
+              dataIndex: 'occurredAt',
+              width: 120,
+              // Ngày trên, giờ dưới để cột hẹp mà không bẻ đôi.
+              render: (value: string) => (
+                <div className="af-cell-stack" title={timestamp(value)}>
+                  <span className="af-nowrap">{new Date(value).toLocaleDateString('vi-VN')}</span>
+                  <small className="af-nowrap">{new Date(value).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</small>
+                </div>
+              ),
+            },
             {
               title: 'Loại',
               dataIndex: 'type',
@@ -105,7 +115,9 @@ export function LiveMovementsPanel() {
               dataIndex: 'productName',
               render: (_, item) => (
                 <div className="af-cell-stack">
-                  <span>{item.productName}</span>
+                  <span className="af-cell-truncate" title={item.productName}>
+                    {item.productName}
+                  </span>
                   <small>{item.sku}</small>
                 </div>
               ),
@@ -113,11 +125,11 @@ export function LiveMovementsPanel() {
             {
               title: 'Lô / hạn dùng',
               key: 'lot',
-              width: 150,
+              width: 140,
               render: (_, item) => (
                 <div className="af-cell-stack">
-                  <span>{item.lotCode}</span>
-                  <small>{isoToVnDate(item.expiresOn)}</small>
+                  <span className="af-nowrap">{item.lotCode}</span>
+                  <small>{item.expiresOn ? isoToVnDate(item.expiresOn) : '—'}</small>
                 </div>
               ),
             },
@@ -125,24 +137,33 @@ export function LiveMovementsPanel() {
               title: 'Số lượng',
               key: 'quantity',
               align: 'right',
-              width: 120,
-              render: (_, item) => <span className={item.signedQuantity < 0 ? 'af-text-danger' : undefined}>{signed(item)}</span>,
+              width: 110,
+              render: (_, item) => (
+                <span
+                  className={`af-nowrap ${item.signedQuantity < 0 ? 'af-text-danger' : item.signedQuantity > 0 ? 'af-text-success' : ''}`}
+                >
+                  {signed(item)}
+                </span>
+              ),
             },
             {
               title: 'Chứng từ',
               dataIndex: 'referenceCode',
               width: 170,
+              // Người thực hiện ghi dưới mã chứng từ để bảng vừa khung, không cuộn ngang.
               render: (code: string, item) => (
-                <Button type="link" onClick={() => setSelected(item.id)}>
-                  {code}
-                </Button>
+                <div className="af-cell-stack">
+                  <Button type="link" size="small" className="af-link-button af-ref-link" title={code} onClick={() => setSelected(item.id)}>
+                    {code}
+                  </Button>
+                  {item.performedByName && <small className="af-cell-truncate">{item.performedByName}</small>}
+                </div>
               ),
             },
-            { title: 'Người thực hiện', dataIndex: 'performedByName', width: 160 },
             {
               title: 'Thao tác',
               key: 'actions',
-              width: 112,
+              width: 96,
               align: 'center' as const,
               fixed: 'right',
               render: (_, item) => <ViewButton subject={`giao dịch kho #${item.id}`} onClick={() => setSelected(item.id)} />,
@@ -160,7 +181,7 @@ export function LiveMovementsPanel() {
             {row?.referenceType === 'ORDER' && (
               <Button
                 onClick={() => {
-                  setOrderId(row.referenceId)
+                  setOrderId(String(row.referenceId))
                   setSelected(null)
                 }}
               >
@@ -184,7 +205,7 @@ export function LiveMovementsPanel() {
                 { key: 'at', label: 'Thời điểm', children: timestamp(row.occurredAt) },
                 { key: 'product', label: 'Sản phẩm', children: `${row.productName} (${row.sku})` },
                 { key: 'lot', label: 'Lô', children: row.lotCode },
-                { key: 'expiry', label: 'Hạn dùng', children: isoToVnDate(row.expiresOn) },
+                { key: 'expiry', label: 'Hạn dùng', children: row.expiresOn ? isoToVnDate(row.expiresOn) : '—' },
                 { key: 'quantity', label: 'Biến động', children: signed(row) },
                 { key: 'reference', label: 'Chứng từ', children: row.referenceCode },
                 { key: 'actor', label: 'Người thực hiện', children: row.performedByName },
@@ -194,7 +215,7 @@ export function LiveMovementsPanel() {
           )
         )}
       </Modal>
-      {orderId !== null && <LiveOrderDetails id={orderId} onClose={() => setOrderId(null)} />}
+      {orderId !== null && <OrderDetails id={orderId} onClose={() => setOrderId(null)} />}
     </>
   )
 }

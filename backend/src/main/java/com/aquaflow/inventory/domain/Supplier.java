@@ -59,6 +59,10 @@ public class Supplier {
         this.active = false;
     }
 
+    public void activate() {
+        this.active = true;
+    }
+
     public Long getId() { return id; }
     public String getName() { return name; }
     public String getPhone() { return phone; }

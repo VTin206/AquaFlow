@@ -26,7 +26,7 @@ chéo và khó theo dõi.
 
 ## Các nguyên tắc bắt buộc
 
-- Không push trực tiếp vào `main` hoặc `develop`.
+- Không push trực tiếp vào `main`. Được phép push trực tiếp vào `develop` khi maintainer/chủ repository yêu cầu hoặc chấp thuận rõ ràng, sau khi đã kiểm tra và commit đúng quy tắc.
 - Không merge PR chưa được review.
 - Không commit password, token, API key hoặc file `.env`.
 - Mọi thay đổi schema phải có Flyway migration tương ứng.

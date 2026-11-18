@@ -1,0 +1,27 @@
+# Profile cho máy chủ thật (docker-compose.prod.yml đặt SPRING_PROFILES_ACTIVE=prod).
+# Không có giá trị mặc định cho kết nối DB: thiếu biến môi trường thì backend dừng ngay khi khởi động.
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      minimum-idle: 2
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+# Tài liệu API chỉ dùng khi phát triển; trên prod không công khai danh sách endpoint.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+server:
+  error:
+    include-message: never
+    include-stacktrace: never

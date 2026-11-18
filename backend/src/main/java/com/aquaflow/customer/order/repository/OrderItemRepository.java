@@ -9,4 +9,7 @@ public interface OrderItemRepository
         extends JpaRepository<OrderItem, Long> {
 
     List<OrderItem> findAllByOrder_Id(Long orderId);
+
+    /** Nạp dòng hàng của nhiều đơn trong một truy vấn khi trả danh sách đơn. */
+    List<OrderItem> findAllByOrder_IdIn(java.util.Collection<Long> orderIds);
 }

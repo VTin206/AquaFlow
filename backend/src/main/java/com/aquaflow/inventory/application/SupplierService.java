@@ -52,6 +52,14 @@ public class SupplierService {
         getSupplier(id).deactivate();         // xóa mềm
     }
 
+    /** Bật lại nhà cung cấp đã ngừng; gọi lại khi đang hoạt động không đổi gì. */
+    @Transactional
+    public SupplierResponse reactivate(Long id) {
+        Supplier supplier = getSupplier(id);
+        supplier.activate();
+        return toResponse(supplier);
+    }
+
     private Supplier getSupplier(Long id) {
         return supplierRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Supplier not found: " + id));

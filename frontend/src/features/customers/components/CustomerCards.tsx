@@ -1,58 +1,44 @@
-import { useState } from 'react'
 import { Button, Select } from 'antd'
+import type { ServerPagination } from '@/shared/utils/table'
+import type { CustomerCardSort } from '../useCustomers'
 import { Plus } from 'lucide-react'
 import { ViewButton } from '@/shared/components/ViewButton'
 import { MobileRecordList } from '@/shared/components/MobileRecordList'
-import { useFeature } from '@/shared/features'
-import { Unsupported } from '@/shared/components/Unsupported'
 import { customerCode, type Customer } from '../types'
 import { CustomerDebt } from './CustomerDebt'
 import { lastOrderLabel } from '../lastOrder'
 
 type CustomerCardsProps = {
+  /** Một trang khách đã sắp xếp theo `sort` (BE sắp xếp trên toàn bộ danh sách). */
   customers: Customer[]
   loading: boolean
   emptyText: string
   onProfile: (id: string) => void
   onCreateOrder: (customer: Customer) => void
+  sort: CustomerCardSort
+  onSortChange: (sort: CustomerCardSort) => void
+  server: ServerPagination
 }
-type Sort = 'recent' | 'idle' | 'name' | 'debt' | 'bottles'
-
-export function CustomerCards({ customers, loading, emptyText, onProfile, onCreateOrder }: CustomerCardsProps) {
-  const showDebt = useFeature('customerDebt')
-  const showBottles = useFeature('bottleLedger')
-  const [sort, setSort] = useState<Sort>('recent')
-  const sorted = [...customers].sort((a, b) =>
-    sort === 'name'
-      ? a.name.localeCompare(b.name, 'vi')
-      : sort === 'debt'
-        ? b.debt - a.debt
-        : sort === 'bottles'
-          ? b.bottlesHeld - a.bottlesHeld
-          : sort === 'idle'
-            ? (a.lastOrderAt ?? '').localeCompare(b.lastOrderAt ?? '')
-            : (b.lastOrderAt ?? '').localeCompare(a.lastOrderAt ?? ''),
-  )
-
+export function CustomerCards({ customers, loading, emptyText, onProfile, onCreateOrder, sort, onSortChange, server }: CustomerCardsProps) {
   return (
     <MobileRecordList
-      key={sort}
-      items={sorted}
+      items={customers}
       rowKey={(customer) => customer.id}
       loading={loading}
       emptyText={emptyText}
       label="Danh sách khách hàng"
+      server={server}
       controls={
-        <Select<Sort>
+        <Select<CustomerCardSort>
           aria-label="Sắp xếp khách hàng"
           value={sort}
-          onChange={setSort}
+          onChange={onSortChange}
           options={[
             { value: 'recent', label: 'Mua gần đây trước' },
             { value: 'idle', label: 'Lâu chưa mua trước' },
             { value: 'name', label: 'Tên: A → Z' },
-            ...(showDebt ? [{ value: 'debt' as const, label: 'Còn phải thu: cao trước' }] : []),
-            ...(showBottles ? [{ value: 'bottles' as const, label: 'Vỏ đang giữ: nhiều trước' }] : []),
+            { value: 'debt' as const, label: 'Còn phải thu: cao trước' },
+            { value: 'bottles' as const, label: 'Vỏ đang giữ: nhiều trước' },
           ]}
         />
       }
@@ -69,9 +55,11 @@ export function CustomerCards({ customers, loading, emptyText, onProfile, onCrea
           </p>
           <dl className="af-record-facts">
             <dt>Còn phải thu</dt>
-            <dd>{showDebt ? <CustomerDebt debt={customer.debt} orders={customer.orders} /> : <Unsupported />}</dd>
+            <dd>
+              <CustomerDebt debt={customer.debt} orders={customer.orders} />
+            </dd>
             <dt>Vỏ đang giữ</dt>
-            <dd>{showBottles ? `${customer.bottlesHeld} vỏ` : <Unsupported />}</dd>
+            <dd>{customer.bottlesHeld} vỏ</dd>
           </dl>
           <div className="af-record-actions">
             <ViewButton title="Xem hồ sơ" subject={customer.name} size="middle" onClick={() => onProfile(customer.id)} />

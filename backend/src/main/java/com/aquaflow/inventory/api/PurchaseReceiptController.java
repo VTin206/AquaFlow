@@ -3,6 +3,9 @@ package com.aquaflow.inventory.api;
 import com.aquaflow.auth.security.AuthUserDetails;
 import com.aquaflow.inventory.api.dto.PurchaseReceiptRequest;
 import com.aquaflow.inventory.api.dto.PurchaseReceiptResponse;
+import com.aquaflow.inventory.api.dto.PurchaseReceiptPage;
+import com.aquaflow.inventory.api.dto.LotSourceResponse;
+import com.aquaflow.shared.api.PageRequestParams;
 import com.aquaflow.inventory.application.PurchaseReceiptService;
 import com.aquaflow.inventory.domain.PurchaseReceiptStatus;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,15 +36,23 @@ public class PurchaseReceiptController {
     }
 
     @GetMapping
-    @Operation(summary = "Get purchase receipts, optionally filtered by status")
+    @Operation(summary = "A page of purchase receipts, newest received first, optionally filtered by status",
+            description = "statusCounts covers every receipt regardless of the filter.")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "List of purchase receipts"),
+        @ApiResponse(responseCode = "200", description = "Page of purchase receipts"),
         @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError"))),
         @ApiResponse(responseCode = "403", description = "Admin or sales staff role required", content = @Content(schema = @Schema(ref = "#/components/schemas/ApiError")))
     })
-    public ResponseEntity<List<PurchaseReceiptResponse>> getAll(
-            @Parameter(description = "DRAFT, CONFIRMED or CANCELLED") @RequestParam(required = false) PurchaseReceiptStatus status) {
-        return ResponseEntity.ok(receiptService.findAll(status));
+    public ResponseEntity<PurchaseReceiptPage> getAll(
+            @Parameter(description = "DRAFT, CONFIRMED or CANCELLED") @RequestParam(required = false) PurchaseReceiptStatus status,
+            @RequestParam(required = false) Integer page, @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(receiptService.page(status, PageRequestParams.of(page, size)));
+    }
+
+    @GetMapping("/lot-sources")
+    @Operation(summary = "First receipt, manufacture date, accepted quantity and cost of every lot received")
+    public List<LotSourceResponse> lotSources() {
+        return receiptService.lotSources();
     }
 
     @GetMapping("/{id}")

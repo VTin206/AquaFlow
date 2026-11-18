@@ -30,9 +30,17 @@ class HealthControllerTest {
     @MockBean private com.aquaflow.inventory.repository.InventoryReturnRepository inventoryReturnRepository;
     @MockBean private com.aquaflow.activity.ActivityRepository activityRepository;
     @MockBean private com.aquaflow.report.ReportRepository reportRepository;
+    @MockBean private com.aquaflow.inventory.brand.BrandService brandService;
+    @MockBean private com.aquaflow.inventory.repository.BestSellerRepository bestSellerRepository;
     @MockBean private com.aquaflow.delivery.repository.DeliveryRepository deliveryRepository;
     @MockBean private com.aquaflow.customer.order.repository.DispatchRepository dispatchRepository;
+    @MockBean private com.aquaflow.customer.order.repository.OrderTrackingRepository orderTrackingRepository;
+    @MockBean private com.aquaflow.auth.repository.RefreshTokenRepository refreshTokenRepository;
+    @MockBean private com.aquaflow.customer.order.repository.OrderQueryRepository orderQueryRepository;
+    @MockBean private com.aquaflow.customer.order.repository.OrderReturnRepository orderReturnRepository;
+    @MockBean private com.aquaflow.customer.repository.CustomerQueryRepository customerQueryRepository;
     @MockBean private com.aquaflow.inventory.application.StockDispatchService stockDispatchService;
+    @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.inventory.application.StockAdjustmentService stockAdjustmentService;
     @MockBean private com.aquaflow.workspace.repository.StoreSettingsRepository storeSettingsRepository;
     @MockBean private com.aquaflow.workspace.repository.NotificationRepository notificationRepository;
 
@@ -57,6 +65,11 @@ class HealthControllerTest {
     private UserRepository userRepository;
 
     // Test này tắt JPA nên phải giả lập các repository của module inventory
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.aquaflow.inventory.repository.ProductCategoryRepository productCategoryRepository;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.aquaflow.content.repository.ShopArticleRepository shopArticleRepository;
+
     @MockBean
     private ProductRepository productRepository;
 

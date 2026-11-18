@@ -5,14 +5,14 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { TrackPage } from './TrackPage'
 
-const mocks = vi.hoisted(() => ({ supported: false, phone: '0283 456 7890' as string | undefined }))
-
 vi.mock('@/features/settings/settingsService', () => ({ useSettings: () => ({ data: undefined }) }))
+const auth = vi.hoisted(() => ({ user: null as { name: string; role: string } | null }))
+vi.mock('@/features/auth/useAuth', () => ({ useAuth: () => auth }))
 vi.mock('./shopService', () => ({
-  lookupOrder: vi.fn(),
+  useLookupOrder: () => vi.fn(),
   useTrackedOrder: vi.fn(),
-  useShopFeature: () => mocks.supported,
-  useShopContact: () => ({ phone: mocks.phone }),
+  useShopContact: () => ({ phone: '0283 456 7890' }),
+  useTransferAccount: () => undefined,
 }))
 
 const renderPage = () =>
@@ -30,28 +30,23 @@ beforeEach(() => {
     value: vi.fn().mockImplementation(() => ({ matches: false, addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn() })),
   })
   vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
-  mocks.supported = false
-  mocks.phone = '0283 456 7890'
 })
-afterEach(cleanup)
-
-test('chưa tra cứu được: cho khách số gọi cửa hàng, không có form khóa hay chữ kỹ thuật', () => {
-  renderPage()
-  expect(screen.getByRole('link', { name: /0283 456 7890/ }).getAttribute('href')).toBe('tel:02834567890')
-  expect(screen.queryByLabelText('Mã đơn')).toBeNull()
-  expect(document.body.textContent).not.toMatch(/backend|API|chưa hỗ trợ/i)
+afterEach(() => {
+  cleanup()
+  auth.user = null
 })
 
-test('cửa hàng chưa có số điện thoại thì vẫn có hướng dẫn và lối đăng nhập', () => {
-  mocks.phone = undefined
+test('hiện form tra cứu dùng được và lối đăng nhập', () => {
   renderPage()
-  expect(screen.getByText('Vui lòng liên hệ cửa hàng để hỏi tình trạng đơn.')).toBeTruthy()
-  expect(screen.getByRole('button', { name: /Đăng nhập/ })).toBeTruthy()
-})
-
-test('tra cứu được thì hiện form', () => {
-  mocks.supported = true
-  renderPage()
-  expect(screen.getByLabelText('Mã đơn')).toBeTruthy()
+  expect((screen.getByLabelText('Mã đơn') as HTMLInputElement).disabled).toBe(false)
   expect(screen.getByRole('button', { name: /Tra cứu/ })).toBeTruthy()
+  expect(screen.getByRole('button', { name: /Đăng nhập/ })).toBeTruthy()
+  expect(document.body.textContent).not.toMatch(/chưa hỗ trợ|backend|API/i)
+})
+
+test('đã đăng nhập thì dẫn tới đơn của tôi thay vì nút đăng nhập', () => {
+  auth.user = { name: 'Khách Test', role: 'CUSTOMER' }
+  renderPage()
+  expect(screen.getByRole('link', { name: /Đơn hàng của tôi/ }).getAttribute('href')).toBe('/shop/orders')
+  expect(screen.queryByRole('button', { name: /Đăng nhập/ })).toBeNull()
 })

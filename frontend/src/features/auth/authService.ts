@@ -25,7 +25,7 @@ const loginError = (error: unknown) => {
   if (error.status === 401) return new ApiError(401, 'Email hoặc mật khẩu không đúng, hoặc tài khoản đã bị khóa.', error.body)
   if (error.status === 400) return new ApiError(400, 'Email hoặc mật khẩu chưa đúng định dạng.', error.body)
   if (error.status === 0 || error.status >= 500)
-    return new ApiError(error.status, 'Không kết nối được máy chủ. Bạn có thể xem bản dùng thử với dữ liệu mẫu.', error.body)
+    return new ApiError(error.status, 'Không kết nối được máy chủ. Vui lòng thử lại sau.', error.body)
   return error
 }
 
@@ -64,4 +64,6 @@ export const authService = {
     }
   },
   me: () => api.get<CurrentUser>('/auth/me'),
+  /** Thu hồi refresh token của phiên này trên máy chủ và xóa cookie. */
+  logout: () => api.post<void>('/auth/logout', undefined, { withCredentials: true }),
 }

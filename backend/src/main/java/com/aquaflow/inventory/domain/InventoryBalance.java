@@ -76,6 +76,22 @@ public class InventoryBalance {
         reserved -= quantity;
     }
 
+    /** Kiểm kê thấy nhiều hơn sổ: cộng thêm vào tồn. */
+    public void adjustUp(int quantity) {
+        requirePositive(quantity);
+        onHand += quantity;
+    }
+
+    /** Kiểm kê thấy ít hơn sổ: không được trừ vào phần đang giữ cho đơn. */
+    public void adjustDown(int quantity) {
+        requirePositive(quantity);
+        if (quantity > getAvailable()) {
+            throw new ConflictException("Lô " + batch.getLotCode() + " đang giữ " + reserved
+                    + " cho đơn; số đếm không được thấp hơn số đang giữ");
+        }
+        onHand -= quantity;
+    }
+
     private static void requirePositive(int quantity) {
         if (quantity <= 0) {
             throw new IllegalArgumentException("Số lượng phải lớn hơn 0");

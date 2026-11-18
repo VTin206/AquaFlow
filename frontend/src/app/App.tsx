@@ -1,11 +1,9 @@
-import { lazy, Suspense, type ReactNode } from 'react'
-import { Spin } from 'antd'
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router'
 import { AppLayout } from '@/app/layouts/AppLayout'
 import { DriverLayout } from '@/app/layouts/DriverLayout'
 import { ThemedArea } from '@/app/layouts/ThemedArea'
 import { RequireAuth } from './RequireAuth'
-import { usePageSupported } from '@/shared/features'
 import { RequireCustomer } from './RequireCustomer'
 import { ScrollToTop } from './ScrollToTop'
 
@@ -22,45 +20,34 @@ const DriverPage = lazy(() => import('@/features/delivery/DriverPage').then((m) 
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 const StaffAccountsPage = lazy(() => import('@/features/auth/StaffAccountsPage').then((m) => ({ default: m.StaffAccountsPage })))
 const ActivityPage = lazy(() => import('@/features/activity/ActivityPage').then((m) => ({ default: m.ActivityPage })))
+const ArticlesPage = lazy(() => import('@/features/articles/ArticlesPage').then((m) => ({ default: m.ArticlesPage })))
 const ShopLayout = lazy(() => import('@/features/shop/ShopLayout').then((m) => ({ default: m.ShopLayout })))
 const ArticlePage = lazy(() => import('@/features/shop/ArticlePage').then((m) => ({ default: m.ArticlePage })))
 const ShopAccountPage = lazy(() => import('@/features/shop/ShopAccountPage').then((m) => ({ default: m.ShopAccountPage })))
 const ShopRegisterPage = lazy(() => import('@/features/shop/ShopAccountPage').then((m) => ({ default: m.ShopRegisterPage })))
 const ShopPage = lazy(() => import('@/features/shop/ShopPage').then((m) => ({ default: m.ShopPage })))
+const DrinksPage = lazy(() => import('@/features/shop/DrinksPage').then((m) => ({ default: m.DrinksPage })))
 const CustomerOrdersPage = lazy(() => import('@/features/shop/CustomerOrdersPage').then((m) => ({ default: m.CustomerOrdersPage })))
 const CustomerOrderPage = lazy(() => import('@/features/shop/CustomerOrdersPage').then((m) => ({ default: m.CustomerOrderPage })))
 const ProductDetailPage = lazy(() => import('@/features/shop/ProductDetailPage').then((m) => ({ default: m.ProductDetailPage })))
 const CheckoutPage = lazy(() => import('@/features/shop/CheckoutPage').then((m) => ({ default: m.CheckoutPage })))
 const TrackPage = lazy(() => import('@/features/shop/TrackPage').then((m) => ({ default: m.TrackPage })))
-const LoginPage = lazy(() => import('@/features/auth/LoginPage').then((m) => ({ default: m.LoginPage })))
-const RegisterPage = lazy(() => import('@/features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })))
 const ForgotPasswordPage = lazy(() => import('@/features/auth/PasswordRecoveryPages').then(m => ({ default: m.ForgotPasswordPage })))
 const ResetPasswordPage = lazy(() => import('@/features/auth/PasswordRecoveryPages').then(m => ({ default: m.ResetPasswordPage })))
-const UnavailablePage = lazy(() => import('@/features/live/UnavailablePage').then((m) => ({ default: m.UnavailablePage })))
-
-/** Trang chưa có API BE: tài khoản thật vẫn mở được nhưng thấy "Chưa hỗ trợ" thay cho dữ liệu mẫu. */
-function BackendPage({ path, title, children }: { path: string; title: string; children: ReactNode }) {
-  return usePageSupported()(path) ? children : <UnavailablePage title={title} />
-}
-
-const pageFallback = (
-  <div className="af-page-loading">
-    <Spin size="large" />
-  </div>
-)
 
 export function App() {
   return (
-    <Suspense fallback={pageFallback}>
+    <Suspense fallback={null}>
       <ScrollToTop />
       <Routes>
-        <Route path="login" element={<LoginPage />} />
-        <Route path="register" element={<RegisterPage />} />
+        <Route path="login" element={<Navigate to="/shop/account" replace />} />
+        <Route path="register" element={<Navigate to="/shop/register" replace />} />
         {/* Trang công khai cho khách đặt hàng và tra cứu đơn, không cần đăng nhập. */}
         <Route element={<ShopLayout />}>
           <Route path="forgot-password" element={<ForgotPasswordPage />} />
           <Route path="reset-password" element={<ResetPasswordPage />} />
           <Route path="shop" element={<ShopPage />} />
+          <Route path="shop/drinks" element={<DrinksPage />} />
           <Route element={<RequireCustomer />}>
             <Route path="shop/orders" element={<CustomerOrdersPage />} />
             <Route path="shop/orders/:id" element={<CustomerOrderPage />} />
@@ -82,52 +69,18 @@ export function App() {
               </ThemedArea>
             }
           >
-            <Route
-              index
-              element={
-                <BackendPage path="/" title="Tổng quan">
-                  <DashboardPage />
-                </BackendPage>
-              }
-            />
+            <Route index element={<DashboardPage />} />
             <Route path="orders" element={<OrdersPage />} />
             <Route path="inventory" element={<InventoryPage />} />
             <Route path="products" element={<ProductsPage />} />
             <Route path="customers" element={<CustomersPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
             <Route path="staff" element={<StaffAccountsPage />} />
-            <Route
-              path="delivery"
-              element={
-                <BackendPage path="/delivery" title="Giao hàng">
-                  <DeliveryPage />
-                </BackendPage>
-              }
-            />
-            <Route
-              path="reports"
-              element={
-                <BackendPage path="/reports" title="Báo cáo">
-                  <ReportsPage />
-                </BackendPage>
-              }
-            />
-            <Route
-              path="activity"
-              element={
-                <BackendPage path="/activity" title="Nhật ký">
-                  <ActivityPage />
-                </BackendPage>
-              }
-            />
-            <Route
-              path="settings"
-              element={
-                <BackendPage path="/settings" title="Cài đặt">
-                  <SettingsPage />
-                </BackendPage>
-              }
-            />
+            <Route path="delivery" element={<DeliveryPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="activity" element={<ActivityPage />} />
+            <Route path="articles" element={<ArticlesPage />} />
+            <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
           {/* Nhân viên giao hàng dùng khung riêng, không vào trang quản lý. */}
@@ -138,14 +91,7 @@ export function App() {
               </ThemedArea>
             }
           >
-            <Route
-              path="driver"
-              element={
-                <BackendPage path="/driver" title="Chuyến của tôi">
-                  <DriverPage />
-                </BackendPage>
-              }
-            />
+            <Route path="driver" element={<DriverPage />} />
           </Route>
         </Route>
       </Routes>

@@ -1,26 +1,27 @@
 import { Alert, App, Button, Card, Checkbox, DatePicker, Empty, Form, Input, InputNumber, Radio, Result, Skeleton, Typography } from 'antd'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { deliveryQuoteApi } from './deliveryQuoteApi'
-import { currency } from '@/shared/utils/format'
+import { DeliveryFeeSummary } from './components/DeliveryFeeSummary'
 import dayjs, { type Dayjs } from 'dayjs'
 import { ChevronDown, Wallet } from 'lucide-react'
-import { useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Link, useNavigate, useOutletContext } from 'react-router'
 import type { LiveOrder } from '@/features/live/orderApi'
 import { Money } from '@/shared/components/Money'
 import { QueryError } from '@/shared/components/QueryError'
 import { focusNextOnEnter } from '@/shared/utils/forms'
-import { suggestedDeliveryFee } from '@/shared/policy'
 import { readProfile, saveProfile, useCart, useCartActions } from './cart'
 import { submitCheckoutOnce } from './checkoutSubmit'
 import { CheckoutReview } from './components/CheckoutReview'
 import { CheckoutDeposit } from './components/CheckoutDeposit'
 import { disabledOutsideHours, formatOpeningHours, isWithinOpeningHours, parseOpeningHours } from './openingHours'
-import { usePlaceWebOrder, useShopContact, useShopDemo, useShopProducts } from './shopService'
+import { usePlaceWebOrder, useShopContact, useShopProducts } from './shopService'
 import { useAuth } from '@/features/auth/useAuth'
 import { isCustomer } from '@/features/auth/accountAccess'
+import { accountKey, customerAccountApi, type SavedAddress } from './customerAccountApi'
 import { SavedAddressPicker } from './SavedAddressPicker'
 import { WardSelect } from '@/shared/address/WardSelect'
+import { TextArea } from '@/shared/components/TextArea'
 
 type CheckoutForm = {
   customer: string
@@ -31,6 +32,7 @@ type CheckoutForm = {
   appointment?: Dayjs
   note?: string
   remember: boolean
+  saveAddress?: boolean
   floor: number
 }
 
@@ -48,7 +50,6 @@ function handleFormKeys(event: KeyboardEvent<HTMLElement>) {
 
 export function CheckoutPage() {
   const { user } = useAuth()
-  const demo = useShopDemo()
   const cart = useCart()
   const actions = useCartActions()
   const products = useShopProducts()
@@ -62,35 +63,72 @@ export function CheckoutPage() {
   const [submitError, setSubmitError] = useState<string>()
   const [placedLiveOrder, setPlacedLiveOrder] = useState<LiveOrder>()
   const submitLock = useRef(false)
+  useEffect(() => {
+    document.title = 'Đặt hàng | AquaFlow'
+  }, [])
   const profile = readProfile()
   // Thông tin đã lưu trên máy được ưu tiên vì khách có thể đặt hộ người khác; chưa lưu thì lấy từ tài khoản.
   // Tài khoản không có họ tên thì `name` là email, không dùng làm tên người nhận.
   const accountDefaults =
     user && isCustomer(user) ? { customer: user.name === user.email ? undefined : user.name, phone: user.phone ?? undefined } : undefined
+  const customer = isCustomer(user)
+  const queryClient = useQueryClient()
+  const addressKey = [...accountKey(user?.email), 'addresses']
+  const savedAddresses = useQuery({ queryKey: addressKey, queryFn: customerAccountApi.addresses, enabled: customer })
+  const applyAddress = (address: SavedAddress) =>
+    form.setFieldsValue({
+      customer: address.recipientName,
+      phone: address.recipientPhone,
+      address: address.addressLine,
+      area: address.area,
+    })
+  // Khách có sổ địa chỉ: điền sẵn địa chỉ mặc định một lần, trừ khi máy đã lưu thông tin hoặc khách đã tự nhập.
+  const hasProfile = Boolean(profile)
+  const prefilled = useRef(false)
+  useEffect(() => {
+    if (prefilled.current || !savedAddresses.data) return
+    prefilled.current = true
+    const address = savedAddresses.data.find((item) => item.isDefault) ?? savedAddresses.data[0]
+    if (address && !hasProfile && !form.isFieldsTouched(['address', 'area'])) applyAddress(address)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ chạy khi sổ địa chỉ tải xong
+  }, [savedAddresses.data])
+  const typedAddress: string = Form.useWatch('address', form) ?? ''
+  const typedArea: string = Form.useWatch('area', form) ?? ''
+  const inAddressBook = (address: string, area: string) =>
+    (savedAddresses.data ?? []).some((item) => item.addressLine.trim() === address.trim() && item.area.trim() === area.trim())
+  // Chỉ mời lưu khi địa chỉ đang nhập chưa có trong sổ.
+  const canSaveAddress =
+    customer && savedAddresses.isSuccess && Boolean(typedAddress.trim() && typedArea.trim()) && !inAddressBook(typedAddress, typedArea)
   const lines = cart.map((line) => ({ ...line, product: products.data?.find((item) => item.id === line.productId) }))
   // Mã sản phẩm lạ (giỏ cũ, đổi nguồn dữ liệu) không có trong danh mục nên bị chặn ở `invalid` bên dưới.
   const invalidCartLine = cart.some((line) => !Number.isSafeInteger(line.quantity) || line.quantity < 1 || line.quantity > 99)
   const invalid = invalidCartLine || lines.some((line) => !line.product || line.product.available === false)
   const subtotal = lines.reduce((sum, line) => sum + (line.product?.price ?? 0) * line.quantity, 0)
   const units = lines.reduce((sum, line) => sum + line.quantity, 0)
-  const jugs = lines.filter((line) => line.product?.unit === 'Bình').reduce((sum, line) => sum + line.quantity, 0)
 
   const validFloor = Number.isInteger(floor) && floor >= 0 && floor <= 30
   const quote = useQuery({
     queryKey: ['shop', 'delivery-quote', cart, floor],
-    queryFn: () => deliveryQuoteApi.quote(cart.map(line => ({ productId: Number(line.productId), quantity: line.quantity })), floor),
-    enabled: !demo && !invalid && cart.length > 0 && validFloor,
+    queryFn: () =>
+      deliveryQuoteApi.quote(
+        cart.map((line) => ({ productId: Number(line.productId), quantity: line.quantity })),
+        floor,
+      ),
+    enabled: !invalid && cart.length > 0 && validFloor,
     retry: false,
     staleTime: 0,
+    // Giữ báo giá trước khi đổi số tầng/giỏ để dòng cách tính không biến mất; số tiền vẫn ẩn tới khi tính xong (quoteBlocked).
+    placeholderData: (previous) => previous,
   })
-  const quoteBlocked = !validFloor || (!demo && (!quote.data || quote.isError || quote.isFetching))
-  const fee = demo ? suggestedDeliveryFee({ units, jugs, floor }) : quoteBlocked ? null : quote.data!.deliveryFee
-  const quotedSubtotal = !demo && !quoteBlocked ? quote.data!.subtotal : subtotal
+  const quoteBlocked = !validFloor || !quote.data || quote.isPlaceholderData || quote.isError || quote.isFetching
+  const fee = quoteBlocked ? null : quote.data!.deliveryFee
+  const quotedSubtotal = quoteBlocked ? subtotal : quote.data!.subtotal
   const total = quotedSubtotal + (fee ?? 0)
 
   const depositHint = <CheckoutDeposit lines={lines} />
   const submit = (values: CheckoutForm) => {
-    if (submitLock.current || mutation.isPending || invalid || quoteBlocked || !cart.length || products.isError || products.isPending) return
+    if (submitLock.current || mutation.isPending || invalid || quoteBlocked || !cart.length || products.isError || products.isPending)
+      return
     setSubmitError(undefined)
     const draft = {
       customer: values.customer.trim(),
@@ -102,7 +140,7 @@ export function CheckoutPage() {
       note: values.note?.trim(),
       lines: cart,
       floor: values.floor ?? 0,
-      ...(!demo ? { expectedTotal: quote.data!.total } : {}),
+      expectedTotal: quote.data!.total,
     }
     void submitCheckoutOnce(
       submitLock,
@@ -118,13 +156,29 @@ export function CheckoutPage() {
               }
             : null,
         )
+        if (customer && values.saveAddress && savedAddresses.data && !inAddressBook(draft.address, draft.area))
+          void customerAccountApi
+            .createAddress({
+              recipientName: draft.customer,
+              recipientPhone: draft.phone,
+              addressLine: draft.address,
+              area: draft.area,
+              isDefault: !savedAddresses.data.length,
+            })
+            .then(() => queryClient.invalidateQueries({ queryKey: accountKey(user?.email) }))
+            .catch(() => message.warning('Đơn đã đặt, nhưng chưa lưu được địa chỉ vào sổ địa chỉ.'))
         actions.clear()
         // Có mã tra cứu thì sang trang theo dõi đơn, chưa có thì báo thành công tại đây.
-        if ('trackingToken' in order && order.trackingToken) navigate(`/track/${order.trackingToken}`, { state: { placed: true } })
-        else setPlacedLiveOrder(order as LiveOrder)
+        // Khách có tài khoản sang thẳng đơn của mình; khách vãng lai có mã tra cứu thì sang trang theo dõi đơn.
+        if (customer && 'id' in order && Number.isSafeInteger(order.id)) navigate(`/shop/orders/${order.id}`, { state: { placed: true } })
+        else if ('trackingToken' in order && order.trackingToken) navigate(`/track/${order.trackingToken}`, { state: { placed: true } })
+        else {
+          setPlacedLiveOrder(order as LiveOrder)
+          window.scrollTo({ top: 0 })
+        }
       },
       (error) => {
-        if (!demo) void quote.refetch()
+        void quote.refetch()
         setSubmitError(error.message)
         message.error(error.message)
       },
@@ -175,14 +229,24 @@ export function CheckoutPage() {
 
   return (
     <div className="af-shop-page af-checkout-page">
-      <Typography.Title level={2}>Đặt hàng</Typography.Title>
+      <div className="af-checkout-head">
+        <Typography.Title level={2}>Đặt hàng</Typography.Title>
+        {!user && (
+          <span>
+            Đã có tài khoản?{' '}
+            <Link to="/shop/account" state={{ from: '/checkout' }}>
+              Đăng nhập
+            </Link>
+          </span>
+        )}
+      </div>
       {products.isPending ? (
         <Skeleton active />
       ) : products.isError ? (
         <QueryError error={products.error} onRetry={products.refetch} />
       ) : !cart.length ? (
         <Empty description="Giỏ hàng đang trống.">
-          <Link to="/shop">Chọn sản phẩm</Link>
+          <Link to="/shop/drinks">Chọn sản phẩm</Link>
         </Empty>
       ) : (
         <>
@@ -213,13 +277,15 @@ export function CheckoutPage() {
             name="checkout"
             layout="vertical"
             scrollToFirstError={{ focus: true, block: 'center' }}
-            initialValues={{ ...accountDefaults, ...profile, when: 'asap', floor: 0, remember: Boolean(profile) }}
+            initialValues={{ ...accountDefaults, ...profile, when: 'asap', floor: 0, remember: Boolean(profile), saveAddress: true }}
             onFinish={submit}
             onKeyDown={handleFormKeys}
           >
             <div className="af-checkout-main">
-              <Card title="Người nhận">
-                <div className="af-checkout-pair">
+              {/* Người nhận và nơi giao chung một khung để khách điền liền một mạch. */}
+              <Card title="Giao đến">
+                {customer && <SavedAddressPicker onSelect={applyAddress} current={{ address: typedAddress, area: typedArea }} />}
+                <div className="af-checkout-who">
                   <Form.Item
                     name="customer"
                     label="Tên người nhận"
@@ -242,35 +308,39 @@ export function CheckoutPage() {
                     <Input inputMode="tel" autoComplete="tel" />
                   </Form.Item>
                 </div>
-              </Card>
-              <Card title="Giao đến">
-                {isCustomer(user) && !user?.isDemo && <SavedAddressPicker onSelect={address => form.setFieldsValue({ customer: address.recipientName, phone: address.recipientPhone, address: address.addressLine, area: address.area })} />}
+                {/* Phường/xã và số tầng chung một hàng; phần giải thích nằm trong dấu (?) cạnh nhãn để form ngắn lại. */}
+                <div className="af-checkout-place">
+                  <Form.Item
+                    name="area"
+                    label="Phường/Xã"
+                    tooltip="Cửa hàng giao trong khu vực TP. Hồ Chí Minh cũ (chưa gồm Bình Dương, Bà Rịa - Vũng Tàu)."
+                    rules={[{ required: true, whitespace: true, message: 'Chọn phường/xã giao hàng.' }, { max: 150 }]}
+                  >
+                    <WardSelect />
+                  </Form.Item>
+                  <Form.Item
+                    name="floor"
+                    label="Số tầng phải đi thang bộ"
+                    tooltip="Nhập 0 nếu giao tầng trệt hoặc có thang máy."
+                    rules={[{ required: true }, { type: 'integer', min: 0, max: 30 }]}
+                  >
+                    <InputNumber min={0} max={30} precision={0} />
+                  </Form.Item>
+                </div>
                 <Form.Item
                   name="address"
                   label="Địa chỉ giao"
                   rules={[{ required: true, whitespace: true, message: 'Nhập địa chỉ giao.' }, { max: 255 }]}
                 >
-                  <Input.TextArea autoComplete="street-address" rows={2} placeholder="Số nhà, tên đường, tòa nhà, tầng" />
+                  <TextArea autoComplete="street-address" rows={1} maxLength={255} placeholder="Số nhà, tên đường, tòa nhà, tầng" />
                 </Form.Item>
-                <Form.Item
-                  name="area"
-                  label="Phường/Xã"
-                  extra="Cửa hàng giao trong TP. Hồ Chí Minh."
-                  rules={[{ required: true, whitespace: true, message: 'Chọn phường/xã giao hàng.' }, { max: 150 }]}
-                >
-                  <WardSelect />
-                </Form.Item>
-                <Form.Item name="floor" label="Số tầng phải đi thang bộ" extra="Nhập 0 nếu giao tầng trệt hoặc có thang máy." rules={[{ required: true }, { type: 'integer', min: 0, max: 30 }]}>
-                  <InputNumber min={0} max={30} precision={0} />
-                </Form.Item>
-                <section aria-label="Phí giao hàng">
-                  <p>Dưới 3 sản phẩm: 15.000đ. Từ 3 sản phẩm: miễn phí cơ bản.</p>
-                  <p>Thang bộ: tầng 1–2 tính 2.000đ/bình/tầng; tầng 3 tính 8.000đ/bình; từ tầng 4 tính 12.000đ/bình.</p>
-                  {!demo && quote.isError ? <QueryError error={quote.error} onRetry={quote.refetch} />
-                    : !demo && quoteBlocked ? <p role="status">Đang tính phí giao…</p>
-                    : <p>Phí giao: <strong>{currency(fee ?? 0)}</strong>{!demo && quote.data &&
-                      <> (cơ bản {currency(quote.data.baseFee)}, thang bộ {currency(quote.data.stairsFee)})</>}</p>}
-                </section>
+                <DeliveryFeeSummary
+                  fee={fee}
+                  quote={quoteBlocked ? undefined : quote.data}
+                  fees={quote.data?.fees}
+                  loading={quoteBlocked}
+                  error={quote.isError ? <QueryError error={quote.error} onRetry={quote.refetch} /> : undefined}
+                />
                 <Form.Item name="when" label="Giờ nhận hàng">
                   <Radio.Group
                     options={[
@@ -311,21 +381,22 @@ export function CheckoutPage() {
                   }
                 </Form.Item>
                 <Form.Item name="note" label="Ghi chú (không bắt buộc)" rules={[{ max: 500 }]}>
-                  <Input.TextArea rows={2} placeholder="Ví dụ: gọi trước khi đến" />
+                  <TextArea rows={1} maxLength={500} placeholder="Ví dụ: gọi trước khi đến" />
                 </Form.Item>
+                {canSaveAddress && (
+                  <Form.Item name="saveAddress" valuePropName="checked" className="af-checkout-remember">
+                    <Checkbox>Lưu địa chỉ này vào sổ địa chỉ</Checkbox>
+                  </Form.Item>
+                )}
                 <Form.Item name="remember" valuePropName="checked" className="af-checkout-remember">
                   <Checkbox>Lưu thông tin trên máy này cho lần đặt sau</Checkbox>
                 </Form.Item>
               </Card>
-              <Card title="Thanh toán">
-                <div className="af-checkout-payment">
-                  <Wallet size={22} aria-hidden />
-                  <div>
-                    <strong>Thanh toán khi nhận hàng</strong>
-                    <p>Trả tiền mặt hoặc chuyển khoản cho nhân viên giao hàng. Không cần trả trước.</p>
-                  </div>
-                </div>
-              </Card>
+              <div className="af-checkout-payment">
+                <Wallet size={20} aria-hidden />
+                <strong>Thanh toán khi nhận hàng</strong>
+                <span>hoặc chuyển khoản trước sau khi cửa hàng xác nhận đơn</span>
+              </div>
               <p className="af-form-hint af-checkout-next-phone">{nextStepHint}</p>
             </div>
             <aside className="af-checkout-aside">

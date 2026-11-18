@@ -1,10 +1,10 @@
-import type { Dayjs } from 'dayjs'
-import type { OrderInput } from '@/features/live/orderApi'
+import dayjs, { type Dayjs } from 'dayjs'
+import type { LiveOrder, OrderInput, OrderUpdateInput } from '@/features/live/orderApi'
 import type { Customer } from '@/features/customers/types'
 import { matchesSearch, phoneDigits } from '@/shared/utils/search'
-import { createdAtOf, walkInName, type Order, type OrderDraft } from './types'
+import { createdAtOf, walkInName, type Order } from './types'
 
-/** Giá trị của form nhận đơn, dùng chung cho bản dùng thử và tài khoản thật. */
+/** Giá trị của form nhận đơn. */
 export type IntakeLine = { productId?: string; quantity?: number }
 export type IntakeValues = {
   phone?: string
@@ -80,6 +80,32 @@ const liveChannels = { 'Tại quầy': 'COUNTER', 'Điện thoại': 'PHONE', 'T
 
 const submittedLines = (values: IntakeValues) => values.lines as SubmittedLine[]
 
+const channelFromLive = { COUNTER: 'Tại quầy', PHONE: 'Điện thoại', MESSAGE: 'Tin nhắn', WEB: 'Điện thoại' } as const
+
+/** Điền form tiếp nhận từ một đơn để sửa (đơn web hiển thị như đơn điện thoại; kênh không đổi khi lưu). */
+export function intakeValuesOf(order: LiveOrder): IntakeValues {
+  return {
+    phone: order.recipientPhone ?? undefined,
+    customer: order.recipientName ?? undefined,
+    method: order.fulfillmentType === 'DELIVERY' ? 'Giao tận nơi' : 'Tại quầy',
+    channel: channelFromLive[order.channel],
+    address: order.deliveryAddress ?? undefined,
+    area: order.deliveryArea ?? undefined,
+    appointment: order.requestedDeliveryAt ? dayjs(order.requestedDeliveryAt) : undefined,
+    lines: order.items.map((item) => ({ productId: String(item.productId), quantity: item.quantity })),
+    note: order.note ?? undefined,
+  }
+}
+
+/** Dữ liệu gửi khi sửa đơn: như khi tạo, bỏ khách, kênh và hình thức nhận. */
+export function toLiveOrderUpdate(values: IntakeValues): OrderUpdateInput {
+  const { recipientName, recipientPhone, deliveryAddress, deliveryArea, requestedDeliveryAt, items, note } = toLiveOrderInput(
+    values,
+    undefined,
+  )
+  return { recipientName, recipientPhone, deliveryAddress, deliveryArea, requestedDeliveryAt, items, note }
+}
+
 export function toLiveOrderInput(values: IntakeValues, customerId: string | undefined): OrderInput {
   const delivery = values.method === 'Giao tận nơi'
   return {
@@ -95,17 +121,3 @@ export function toLiveOrderInput(values: IntakeValues, customerId: string | unde
     note: text(values.note),
   }
 }
-
-/** Dữ liệu mẫu tính phí giao thay cho hệ thống, như backend khi tạo đơn. */
-export const toDemoOrderDraft = (values: IntakeValues, deliveryFee: number): OrderDraft => ({
-  customer: values.customer,
-  phone: values.phone,
-  address: values.address,
-  area: values.area,
-  method: values.method,
-  channel: values.channel,
-  lines: submittedLines(values),
-  deliveryFee,
-  appointment: values.appointment?.toISOString(),
-  note: values.note,
-})

@@ -16,23 +16,54 @@ import java.util.Locale;
 @Service
 public class AuthService {
 
+    /** Kết quả đăng nhập/làm mới: phần trả trong body và refresh token để đặt vào cookie HttpOnly. */
+    public record Session(LoginResponse response, String refreshToken) {
+    }
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokens;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService,
+            RefreshTokenService refreshTokens) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.refreshTokens = refreshTokens;
     }
 
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
-        User user = userRepository.findByEmailIgnoreCase(normalizeEmail(request.email()))
+        return toLoginResponse(authenticate(request));
+    }
+
+    /** Đăng nhập và mở phiên dài: access token ngắn hạn trong body, refresh token cho cookie. */
+    @Transactional
+    public Session startSession(LoginRequest request) {
+        User user = authenticate(request);
+        return new Session(toLoginResponse(user), refreshTokens.issue(user));
+    }
+
+    /** Đổi refresh token lấy access token mới (và refresh token mới). */
+    @Transactional(noRollbackFor = InvalidRefreshTokenException.class)
+    public Session refresh(String refreshToken) {
+        RefreshTokenService.Rotated rotated = refreshTokens.rotate(refreshToken);
+        return new Session(toLoginResponse(rotated.user()), rotated.token());
+    }
+
+    public void logout(String refreshToken) {
+        refreshTokens.revoke(refreshToken);
+    }
+
+    private User authenticate(LoginRequest request) {
+        return userRepository.findByEmailIgnoreCase(normalizeEmail(request.email()))
                 .filter(User::isActive)
                 .filter(candidate -> passwordEncoder.matches(request.password(), candidate.getPasswordHash()))
                 .orElseThrow(InvalidCredentialsException::new);
+    }
 
+    private LoginResponse toLoginResponse(User user) {
         return new LoginResponse(
                 jwtService.generateToken(user),
                 "Bearer",

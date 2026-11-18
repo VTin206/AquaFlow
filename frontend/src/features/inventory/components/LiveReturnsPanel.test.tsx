@@ -52,6 +52,17 @@ beforeEach(() => {
   vi.spyOn(window, 'getComputedStyle').mockImplementation((e) => style(e))
   client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
 })
+// Hộp xác nhận cũ còn trong DOM sau khi đóng: chỉ bấm nút của hộp mới mở.
+const clickedConfirms = new WeakSet<HTMLElement>()
+const confirmDialog = async (name: string) => {
+  const button = await waitFor(() => {
+    const fresh = screen.getAllByRole('button', { name }).filter((item) => !clickedConfirms.has(item))
+    if (!fresh.length) throw new Error(`Chưa thấy hộp xác nhận "${name}"`)
+    return fresh[fresh.length - 1]
+  })
+  clickedConfirms.add(button)
+  fireEvent.click(button)
+}
 afterEach(() => {
   cleanup()
   client.clear()
@@ -83,6 +94,7 @@ it('submits actual received and sellable quantities, retaining missing goods as 
   fireEvent.change(screen.getByLabelText('Ghi chú tình trạng'), { target: { value: 'One damaged' } })
   expect(await screen.findByText('Còn chờ sau đợt này: 3')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'Lưu đợt nhận hàng' }))
+  await confirmDialog('Lưu phiếu')
   await waitFor(() => expect(returnApi.inspectAttempt).toHaveBeenCalledTimes(1))
   expect(vi.mocked(returnApi.inspectAttempt).mock.calls[0][0]).toEqual({
     attemptId: 4,

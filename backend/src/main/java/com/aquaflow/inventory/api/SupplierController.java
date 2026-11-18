@@ -89,4 +89,10 @@ public class SupplierController {
         supplierService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/reactivate")
+    @Operation(summary = "Reactivate a deactivated supplier", description = "Idempotent.")
+    public ResponseEntity<SupplierResponse> reactivateSupplier(@PathVariable Long id) {
+        return ResponseEntity.ok(supplierService.reactivate(id));
+    }
 }

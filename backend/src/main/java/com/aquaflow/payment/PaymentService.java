@@ -14,8 +14,24 @@ public class PaymentService {
     public Payments payments(long id) { return new Payments(repository.balance(id),repository.receipts(id)); }
     public Receipt detail(long orderId,long id) { return repository.detail(orderId,id); }
     public List<Balance> balances() { return repository.balances(); }
-    public List<CustomerBalance> customers() { return repository.customerBalances(); }
+    public PageResponse<CustomerBalance> customers(String q, PageRequestParams page) { return repository.customerBalances(SearchKeyword.of(q), page); }
     public List<Balance> receivables(long id) { return repository.receivables(id); }
+    /**
+     * Hủy phiếu thu/hoàn ghi nhầm: phiếu chuyển REJECTED nên mọi số dư, công nợ và báo cáo (chỉ tính CONFIRMED) tự loại.
+     * Không hủy phiếu tài xế nộp trong đối soát chuyến; không hủy phiếu thu đã được hoàn lại một phần.
+     */
+    @Transactional
+    public Balance voidPayment(long orderId,long id,long actor,PaymentDtos.Void input) {
+        repository.lockOrder(orderId);
+        var payment=repository.voidable(orderId,id);
+        if (!"CONFIRMED".equals(payment.status())) throw new ConflictException("Phiếu này đã bị hủy trước đó.");
+        if (payment.fromDelivery()) throw new ConflictException("Phiếu do tài xế nộp khi đối soát chuyến, không hủy ở đây.");
+        if ("IN".equals(payment.direction()) && payment.amount().compareTo(repository.balance(orderId).paid())>0)
+            throw new ConflictException("Đơn đã hoàn lại một phần tiền; hủy phiếu hoàn trước.");
+        repository.voidPayment(orderId,id,actor,input.reason());
+        return repository.balance(orderId);
+    }
+
     @Transactional
     public Receipt create(long id,long actor,Create input) {
         repository.lockOrder(id);
@@ -26,7 +42,9 @@ public class PaymentService {
             if (List.of("PENDING","CANCELLED").contains(balance.status())) throw new ConflictException("Chỉ thu tiền đơn đã xác nhận và chưa hủy.");
             if (input.amount().compareTo(balance.due())>0) throw new ConflictException("Số tiền vượt quá số còn phải thu. Vui lòng tải lại đơn.");
         } else {
-            if (!"CANCELLED".equals(balance.status())) throw new ConflictException("Chỉ hoàn tiền sau khi đơn đã hủy hoặc hoàn tất xử lý hàng hoàn.");
+            // Đơn chưa hủy chỉ có số phải hoàn khi khách trả hàng sau giao làm giá trị đơn thấp hơn số đã thu.
+            if (!"CANCELLED".equals(balance.status()) && balance.refundDue().signum() <= 0)
+                throw new ConflictException("Chỉ hoàn tiền sau khi đơn đã hủy hoặc hoàn tất xử lý hàng hoàn.");
             if (input.note()==null) throw new BadRequestException("Nhập lý do hoàn tiền.");
             if (input.amount().compareTo(balance.refundDue())>0) throw new ConflictException("Số tiền vượt quá số phải hoàn.");
         }

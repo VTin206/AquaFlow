@@ -79,3 +79,25 @@ test('delivery adapter uses REST resources, passes result/handover data and pres
     await new Promise((resolve) => server.close(resolve))
   }
 })
+
+test('trip list sends the recent-days and order filters as query parameters', async () => {
+  const urls = []
+  const server = createServer((req, res) => {
+    urls.push(req.url)
+    res.setHeader('Content-Type', 'application/json')
+    res.end('[]')
+  })
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+  const { httpClient } = await import('/src/shared/api/client.ts')
+  const previousUrl = httpClient.defaults.baseURL
+  httpClient.defaults.baseURL = `http://127.0.0.1:${server.address().port}/api/v1`
+  try {
+    const { deliveryApi } = await import('/src/features/delivery/deliveryApi.ts')
+    await deliveryApi.list({ days: 30 })
+    await deliveryApi.list({ orderId: 12 })
+    assert.deepEqual(urls, ['/api/v1/delivery/trips?days=30', '/api/v1/delivery/trips?orderId=12'])
+  } finally {
+    httpClient.defaults.baseURL = previousUrl
+    await new Promise((resolve) => server.close(resolve))
+  }
+})

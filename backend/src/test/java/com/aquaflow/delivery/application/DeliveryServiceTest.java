@@ -66,7 +66,7 @@ class DeliveryServiceTest {
     @BeforeEach
     void setUp() {
         service = new DeliveryService(repository, assignmentDispatch, redeliveryReservations,
-                orderRepository, orderItemRepository, bottleLedger);
+                orderRepository, orderItemRepository, bottleLedger, java.time.Clock.systemUTC());
     }
 
     @Test
@@ -274,7 +274,7 @@ class DeliveryServiceTest {
 
     private static Order cancelledFailedOrder() {
         Order order = new Order("AF-" + ORDER_ID, 7L, 8L, OrderChannel.WEB, FulfillmentType.DELIVERY,
-                "Nguyễn An", "0900000000", "Địa chỉ giao", "Quận 1", null,
+                "Nguyễn An", "0900000000", "Địa chỉ giao", "Phường Bến Thành", null,
                 BigDecimal.ZERO, null);
         ReflectionTestUtils.setField(order, "id", ORDER_ID);
         order.transitionTo(OrderStatus.CANCELLED);

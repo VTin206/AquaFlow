@@ -23,12 +23,17 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        # Nạp quan hệ lazy theo nhóm (IN (...)) thay vì từng bản ghi một: database ở xa thì mỗi lượt đi về đều đắt.
+        default_batch_fetch_size: 100
   flyway:
     enabled: true
     locations: classpath:db/migration
 
 server:
   port: ${SERVER_PORT:8080}
+  # Backend chạy sau nginx: lấy IP khách từ X-Forwarded-For (chỉ tin proxy trong mạng nội bộ)
+  # để giới hạn đăng nhập/tra cứu đơn tính theo từng khách, không dồn chung IP của nginx.
+  forward-headers-strategy: native
   error:
     include-message: always
 
@@ -39,4 +44,9 @@ app:
     frontend-url: ${FRONTEND_URL:}
   jwt:
     secret: ${APP_JWT_SECRET:}
-    expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}
+    # Access token ngắn hạn; trình duyệt tự xin token mới bằng refresh token (cookie HttpOnly).
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:15}
+  refresh-token:
+    # Phiên tự kết thúc nếu không dùng trong chừng này ngày.
+    days: ${REFRESH_TOKEN_DAYS:14}
+    secure-cookie: ${REFRESH_COOKIE_SECURE:true}

@@ -1,22 +1,25 @@
-import { useState } from 'react'
-import { Button, Card, Grid, Input, Segmented, Select, Tabs, Tooltip } from 'antd'
+import { useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router'
+import { ToneLabel } from '@/shared/components/ToneLabel'
+import { filterOn } from '@/shared/utils/filterOn'
+import { Button, Card, Grid, Input, Segmented, Select } from 'antd'
 import { FunnelX, Plus, Search, SlidersHorizontal } from 'lucide-react'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
-import { useFeature } from '@/shared/features'
 import { OrderDetails } from './components/OrderDetails'
 import { OrderIntakeModal } from './components/OrderIntakeModal'
 import { OrdersTable } from './components/OrdersTable'
-import { useOrderList, useOrderStatuses } from './orderData'
+import { useOrderPage, useOrderStatusCounts } from './orderData'
+import { orderStatuses as statuses } from './orderStatus'
 import { inOrderGroup, orderGroups, statusesInGroup, type OrderGroupKey } from './orderGroups'
-import { amountDue } from './types'
+import type { OrderStatus } from './types'
 import { ALL_ORDERS as ALL, useOrderFilters } from './useOrderFilters'
-import { matchesSearch } from '@/shared/utils/search'
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
+import { tablePagination, type ServerPagination } from '@/shared/utils/table'
 
 export function OrdersPage() {
-  const showPayments = useFeature('orderPayments')
-  const ordersQuery = useOrderList()
+  const countsQuery = useOrderStatusCounts()
   const {
     filters: { query, group, status, method, payment },
     updateFilters,
@@ -27,83 +30,101 @@ export function OrdersPage() {
   const [moreFilters, setMoreFilters] = useState(false)
   const extraActive = Number(status !== ALL) + Number(method !== ALL) + Number(payment !== ALL)
   const [created, setCreated] = useState<string | null>(null)
+  // Link `/orders?order=<id>` (ví dụ nút "Xem đơn" trên thông báo) mở thẳng chi tiết đơn đó.
+  const [params, setParams] = useSearchParams()
+  const linkedOrder = params.get('order')
+  const viewing = created ?? linkedOrder
+  const closeViewing = () => {
+    setCreated(null)
+    if (linkedOrder) {
+      setParams(
+        (current) => {
+          current.delete('order')
+          return current
+        },
+        { replace: true },
+      )
+    }
+  }
 
-  const orders = ordersQuery.data ?? []
-  const statuses = useOrderStatuses()
-  const countGroup = (key: OrderGroupKey) => orders.filter((order) => inOrderGroup(key, order.status)).length
+  const counts = countsQuery.data ?? {}
+  const countOf = (value: OrderStatus) => counts[value] ?? 0
+  const countGroup = (key: OrderGroupKey) => statuses.filter((value) => inOrderGroup(key, value)).reduce((sum, value) => sum + countOf(value), 0)
   // Chưa chọn nhóm: mở thẳng việc cần làm; hết việc thì xem tất cả.
   const activeGroup: OrderGroupKey = group || (countGroup('need') > 0 ? 'need' : 'all')
   const groupStatuses = statusesInGroup(activeGroup, statuses)
   const statusValue = groupStatuses.includes(status as never) ? status : ALL
   const statusOptions = [
     { value: ALL, label: 'Mọi trạng thái' },
-    ...groupStatuses.map((value) => ({ value, label: `${value} (${orders.filter((order) => order.status === value).length})` })),
+    ...groupStatuses.map((value) => ({ value, label: `${value} (${countOf(value)})` })),
   ]
-  // Bộ lọc thanh toán đã lưu từ bản dùng thử bị bỏ qua khi BE chưa có phiếu thu.
-  const paymentFilter = showPayments ? payment : ALL
+  const paymentFilter = payment
   const hasFilters = Boolean(query.trim() || statusValue !== ALL || method !== ALL || paymentFilter !== ALL)
   // Xóa bộ lọc giữ nguyên nhóm đang xem.
   const resetFilters = () => updateFilters({ query: '', status: ALL, method: ALL, payment: ALL })
-  const visible = orders.filter(
-    (order) =>
-      inOrderGroup(activeGroup, order.status) &&
-      (statusValue === ALL || order.status === statusValue) &&
-      (method === ALL || order.method === method) &&
-      (paymentFilter === ALL ||
-        (order.status !== 'Đã hủy' && (paymentFilter === 'Còn phải thu' ? amountDue(order) > 0 : amountDue(order) === 0))) &&
-      matchesSearch(query, `${order.code ?? order.id} ${order.customer} ${order.phone} ${order.items}`, order.phone),
+  // Nhóm lịch sử tìm ở BE: chờ ngừng gõ rồi mới gửi.
+  const searched = useDebouncedValue(query)
+  const listFilters = useMemo(
+    () => ({ query: searched, group: activeGroup, status: statusValue, method, payment: paymentFilter }),
+    [searched, activeGroup, statusValue, method, paymentFilter],
   )
+  const filterKey = JSON.stringify(listFilters)
+  // Mỗi trang cố định 10 đơn; đổi bộ lọc thì về trang đầu.
+  const pageSize = tablePagination.defaultPageSize ?? 10
+  const [paging, setPaging] = useState({ filterKey, page: 0 })
+  const page = paging.filterKey === filterKey ? paging.page : 0
+  const listQuery = useOrderPage(listFilters, page, pageSize)
+  const visible = listQuery.data?.orders ?? []
+  const server: ServerPagination | undefined = listQuery.data?.serverPaged
+    ? { page, size: pageSize, total: listQuery.data.total, onChange: (next) => setPaging({ filterKey, page: next }) }
+    : undefined
+  const failed = countsQuery.isError ? countsQuery : listQuery.isError ? listQuery : undefined
+  const loading = countsQuery.isPending || listQuery.isPending
 
   return (
     <Page
       title="Đơn hàng"
-      description="Tiếp nhận tại quầy, điện thoại hoặc tin nhắn; theo dõi giao nhận và thanh toán riêng."
       actions={
-        <Button type="primary" icon={<Plus size={16} />} onClick={() => setCreating(true)}>
-          Tạo đơn hàng
-        </Button>
+        <>
+          <Link to="/delivery">
+            <Button>Bảng giao hàng</Button>
+          </Link>
+          <Button type="primary" icon={<Plus size={16} />} onClick={() => setCreating(true)}>
+            Tạo đơn hàng
+          </Button>
+        </>
       }
     >
       <Card className="af-card" styles={{ body: { padding: 0 } }}>
-        {ordersQuery.isError ? (
-          <QueryError error={ordersQuery.error} onRetry={ordersQuery.refetch} />
+        {failed ? (
+          <QueryError error={failed.error ?? new Error('Không tải được danh sách đơn hàng.')} onRetry={failed.refetch} />
         ) : (
           <>
-            {/* 4 nhóm theo việc cần làm; trạng thái chi tiết lọc trong ô chọn. Điện thoại: 4 ô chia đều, số ở trên, tên ở dưới. */}
-            {narrow ? (
-              <div className="af-order-groups">
-                <Segmented<OrderGroupKey>
-                  block
-                  aria-label="Nhóm đơn hàng"
-                  value={activeGroup}
-                  onChange={(value) => updateFilters({ group: value, status: ALL })}
-                  options={orderGroups.map(({ key, label }) => {
-                    const count = countGroup(key)
-                    return {
-                      value: key,
-                      label: (
+            {/* 4 nhóm theo việc cần làm, cùng kiểu thanh lọc với các trang khác; trạng thái chi tiết lọc trong ô chọn. Điện thoại: 4 ô chia đều, số ở trên, tên ở dưới. */}
+            <div className="af-order-groups">
+              <Segmented<OrderGroupKey>
+                block={narrow}
+                aria-label="Nhóm đơn hàng"
+                value={activeGroup}
+                onChange={(value) => updateFilters({ group: value, status: ALL })}
+                options={orderGroups.map(({ key, label, tone }) => {
+                  const count = countGroup(key)
+                  return {
+                    value: key,
+                    label: narrow ? (
+                      <ToneLabel tone={tone}>
                         <span className="af-order-group">
                           <strong className={key === 'need' && count > 0 ? 'is-urgent' : undefined}>{count}</strong>
                           <small>{label}</small>
                         </span>
-                      ),
-                    }
-                  })}
-                />
-              </div>
-            ) : (
-              <Tabs
-                className="af-order-tabs"
-                size="small"
-                aria-label="Nhóm đơn hàng"
-                activeKey={activeGroup}
-                onChange={(value) => updateFilters({ group: value as OrderGroupKey, status: ALL })}
-                items={orderGroups.map(({ key, label }) => ({
-                  key,
-                  label: <CountLabel label={label} count={countGroup(key)} urgent={key === 'need'} />,
-                }))}
+                      </ToneLabel>
+                    ) : (
+                      <CountLabel label={label} count={count} urgent={key === 'need'} tone={tone} />
+                    ),
+                  }
+                })}
               />
-            )}
+            </div>
             <div className="af-toolbar">
               <div className="af-order-filters">
                 {narrow && (
@@ -120,6 +141,7 @@ export function OrdersPage() {
                     {groupStatuses.length > 1 && (
                       <Select
                         aria-label="Lọc trạng thái trong nhóm"
+                        className={filterOn(statusValue !== ALL)}
                         style={{ minWidth: 190 }}
                         value={statusValue}
                         onChange={(value) => updateFilters({ status: String(value) })}
@@ -128,6 +150,7 @@ export function OrdersPage() {
                     )}
                     <Select
                       aria-label="Lọc hình thức nhận"
+                      className={filterOn(method !== ALL)}
                       value={method}
                       onChange={(value) => updateFilters({ method: value })}
                       style={{ minWidth: 160 }}
@@ -136,44 +159,46 @@ export function OrdersPage() {
                         ...['Tại quầy', 'Giao tận nơi'].map((value) => ({ value, label: value })),
                       ]}
                     />
-                    <Tooltip title={showPayments ? undefined : 'Backend chưa hỗ trợ phiếu thu'}>
-                      <Select
-                        aria-label="Lọc thanh toán"
-                        value={paymentFilter}
-                        disabled={!showPayments}
-                        onChange={(value) => updateFilters({ payment: value })}
-                        style={{ minWidth: 165 }}
-                        options={[
-                          { value: ALL, label: showPayments ? 'Mọi thanh toán' : 'Thanh toán (chưa hỗ trợ)' },
-                          ...['Còn phải thu', 'Đã thanh toán'].map((value) => ({ value, label: value })),
-                        ]}
-                      />
-                    </Tooltip>
+                    <Select
+                      aria-label="Lọc thanh toán"
+                      className={filterOn(paymentFilter !== ALL)}
+                      value={paymentFilter}
+                      onChange={(value) => updateFilters({ payment: value })}
+                      style={{ minWidth: 165 }}
+                      options={[
+                        { value: ALL, label: 'Mọi thanh toán' },
+                        ...['Còn phải thu', 'Đã thanh toán'].map((value) => ({ value, label: value })),
+                      ]}
+                    />
                   </>
                 )}
+                {hasFilters && (
+                  <Button type="link" className="af-clear-filter" icon={<FunnelX size={15} />} onClick={resetFilters}>
+                    Xóa lọc
+                  </Button>
+                )}
               </div>
-              <Input
-                allowClear
-                prefix={<Search size={16} className="af-input-icon" />}
-                placeholder="Tìm mã đơn, tên khách, số điện thoại..."
-                aria-label="Tìm đơn hàng"
-                value={query}
-                onChange={(event) => updateFilters({ query: event.target.value })}
-                className="af-search"
-              />
-            </div>
-            <div className="af-filter-summary">
-              <span role="status">{ordersQuery.isPending ? 'Đang tải đơn hàng…' : `${visible.length} / ${orders.length} đơn hàng`}</span>
-              {hasFilters && (
-                <Button type="link" size="small" className="af-clear-filter" icon={<FunnelX size={14} />} onClick={resetFilters}>
-                  Xóa bộ lọc
-                </Button>
-              )}
+              {/* Số đơn đứng cạnh ô tìm thay vì một dòng riêng, để trang 10 đơn vừa khung hình. */}
+              <div className="af-toolbar-end">
+                <span role="status" className="af-toolbar-count">
+                  {loading ? 'Đang tải…' : `${listQuery.data?.total ?? 0} / ${countGroup(activeGroup)} đơn`}
+                </span>
+                <Input
+                  allowClear
+                  prefix={<Search size={16} className="af-input-icon" />}
+                  placeholder="Tìm mã đơn, tên khách, số điện thoại..."
+                  aria-label="Tìm đơn hàng"
+                  value={query}
+                  onChange={(event) => updateFilters({ query: event.target.value })}
+                  className={`af-search ${filterOn(Boolean(query.trim()))}`}
+                />
+              </div>
             </div>
             <OrdersTable
-              filterKey={JSON.stringify([query, activeGroup, statusValue, method, paymentFilter])}
+              filterKey={filterKey}
               orders={visible}
-              loading={ordersQuery.isPending}
+              loading={loading}
+              server={server}
               emptyText={
                 hasFilters
                   ? 'Không có đơn phù hợp. Thử đổi từ khóa hoặc xóa bộ lọc.'
@@ -188,7 +213,7 @@ export function OrdersPage() {
         )}
       </Card>
       {creating && <OrderIntakeModal onClose={() => setCreating(false)} onCreated={setCreated} />}
-      {created !== null && <OrderDetails id={created} onClose={() => setCreated(null)} />}
+      {viewing !== null && <OrderDetails id={viewing} onClose={closeViewing} />}
     </Page>
   )
 }

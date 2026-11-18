@@ -1,109 +1,83 @@
 import { useState } from 'react'
-import { Card, Col, Empty, Row, Skeleton } from 'antd'
+import { useSearchParams } from 'react-router'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
-import { canDispatch } from '@/features/orders/orderService'
-import { amountDue, jugCount, orderedAtOf } from '@/features/orders/types'
-import { useOrders } from '@/features/orders/useOrders'
-import { openIn } from '../tripService'
-import { useTrips } from '../useTrips'
+import { useOrderList } from '@/features/orders/orderData'
+import { knownAmountDue } from '@/features/orders/types'
+import type { DeliveryTrip } from '../deliveryApi'
+import { stopOrderId, useTripBackend } from '../tripBackend'
+import { toWaitingOrder } from '../waitingOrders'
+import { useTripCreatedNotice } from '../useTripCreatedNotice'
 import { CreateTripModal } from './CreateTripModal'
 import { TripDrawer } from './TripDrawer'
-import { TripCard } from './TripCard'
+import { TripsList } from './TripsList'
 import { WaitingOrdersCard, type WaitingOrder } from './WaitingOrdersCard'
 
-/** Xếp đơn chờ giao vào chuyến và theo dõi các chuyến đang chạy. */
+/** Xếp đơn chờ giao vào chuyến và theo dõi các chuyến. */
 export function TripsPanel() {
-  const ordersQuery = useOrders()
-  const tripsQuery = useTrips()
+  const [searchParams] = useSearchParams()
+  const notifyCreated = useTripCreatedNotice()
+  const backend = useTripBackend()
+  const tripsQuery = backend.useTrips()
+  const availableQuery = backend.useAvailable()
+  const ordersQuery = useOrderList()
   const [selected, setSelected] = useState<string[]>([])
   const [creating, setCreating] = useState(false)
-  const [tripId, setTripId] = useState<string | null>(null)
+  const [tripId, setTripId] = useState<number | null>(() => {
+    const value = Number(searchParams.get('tripId'))
+    return Number.isSafeInteger(value) && value > 0 ? value : null
+  })
 
   const orders = ordersQuery.data ?? []
-  const trips = tripsQuery.data ?? []
-  // Đơn còn việc ở một chuyến chưa đối soát thì không xếp thêm; đơn giao lại (đã kiểm hàng hoàn) quay về danh sách chờ.
-  const busy = new Set(
-    trips
-      .filter((trip) => trip.status !== 'Đã đối soát')
-      .flatMap((trip) =>
-        trip.orderIds.filter((id) => {
-          const order = orders.find((item) => item.id === id)
-          return !order || openIn(trip, order)
-        }),
-      ),
-  )
-  const waiting = orders.filter((order) => canDispatch(order) && !busy.has(order.id))
+  const orderOf = (id: string) => orders.find((order) => order.id === id)
+  const waiting: WaitingOrder[] = (availableQuery.data ?? []).map((item) => toWaitingOrder(item, orderOf(String(item.id))))
   const chosen = waiting.filter((order) => selected.includes(order.id))
-  const rows: WaitingOrder[] = waiting.map((order) => ({
-    id: order.id,
-    code: order.code ?? order.id,
-    customer: order.customer,
-    address: order.address,
-    appointment: order.appointment,
-    jugs: jugCount(order),
-    due: amountDue(order),
-    redelivery: Boolean(order.dispatches?.length),
-    orderedAt: orderedAtOf(order),
-  }))
-  const activeTrips = trips.filter((trip) => trip.status !== 'Đã đối soát')
-  const settledTrips = trips.filter((trip) => trip.status === 'Đã đối soát')
-
-  if (ordersQuery.isError) return <QueryError error={ordersQuery.error} onRetry={ordersQuery.refetch} />
+  const dueLabel = (trip: DeliveryTrip) => {
+    const dues = trip.orders.map((stop) => {
+      const order = orderOf(stopOrderId(stop))
+      return order ? knownAmountDue(order) : null
+    })
+    const sum = dues.reduce<number>((total, due) => total + (due ?? 0), 0)
+    return `Cần thu ${dues.includes(null) ? 'từ ' : ''}${currency(sum)}`
+  }
 
   return (
     <>
       <WaitingOrdersCard
-        orders={rows}
-        loading={ordersQuery.isPending}
+        orders={waiting}
+        loading={availableQuery.isPending}
         selected={selected}
         onSelect={setSelected}
         onCreate={() => setCreating(true)}
+        error={
+          availableQuery.isError && availableQuery.error ? (
+            <QueryError error={availableQuery.error} onRetry={availableQuery.refetch} />
+          ) : undefined
+        }
       />
 
       <div className="af-section-heading">
         <h2>Chuyến giao</h2>
-        <span>Ghi kết quả từng điểm, đối soát tiền và vỏ khi tài xế về</span>
       </div>
-      {tripsQuery.isPending ? (
-        <Skeleton active />
-      ) : activeTrips.length === 0 && settledTrips.length === 0 ? (
-        <Card>
-          <Empty description="Chưa có chuyến nào hôm nay." />
-        </Card>
+      {tripsQuery.isError && tripsQuery.error ? (
+        <QueryError error={tripsQuery.error} onRetry={tripsQuery.refetch} />
       ) : (
-        <Row gutter={[12, 12]}>
-          {[...activeTrips, ...settledTrips].map((trip) => {
-            const stops = trip.orderIds.map((id) => orders.find((order) => order.id === id)).filter((order) => order !== undefined)
-            const finished = trip.departedAt ? stops.filter((order) => order.status !== 'Đang giao').length : 0
-            return (
-              <Col key={trip.id} xs={24} md={12} xl={8}>
-                <TripCard
-                  code={trip.id}
-                  status={trip.status}
-                  driver={trip.driver}
-                  vehicle={trip.vehicle}
-                  finished={finished}
-                  total={stops.length}
-                  dueLabel={`Cần thu ${currency(stops.reduce((sum, order) => sum + amountDue(order), 0))}`}
-                  onOpen={() => setTripId(trip.id)}
-                />
-              </Col>
-            )
-          })}
-        </Row>
+        <TripsList trips={tripsQuery.data ?? []} loading={tripsQuery.isPending} dueLabel={dueLabel} onOpen={setTripId} />
       )}
 
-      <CreateTripModal
-        orders={chosen}
-        open={creating}
-        onClose={() => setCreating(false)}
-        onCreated={(id) => {
-          setSelected([])
-          setTripId(id)
-        }}
-      />
-      {tripId && <TripDrawer key={tripId} tripId={tripId} onClose={() => setTripId(null)} />}
+      {creating && (
+        <CreateTripModal
+          orders={chosen}
+          onClose={() => setCreating(false)}
+          onCreated={(id, failed) => {
+            setCreating(false)
+            setSelected([])
+            setTripId(id)
+            notifyCreated(id, chosen.length, failed)
+          }}
+        />
+      )}
+      {tripId !== null && <TripDrawer key={tripId} tripId={tripId} onClose={() => setTripId(null)} />}
     </>
   )
 }

@@ -21,5 +21,9 @@ public class PaymentDtos {
     public record Receipt(long id, long orderId, BigDecimal amount, String direction, String method, String reference, String note,
             long recordedBy, String recordedByName, OffsetDateTime createdAt, String source) {}
     public record Payments(Balance balance, List<Receipt> payments) {}
+    /** Hủy phiếu thu ghi nhầm: bắt buộc nêu lý do. */
+    public record Void(@NotBlank @Size(max=300) String reason) {
+        public Void { reason = reason == null ? null : reason.trim(); }
+    }
     public record CustomerBalance(long customerId, String name, boolean active, BigDecimal due, BigDecimal refundDue) {}
 }

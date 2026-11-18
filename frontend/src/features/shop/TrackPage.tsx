@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react'
-import { Alert, App, Button, Card, Form, Input, Result, Skeleton, Steps, Typography } from 'antd'
-import { Copy, Hash, LogIn, Phone, RefreshCw, Search, ShoppingBag } from 'lucide-react'
+import { Alert, Button, Card, Form, Input, Result, Skeleton, Steps, Typography } from 'antd'
+import { Hash, LayoutDashboard, LogIn, Phone, ReceiptText, RefreshCw, Search, ShoppingBag } from 'lucide-react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { Money } from '@/shared/components/Money'
 import { focusNextOnEnter } from '@/shared/utils/forms'
 import { TransferQr } from '@/shared/payment/TransferQr'
 import { dueTone } from '@/shared/utils/money'
 import { currency } from '@/shared/utils/format'
+import { accountDestination, isCustomer } from '@/features/auth/accountAccess'
+import { useAuth } from '@/features/auth/useAuth'
 import type { PublicOrder } from '@/features/orders/types'
 import { useSettings } from '@/features/settings/settingsService'
-import { lookupOrder, useShopContact, useShopFeature, useTrackedOrder } from './shopService'
+import { CopyOrderCode } from './components/CopyOrderCode'
+import { useLookupOrder, useShopContact, useTrackedOrder, useTransferAccount } from './shopService'
 
 const stepOf: Record<PublicOrder['status'], number> = {
   'Chờ xác nhận': 0,
@@ -22,42 +25,11 @@ const stepOf: Record<PublicOrder['status'], number> = {
   'Đã hủy': 0,
 }
 
-/** Chưa tra cứu trực tuyến được: chỉ cho khách cách làm được ngay, không hiện form không dùng được. */
-function LookupHelp() {
-  const phone = useShopContact()?.phone?.trim()
-  return (
-    <div className="af-shop-page af-shop-account-page">
-      <header>
-        <h1>Hỏi về đơn hàng của bạn</h1>
-        <p>Đọc mã đơn cho cửa hàng để được báo tình trạng đơn. Mã đơn có trong màn hình đặt hàng thành công.</p>
-      </header>
-      <div className="af-shop-account-grid">
-        <section aria-label="Liên hệ cửa hàng">
-          <p>{phone ? 'Gọi cửa hàng trong giờ mở cửa:' : 'Vui lòng liên hệ cửa hàng để hỏi tình trạng đơn.'}</p>
-          {phone && (
-            <a href={`tel:${phone.replace(/\s/g, '')}`}>
-              <Button type="primary" size="large" block icon={<Phone size={18} />}>
-                {phone}
-              </Button>
-            </a>
-          )}
-        </section>
-        <section className="af-shop-account-side" aria-label="Lựa chọn khác">
-          <p>Có tài khoản? Đăng nhập để xem mọi đơn đã đặt.</p>
-          <Link to="/shop/account">
-            <Button size="large" block icon={<LogIn size={18} />}>
-              Đăng nhập
-            </Button>
-          </Link>
-        </section>
-      </div>
-    </div>
-  )
-}
-
 /** Tra cứu đơn không cần tài khoản (bố cục như trang tài khoản): mã đơn + số điện thoại đặt hàng. */
 function LookupForm() {
   const navigate = useNavigate()
+  const lookupOrder = useLookupOrder()
+  const { user } = useAuth()
   const [error, setError] = useState<string>()
   const [loading, setLoading] = useState(false)
   return (
@@ -101,18 +73,38 @@ function LookupForm() {
               <Input size="large" prefix={<Phone size={17} aria-hidden />} inputMode="tel" placeholder="0901 234 567" />
             </Form.Item>
             {error && <Alert type="error" showIcon title={error} style={{ marginBottom: 16 }} />}
-            <Button type="primary" size="large" htmlType="submit" loading={loading} icon={<Search size={18} />} className="af-shop-account-submit">
+            <Button
+              type="primary"
+              size="large"
+              htmlType="submit"
+              loading={loading}
+              icon={<Search size={18} />}
+              className="af-shop-account-submit"
+            >
               Tra cứu
             </Button>
           </Form>
         </section>
         <section className="af-shop-account-side" aria-label="Lựa chọn khác">
-          <p>Có tài khoản? Đăng nhập để xem mọi đơn đã đặt.</p>
-          <Link to="/shop/account">
-            <Button size="large" block icon={<LogIn size={18} />}>
-              Đăng nhập
-            </Button>
-          </Link>
+          {user ? (
+            <>
+              <p>Bạn đang đăng nhập với tên {user.name}.</p>
+              <Link to={accountDestination(user, '/shop/orders')}>
+                <Button size="large" block icon={isCustomer(user) ? <ReceiptText size={18} /> : <LayoutDashboard size={18} />}>
+                  {isCustomer(user) ? 'Đơn hàng của tôi' : 'Trang quản lý'}
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <>
+              <p>Có tài khoản? Đăng nhập để xem mọi đơn đã đặt.</p>
+              <Link to="/shop/account">
+                <Button size="large" block icon={<LogIn size={18} />}>
+                  Đăng nhập
+                </Button>
+              </Link>
+            </>
+          )}
           <p>Chưa đặt đơn nào?</p>
           <Link to="/shop">
             <Button size="large" block icon={<ShoppingBag size={18} />}>
@@ -126,10 +118,12 @@ function LookupForm() {
 }
 
 function TrackedOrder({ token }: { token: string }) {
-  const { message } = App.useApp()
   const location = useLocation()
   const navigate = useNavigate()
+  // Khách chưa đăng nhập không đọc được cài đặt cửa hàng: số gọi và tài khoản nhận chuyển khoản lấy từ hồ sơ công khai.
   const { data: settings } = useSettings()
+  const storePhone = useShopContact()?.phone ?? settings?.phone
+  const account = useTransferAccount()
   const orderQuery = useTrackedOrder(token)
   const order = orderQuery.data
   const placed = (location.state as { placed?: boolean } | null)?.placed
@@ -169,7 +163,12 @@ function TrackedOrder({ token }: { token: string }) {
       )}
       <Card
         className="af-shop-track-card"
-        title={`Đơn ${order.id}`}
+        title={
+          <span className="af-shop-track-code">
+            Đơn {order.id}
+            <CopyOrderCode code={order.id} />
+          </span>
+        }
         extra={
           <Button
             type="text"
@@ -252,34 +251,50 @@ function TrackedOrder({ token }: { token: string }) {
             </li>
           ))}
         </ul>
-        <div className="af-order-summary">
-          <span>Phí giao</span>
-          <span>{order.deliveryFee ? currency(order.deliveryFee) : 'Miễn phí'}</span>
-        </div>
-        <div className="af-order-summary af-order-summary-highlight">
-          <span>{order.status === 'Chờ xác nhận' ? 'Tạm tính' : 'Tổng cộng'}</span>
-          <strong>{currency(order.total)}</strong>
-        </div>
-        {order.paid > 0 && (
-          <div className="af-order-summary">
-            <span>Đã thanh toán</span>
-            <Money value={order.paid} tone="paid" />
+        <dl className="af-checkout-totals">
+          <div>
+            <dt>Tiền hàng</dt>
+            <dd className="af-money">{currency(order.total - (order.deliveryFee ?? 0))}</dd>
           </div>
-        )}
-        {!cancelled && (
-          <div className="af-order-summary">
-            <span>Còn phải trả</span>
-            <Money value={order.due} tone={dueTone(order.due)} />
+          <div>
+            <dt>Phí giao</dt>
+            <dd>{order.deliveryFee ? <span className="af-money">{currency(order.deliveryFee)}</span> : 'Miễn phí'}</dd>
           </div>
-        )}
+          <div className="is-total">
+            <dt>{order.status === 'Chờ xác nhận' ? 'Tạm tính' : 'Tổng cộng'}</dt>
+            <dd>
+              <Money value={order.total} tone="due" />
+            </dd>
+          </div>
+          {order.paid > 0 && (
+            <div>
+              <dt>Đã thanh toán</dt>
+              <dd>
+                <Money value={order.paid} tone="paid" />
+              </dd>
+            </div>
+          )}
+          {!cancelled && (
+            <div>
+              <dt>Còn phải trả</dt>
+              <dd>
+                <Money value={order.due} tone={dueTone(order.due)} />
+              </dd>
+            </div>
+          )}
+        </dl>
       </Card>
 
       {canTransfer && (
         <Card className="af-shop-track-card" title="Chuyển khoản">
-          <TransferQr settings={settings} amount={order.due} note={order.id} />
-          <p className="af-form-hint">
-            Quét mã bằng ứng dụng ngân hàng, giữ nguyên nội dung để cửa hàng đối chiếu. Hoặc trả tiền mặt khi nhận hàng.
-          </p>
+          {account ? (
+            <>
+              <TransferQr settings={account} amount={order.due} note={order.id} />
+              <p className="af-form-hint">Giữ nguyên nội dung chuyển khoản để cửa hàng đối chiếu.</p>
+            </>
+          ) : (
+            <p className="af-shop-transfer-off">Chưa hỗ trợ. Vui lòng trả tiền khi nhận hàng.</p>
+          )}
         </Card>
       )}
       {order.status === 'Chờ xác nhận' && (
@@ -292,19 +307,8 @@ function TrackedOrder({ token }: { token: string }) {
       )}
 
       <div className="af-shop-track-actions">
-        <Button
-          icon={<Copy size={16} />}
-          onClick={() =>
-            navigator.clipboard
-              ?.writeText(window.location.href)
-              .then(() => message.success('Đã chép liên kết theo dõi đơn.'))
-              .catch(() => message.info('Hãy lưu lại địa chỉ trang này để theo dõi đơn.'))
-          }
-        >
-          Chép liên kết
-        </Button>
-        {settings?.phone && (
-          <Button icon={<Phone size={16} />} href={`tel:${settings.phone.replace(/\s/g, '')}`}>
+        {storePhone && (
+          <Button icon={<Phone size={16} />} href={`tel:${storePhone.replace(/\s/g, '')}`}>
             Gọi cửa hàng
           </Button>
         )}
@@ -320,12 +324,10 @@ function TrackedOrder({ token }: { token: string }) {
 }
 
 export function TrackPage() {
-  const supported = useShopFeature('orderTracking')
   const { token } = useParams()
   useEffect(() => {
     if (!token) document.title = 'Tra cứu đơn hàng'
   }, [token])
-  if (!supported) return <LookupHelp />
   if (!token) return <LookupForm />
   return (
     <div className="af-shop-page af-shop-narrow">

@@ -1,17 +1,50 @@
 import { useId, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Badge, Button, Empty, Popover, Spin } from 'antd'
-import { Bell, Check, X } from 'lucide-react'
+import {
+  ArrowRight,
+  Bell,
+  CalendarClock,
+  Check,
+  CheckCheck,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCheck,
+  ClockAlert,
+  Package,
+  PackageX,
+  TriangleAlert,
+  Truck,
+  X,
+  type LucideIcon,
+} from 'lucide-react'
 import { useAuth } from '@/features/auth/useAuth'
-import { useNavigate } from 'react-router'
-import { LiveOrderDetails } from '@/features/live/LiveOrderDetails'
-import { notificationService } from './notificationService'
+import { Link, useNavigate } from 'react-router'
+import { OrderDetails } from '@/features/orders/components/OrderDetails'
+import { notificationService, type Notification } from './notificationService'
+import { groupNotifications, notificationTime, notificationView } from './notificationView'
 
-export function LiveNotificationPopover() {
+const kindIcons: Record<Notification['kind'], LucideIcon> = {
+  DELIVERY_FAILED: TriangleAlert,
+  BATCH_EXPIRED: PackageX,
+  ORDER_OVERDUE: ClockAlert,
+  ORDER_PENDING: ClipboardCheck,
+  LOW_STOCK: Package,
+  BATCH_EXPIRING: CalendarClock,
+  TRIP_ASSIGNED: Truck,
+  TRIP_ORDER_OVERDUE: ClockAlert,
+  MANUAL: Bell,
+}
+
+/**
+ * Hộp thông báo của nhân viên. `driver`: màn hình tài xế, chỉ có thông báo chuyến của mình nên không có
+ * liên kết sang danh sách đơn (tài xế không mở được trang đó).
+ */
+export function LiveNotificationPopover({ driver = false }: { driver?: boolean }) {
   const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const [page, setPage] = useState(0)
-  const [orderId, setOrderId] = useState<number | null>(null)
+  const [orderId, setOrderId] = useState<string | null>(null)
   const navigate = useNavigate()
   const panelId = useId()
   const trigger = useRef<HTMLButtonElement>(null)
@@ -30,6 +63,9 @@ export function LiveNotificationPopover() {
     enabled: !!user,
     refetchInterval: 30_000,
   })
+  const items = list.data ?? []
+  const loading = list.isPending
+  const failed = list.isError || unread.isError
   const read = useMutation({
     mutationFn: async (id: number | null) => {
       if (id === null) await notificationService.markAllRead()
@@ -37,10 +73,29 @@ export function LiveNotificationPopover() {
     },
     onSuccess: () => client.invalidateQueries({ queryKey: key }),
   })
+  /** Server trả đủ 20 dòng thì có thể còn trang sau. */
+  const hasNextPage = !list.isError && (list.data?.length ?? 0) >= 20
   const count = unread.data?.count ?? 0
   const close = () => {
     setOpen(false)
     trigger.current?.focus()
+  }
+  /** Thông báo có chỗ để mở (đơn, hàng trong kho, chuyến) thì bấm cả dòng là mở. */
+  const hasTarget = (item: Notification) =>
+    (item.entityType === 'ORDER' && !!item.entityId) || ['PRODUCT', 'BATCH', 'TRIP'].includes(item.entityType ?? '')
+  /** Mở đúng chỗ xử lý: chi tiết đơn, trang kho hoặc màn hình chuyến; mở rồi thì tính là đã đọc. */
+  const openItem = (item: Notification) => {
+    if (!item.readAt) read.mutate(item.id)
+    if (item.entityType === 'ORDER' && item.entityId) {
+      close()
+      setOrderId(String(item.entityId))
+    } else if (item.entityType === 'PRODUCT' || item.entityType === 'BATCH') {
+      close()
+      navigate('/inventory')
+    } else if (item.entityType === 'TRIP') {
+      close()
+      navigate('/driver')
+    }
   }
 
   return (
@@ -65,17 +120,35 @@ export function LiveNotificationPopover() {
             }}
           >
             <div className="af-notifications-header">
-              <strong>Thông báo {unread.isSuccess && <span>({count} chưa đọc)</span>}</strong>
-              <Button type="text" size="small" icon={<X size={16} />} aria-label="Đóng thông báo" onClick={close} />
+              <strong>
+                Thông báo
+                {unread.isSuccess && count > 0 && (
+                  <span className="af-count is-urgent" aria-label={`${count} chưa đọc`}>
+                    {count}
+                  </span>
+                )}
+              </strong>
+              <span className="af-notifications-header-actions">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<CheckCheck size={15} />}
+                  disabled={!count || read.isPending || unread.isError}
+                  onClick={() => read.mutate(null)}
+                >
+                  Đọc tất cả
+                </Button>
+                <Button type="text" size="small" icon={<X size={16} />} aria-label="Đóng thông báo" onClick={close} />
+              </span>
             </div>
             {read.isError && <Alert type="error" title="Không cập nhật được trạng thái đã đọc. Vui lòng thử lại." />}
             <div className="af-notifications-list">
-              {list.isPending ? (
+              {loading ? (
                 <div className="af-notifications-state">
                   <Spin size="small" />
                   <span>Đang tải thông báo…</span>
                 </div>
-              ) : list.isError || unread.isError ? (
+              ) : failed ? (
                 <div className="af-notifications-state">
                   <span>Không tải được thông báo.</span>
                   <Button
@@ -88,60 +161,125 @@ export function LiveNotificationPopover() {
                     Thử lại
                   </Button>
                 </div>
-              ) : !list.data.length ? (
+              ) : !items.length ? (
                 <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có thông báo" />
               ) : (
-                <ul>
-                  {list.data.map((item) => (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        className="af-notification-item"
-                        disabled={read.isPending}
-                        aria-label={`${item.title} — ${item.entityType === 'ORDER' ? 'xem đơn hàng' : item.entityType ? 'xem kho' : 'đánh dấu đã đọc'}`}
-                        onClick={() => {
-                          if (!item.readAt) read.mutate(item.id)
-                          if (item.entityType === 'ORDER' && item.entityId) {
-                            close()
-                            setOrderId(item.entityId)
-                          } else if (item.entityType === 'PRODUCT' || item.entityType === 'BATCH') {
-                            close()
-                            navigate('/inventory')
-                          }
-                        }}
-                      >
-                        <span className="af-notification-icon">
-                          {item.readAt || item.resolvedAt ? <Check size={18} /> : <Bell size={18} />}
-                        </span>
-                        <span className="af-notification-copy">
-                          <strong>{item.title}</strong>
-                          <span style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{item.message}</span>
-                          <small>
-                            {new Date(item.createdAt).toLocaleString('vi-VN')} ·{' '}
-                            {item.resolvedAt ? 'Không còn cần xử lý' : item.readAt ? 'Đã đọc' : 'Chưa đọc'}
-                          </small>
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                groupNotifications(items).map((group) => (
+                  <div key={group.key} role="group" aria-label={group.label}>
+                    {/* Đã xử lý: chỉ cần mờ đi và có dấu tích, không cần tiêu đề. */}
+                    {group.key === 'done' ? (
+                      <div className="af-notifications-group" aria-hidden />
+                    ) : (
+                      <div className="af-notifications-group">
+                        {group.label} <span>{group.items.length}</span>
+                      </div>
+                    )}
+                    <ul>
+                      {group.items.map((item) => {
+                        const view = notificationView(item)
+                        const Icon = item.resolvedAt ? Check : kindIcons[item.kind]
+                        const unreadItem = !item.readAt && !item.resolvedAt
+                        const clickable = hasTarget(item)
+                        return (
+                          <li
+                            key={item.id}
+                            className={clickable ? 'af-notification-item is-clickable' : 'af-notification-item'}
+                            role={clickable ? 'button' : undefined}
+                            tabIndex={clickable ? 0 : undefined}
+                            aria-label={clickable ? `Mở thông báo: ${item.title}` : undefined}
+                            onClick={clickable ? () => openItem(item) : undefined}
+                            onKeyDown={
+                              clickable
+                                ? (event) => {
+                                    if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return
+                                    event.preventDefault()
+                                    openItem(item)
+                                  }
+                                : undefined
+                            }
+                            data-tone={item.resolvedAt ? undefined : view.tone}
+                            data-unread={unreadItem || undefined}
+                            data-resolved={item.resolvedAt ? true : undefined}
+                          >
+                            <span className="af-notification-icon" aria-hidden>
+                              <Icon size={18} />
+                            </span>
+                            <div className="af-notification-copy">
+                              <div className="af-notification-title">
+                                <strong>{item.title}</strong>
+                                {unreadItem && <span className="af-notification-dot" aria-label="Chưa đọc" />}
+                                <time dateTime={item.createdAt} title={new Date(item.createdAt).toLocaleString('vi-VN')}>
+                                  {notificationTime(item.createdAt)}
+                                </time>
+                              </div>
+                              <span style={{ whiteSpace: 'pre-wrap' }}>{item.message}</span>
+                              {view.action ? (
+                                <Button
+                                  size="small"
+                                  type={view.tone === 'urgent' ? 'primary' : 'default'}
+                                  danger={view.tone === 'urgent'}
+                                  className="af-notification-action"
+                                  disabled={read.isPending}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    openItem(item)
+                                  }}
+                                >
+                                  {view.action} <ArrowRight size={14} aria-hidden />
+                                </Button>
+                              ) : (
+                                unreadItem && (
+                                  <Button
+                                    size="small"
+                                    type="link"
+                                    className="af-notification-action"
+                                    disabled={read.isPending}
+                                    onClick={(event) => {
+                                      event.stopPropagation()
+                                      read.mutate(item.id)
+                                    }}
+                                  >
+                                    Đánh dấu đã đọc
+                                  </Button>
+                                )
+                              )}
+                            </div>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
+                ))
               )}
             </div>
-            <div className="af-notifications-footer" style={{ gap: 8, flexWrap: 'wrap' }}>
-              <Button size="small" disabled={!count || read.isPending || unread.isError} onClick={() => read.mutate(null)}>
-                Đọc tất cả
-              </Button>
-              <Button size="small" disabled={page === 0 || list.isFetching} onClick={() => setPage((value) => value - 1)}>
-                Trước
-              </Button>
-              <span>Trang {page + 1}</span>
-              <Button
-                size="small"
-                disabled={list.isFetching || list.isError || (list.data?.length ?? 0) < 20}
-                onClick={() => setPage((value) => value + 1)}
-              >
-                Sau
-              </Button>
+            <div className="af-notifications-footer">
+              {!driver && (
+                <Link to="/orders" onClick={() => setOpen(false)}>
+                  Xem tất cả đơn hàng <ArrowRight size={14} aria-hidden />
+                </Link>
+              )}
+              {/* Chỉ một trang thì không cần nút chuyển trang. */}
+              {(page > 0 || hasNextPage) && (
+                <nav className="af-notifications-pager" aria-label="Trang thông báo">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<ChevronLeft size={16} />}
+                    aria-label="Trang trước"
+                    disabled={page === 0 || list.isFetching}
+                    onClick={() => setPage((value) => value - 1)}
+                  />
+                  <span aria-current="page">{page + 1}</span>
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<ChevronRight size={16} />}
+                    aria-label="Trang sau"
+                    disabled={!hasNextPage || list.isFetching}
+                    onClick={() => setPage((value) => value + 1)}
+                  />
+                </nav>
+              )}
             </div>
           </section>
         }
@@ -160,7 +298,7 @@ export function LiveNotificationPopover() {
           </Badge>
         </button>
       </Popover>
-      {orderId !== null && <LiveOrderDetails id={orderId} onClose={() => setOrderId(null)} />}
+      {orderId !== null && <OrderDetails id={orderId} onClose={() => setOrderId(null)} />}
     </>
   )
 }

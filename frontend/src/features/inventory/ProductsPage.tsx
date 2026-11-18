@@ -1,5 +1,7 @@
 import { useState, type KeyboardEvent, type ReactNode } from 'react'
+import { filterOn } from '@/shared/utils/filterOn'
 import { useLinkedQuery } from '@/shared/utils/useLinkedQuery'
+import { Link } from 'react-router'
 import {
   App,
   Button,
@@ -15,7 +17,6 @@ import {
   Skeleton,
   Space,
   Tag,
-  Tooltip,
   Typography,
   type MenuProps,
 } from 'antd'
@@ -23,10 +24,13 @@ import { Droplets, Ellipsis, FunnelX, LayoutGrid, Plus, Search } from 'lucide-re
 import { Page } from '@/shared/components/Page'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { QueryError } from '@/shared/components/QueryError'
-import { useFeature, useLiveOnly } from '@/shared/features'
+import { useConfirm } from '@/shared/components/confirm'
 import { currency } from '@/shared/utils/format'
 import { LiveBottleTypes } from '@/features/live/LiveBottleTypes'
-import { brandGroups, capacityGroups, catalogCategories, getBrandGroup, getCatalogDetails, normalizeSearch } from './catalogGroups'
+import { LiveProductCategories } from '@/features/live/LiveProductCategories'
+import { BrandsModal } from './components/BrandsModal'
+import { capacityGroups, getCatalogDetails, normalizeSearch, sortCategoryNames } from './catalogGroups'
+import { brandGroupOf, useBrandGroups } from './brandApi'
 import { ProductFormModal } from './components/ProductFormModal'
 import {
   useActivateProduct,
@@ -52,23 +56,24 @@ function ProductImage({ product }: { product: CatalogItem }) {
 function StockTag({ product }: { product: CatalogItem }) {
   if (!product.active || product.stock === undefined) return null
   return (
-    <Tag color={product.stock === 0 ? 'default' : product.lowStock ? 'orange' : 'green'}>
-      {product.stock === 0 ? 'Chưa có hàng' : `Còn ${product.stock}`}
-    </Tag>
+    <Link to={`/inventory?q=${encodeURIComponent(product.sku)}`} title="Xem tồn kho" onClick={(event) => event.stopPropagation()}>
+      <Tag color={product.stock === 0 ? 'default' : product.lowStock ? 'orange' : 'green'} className="af-tag-link">
+        {product.stock === 0 ? 'Chưa có hàng' : `Còn ${product.stock}`}
+      </Tag>
+    </Link>
   )
 }
 
 export function ProductsPage() {
   const { message, modal } = App.useApp()
-  const canManageBottleTypes = useLiveOnly()
+  const ask = useConfirm()
   const canManage = useCanManageProducts()
-  const showDetails = useFeature('productCatalogDetails')
+  const brandList = useBrandGroups()
   const [status, setStatus] = useState<ProductStatus>('active')
   // Quản lý tải hết một lần rồi lọc tại chỗ để đếm được từng trạng thái; nhân viên chỉ xem sản phẩm đang bán (BE cũng giới hạn như vậy).
   const productsQuery = useCatalog(canManage ? 'all' : 'active')
   const deactivate = useDeactivateProduct()
   const activate = useActivateProduct()
-  const canReactivate = useFeature('reactivate')
   const [query, setQuery] = useLinkedQuery()
   const [brand, setBrand] = useState<string>()
   const [category, setCategory] = useState<string>()
@@ -79,6 +84,8 @@ export function ProductsPage() {
   // undefined: đóng; null: thêm mới; CatalogItem: sửa.
   const [editing, setEditing] = useState<CatalogItem | null>()
   const [bottlesOpen, setBottlesOpen] = useState(false)
+  const [categoriesOpen, setCategoriesOpen] = useState(false)
+  const [brandsOpen, setBrandsOpen] = useState(false)
   const allProducts = productsQuery.data ?? []
   const products = status === 'all' ? allProducts : allProducts.filter((product) => product.active === (status === 'active'))
   const activeCount = allProducts.filter((product) => product.active).length
@@ -88,12 +95,16 @@ export function ProductsPage() {
     { value: 'all', label: <CountLabel label="Tất cả" count={allProducts.length} /> },
   ]
   const keyword = normalizeSearch(query.trim())
-  const brandName = (product: CatalogItem) => getBrandGroup(product.brand)?.name ?? product.brand
+  const brandName = (product: CatalogItem) => brandGroupOf(brandList, product.brand)?.name ?? product.brand
   const brands = [...new Set(products.map(brandName))].map((name) => ({
     name,
-    logo: brandGroups.find((group) => group.name === name)?.logo ?? products.find((product) => brandName(product) === name)?.image,
+    logo: brandList.find((group) => group.name === name)?.logo ?? products.find((product) => brandName(product) === name)?.image,
     count: products.filter((product) => brandName(product) === name).length,
   }))
+  // Bộ lọc loại lấy từ chính danh sách sản phẩm, theo thứ tự cửa hàng tạo loại.
+  const categoryNames = sortCategoryNames(
+    products.map((product) => ({ name: getCatalogDetails(product).category, id: getCatalogDetails(product).categoryId })),
+  )
   const visible = products
     .filter((product) => {
       const details = getCatalogDetails(product)
@@ -157,7 +168,12 @@ export function ProductsPage() {
           },
         ),
     })
-  const resumeSelling = (product: CatalogItem) =>
+  const resumeSelling = async (product: CatalogItem) =>
+    (await ask({
+      title: `Bán lại ${product.name}?`,
+      content: <p>Sản phẩm hiện lại trên trang đặt hàng và khi tạo đơn.</p>,
+      okText: 'Bán lại',
+    })) &&
     activate.mutateAsync(product.id).then(
       () => {
         message.success(`Đã bán lại ${product.name}.`)
@@ -175,8 +191,7 @@ export function ProductsPage() {
       : {
           key: 'resume',
           label: 'Bán lại',
-          disabled: !canReactivate || activate.isPending,
-          extra: canReactivate ? undefined : 'Chưa hỗ trợ',
+          disabled: activate.isPending,
           onClick: () => void resumeSelling(product),
         },
   ]
@@ -216,16 +231,9 @@ export function ProductsPage() {
         <Row gutter={[16, 16]}>
           {shown.map((product) => {
             const details = getCatalogDetails(product)
-            const spec = showDetails
-              ? `${details.packaging} · ${details.volumeMl ? (details.volumeMl >= 1000 ? `${(details.volumeMl / 1000).toLocaleString('vi-VN')}L` : `${details.volumeMl}ml`) : details.capacity}`
-              : [
-                  product.unitsPerCase && `${product.unitsPerCase} ${product.unit.toLowerCase()}/thùng`,
-                  product.bottleTypeName && `Vỏ ${product.bottleTypeName}`,
-                ]
-                  .filter(Boolean)
-                  .join(' · ')
+            const spec = `${details.packaging} · ${details.volumeMl ? (details.volumeMl >= 1000 ? `${(details.volumeMl / 1000).toLocaleString('vi-VN')}L` : `${details.volumeMl}ml`) : details.capacity}`
             return (
-              <Col key={product.id} xs={24} sm={12} lg={8} xl={6}>
+              <Col key={product.id} xs={12} sm={12} lg={8} xl={6}>
                 {/* Người quản lý bấm thẻ để sửa; thao tác khác nằm trong ⋯ ở góc ảnh. */}
                 <Card
                   className={`af-product-card${product.active ? '' : ' is-inactive'}${canManage ? ' is-editable' : ''}`}
@@ -304,10 +312,11 @@ export function ProductsPage() {
   return (
     <Page
       title="Sản phẩm"
-      description="Tra cứu theo thương hiệu, loại nước và quy cách đóng gói."
       actions={
         <Space wrap>
-          {canManageBottleTypes && <Button onClick={() => setBottlesOpen(true)}>Loại vỏ bình</Button>}
+          {canManage && <Button onClick={() => setBrandsOpen(true)}>Thương hiệu</Button>}
+          {canManage && <Button onClick={() => setCategoriesOpen(true)}>Loại sản phẩm</Button>}
+          <Button onClick={() => setBottlesOpen(true)}>Loại vỏ bình</Button>
           {canManage && (
             <Button type="primary" icon={<Plus size={16} />} onClick={() => setEditing(null)}>
               Thêm sản phẩm
@@ -356,6 +365,7 @@ export function ProductsPage() {
         <div className="af-catalog-filters">
           <Input
             aria-label="Tìm sản phẩm"
+            className={filterOn(Boolean(query.trim()))}
             allowClear
             prefix={<Search size={16} className="af-input-icon" />}
             placeholder="Tìm tên, mã hàng, thương hiệu..."
@@ -365,22 +375,21 @@ export function ProductsPage() {
               setPage(1)
             }}
           />
-          <Tooltip title={showDetails ? undefined : 'Backend chưa hỗ trợ loại nước'}>
-            <Select
-              aria-label="Loại nước"
-              allowClear
-              disabled={!showDetails}
-              placeholder={showDetails ? 'Tất cả loại nước' : 'Loại nước (chưa hỗ trợ)'}
-              value={category}
-              options={catalogCategories.map((value) => ({ value, label: value }))}
-              onChange={(value) => {
-                setCategory(value)
-                setPage(1)
-              }}
-            />
-          </Tooltip>
+          <Select
+            aria-label="Loại sản phẩm"
+            className={filterOn(Boolean(category))}
+            allowClear
+            placeholder="Tất cả loại sản phẩm"
+            value={category}
+            options={categoryNames.map((value) => ({ value, label: value }))}
+            onChange={(value) => {
+              setCategory(value)
+              setPage(1)
+            }}
+          />
           <Select
             aria-label="Quy cách"
+            className={filterOn(Boolean(packaging))}
             allowClear
             placeholder="Tất cả quy cách"
             value={packaging}
@@ -390,20 +399,18 @@ export function ProductsPage() {
               setPage(1)
             }}
           />
-          <Tooltip title={showDetails ? undefined : 'Backend chưa hỗ trợ dung tích'}>
-            <Select
-              aria-label="Dung tích"
-              allowClear
-              disabled={!showDetails}
-              placeholder={showDetails ? 'Tất cả dung tích' : 'Dung tích (chưa hỗ trợ)'}
-              value={capacity}
-              options={filterOptions('capacity')}
-              onChange={(value) => {
-                setCapacity(value)
-                setPage(1)
-              }}
-            />
-          </Tooltip>
+          <Select
+            aria-label="Dung tích"
+            className={filterOn(Boolean(capacity))}
+            allowClear
+            placeholder="Tất cả dung tích"
+            value={capacity}
+            options={filterOptions('capacity')}
+            onChange={(value) => {
+              setCapacity(value)
+              setPage(1)
+            }}
+          />
         </div>
         <div className="af-catalog-results">
           {canManage && (
@@ -434,6 +441,8 @@ export function ProductsPage() {
         onClose={() => setEditing(undefined)}
       />
       {bottlesOpen && <LiveBottleTypes onClose={() => setBottlesOpen(false)} />}
+      {categoriesOpen && <LiveProductCategories onClose={() => setCategoriesOpen(false)} />}
+      {brandsOpen && <BrandsModal products={allProducts} onClose={() => setBrandsOpen(false)} />}
     </Page>
   )
 }

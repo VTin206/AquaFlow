@@ -1,11 +1,16 @@
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
-import { Alert, App, Button, Collapse, Descriptions, Dropdown, Modal, Popconfirm, Skeleton, Table, Tag, type CollapseProps } from 'antd'
-import { Ellipsis } from 'lucide-react'
+import { Alert, App, Button, Descriptions, Popconfirm, Skeleton, Table, Tag, Timeline, Typography, type CollapseProps, type MenuProps } from 'antd'
+import { Money } from '@/shared/components/Money'
 import { OrderTotals } from '@/shared/components/OrderTotals'
 import { QueryError } from '@/shared/components/QueryError'
 import { currency } from '@/shared/utils/format'
+import { dueTone } from '@/shared/utils/money'
 import { useStaff } from '@/features/auth/useStaff'
+import { can } from '@/features/auth/permissions'
+import { OrderIntakeModal } from '@/features/orders/components/OrderIntakeModal'
+import { Pencil } from 'lucide-react'
 import { tripLabels } from '@/features/delivery/deliveryApi'
 import { catalogApi } from './catalogApi'
 import {
@@ -14,17 +19,14 @@ import {
   canPrepare,
   confirmOrderHint,
   orderApi,
-  orderStatusLabels,
   paymentStatusLabels,
   channelLabels,
-  type OrderStatus,
 } from './orderApi'
+import { explainStockShortage } from './stockShortage'
 import { invalidateLiveData } from './invalidateLiveData'
-import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
 import { canDispatch, canHandover, dispatchApi } from './dispatchApi'
-import { OrderProgress } from '@/features/orders/OrderProgress'
 import { OrderDeliveryHistory } from '@/features/orders/OrderDeliveryHistory'
-import { OrderFocusBanner, OrderLines, OrderParty } from '@/features/orders/components/OrderSheet'
+import { OrderDetailsFrame } from '@/features/orders/components/OrderDetailsFrame'
 import { fromLiveOrder } from '@/features/orders/orderData'
 import { liveOrderFocus } from '@/features/orders/orderFocus'
 import { DeliverySlipDocument, InvoiceDocument } from '@/features/orders/print/OrderDocuments'
@@ -34,18 +36,11 @@ import { useSettings } from '@/features/settings/settingsService'
 import { usePrinter } from '@/shared/print/usePrinter'
 import { LiveOrderPayments } from './LiveOrderPayments'
 import { useOrderPayments } from './paymentApi'
+import { LiveOrderReturnModal } from './LiveOrderReturnModal'
+import { useOrderDepositLabel } from './bottleDeposits'
+import { describeActivity, useOrderActivity, useOrderReturns } from './orderReturnApi'
 
 const dateTime = (value: string | null) => (value ? new Date(value).toLocaleString('vi-VN') : '—')
-const statusColors: Record<OrderStatus, string> = {
-  PENDING: 'gold',
-  CONFIRMED: 'blue',
-  PREPARING: 'blue',
-  OUT_FOR_DELIVERY: 'cyan',
-  DELIVERED: 'green',
-  COMPLETED: 'green',
-  CANCELLED: 'default',
-}
-
 /** Màu trạng thái thanh toán theo quy ước tiền: cam còn phải thu, xanh đã thu, đỏ đang hoàn. */
 const paymentTagColors: Record<keyof typeof paymentStatusLabels, string> = {
   UNPAID: 'orange',
@@ -62,6 +57,13 @@ const paymentTagColors: Record<keyof typeof paymentStatusLabels, string> = {
 export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => void }) {
   const staff = useStaff()
   const canManage = staff?.role === 'ADMIN' || staff?.role === 'SALES_STAFF'
+  // Nhận trả hàng làm giảm doanh thu và có thể hoàn tiền nên chỉ chủ cửa hàng (BE cũng chặn).
+  const canTakeReturns = staff?.role === 'ADMIN'
+  const [returning, setReturning] = useState(false)
+  const [editingOrder, setEditingOrder] = useState(false)
+  const canEdit = !!staff && can(staff.role, 'editOrder')
+  const returns = useOrderReturns(id)
+  const activity = useOrderActivity(id, canManage)
   const { message } = App.useApp()
   const queryClient = useQueryClient()
   const payments = useOrderPayments(id)
@@ -81,7 +83,8 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
   })
   const { allowed: canSeeTrips, query: trips } = useOrderDeliveryHistory(id)
   const update = useMutation({
-    mutationFn: (status: 'CONFIRMED' | 'PREPARING' | 'CANCELLED') => orderApi.updateStatus(id, status),
+    mutationFn: (status: 'CONFIRMED' | 'PREPARING' | 'CANCELLED') =>
+      orderApi.updateStatus(id, status).catch((error) => explainStockShortage(error, queryClient)),
     onSuccess: (order) => {
       void invalidateLiveData(queryClient)
       message.success(
@@ -116,6 +119,8 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
   })
   const busy = update.isPending || handover.isPending
   const printer = usePrinter()
+  // Tải sẵn mức cọc theo loại vỏ để phiếu giao in được ngay.
+  const depositOf = useOrderDepositLabel()
   const copyMessage = useCopyOrderMessage()
   const { data: settings } = useSettings()
   const order = query.data
@@ -125,35 +130,39 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
   const lastAttempt = trips.data?.at(-1)?.assignment.latestAttempt
   const lastTrip = trips.data?.at(-1)?.trip
 
-  const moreMenu =
-    viewOrder && viewOrder.status !== 'Đã hủy' ? (
-      <Dropdown
-        trigger={['click']}
-        menu={{
-          items: [
-            { key: 'copy', label: 'Sao chép tin nhắn xác nhận', onClick: () => void copyMessage(viewOrder, settings?.storeName) },
-            {
-              key: 'invoice',
-              label: 'In hóa đơn bán lẻ',
-              disabled: !canPrint,
-              onClick: () => printer.print(<InvoiceDocument order={viewOrder} settings={settings} />),
-            },
-            ...(viewOrder.method === 'Giao tận nơi'
-              ? [
-                  {
-                    key: 'slip',
-                    label: 'In phiếu giao hàng',
-                    disabled: !canPrint,
-                    onClick: () => printer.print(<DeliverySlipDocument order={viewOrder} settings={settings} />),
-                  },
-                ]
-              : []),
-          ],
-        }}
-      >
-        <Button icon={<Ellipsis size={16} />}>Thao tác khác</Button>
-      </Dropdown>
-    ) : null
+  const moreItems: MenuProps['items'] =
+    viewOrder && viewOrder.status !== 'Đã hủy'
+      ? [
+          { key: 'copy', label: 'Sao chép tin nhắn xác nhận', onClick: () => void copyMessage(viewOrder, settings?.storeName) },
+          {
+            key: 'invoice',
+            label: 'In hóa đơn bán lẻ',
+            disabled: !canPrint,
+            onClick: () => printer.print(<InvoiceDocument order={viewOrder} settings={settings} />),
+          },
+          ...(viewOrder.method === 'Giao tận nơi'
+            ? [
+                {
+                  key: 'slip',
+                  label: 'In phiếu giao hàng',
+                  disabled: !canPrint,
+                  onClick: () => printer.print(<DeliverySlipDocument order={viewOrder} settings={settings} depositRate={depositOf(viewOrder)} />),
+                },
+              ]
+            : []),
+          ...(order && ['DELIVERED', 'COMPLETED'].includes(order.status)
+            ? [
+                {
+                  key: 'return',
+                  label: 'Nhận trả hàng',
+                  disabled: !canTakeReturns,
+                  extra: canTakeReturns ? undefined : 'Chủ cửa hàng',
+                  onClick: () => setReturning(true),
+                },
+              ]
+            : []),
+        ]
+      : []
 
   const primaryAction =
     order && canManage ? (
@@ -226,6 +235,23 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
     ) : null
 
   const productName = (productId: number) => catalog.data?.find((product) => product.id === productId)?.name ?? `Sản phẩm #${productId}`
+  const historyEvents = order
+    ? [
+        { at: order.createdAt, message: 'Tạo đơn' },
+        ...(order.confirmedAt ? [{ at: order.confirmedAt, message: 'Xác nhận đơn' }] : []),
+        ...(order.cancelledAt ? [{ at: order.cancelledAt, message: 'Hủy đơn' }] : []),
+      ]
+    : []
+  // Có nhật ký chi tiết thì dùng nhật ký (kèm người làm); chưa có (đơn cũ, lỗi tải) thì dùng các mốc chính của đơn.
+  const timeline: { key: string; at: string; message: string; actor?: string }[] = activity.data?.length
+    ? activity.data.map((entry, index) => ({
+        key: `${entry.kind}-${entry.entityId ?? index}-${entry.at}`,
+        at: entry.at,
+        message: describeActivity(entry),
+        actor: entry.actorName,
+      }))
+    : historyEvents.map((event) => ({ ...event, key: event.message }))
+  const returnedTotal = (returns.data?.returns ?? []).reduce((sum, entry) => sum + Number(entry.value), 0)
   const moreSections: CollapseProps['items'] = order
     ? [
         { key: 'payments', label: 'Thanh toán', extra: payments.data ? `Còn phải thu ${currency(payments.data.balance.due)}` : undefined, children: <LiveOrderPayments orderId={id} /> },
@@ -279,6 +305,71 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
           ),
         },
         {
+          key: 'returns',
+          label: 'Hàng trả lại',
+          extra: returns.data ? (returns.data.returns.length ? `${returns.data.returns.length} lần · ${currency(returnedTotal)}` : 'Chưa có') : undefined,
+          children: returns.isError ? (
+            <QueryError error={returns.error} onRetry={returns.refetch} />
+          ) : returns.isPending ? (
+            <Skeleton active />
+          ) : !returns.data.returns.length ? (
+            <p className="af-order-more-empty">Khách chưa trả lại hàng của đơn này.</p>
+          ) : (
+            returns.data.returns.map((entry) => (
+              <div key={entry.id} className="af-order-receipt">
+                <p>
+                  <strong>{dateTime(entry.createdAt)}</strong> · {entry.performedByName} · {entry.reason}
+                  <br />
+                  <Typography.Text type="secondary">
+                    {entry.restocked ? 'Đã nhập lại tồn bán được' : 'Hàng hỏng, loại khỏi kho'}
+                    {Number(entry.refunded) > 0 ? ` · Đã hoàn ${currency(entry.refunded)}` : ''}
+                  </Typography.Text>
+                </p>
+                <Table
+                  rowKey="orderItemId"
+                  size="small"
+                  dataSource={entry.lines}
+                  pagination={false}
+                  scroll={{ x: 450 }}
+                  columns={[
+                    { title: 'Sản phẩm', dataIndex: 'productName' },
+                    { title: 'Số lượng', dataIndex: 'quantity', align: 'right' },
+                    { title: 'Giá trị', dataIndex: 'value', align: 'right', render: currency },
+                  ]}
+                />
+              </div>
+            ))
+          ),
+        },
+        {
+          key: 'history',
+          label: 'Lịch sử xử lý',
+          extra: `${activity.data?.length || historyEvents.length} mốc`,
+          children: (
+            <>
+              <Timeline
+                items={[...timeline].reverse().map((event) => ({
+                  key: event.key,
+                  content: (
+                    <>
+                      <div>{event.message}</div>
+                      <Typography.Text type="secondary">
+                        {dateTime(event.at)}
+                        {event.actor ? ` · ${event.actor}` : ''}
+                      </Typography.Text>
+                    </>
+                  ),
+                }))}
+              />
+              {activity.isError ? (
+                <p className="af-form-hint">Không tải được nhật ký chi tiết; đang hiện các mốc chính của đơn.</p>
+              ) : (
+                <p className="af-form-hint">Thao tác trước khi bật nhật ký chỉ có các mốc chính.</p>
+              )}
+            </>
+          ),
+        },
+        {
           key: 'info',
           label: 'Thông tin đơn',
           extra: channelLabels[order.channel] ?? order.channel,
@@ -298,81 +389,103 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
       ]
     : []
 
+  const balance = payments.data?.balance
   return (
-    <Modal
-      open
-      width={modalWidth.medium}
-      styles={modalScrollBody}
-      onCancel={onClose}
-      title={
-        <span className="af-order-title">
-          <span>{order ? `Đơn ${order.orderCode}` : 'Chi tiết đơn hàng'}</span>
-          {order && <Tag color={statusColors[order.status]}>{orderStatusLabels[order.status] ?? order.status}</Tag>}
-        </span>
-      }
-      footer={
-        order ? (
-          <div className="af-order-footer">
-            <div>{cancelAction}</div>
-            <div>
-              {moreMenu}
-              {primaryAction}
-            </div>
-          </div>
-        ) : null
-      }
-    >
-      {query.isError ? (
-        <QueryError error={query.error} onRetry={query.refetch} />
-      ) : !order || !viewOrder ? (
-        <Skeleton active />
-      ) : (
-        <>
-          <OrderFocusBanner
-            focus={liveOrderFocus(
+    <OrderDetailsFrame
+      order={order ? viewOrder : undefined}
+      placeholder={query.isError ? <QueryError error={query.error} onRetry={query.refetch} /> : <Skeleton active />}
+      focus={
+        order
+          ? liveOrderFocus(
               order,
               lastAttempt?.outcome === 'FAILED' ? (lastAttempt.failureReason ?? null) : undefined,
               order.fulfillmentType === 'DELIVERY' && trips.isSuccess && !trips.data.length,
-            )}
+            )
+          : undefined
+      }
+      progress={order}
+      notice={
+        catalog.isError && (
+          <Alert
+            type="warning"
+            title="Không tải được tên sản phẩm; đang hiển thị mã định danh."
+            action={<Button onClick={() => void catalog.refetch()}>Thử lại</Button>}
+            style={{ marginBottom: 16 }}
           />
-          {order.status !== 'CANCELLED' && <OrderProgress order={order} showStatus={false} />}
-          {catalog.isError && (
-            <Alert
-              type="warning"
-              title="Không tải được tên sản phẩm; đang hiển thị mã định danh."
-              action={<Button onClick={() => void catalog.refetch()}>Thử lại</Button>}
-              style={{ marginBottom: 16 }}
-            />
+        )
+      }
+      sections={moreSections}
+      cancelAction={
+        <>
+          {order && canEdit && order.status === 'PENDING' && (
+            <Button type="text" icon={<Pencil size={15} />} disabled={busy} onClick={() => setEditingOrder(true)}>
+              Sửa đơn
+            </Button>
           )}
-          <div className="af-order-sheet">
-            <OrderParty order={viewOrder} />
-            <OrderLines lines={viewOrder.lines}>
-              <OrderTotals
-                wide
-                rows={[
-                  { label: 'Tiền hàng', value: currency(order.subtotal) },
-                  ...(Number(order.discountAmount) > 0 ? [{ label: 'Giảm giá', value: `−${currency(order.discountAmount)}` }] : []),
-                  ...(order.fulfillmentType === 'DELIVERY'
-                    ? [{ label: 'Phí giao', value: Number(order.deliveryFee) > 0 ? currency(order.deliveryFee) : 'Miễn phí' }]
-                    : []),
-                ]}
-                total={{ label: 'Tổng cộng', value: currency(order.total) }}
-                after={
-                  order.status !== 'CANCELLED' && (
-                    <div className="is-status">
-                      <Tag color={paymentTagColors[order.paymentStatus]}>
-                        {paymentStatusLabels[order.paymentStatus] ?? order.paymentStatus}
-                      </Tag>
-                    </div>
-                  )
-                }
-              />
-            </OrderLines>
-          </div>
-          <Collapse ghost className="af-order-more" defaultActiveKey={['payments']} items={moreSections} />
+          {cancelAction}
         </>
-      )}
+      }
+      moreItems={moreItems}
+      actions={primaryAction}
+      onClose={onClose}
+      totals={
+        order && (
+          <OrderTotals
+            wide
+            rows={[
+              { label: 'Tiền hàng', value: currency(order.subtotal) },
+              ...(Number(order.discountAmount) > 0 ? [{ label: 'Giảm giá', value: `−${currency(order.discountAmount)}` }] : []),
+              ...(order.fulfillmentType === 'DELIVERY'
+                ? [{ label: 'Phí giao', value: Number(order.deliveryFee) > 0 ? currency(order.deliveryFee) : 'Miễn phí' }]
+                : []),
+            ]}
+            total={{ label: 'Tổng cộng', value: currency(order.total) }}
+            after={
+              order.status !== 'CANCELLED' && (
+                <>
+                  {returnedTotal > 0 && (
+                    <div className="is-after-total">
+                      <dt>Hàng trả lại</dt>
+                      <dd>−{currency(returnedTotal)}</dd>
+                    </div>
+                  )}
+                  {balance && (
+                    <>
+                      <div className={returnedTotal > 0 ? undefined : 'is-after-total'}>
+                        <dt>Đã thu</dt>
+                        <dd>
+                          <Money value={Number(balance.paid)} tone={Number(balance.paid) > 0 ? 'paid' : 'neutral'} />
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Còn phải thu</dt>
+                        <dd>
+                          <strong>
+                            <Money value={Number(balance.due)} tone={dueTone(Number(balance.due))} />
+                          </strong>
+                        </dd>
+                      </div>
+                    </>
+                  )}
+                  <div className="is-status">
+                    <Tag color={paymentTagColors[order.paymentStatus]}>{paymentStatusLabels[order.paymentStatus] ?? order.paymentStatus}</Tag>
+                  </div>
+                </>
+              )
+            }
+          />
+        )
+      }
+    >
       {printer.portal}
-    </Modal>
+      {editingOrder && order && <OrderIntakeModal editing={order} onClose={() => setEditingOrder(false)} />}
+      {returning && order && (
+        <LiveOrderReturnModal
+          order={{ id: order.id, orderCode: order.orderCode, subtotal: Number(order.subtotal), discountAmount: Number(order.discountAmount) }}
+          balance={balance}
+          onClose={() => setReturning(false)}
+        />
+      )}
+    </OrderDetailsFrame>
   )
 }

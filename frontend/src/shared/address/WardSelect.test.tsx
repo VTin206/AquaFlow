@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { hcmWards } from './hcmWards'
+import { deliveryWards, hcmWards } from './hcmWards'
 import { WardSelect } from './WardSelect'
 
 beforeEach(() => {
@@ -19,6 +19,19 @@ test('danh sách đủ 168 đơn vị của TP. Hồ Chí Minh, không trùng', 
   expect(hcmWards.filter((ward) => ward.startsWith('Phường '))).toHaveLength(113)
   expect(hcmWards.filter((ward) => ward.startsWith('Xã '))).toHaveLength(54)
   expect(hcmWards).toContain('Đặc khu Côn Đảo')
+})
+
+test('khu vực giao chỉ gồm 102 đơn vị của TP. Hồ Chí Minh cũ', () => {
+  expect(deliveryWards).toHaveLength(102)
+  expect(deliveryWards.filter((ward) => ward.startsWith('Phường '))).toHaveLength(78)
+  expect(deliveryWards.filter((ward) => ward.startsWith('Xã '))).toHaveLength(24)
+  expect(deliveryWards).toContain('Xã Thạnh An')
+  for (const outside of ['Phường Thủ Dầu Một', 'Phường Dĩ An', 'Phường Vũng Tàu', 'Xã Thanh An', 'Đặc khu Côn Đảo']) expect(deliveryWards).not.toContain(outside)
+})
+
+test('phường ngoài khu vực giao đã lưu vẫn hiện và nhắc chọn lại', () => {
+  render(<WardSelect value="Phường Dĩ An" />)
+  expect(screen.getByText('Phường Dĩ An (ngoài khu vực giao, chọn lại)')).toBeTruthy()
 })
 
 test('gõ không dấu vẫn tìm được và trả về đúng tên phường', async () => {

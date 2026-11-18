@@ -60,7 +60,7 @@ class GuestOrderPostgresIntegrationTest {
                 "Guest Customer",
                 "0901234567",
                 "123 Nguyen Trai",
-                "Quan 5",
+                "Phường Chợ Quán",
                 null,
                 List.of(new OrderItemRequest(productId, 2)),
                 "Guest PostgreSQL test");

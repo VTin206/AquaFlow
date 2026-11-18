@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
 
+import java.time.Clock;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /** Trip assignments, inventory dispatch and delivery outcomes share one trip workflow. */
@@ -27,20 +29,38 @@ public class DeliveryService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final DeliveryBottleService bottleLedger;
+    private final Clock clock;
+
+    /** Giới hạn của bộ lọc "chuyến gần đây". */
+    public static final int MAX_RECENT_DAYS = 365;
 
     public DeliveryService(DeliveryRepository repository, AssignmentDispatchService assignmentDispatch,
                           RedeliveryReservationService redeliveryReservations,
-                          OrderRepository orderRepository, OrderItemRepository orderItemRepository, DeliveryBottleService bottleLedger) {
+                          OrderRepository orderRepository, OrderItemRepository orderItemRepository, DeliveryBottleService bottleLedger,
+                          Clock clock) {
         this.repository = repository;
         this.assignmentDispatch = assignmentDispatch;
         this.redeliveryReservations = redeliveryReservations;
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.bottleLedger = bottleLedger;
+        this.clock = clock;
     }
 
     public List<TripResponse> list(long actorId, boolean admin) {
-        return repository.listTrips(actorId, admin).stream().map(repository::viewTrip).toList();
+        return list(actorId, admin, null, null);
+    }
+
+    /**
+     * @param orderId chỉ chuyến có đơn này
+     * @param days    chỉ chuyến chưa xong hoặc có hoạt động trong số ngày này (1–365); null: mọi chuyến
+     */
+    public List<TripResponse> list(long actorId, boolean admin, Long orderId, Integer days) {
+        if (orderId != null && orderId <= 0) throw new BadRequestException("Mã đơn không hợp lệ");
+        if (days != null && (days < 1 || days > MAX_RECENT_DAYS))
+            throw new BadRequestException("Số ngày phải từ 1 đến " + MAX_RECENT_DAYS);
+        OffsetDateTime since = days == null ? null : OffsetDateTime.now(clock).minusDays(days);
+        return repository.viewTrips(repository.listTrips(actorId, admin, orderId, since));
     }
 
     public TripResponse get(long id, long actorId, boolean admin) {
@@ -228,11 +248,13 @@ public class DeliveryService {
         }
         var collections = repository.collections(tripId);
         if (!collections.receipts().isEmpty() && (request.cashReported().compareTo(collections.cashExpected()) != 0
-                || request.bottlesExpected() != collections.bottlesExpected())) {
+                || request.bottlesExpected() != collections.bottlesExpected()
+                || request.depositReported().compareTo(collections.depositExpected()) != 0)) {
             throw new ConflictException("Collection totals changed; reload the trip before settlement");
         }
         if ((request.cashReported().compareTo(request.cashConfirmed()) != 0
-                || !request.bottlesExpected().equals(request.bottlesConfirmed()))
+                || !request.bottlesExpected().equals(request.bottlesConfirmed())
+                || request.depositReported().compareTo(request.depositConfirmed()) != 0)
                 && DeliveryRepository.clean(request.note()) == null) {
             throw new BadRequestException("Cần ghi lý do khi tiền hoặc vỏ bàn giao có chênh lệch");
         }
@@ -274,12 +296,20 @@ public class DeliveryService {
         requireStatus(trip, "IN_PROGRESS");
         var order = repository.lockOrder(orderId);
         if (!List.of("OUT_FOR_DELIVERY", "DELIVERED").contains(order.status())) throw new ConflictException("Order cannot receive collections");
-        if (request.amount().signum()==0 && request.bottlesReturned()==0) throw new BadRequestException("Enter an amount or returned bottles");
+        if (request.amount().signum()==0 && request.bottlesReturned()==0 && request.depositAmount().signum()==0)
+            throw new BadRequestException("Enter an amount or returned bottles");
         var balance = repository.balance(orderId);
         if (request.amount().compareTo(balance.due())>0) throw new ConflictException("Amount exceeds the outstanding balance");
         int returned = repository.collections(tripId).receipts().stream().filter(r -> r.orderId()==orderId).mapToInt(CollectionResponse::bottlesReturned).sum();
         if ((long)returned+request.bottlesReturned()>balance.bottlesToExchange()) throw new BadRequestException("Returned bottles exceed the order quantity");
-        repository.collect(assignment.id(), orderId, actorId, request);
+        java.util.UUID depositEntry = null;
+        if (request.depositAmount().signum()>0) {
+            // Cọc chỉ thu cho phần vỏ khách chưa đổi của đơn đã giao thành công, ghi vào sổ cọc của khách.
+            if (request.depositAmount().compareTo(bottleLedger.depositShortfall(assignment.id()))>0)
+                throw new ConflictException("Tiền cọc vượt số cọc còn phải thu cho số vỏ khách chưa đổi");
+            depositEntry = bottleLedger.collectDeposit(assignment.id(), orderId, actorId, request.requestId(), request.depositAmount());
+        }
+        repository.collect(assignment.id(), orderId, actorId, request, depositEntry);
         return repository.collections(tripId);
     }
 

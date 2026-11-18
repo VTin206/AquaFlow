@@ -1,8 +1,7 @@
 import dayjs, { type Dayjs } from 'dayjs'
-import type { ActivityEntry } from './activityService'
 import { activityAreas, activityDescription, activityTarget, type ActivityLog } from './activityApi'
 
-/** Một dòng nhật ký đã chuẩn hóa, dùng chung cho bản dùng thử và tài khoản thật. */
+/** Một dòng nhật ký đã chuẩn hóa, lấy từ máy chủ. */
 export type ActivityItem = {
   id: string
   at: string
@@ -51,19 +50,6 @@ export function fromLive(entry: ActivityLog): ActivityItem {
   }
 }
 
-export function fromDemo(entry: ActivityEntry, orderIds: ReadonlySet<string>): ActivityItem {
-  return {
-    id: entry.id,
-    at: entry.at,
-    actor: entry.by,
-    area: entry.area,
-    description: entry.action,
-    target: entry.target,
-    entity: orderIds.has(entry.target) ? { type: 'ORDER', id: entry.target } : undefined,
-    important: isImportantActivity(entry.action),
-  }
-}
-
 /** Trang mở khi bấm đối tượng không phải đơn hàng (chưa có đường dẫn tới từng hồ sơ). */
 export const entityPages: Record<string, { path: string; label: string }> = {
   PRODUCT: { path: '/products', label: 'Mở trang Sản phẩm' },
@@ -76,6 +62,8 @@ export const entityPages: Record<string, { path: string; label: string }> = {
   INVENTORY_RETURN: { path: '/inventory', label: 'Mở trang Kho hàng' },
   DELIVERY_TRIP: { path: '/delivery', label: 'Mở trang Giao hàng' },
   STAFF_ACCOUNT: { path: '/staff', label: 'Mở trang Nhân viên' },
+  SHOP_ARTICLE: { path: '/articles', label: 'Mở trang Bài viết' },
+  STOCK_ADJUSTMENT: { path: '/inventory', label: 'Mở trang Kho hàng' },
 }
 
 /** Nhóm theo ngày, giữ thứ tự mới nhất trước. */

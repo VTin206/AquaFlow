@@ -1,230 +1,529 @@
 import { useEffect, useState } from 'react'
-import { Button, Card, Empty, Progress, Select, Skeleton, Tag } from 'antd'
-import { Clock3, Map, Package, Phone, Recycle, Wallet } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { App, Button, Card, Empty, Form, InputNumber, Modal, Popconfirm, Progress, Segmented, Skeleton, Tag } from 'antd'
+import { Clock3, History, Map, Package, Phone, Recycle, RefreshCw, Wallet } from 'lucide-react'
+import { TransferQr } from '@/shared/payment/TransferQr'
+import { useSettings } from '@/features/settings/settingsService'
 import { mapsSearchUrl } from '@/shared/address/maps'
+import { useAuth } from '@/features/auth/useAuth'
 import { useStaff } from '@/features/auth/useStaff'
-import { QueryError } from '@/shared/components/QueryError'
 import { Money } from '@/shared/components/Money'
+import { QueryError } from '@/shared/components/QueryError'
+import { currency } from '@/shared/utils/format'
 import { dueTone } from '@/shared/utils/money'
-import { AdvanceStatusButton } from '@/features/orders/components/AdvanceStatusButton'
-import { OrderDetailsModal } from '@/features/orders/components/OrderDetailsModal'
-import { LateTag } from '@/features/orders/components/LateTag'
+import { modalWidth } from '@/shared/utils/modal'
+import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { OrderFocusBanner } from '@/features/orders/components/OrderSheet'
-import { OrderStatusTag } from '@/features/orders/components/OrderStatusTag'
-import { amountDue, deliveryAttempts, jugCount, type Order } from '@/features/orders/types'
-import { useOrders } from '@/features/orders/useOrders'
+import {
+  collectionApi,
+  deliveryApi,
+  RECENT_TRIP_DAYS,
+  type CollectionInput,
+  type DeliveryStop,
+  type TripCollections,
+  type DeliveryTrip,
+} from './deliveryApi'
+import { DeliveryBottlesButton } from './components/DeliveryBottlesButton'
+import { deliveryBottleApi } from './deliveryBottleApi'
+import { depositShortfall } from './bottleDeposit'
+import { AttemptsTimeline } from './components/AttemptsTimeline'
+import { DeliveryActionModal } from './components/DeliveryActionModal'
+import { TripRouteButton } from './components/TripRouteButton'
 import { TripStatusTag } from './components/TripStatusTag'
-import { drivers, type Trip } from './types'
-import { driverTripFocus } from './tripFocus'
-import { dispatchedIn, openIn } from './tripService'
-import { useTrips } from './useTrips'
-import { useIsDemo } from '@/shared/features'
-import { LiveDriverPage } from './LiveDriverPage'
+import { DriverDue } from './driverParts'
+import { driverToday } from './driverUtils'
+import { driverTripFocus, liveTripStatus } from './tripFocus'
 
-const DRIVER_KEY = 'aquaflow.driver'
-const readDriver = () => {
-  try {
-    const saved = localStorage.getItem(DRIVER_KEY)
-    return saved && drivers.includes(saved) ? saved : drivers[0]
-  } catch {
-    return drivers[0]
-  }
-}
-
-
-/** Màn hình điện thoại cho tài xế: chỉ chuyến của mình, nút gọi/chỉ đường lớn, ghi kết quả từng điểm. */
+/** Màn hình tài xế: lấy chuyến của tài xế đang đăng nhập, giao diện nằm ở DriverScreen. */
 export function DriverPage() {
-  return useIsDemo() ? <DemoDriverPage /> : <LiveDriverPage />
+  const { user } = useAuth()
+  // BE chỉ trả chuyến của tài xế đang đăng nhập; chuyến xong quá 30 ngày không cần hiện.
+  const trips = useQuery({
+    queryKey: ['live', 'driver-trips', user?.email],
+    queryFn: () => deliveryApi.list({ days: RECENT_TRIP_DAYS }),
+    refetchInterval: 15000,
+  })
+  return (
+    <DriverScreen
+      trips={trips.data}
+      loading={trips.isPending}
+      fetching={trips.isFetching}
+      error={trips.isError ? trips.error : null}
+      onRetry={() => void trips.refetch()}
+    />
+  )
 }
 
-function DemoDriverPage() {
+/** Màn hình điện thoại cho tài xế: mỗi chuyến nói rõ việc tiếp theo, điểm chưa giao lên trước. */
+function DriverScreen({
+  trips,
+  loading,
+  fetching,
+  error,
+  onRetry,
+}: {
+  trips?: DeliveryTrip[]
+  loading: boolean
+  fetching: boolean
+  error: Error | null
+  onRetry: () => void
+}) {
   const staff = useStaff()
-  const [chosen, setDriver] = useState(readDriver)
-  // Tài khoản giao hàng chỉ xem chuyến của chính mình; chủ cửa hàng chọn tài xế để xem thay.
-  const ownTrips = staff?.role === 'DELIVERY_STAFF'
-  const driver = ownTrips ? staff.name : chosen
-  const tripsQuery = useTrips()
-  const ordersQuery = useOrders()
-  const [orderId, setOrderId] = useState<string | null>(null)
-  const orders = ordersQuery.data ?? []
-  const myTrips = (tripsQuery.data ?? []).filter((trip) => trip.driver === driver && trip.status !== 'Đã đối soát')
+  const [showHistory, setShowHistory] = useState(false)
+  const finished = (trip: DeliveryTrip) => ['COMPLETED', 'CANCELLED'].includes(trip.status)
+  const mine = trips ?? []
+  const visible = mine.filter((trip) => showHistory || !finished(trip))
+  const hiddenCount = mine.filter(finished).length
 
   useEffect(() => {
     document.title = 'Chuyến của tôi | AquaFlow'
   }, [])
 
-  const chooseDriver = (value: string) => {
-    setDriver(value)
-    try {
-      localStorage.setItem(DRIVER_KEY, value)
-    } catch {
-      // Không lưu được thì lần sau chọn lại.
-    }
-  }
-
   return (
-    <>
-      <div className="af-driver">
-        <header className="af-driver-head">
+    <div className="af-driver">
+      <header className="af-driver-head">
+        <div>
           <h1>Chuyến của tôi</h1>
-          {ownTrips && (
-            <p>
-              {driver} · {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit' })}
-            </p>
-          )}
-        </header>
-        {!ownTrips && (
-          <>
-            <label className="af-driver-picker">
-              <span>Tài xế</span>
-              <Select value={driver} onChange={chooseDriver} options={drivers.map((name) => ({ value: name, label: name }))} />
-            </label>
-            <p className="af-form-hint">Đang xem thay tài xế. Nhân viên giao hàng đăng nhập sẽ chỉ thấy chuyến của mình.</p>
-          </>
-        )}
-
-        {tripsQuery.isError || ordersQuery.isError ? (
-          <Card>
-            <QueryError
-              error={(tripsQuery.error ?? ordersQuery.error)!}
-              onRetry={() => {
-                tripsQuery.refetch()
-                ordersQuery.refetch()
-              }}
-            />
-          </Card>
-        ) : tripsQuery.isPending || ordersQuery.isPending ? (
-          <Skeleton active />
-        ) : myTrips.length === 0 ? (
-          <Card>
-            <Empty description="Chưa có chuyến nào được giao cho bạn." />
-          </Card>
-        ) : (
-          myTrips.map((trip) => (
-            <DriverTrip
-              key={trip.id}
-              trip={trip}
-              stops={trip.orderIds.map((id) => orders.find((order) => order.id === id)).filter((order) => order !== undefined)}
-              onDetails={setOrderId}
-            />
-          ))
-        )}
-      </div>
-      {orderId && <OrderDetailsModal key={orderId} orderId={orderId} onClose={() => setOrderId(null)} />}
-    </>
+          <p>
+            {staff?.name} · {driverToday()}
+          </p>
+        </div>
+        {/* Trang tự làm mới 15 giây một lần; nút này để lấy ngay đơn cửa hàng vừa xếp thêm. */}
+        <Button icon={<RefreshCw size={16} />} loading={fetching} onClick={onRetry}>
+          Làm mới
+        </Button>
+      </header>
+      {error ? (
+        <QueryError error={error} onRetry={onRetry} />
+      ) : loading ? (
+        <Skeleton active />
+      ) : !visible.length ? (
+        <Card>
+          <Empty description="Chưa có chuyến nào được giao cho bạn." />
+        </Card>
+      ) : (
+        visible.map((trip) => <DriverTrip key={trip.id} trip={trip} />)
+      )}
+      {hiddenCount > 0 && (
+        <Button type="link" block onClick={() => setShowHistory(!showHistory)}>
+          {showHistory ? 'Ẩn chuyến đã xong' : `Xem ${hiddenCount} chuyến đã xong`}
+        </Button>
+      )}
+    </div>
   )
 }
 
-function DriverTrip({ trip, stops, onDetails }: { trip: Trip; stops: Order[]; onDetails: (id: string) => void }) {
-  const pending = stops.filter((order) => openIn(trip, order))
-  const finished = stops.filter((order) => !openIn(trip, order))
-  const waiting = pending.filter((order) => !dispatchedIn(trip, order)).length
-  const due = stops.reduce((sum, order) => sum + amountDue(order), 0)
-  const jugs = stops.reduce((sum, order) => sum + jugCount(order), 0)
+function DriverTrip({ trip }: { trip: DeliveryTrip }) {
+  const { user } = useAuth()
+  const { message } = App.useApp()
+  const client = useQueryClient()
+  const [result, setResult] = useState<DeliveryStop | null>(null)
+  const [collect, setCollect] = useState<DeliveryStop | null>(null)
+  const [history, setHistory] = useState<DeliveryStop | null>(null)
+  const liveReceipts = useQuery({
+    queryKey: ['live', 'trip-collections', user?.email, trip.id],
+    queryFn: () => collectionApi.get(trip.id),
+    refetchInterval: 15000,
+  })
+  const liveAttempts = useQuery({
+    queryKey: ['live', 'driver-attempts', user?.email, trip.id, history?.orderId],
+    queryFn: () => deliveryApi.assignmentAttempts(history!.id),
+    enabled: !!history,
+  })
+  const receipts = liveReceipts.data
+  const attempts = liveAttempts.data
+  const change = useMutation({
+    mutationFn: (fn: () => Promise<unknown>) => fn(),
+    onSuccess: async () => {
+      await invalidateLiveData(client)
+      message.success('Đã ghi nhận.')
+      setResult(null)
+      setCollect(null)
+    },
+    onError: (error) => message.error(error.message),
+  })
+  const pending = trip.orders.filter((order) => !order.latestAttempt)
+  const done = trip.orders.length - pending.length
+  const active = trip.status === 'IN_PROGRESS'
+  // Trước khi khởi hành: đơn phải ở trạng thái đang giao. Sau đó đơn đổi sang đã giao là bình thường, chỉ đếm đơn còn chờ xuất kho.
+  const waitingForDispatch =
+    trip.status === 'CREATED'
+      ? trip.orders.filter((order) => order.orderStatus !== 'OUT_FOR_DELIVERY').length
+      : pending.filter((order) => order.orderStatus === 'PREPARING').length
+  const canDepart = trip.status === 'CREATED' && trip.orders.length > 0 && Boolean(trip.driverId) && waitingForDispatch === 0
+  const stage = trip.status === 'CREATED' ? 'preparing' : active ? 'delivering' : trip.status === 'COMPLETED' ? 'settled' : 'cancelled'
+  const totalDue = receipts?.balances.reduce((sum, balance) => sum + balance.due, 0) ?? 0
+  const totalBottles = receipts?.balances.reduce((sum, balance) => sum + balance.bottlesToExchange, 0) ?? 0
+
+  const stop = (order: DeliveryStop, index: number, list: DeliveryStop[]) => {
+    const balance = receipts?.balances.find((b) => b.orderId === order.orderId)
+    const returned = receipts?.receipts.filter((r) => r.orderId === order.orderId).reduce((sum, r) => sum + r.bottlesReturned, 0) ?? 0
+    const onTheWay = active && order.orderStatus !== 'PREPARING'
+    return (
+      <li className="af-driver-stop" key={order.id}>
+        <div className="af-trip-stop-top">
+          {list === pending && <span className="af-trip-stop-index">{index + 1}</span>}
+          <strong className="af-driver-customer">{order.recipientName || 'Khách hàng'}</strong>
+          {/* Cả chuyến đang giao thì không lặp lại thẻ "Đang giao" ở từng điểm. */}
+          {(order.latestAttempt || !onTheWay) && (
+            <Tag color={order.latestAttempt?.outcome === 'SUCCESS' ? 'green' : order.latestAttempt ? 'red' : 'default'}>
+              {order.latestAttempt?.outcome === 'SUCCESS'
+                ? 'Đã giao'
+                : order.latestAttempt
+                  ? 'Giao thất bại'
+                  : order.orderStatus === 'PREPARING'
+                    ? 'Chờ xuất kho'
+                    : 'Chờ khởi hành'}
+            </Tag>
+          )}
+        </div>
+        <small className="af-text-muted">{order.orderCode}</small>
+        {order.deliveryAddress && <p className="af-driver-address">{order.deliveryAddress}</p>}
+        <ul className="af-driver-facts">
+          {order.items.map((line, i) => (
+            <li key={i}>
+              <Package size={15} />
+              <span>
+                {line.productName} × {line.quantity} {line.unit.toLowerCase()}
+              </span>
+            </li>
+          ))}
+          {order.recipientPhone && (
+            <li>
+              <Phone size={15} />
+              <a href={`tel:${order.recipientPhone}`}>{order.recipientPhone}</a>
+            </li>
+          )}
+          {order.requestedDeliveryAt && (
+            <li>
+              <Clock3 size={15} />
+              <span>
+                Hẹn{' '}
+                {new Date(order.requestedDeliveryAt).toLocaleString('vi-VN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  day: '2-digit',
+                  month: '2-digit',
+                })}
+              </span>
+            </li>
+          )}
+          {balance && (
+            <li>
+              <Wallet size={15} />
+              <span>
+                <DriverDue due={balance.due} />
+                {balance.bottlesToExchange > 0 && ` · đổi ${balance.bottlesToExchange} vỏ, đã nhận ${returned}`}
+              </span>
+            </li>
+          )}
+          {order.note && <li className="af-driver-note">{order.note}</li>}
+          {order.latestAttempt?.failureReason && <li className="af-text-danger">Lý do thất bại: {order.latestAttempt.failureReason}</li>}
+        </ul>
+        <div className="af-driver-actions">
+          {order.recipientPhone && (
+            <Button size="large" icon={<Phone size={18} />} href={`tel:${order.recipientPhone}`}>
+              Gọi
+            </Button>
+          )}
+          {order.deliveryAddress && (
+            <Button size="large" icon={<Map size={18} />} href={mapsSearchUrl(order.deliveryAddress)} target="_blank" rel="noreferrer">
+              Chỉ đường
+            </Button>
+          )}
+          {active && (
+            <Button
+              size="large"
+              icon={<Wallet size={18} />}
+              // Đơn đã giao thành công vẫn có thể còn cọc vỏ phải thu dù tiền hàng đã đủ.
+              disabled={!balance || (balance.due <= 0 && order.latestAttempt?.outcome !== 'SUCCESS') || change.isPending}
+              onClick={() => setCollect(order)}
+            >
+              Thu tiền
+            </Button>
+          )}
+          {order.latestAttempt && (
+            <Button size="large" icon={<History size={18} />} onClick={() => setHistory(order)}>
+              Lịch sử
+            </Button>
+          )}
+          <DeliveryBottlesButton assignmentId={order.id} orderCode={order.orderCode} />
+          {active && !order.latestAttempt && (
+            <Button size="large" type="primary" className="af-driver-primary" disabled={change.isPending} onClick={() => setResult(order)}>
+              Kết quả giao
+            </Button>
+          )}
+        </div>
+      </li>
+    )
+  }
 
   return (
     <section className="af-driver-trip" aria-label={`Chuyến ${trip.id}`}>
       <Card size="small" className="af-driver-summary">
         <div className="af-trip-card-head">
-          <strong>Chuyến {trip.id}</strong>
-          <TripStatusTag status={trip.status} />
+          <strong>Chuyến #{trip.id}</strong>
+          <TripStatusTag status={liveTripStatus(trip)} />
         </div>
         <Progress
-          percent={Math.round((finished.length / Math.max(1, stops.length)) * 100)}
-          format={() => `${finished.length}/${stops.length} điểm`}
+          percent={Math.round((done / Math.max(1, trip.orders.length)) * 100)}
+          format={() => `${done}/${trip.orders.length} điểm`}
         />
-        <div className="af-driver-totals">
-          <span>
-            <Wallet size={16} /> Cần thu <Money value={due} tone={dueTone(due)} />
-          </span>
-          <span>
-            <Recycle size={16} /> Vỏ cần đổi <strong>{jugs}</strong>
-          </span>
-        </div>
-        {/* Tài xế không xuất kho: cửa hàng xuất kho ở trang Giao hàng, xong mới đi giao. */}
+        {receipts && (
+          <div className="af-driver-totals">
+            <span>
+              <Wallet size={16} /> Cần thu <Money value={totalDue} tone={dueTone(totalDue)} />
+            </span>
+            <span>
+              <Recycle size={16} /> Vỏ cần đổi <strong>{totalBottles}</strong>
+            </span>
+            {(receipts.cashExpected > 0 || receipts.bottlesExpected > 0) && (
+              <span>
+                Đang giữ <strong>{currency(receipts.cashExpected)}</strong> · <strong>{receipts.bottlesExpected}</strong> vỏ
+              </span>
+            )}
+          </div>
+        )}
+        {liveReceipts.isError && <QueryError error={liveReceipts.error} onRetry={liveReceipts.refetch} />}
         <OrderFocusBanner
           focus={driverTripFocus({
-            stage: 'delivering',
-            total: stops.length,
+            stage,
+            total: trip.orders.length,
             pending: pending.length,
-            waitingDispatch: waiting,
-            nextCustomer: pending[0]?.customer,
+            waitingDispatch: waitingForDispatch,
+            nextCustomer: pending[0]?.recipientName || 'Khách hàng',
           })}
         />
+        {canDepart && (
+          <Popconfirm
+            title="Đã nhận đủ hàng và bắt đầu giao?"
+            okText="Bắt đầu"
+            cancelText="Chưa"
+            onConfirm={() => change.mutateAsync(() => deliveryApi.depart(trip.id)).catch(() => {})}
+          >
+            <Button size="large" type="primary" block loading={change.isPending}>
+              Bắt đầu chuyến
+            </Button>
+          </Popconfirm>
+        )}
+        {active && pending.length > 0 && (
+          <TripRouteButton
+            size="large"
+            block
+            label="Xem lộ trình các điểm còn lại"
+            addresses={pending.map((order) => order.deliveryAddress)}
+          />
+        )}
       </Card>
-
-      <ol className="af-driver-stops">
-        {pending.map((order, index) => (
-          <li key={order.id} className="af-driver-stop">
-            <div className="af-trip-stop-top">
-              <span className="af-trip-stop-index">{index + 1}</span>
-              <strong className="af-driver-customer">{order.customer}</strong>
-              {dispatchedIn(trip, order) ? <OrderStatusTag status={order.status} method={order.method} /> : <Tag>Chờ xuất kho</Tag>}
-              <LateTag order={order} />
-            </div>
-            <p className="af-driver-address">
-              {order.address}
-              {order.floor ? ` · lầu ${order.floor} (thang bộ)` : ''}
-            </p>
-            <ul className="af-driver-facts">
-              <li>
-                <Package size={15} /> {order.items}
-              </li>
-              {order.appointment && (
-                <li>
-                  <Clock3 size={15} /> Hẹn {new Date(order.appointment).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                </li>
-              )}
-              <li>
-                <Wallet size={15} /> Thu <Money value={amountDue(order)} tone={dueTone(amountDue(order))} />
-                {jugCount(order) ? ` · đổi ${jugCount(order)} vỏ` : ''}
-              </li>
-              {order.note && <li className="af-driver-note">{order.note}</li>}
-              {deliveryAttempts(order)
-                .filter((attempt) => !attempt.success)
-                .map((attempt) => (
-                  <li key={attempt.at} className="af-text-danger">
-                    Lần trước thất bại ({new Date(attempt.at).toLocaleDateString('vi-VN')}): {attempt.reason}
-                  </li>
-                ))}
-            </ul>
-            <div className="af-driver-actions">
-              {order.phone && (
-                <Button size="large" icon={<Phone size={18} />} href={`tel:${order.phone.replace(/\s/g, '')}`}>
-                  Gọi
-                </Button>
-              )}
-              <Button size="large" icon={<Map size={18} />} href={mapsSearchUrl([order.address, order.area].filter(Boolean).join(', '))} target="_blank" rel="noreferrer">
-                Chỉ đường
-              </Button>
-              <Button size="large" onClick={() => onDetails(order.id)}>
-                Thu tiền
-              </Button>
-              {order.status === 'Đang giao' && (
-                <span className="af-driver-result">
-                  <AdvanceStatusButton order={order} size="large" primary />
-                </span>
-              )}
-            </div>
-          </li>
-        ))}
-      </ol>
-
-      {finished.length > 0 && (
-        <details className="af-driver-finished">
-          <summary>Đã xong {finished.length} điểm</summary>
-          <ul>
-            {finished.map((order) => (
-              <li key={order.id}>
-                <span>
-                  {order.id} · {order.customer}
-                </span>
-                {order.status === 'Giao thất bại' ? <Tag color="red">Thất bại</Tag> : <Tag color="green">Đã giao</Tag>}
-              </li>
-            ))}
-          </ul>
-        </details>
+      {trip.orders.length > 0 && (
+        // Điểm giao lùi vào, có vạch nối với thẻ chuyến để thấy rõ điểm thuộc chuyến nào.
+        <div className="af-driver-group">
+          <small className="af-driver-group-label">Điểm giao · Chuyến #{trip.id}</small>
+          {pending.length > 0 && <ol className="af-driver-stops">{pending.map(stop)}</ol>}
+          {done > 0 && (
+            <details className="af-driver-finished">
+              <summary>Đã có kết quả {done} điểm</summary>
+              <ol className="af-driver-stops">{trip.orders.filter((o) => o.latestAttempt).map(stop)}</ol>
+            </details>
+          )}
+        </div>
       )}
+      {result && (
+        <DeliveryActionModal
+          action={{ kind: 'result', tripId: trip.id, order: result }}
+          drivers={[]}
+          available={[]}
+          optionError={null}
+          onRetry={() => {}}
+          loading={change.isPending}
+          onClose={() => setResult(null)}
+          onSubmit={async (values) => {
+            try {
+              await change.mutateAsync(() =>
+                deliveryApi.assignmentResult(result.id, {
+                  outcome: values.outcome!,
+                  recipientName: values.outcome === 'SUCCESS' ? values.recipientName : undefined,
+                  failureReason: values.outcome === 'FAILED' ? values.failureReason : undefined,
+                  note: values.note,
+                }),
+              )
+            } catch {
+              /* Keep draft for retry. */
+            }
+          }}
+        />
+      )}
+      {collect && receipts && (
+        <CollectionModal
+          order={collect}
+          data={receipts}
+          loading={change.isPending}
+          onClose={() => setCollect(null)}
+          onSave={async (input) => {
+            try {
+              await change.mutateAsync(() => collectionApi.collect(trip.id, collect.orderId, input))
+            } catch {
+              /* Keep idempotency key for retry. */
+            }
+          }}
+        />
+      )}
+      <Modal open={!!history} centered title={`Lịch sử ${history?.orderCode ?? ''}`} onCancel={() => setHistory(null)} footer={null}>
+        {liveAttempts.isError ? (
+          <QueryError error={liveAttempts.error} onRetry={liveAttempts.refetch} />
+        ) : attempts ? (
+          <AttemptsTimeline attempts={attempts} />
+        ) : (
+          <Skeleton active />
+        )}
+      </Modal>
     </section>
+  )
+}
+
+function CollectionModal({
+  order,
+  data,
+  loading,
+  onClose,
+  onSave,
+}: {
+  order: DeliveryStop
+  data: TripCollections
+  loading: boolean
+  onClose: () => void
+  onSave: (input: CollectionInput) => Promise<void>
+}) {
+  const [form] = Form.useForm()
+  const [requestId] = useState(() => crypto.randomUUID())
+  const balance = data.balances.find((b) => b.orderId === order.orderId)!
+  const method = Form.useWatch('method', form)
+  const amount: number | undefined = Form.useWatch('amount', form)
+  const depositAmount: number | undefined = Form.useWatch('depositAmount', form)
+  const { data: settings } = useSettings()
+  const bottles = useQuery({ queryKey: ['live', 'delivery-bottles', 'deposit', order.id], queryFn: () => deliveryBottleApi.get(order.id) })
+  // Cọc chỉ thu được sau khi giao thành công (sổ vỏ đã ghi giao); trừ phần cọc đã thu ở các lần trước.
+  const collected = data.receipts.filter((r) => r.orderId === order.orderId).reduce((sum, r) => sum + (r.depositAmount ?? 0), 0)
+  const deposit =
+    bottles.data?.tracked && bottles.data.given ? Math.max(0, depositShortfall(bottles.data.lines).total - collected) : 0
+  const nothing = !bottles.isLoading && balance.due <= 0 && deposit <= 0
+  // Số cọc chỉ biết sau khi tải sổ vỏ: điền sẵn khi có, trừ khi tài xế đã tự sửa.
+  useEffect(() => {
+    if (!form.isFieldTouched('depositAmount')) form.setFieldValue('depositAmount', deposit)
+  }, [deposit, form])
+  return (
+    <Modal
+      open
+      centered
+      title={`Thu tiền · ${order.orderCode}`}
+      width={modalWidth.small}
+      onCancel={onClose}
+      onOk={() => form.submit()}
+      confirmLoading={loading}
+      closable={!loading}
+      maskClosable={!loading}
+      cancelButtonProps={{ disabled: loading }}
+      okButtonProps={{ disabled: nothing || bottles.isLoading }}
+      okText="Ghi nhận"
+      cancelText="Hủy"
+    >
+      <dl className="af-collect-split">
+        <div>
+          <dt>Tiền hàng còn thu</dt>
+          <dd>{currency(balance.due)}</dd>
+        </div>
+        {deposit > 0 && (
+          <>
+            <div>
+              <dt>Cọc vỏ thiếu</dt>
+              <dd>{currency(deposit)}</dd>
+            </div>
+            <div className="is-total">
+              <dt>Tổng thu của khách</dt>
+              <dd>{currency(balance.due + deposit)}</dd>
+            </div>
+          </>
+        )}
+      </dl>
+      {nothing && <p className="af-form-hint">Đơn này không còn tiền hàng hay cọc vỏ nào phải thu.</p>}
+      <Form
+        form={form}
+        layout="vertical"
+        disabled={loading || nothing}
+        initialValues={{ amount: balance.due, method: 'CASH', bottlesReturned: 0, depositAmount: deposit }}
+        onFinish={(values) => {
+          const money = values.amount ?? 0
+          const depositPaid = deposit > 0 ? (values.depositAmount ?? 0) : 0
+          if (money <= 0 && depositPaid <= 0) {
+            form.setFields([{ name: 'amount', errors: ['Nhập tiền hàng hoặc tiền cọc nhận được.'] }])
+            return
+          }
+          return onSave({ ...values, amount: money, depositAmount: depositPaid, bottlesReturned: 0, requestId })
+        }}
+      >
+        <Form.Item
+          name="amount"
+          label="Tiền hàng nhận"
+          rules={[{ required: true }, { type: 'number', min: deposit > 0 ? 0 : 1, max: balance.due }]}
+        >
+          <InputNumber
+            min={0}
+            max={balance.due}
+            precision={0}
+            inputMode="numeric"
+            formatter={(value) => `${value ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
+            parser={(value) => Number((value ?? '').replace(/\D/g, ''))}
+            suffix="₫"
+            style={{ width: '100%' }}
+          />
+        </Form.Item>
+        {deposit > 0 && (
+          <Form.Item
+            name="depositAmount"
+            label="Cọc vỏ nhận"
+            extra="Cọc cho số vỏ khách chưa trả, ghi vào sổ cọc của khách. Khách trả vỏ sau thì chủ cửa hàng hoàn cọc."
+            rules={[{ required: true }, { type: 'number', min: 0, max: deposit }]}
+          >
+            <InputNumber
+              min={0}
+              max={deposit}
+              precision={0}
+              inputMode="numeric"
+              formatter={(value) => `${value ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
+              parser={(value) => Number((value ?? '').replace(/\D/g, ''))}
+              suffix="₫"
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+        )}
+        <Form.Item name="method" label="Phương thức" rules={[{ required: true }]}>
+          <Segmented
+            block
+            options={[
+              { value: 'CASH', label: 'Tiền mặt' },
+              { value: 'BANK_TRANSFER', label: 'Chuyển khoản' },
+            ]}
+          />
+        </Form.Item>
+        {method === 'BANK_TRANSFER' && (
+          <div className="af-driver-qr">
+            <TransferQr
+              settings={settings}
+              amount={(amount ?? 0) + (deposit > 0 ? (depositAmount ?? 0) : 0) || balance.due + deposit}
+              note={order.orderCode}
+            />
+            <p className="af-form-hint">Đưa mã cho khách quét. Chỉ bấm Ghi nhận sau khi thấy tiền vào tài khoản cửa hàng.</p>
+          </div>
+        )}
+      </Form>
+      {data.receipts
+        .filter((r) => r.orderId === order.orderId)
+        .map((r) => (
+          <p key={r.id}>
+            {new Date(r.createdAt).toLocaleString('vi-VN')} · {currency(r.amount)} ({r.method === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}) ·{' '}
+            {r.bottlesReturned} vỏ{r.depositAmount > 0 ? ` · cọc ${currency(r.depositAmount)}` : ''}
+          </p>
+        ))}
+    </Modal>
   )
 }

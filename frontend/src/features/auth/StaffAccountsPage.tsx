@@ -1,25 +1,39 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, App, Button, Card, Descriptions, Form, Input, Modal, Select, Table, Tag } from 'antd'
-import { KeyRound, Pencil, Plus } from 'lucide-react'
+import { App, Button, Card, Descriptions, Form, Input, Modal, Segmented, Select, Table, Tag } from 'antd'
+import { KeyRound, Pencil, Plus, Search } from 'lucide-react'
 import { ViewButton } from '@/shared/components/ViewButton'
-import { modalWidth } from '@/shared/utils/modal'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
-import { useIsDemo } from '@/shared/features'
+import { useConfirm } from '@/shared/components/confirm'
+import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { useAuth } from './useAuth'
 import { staffApi, type StaffAccount, type StaffCreate, type StaffUpdate } from './staffApi'
 import { roleLabel } from './roles'
+import { CountLabel } from '@/shared/components/CountLabel'
+import { matchesSearch } from '@/shared/utils/search'
 
 type Action = { kind: 'create' } | { kind: 'edit' | 'password'; account: StaffAccount }
+type RoleFilter = 'all' | StaffAccount['role']
+type StatusFilter = 'all' | StaffAccount['status']
 export function StaffAccountsPage() {
-  const demo = useIsDemo()
   const { user } = useAuth()
   const client = useQueryClient()
   const { message } = App.useApp()
   const [action, setAction] = useState<Action | null>(null)
   const [viewingId, setViewingId] = useState<number>()
-  const query = useQuery({ queryKey: ['live', 'staff-accounts', user?.email], queryFn: staffApi.list, enabled: !demo })
+  const [role, setRole] = useState<RoleFilter>('all')
+  const [status, setStatus] = useState<StatusFilter>('all')
+  const [search, setSearch] = useState('')
+  const query = useQuery({ queryKey: ['live', 'staff-accounts', user?.email], queryFn: staffApi.list })
+  const accounts = query.data ?? []
+  const countRole = (value: RoleFilter) => accounts.filter((account) => value === 'all' || account.role === value).length
+  const visible = accounts.filter(
+    (account) =>
+      (role === 'all' || account.role === role) &&
+      (status === 'all' || account.status === status) &&
+      matchesSearch(search, `${account.fullName} ${account.email}`, account.phone ?? undefined),
+  )
   const save = useMutation({
     mutationFn: (operation: () => Promise<unknown>) => operation(),
     onSuccess: async () => {
@@ -32,33 +46,60 @@ export function StaffAccountsPage() {
   return (
     <Page
       title="Tài khoản nhân viên"
-      description="Tạo tài khoản bán hàng và giao hàng; mỗi người đăng nhập bằng email và mật khẩu riêng."
       actions={
-        <Button type="primary" icon={<Plus size={16} />} disabled={demo} onClick={() => setAction({ kind: 'create' })}>
+        <Button type="primary" icon={<Plus size={16} />} onClick={() => setAction({ kind: 'create' })}>
           Thêm nhân viên
         </Button>
       }
     >
-      {demo ? (
-        <Alert
-          type="info"
-          showIcon
-          title="Đăng nhập tài khoản admin thật để quản lý tài khoản. Chuyển vai trò trong menu tài khoản để xem Demo nhân viên."
-        />
-      ) : query.isError ? (
+      {query.isError ? (
         <QueryError error={query.error} onRetry={query.refetch} />
       ) : (
-        <Card>
+        <Card className="af-card" styles={{ body: { padding: 0 } }}>
+          <div className="af-toolbar">
+            <Segmented<RoleFilter>
+              aria-label="Vai trò"
+              value={role}
+              onChange={setRole}
+              options={[
+                { value: 'all', label: <CountLabel label="Tất cả" count={countRole('all')} /> },
+                { value: 'SALES_STAFF', label: <CountLabel label="Bán hàng" count={countRole('SALES_STAFF')} /> },
+                { value: 'DELIVERY_STAFF', label: <CountLabel label="Giao hàng" count={countRole('DELIVERY_STAFF')} /> },
+              ]}
+            />
+            <div className="af-staff-filters">
+              <Select<StatusFilter>
+                aria-label="Trạng thái tài khoản"
+                value={status}
+                onChange={setStatus}
+                options={[
+                  { value: 'all', label: 'Mọi trạng thái' },
+                  { value: 'ACTIVE', label: 'Đang hoạt động' },
+                  { value: 'INACTIVE', label: 'Đã khóa' },
+                ]}
+              />
+              <Input
+                allowClear
+                aria-label="Tìm nhân viên"
+                prefix={<Search size={16} className="af-input-icon" />}
+                placeholder="Tên, email, số điện thoại"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </div>
+          </div>
           <Table<StaffAccount>
+            className="af-data-table af-table-flush af-table-dense"
             rowKey="id"
             loading={query.isPending}
-            dataSource={query.data}
+            dataSource={visible}
+            locale={{ emptyText: accounts.length ? 'Không có nhân viên phù hợp.' : 'Chưa có tài khoản nhân viên.' }}
             scroll={{ x: 720 }}
             columns={[
               { title: 'Họ tên', dataIndex: 'fullName' },
               { title: 'Email đăng nhập', dataIndex: 'email' },
               { title: 'Vai trò', dataIndex: 'role', render: roleLabel },
-              { title: 'Điện thoại', dataIndex: 'phone' },
+              { title: 'Điện thoại', dataIndex: 'phone', render: (phone: string | null) => phone || '—' },
               {
                 title: 'Trạng thái',
                 dataIndex: 'status',
@@ -113,10 +154,10 @@ function AccountDetails({
   onAction: (kind: 'edit' | 'password', account: StaffAccount) => void
 }) {
   return (
+    // Rộng mặc định như cửa sổ đặt mật khẩu và sửa thông tin để mở chồng lên nhau không bị lệch khung.
     <Modal
       open={account !== undefined}
       centered
-      width={modalWidth.small}
       onCancel={onClose}
       title={account?.fullName}
       footer={
@@ -171,11 +212,40 @@ function AccountForm({
   onSave: (value: Partial<StaffCreate & StaffUpdate>) => void
 }) {
   const [form] = Form.useForm()
+  const confirm = useConfirm()
+  const discard = useConfirmDiscard(form, onClose)
+  // Khóa, mở khóa và đặt lại mật khẩu ảnh hưởng ngay tới việc đăng nhập của nhân viên: hỏi lại trước khi lưu.
+  const submit = async (values: Partial<StaffCreate & StaffUpdate>) => {
+    if (action.kind === 'password') {
+      const ok = await confirm({
+        title: `Đặt mật khẩu mới cho ${action.account.fullName}?`,
+        content: <p>Mật khẩu cũ hết hiệu lực ngay; nhân viên phải đăng nhập bằng mật khẩu mới.</p>,
+        okText: 'Đặt mật khẩu',
+        danger: true,
+      })
+      if (!ok) return
+    }
+    if (action.kind === 'edit' && values.status && values.status !== action.account.status) {
+      const locking = values.status === 'INACTIVE'
+      const ok = await confirm({
+        title: `${locking ? 'Khóa' : 'Mở khóa'} tài khoản ${action.account.fullName}?`,
+        content: (
+          <p>
+            {locking ? 'Nhân viên không đăng nhập được cho tới khi mở khóa lại.' : 'Nhân viên đăng nhập lại được bằng mật khẩu hiện có.'}
+          </p>
+        ),
+        okText: locking ? 'Khóa tài khoản' : 'Mở khóa',
+        danger: locking,
+      })
+      if (!ok) return
+    }
+    onSave(values)
+  }
   return (
     <Modal
       open
       title={action.kind === 'create' ? 'Thêm nhân viên' : action.kind === 'edit' ? 'Cập nhật nhân viên' : 'Đặt mật khẩu mới'}
-      onCancel={onClose}
+      onCancel={discard}
       closable={!saving}
       maskClosable={!saving}
       onOk={() => form.submit()}
@@ -188,7 +258,7 @@ function AccountForm({
         form={form}
         layout="vertical"
         disabled={saving}
-        onFinish={onSave}
+        onFinish={submit}
         initialValues={action.kind === 'create' ? { role: 'SALES_STAFF' } : { ...action.account, phone: action.account.phone ?? '' }}
       >
         {action.kind !== 'password' && (

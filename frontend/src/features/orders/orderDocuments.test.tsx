@@ -2,16 +2,12 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { LiveOrder } from '@/features/live/orderApi'
-import type { StoreSettings } from '@/features/settings/types'
+import { normalizeDeliveryFees, type StoreSettings } from '@/features/settings/types'
 import { fromLiveOrder } from './orderData'
 import { orderConfirmationMessage } from './orderMessage'
 import { DeliverySlipDocument, InvoiceDocument } from './print/OrderDocuments'
 import { knownAmountDue, type Order } from './types'
 
-vi.mock('@/shared/features', async (original) => ({
-  ...(await original<typeof import('@/shared/features')>()),
-  useFeature: () => false,
-}))
 vi.mock('@/shared/payment/TransferQr', () => ({ TransferQr: ({ note }: { note: string }) => <div>QR {note}</div> }))
 
 const money = (text: string | null | undefined) => text?.replace(/\s/g, ' ')
@@ -77,11 +73,29 @@ describe('order documents for live orders', () => {
     expect(screen.queryByText(/^QR/)).toBeNull()
   })
 
-  it('leaves the amount blank and omits the mock deposit on a partially paid slip', () => {
+  it('leaves the amount blank on a partially paid slip and keeps blanks for bottles and deposit', () => {
     const { container } = render(<DeliverySlipDocument order={viewOf('PARTIALLY_PAID')} settings={settings} />)
     expect(screen.getByText('Tiền cần thu').parentElement?.querySelector('.af-doc-blank')).toBeTruthy()
     expect(container.textContent).toContain('Vỏ rỗng cần đổi')
-    expect(container.textContent).not.toContain('Cọc thu thêm')
+    expect(container.textContent).toContain('Cọc thu thêm (theo loại vỏ)')
+  })
+
+  it('prints the deposit of the order bottle types instead of a fixed sample amount', () => {
+    const { container } = render(
+      <DeliverySlipDocument order={viewOf('UNPAID')} settings={settings} depositRate="Vỏ 20L 45.000 ₫/vỏ thiếu" />,
+    )
+    expect(container.textContent).toContain('Cọc thu thêm (Vỏ 20L 45.000 ₫/vỏ thiếu)')
+  })
+})
+
+describe('normalizeDeliveryFees', () => {
+  it('fills one box per floor and repeats the last fee for higher floors, like the backend', () => {
+    expect(normalizeDeliveryFees({ freeFromUnits: 3, smallOrderFee: 15000, stairsPerJug: [2000, 6000] }).stairsPerJug).toEqual([
+      2000, 6000, 6000, 6000,
+    ])
+    expect(normalizeDeliveryFees({ freeFromUnits: 3, smallOrderFee: 15000, stairsPerJug: [1, 2, 3, 4, 5, 6] }).stairsPerJug).toEqual([
+      1, 2, 3, 4,
+    ])
   })
 })
 

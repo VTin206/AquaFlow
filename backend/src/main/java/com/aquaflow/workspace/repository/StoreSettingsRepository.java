@@ -23,6 +23,11 @@ public class StoreSettingsRepository {
                         rs.getTimestamp("updated_at").toInstant(), rs.getObject("updated_by", Long.class)));
     }
 
+    /** Phí giao đang áp dụng; cài đặt cũ chưa có mục này thì dùng mức mặc định. */
+    public com.aquaflow.workspace.api.DeliveryFees deliveryFees() {
+        return get().settings().deliveryFees();
+    }
+
     public int defaultLowStock() {
         return jdbc.queryForObject("SELECT COALESCE((settings->>'defaultLowStock')::integer,10) FROM store_settings WHERE id=1",Integer.class);
     }
@@ -42,7 +47,10 @@ public class StoreSettingsRepository {
     }
 
     private StoreSettingsData decode(String json) {
-        try { return mapper.readValue(json, StoreSettingsData.class); }
+        try {
+            StoreSettingsData data = mapper.readValue(json, StoreSettingsData.class);
+            return data.deliveryFees() == null ? data.withDeliveryFees(com.aquaflow.workspace.api.DeliveryFees.DEFAULT) : data;
+        }
         catch (JsonProcessingException e) { throw new IllegalStateException("Invalid stored settings", e); }
     }
 

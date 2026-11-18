@@ -8,28 +8,28 @@ import { focusNextOnEnter } from '@/shared/utils/forms'
 type RegisterValues = { fullName: string; phone: string; email: string; password: string; confirm: string; agree: boolean }
 
 /**
- * Form đăng ký tài khoản khách hàng, dùng ở trang /register và khung đăng nhập trên trang khách.
+ * Form đăng ký tài khoản khách hàng, dùng ở trang /shop/register.
  * Tạo tài khoản CUSTOMER qua API; sau đó khách đăng nhập bằng email và mật khẩu vừa chọn.
  */
 export function RegisterForm({ size = 'large' }: { size?: 'middle' | 'large' }) {
   const [form] = Form.useForm<RegisterValues>()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>()
-  const [registered, setRegistered] = useState(false)
+  const [registeredEmail, setRegisteredEmail] = useState<string>()
   const submit = async (values: RegisterValues) => {
     setLoading(true)
     setError(undefined)
     try {
       await authService.register(values)
       form.resetFields()
-      setRegistered(true)
+      setRegisteredEmail(values.email.trim())
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Đăng ký thất bại. Vui lòng thử lại.')
     } finally {
       setLoading(false)
     }
   }
-  if (registered)
+  if (registeredEmail)
     return (
       <Alert
         type="success"
@@ -37,7 +37,7 @@ export function RegisterForm({ size = 'large' }: { size?: 'middle' | 'large' }) 
         title="Tạo tài khoản thành công"
         description="Bạn có thể đăng nhập để đặt hàng và xem đơn của mình."
         action={
-          <Link to="/shop/account">
+          <Link to="/shop/account" state={{ email: registeredEmail }}>
             <Button type="primary">Đăng nhập</Button>
           </Link>
         }

@@ -86,6 +86,10 @@ public class Order {
     @Column(columnDefinition = "TEXT")
     private String note;
 
+    /** Khóa bí mật của liên kết tra cứu đơn cho khách; cấp khi tạo đơn, đơn cũ được cấp khi tra cứu lần đầu. */
+    @Column(name = "tracking_token", length = 64, unique = true, updatable = false)
+    private String trackingToken;
+
     protected Order() {
     }
 
@@ -145,6 +149,20 @@ public class Order {
         this.subtotal = validatedSubtotal;
         this.discountAmount = validatedDiscount;
         this.deliveryFee = validatedDeliveryFee;
+    }
+
+    /** Sửa thông tin nhận hàng khi đơn còn chờ xác nhận; kênh, hình thức nhận và phí giao giữ nguyên. */
+    public void updateDetails(String recipientName, String recipientPhone, String deliveryAddress, String deliveryArea,
+                              OffsetDateTime requestedDeliveryAt, String note) {
+        if (status != OrderStatus.PENDING) {
+            throw new com.aquaflow.shared.api.ConflictException("Chỉ sửa được đơn đang chờ xác nhận");
+        }
+        this.recipientName = recipientName;
+        this.recipientPhone = recipientPhone;
+        this.deliveryAddress = deliveryAddress;
+        this.deliveryArea = deliveryArea;
+        this.requestedDeliveryAt = requestedDeliveryAt;
+        this.note = note;
     }
 
     public BigDecimal getTotal() {
@@ -314,5 +332,16 @@ public class Order {
 
     public String getNote() {
         return note;
+    }
+
+    public String getTrackingToken() {
+        return trackingToken;
+    }
+
+    /** Chỉ cấp một lần cho đơn mới; đơn đã lưu được cấp qua OrderTrackingRepository. */
+    public void assignTrackingToken(String token) {
+        if (trackingToken == null) {
+            trackingToken = Objects.requireNonNull(token, "Tracking token is required");
+        }
     }
 }

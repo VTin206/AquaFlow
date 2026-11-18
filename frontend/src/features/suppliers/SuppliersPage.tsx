@@ -6,11 +6,10 @@ import { MapLink } from '@/shared/address/MapLink'
 import { modalWidth } from '@/shared/utils/modal'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
+import { useConfirm } from '@/shared/components/confirm'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { useColumnSort } from '@/shared/components/sortableColumn'
-import { useFeature } from '@/shared/features'
-import { Unsupported } from '@/shared/components/Unsupported'
-import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
+import { tablePagination } from '@/shared/utils/table'
 import { SupplierFormModal } from './components/SupplierFormModal'
 import type { SupplierStatus } from './supplierService'
 import { useActivateSupplier, useCanManageSuppliers, useDeactivateSupplier, useSuppliers } from './useSuppliers'
@@ -19,19 +18,16 @@ import { matchesSearch } from '@/shared/utils/search'
 
 export function SuppliersPage() {
   const { message, modal } = App.useApp()
+  const ask = useConfirm()
   const canManage = useCanManageSuppliers()
-  const showContact = useFeature('supplierContactName')
-  const showEmail = useFeature('supplierEmail')
   const [status, setStatus] = useState<SupplierStatus>('active')
   // Quản lý tải hết một lần rồi lọc tại chỗ để đếm được từng trạng thái; nhân viên chỉ xem nhà cung cấp đang dùng (BE cũng giới hạn như vậy).
   const suppliersQuery = useSuppliers(canManage ? 'all' : 'active')
   const deactivate = useDeactivateSupplier()
   const activate = useActivateSupplier()
-  const canReactivate = useFeature('reactivate')
   const sort = useColumnSort<Supplier>()
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
   const [editing, setEditing] = useState<Supplier | null>()
   const [viewingId, setViewingId] = useState<string>()
   const keyword = query.trim()
@@ -80,7 +76,12 @@ export function SuppliersPage() {
         ),
     })
 
-  const reactivate = (supplier: Supplier) =>
+  const reactivate = async (supplier: Supplier) =>
+    (await ask({
+      title: `Hợp tác lại với ${supplier.name}?`,
+      content: <p>Nhà cung cấp hiện lại khi tạo phiếu nhập kho.</p>,
+      okText: 'Hợp tác lại',
+    })) &&
     activate.mutateAsync(supplier.id).then(
       () => {
         message.success(`Đã hợp tác lại với ${supplier.name}.`)
@@ -96,8 +97,7 @@ export function SuppliersPage() {
           {
             key: 'resume',
             label: 'Hợp tác lại',
-            disabled: !canReactivate || activate.isPending,
-            extra: canReactivate ? undefined : 'Chưa hỗ trợ',
+            disabled: activate.isPending,
             onClick: () => void reactivate(supplier),
           },
         ]
@@ -126,16 +126,12 @@ export function SuppliersPage() {
       width: 190,
       render: (_, supplier) => (
         <div className="af-cell-stack">
-          {showContact ? (
-            <span className="af-cell-truncate" title={supplier.contactName}>
-              {supplier.contactName || 'Chưa có người liên hệ'}
-            </span>
-          ) : (
-            <Unsupported label="Người liên hệ: chưa hỗ trợ" />
-          )}
+          <span className="af-cell-truncate" title={supplier.contactName}>
+            {supplier.contactName || 'Chưa có người liên hệ'}
+          </span>
           <small>{supplier.phone ? <a href={`tel:${supplier.phone}`}>{supplier.phone}</a> : 'Chưa có số điện thoại'}</small>
           {/* Email là một cách liên hệ nên nằm chung cột, không tách cột riêng. */}
-          {showEmail && supplier.email && (
+          {supplier.email && (
             <small className="af-cell-truncate" title={supplier.email}>
               <a href={`mailto:${supplier.email}`}>{supplier.email}</a>
             </small>
@@ -158,7 +154,6 @@ export function SuppliersPage() {
   return (
     <Page
       title="Nhà cung cấp"
-      description="Quản lý thông tin và đầu mối liên hệ của các đơn vị cung cấp hàng."
       actions={
         canManage ? (
           <Button type="primary" icon={<Plus size={16} />} onClick={() => setEditing(null)}>
@@ -201,7 +196,7 @@ export function SuppliersPage() {
               />
             </div>
             <Table<Supplier>
-              className="af-data-table af-table-flush"
+              className="af-data-table af-table-flush af-table-dense"
               size="middle"
               rowKey="id"
               columns={columns}
@@ -210,14 +205,10 @@ export function SuppliersPage() {
               pagination={{
                 ...tablePagination,
                 current: page,
-                pageSize,
-                onChange: (nextPage, nextSize) => {
-                  setPage(nextSize === pageSize ? nextPage : 1)
-                  setPageSize(nextSize)
-                },
+                onChange: setPage,
               }}
               rowClassName={(supplier) => (supplier.active ? '' : 'af-row-inactive')}
-              scroll={{ x: 962, y: tableScrollHeight }}
+              scroll={{ x: 962 }}
               locale={{
                 emptyText: (
                   <Empty
@@ -290,17 +281,9 @@ export function SuppliersPage() {
             size="small"
             items={[
               { key: 'code', label: 'Mã', children: viewing.code },
-              ...(showContact ? [{ key: 'contact', label: 'Người liên hệ', children: viewing.contactName || '—' }] : []),
+              { key: 'contact', label: 'Người liên hệ', children: viewing.contactName || '—' },
               { key: 'phone', label: 'Điện thoại', children: viewing.phone ? <a href={`tel:${viewing.phone}`}>{viewing.phone}</a> : '—' },
-              ...(showEmail
-                ? [
-                    {
-                      key: 'email',
-                      label: 'Email',
-                      children: viewing.email ? <a href={`mailto:${viewing.email}`}>{viewing.email}</a> : '—',
-                    },
-                  ]
-                : []),
+              { key: 'email', label: 'Email', children: viewing.email ? <a href={`mailto:${viewing.email}`}>{viewing.email}</a> : '—' },
               {
                 key: 'address',
                 label: 'Địa chỉ',

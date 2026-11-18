@@ -1,7 +1,9 @@
-import { Alert, Form, Input, InputNumber, Modal, Select } from 'antd'
+import { Alert, Form, Input, InputNumber, Modal, Segmented, Select, Tag } from 'antd'
 import { QueryError } from '@/shared/components/QueryError'
 import { modalWidth } from '@/shared/utils/modal'
 import type { DeliveryStop, ResultInput, SettlementInput } from '../deliveryApi'
+import { TextArea } from '@/shared/components/TextArea'
+import { FAILURE_REASONS } from './deliveryActionConstants'
 
 export type DeliveryAction = { kind: 'driver' | 'add' | 'settle'; tripId: number } | { kind: 'result'; tripId: number; order: DeliveryStop }
 export type DeliveryFormValues = Partial<SettlementInput & ResultInput> & { driverId?: number; orderId?: number }
@@ -19,7 +21,7 @@ export function DeliveryActionModal({
   onSubmit,
 }: {
   action: DeliveryAction
-  expected?: { cash: number; bottles: number }
+  expected?: { cash: number; bottles: number; deposit: number }
   drivers: { id: number; name: string }[]
   available: { id: number; orderCode: string; recipientName: string | null; deliveryFailed: boolean; redeliveryEligible: boolean }[]
   optionError: Error | null
@@ -30,6 +32,7 @@ export function DeliveryActionModal({
 }) {
   const [form] = Form.useForm<DeliveryFormValues>()
   const outcome = Form.useWatch('outcome', form) ?? 'SUCCESS'
+  const reason: string = Form.useWatch('failureReason', form) ?? ''
   const title = {
     driver: 'Phân tài xế',
     add: 'Thêm đơn vào chuyến',
@@ -39,6 +42,7 @@ export function DeliveryActionModal({
   return (
     <Modal
       open
+      centered
       title={title}
       width={modalWidth.small}
       onCancel={onClose}
@@ -60,6 +64,8 @@ export function DeliveryActionModal({
           cashConfirmed: expected?.cash ?? 0,
           bottlesExpected: expected?.bottles ?? 0,
           bottlesConfirmed: expected?.bottles ?? 0,
+          depositReported: expected?.deposit ?? 0,
+          depositConfirmed: expected?.deposit ?? 0,
         }}
       >
         {action.kind === 'driver' && (
@@ -92,7 +98,8 @@ export function DeliveryActionModal({
         {action.kind === 'result' && (
           <>
             <Form.Item name="outcome" label="Kết quả" rules={[{ required: true }]}>
-              <Select
+              <Segmented
+                block
                 options={[
                   { value: 'SUCCESS', label: 'Giao thành công' },
                   { value: 'FAILED', label: 'Giao thất bại' },
@@ -108,13 +115,23 @@ export function DeliveryActionModal({
                 <Input maxLength={150} />
               </Form.Item>
             ) : (
-              <Form.Item
-                name="failureReason"
-                label="Lý do thất bại"
-                rules={[{ required: true, whitespace: true, message: 'Nhập lý do giao thất bại.' }]}
-              >
-                <Input.TextArea maxLength={2000} />
-              </Form.Item>
+              <>
+                <div className="af-reason-picks" role="group" aria-label="Chọn nhanh lý do">
+                  {FAILURE_REASONS.map((pick) => (
+                    <Tag.CheckableTag key={pick} checked={reason === pick} onChange={() => form.setFieldValue('failureReason', pick)}>
+                      {pick}
+                    </Tag.CheckableTag>
+                  ))}
+                </div>
+                <Form.Item
+                  name="failureReason"
+                  label="Lý do thất bại"
+                  extra="Chạm một lý do ở trên hoặc tự ghi."
+                  rules={[{ required: true, whitespace: true, message: 'Chọn hoặc nhập lý do giao thất bại.' }]}
+                >
+                  <TextArea maxLength={2000} />
+                </Form.Item>
+              </>
             )}
           </>
         )}
@@ -143,11 +160,28 @@ export function DeliveryActionModal({
                 />
               </Form.Item>
             ))}
+            {(expected?.deposit ?? 0) > 0 &&
+              (
+              [
+                ['depositReported', 'Cọc vỏ tài xế báo'],
+                ['depositConfirmed', 'Cọc vỏ thực nhận'],
+              ] as const
+            ).map(([name, label]) => (
+              <Form.Item key={name} name={name} label={label} rules={[{ required: true, message: 'Nhập số tiền cọc.' }]}>
+                <InputNumber
+                  disabled={!!expected && name === 'depositReported'}
+                  min={0}
+                  max={999999999999.99}
+                  precision={2}
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+            ))}
           </>
         )}
         {(action.kind === 'result' || action.kind === 'settle') && (
           <Form.Item name="note" label={action.kind === 'settle' ? 'Ghi chú / lý do chênh lệch' : 'Ghi chú'}>
-            <Input.TextArea maxLength={action.kind === 'result' ? 1000 : 2000} />
+            <TextArea maxLength={action.kind === 'result' ? 1000 : 2000} />
           </Form.Item>
         )}
       </Form>

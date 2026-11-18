@@ -1,18 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Alert, App, Avatar, Button, Divider, Form, Input } from 'antd'
-import {
-  ArrowRight,
-  FlaskConical,
-  LayoutDashboard,
-  LockKeyhole,
-  LogOut,
-  PackageSearch,
-  ShoppingBag,
-  UserRound,
-  UserRoundPlus,
-} from 'lucide-react'
-import { Link, useNavigate } from 'react-router'
-import { backendFeatures } from '@/shared/features'
+import { Alert, App, Avatar, Button, Checkbox, Divider, Form, Input, Modal } from 'antd'
+import { ArrowRight, Headphones, LayoutDashboard, LockKeyhole, PackageSearch, ShoppingBag, UserRound, UserRoundPlus } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { focusNextOnEnter } from '@/shared/utils/forms'
 import type { LoginCredentials } from '@/features/auth/authService'
 import { devAccounts } from '@/features/auth/devAccounts'
@@ -22,29 +11,47 @@ import { useStaff } from '@/features/auth/useStaff'
 import { accountDestination, isCustomer } from '@/features/auth/accountAccess'
 import { CustomerAccountPanel } from './CustomerAccountPanel'
 
+const REMEMBERED_EMAIL_KEY = 'aquaflow.auth.remembered-email'
+type LoginFormValues = LoginCredentials & { rememberMe?: boolean }
+
 /**
- * Trang tài khoản trong cửa hàng (bố cục kiểu Uniqlo): đăng nhập bên trái, tạo tài khoản hoặc mua không cần tài khoản bên phải.
- * Dùng cùng API đăng nhập; khách vào đơn của mình, nhân viên vào không gian quản lý.
+ * Trang đăng nhập duy nhất của hệ thống, kiêm trang tài khoản khi đã đăng nhập (bố cục kiểu Uniqlo).
+ * Khách vào đơn của mình, nhân viên vào không gian quản lý; bị chặn ở trang nào thì đăng nhập xong quay lại trang đó.
  */
 export function ShopAccountPage() {
-  const { login, logout, enterDemo, isAuthenticated, user } = useAuth()
+  const { login, isAuthenticated, user } = useAuth()
   const staff = useStaff()
   const { message } = App.useApp()
   const navigate = useNavigate()
+  const location = useLocation()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string>()
+  const [redirectAfterLogin, setRedirectAfterLogin] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
+  const rememberedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? ''
+  const routeState = location.state as { from?: string; email?: string } | null
+  const returnTo = routeState?.from ?? '/'
+  // Vừa tạo tài khoản xong thì điền sẵn email đó thay cho email đã ghi nhớ.
+  const initialEmail = routeState?.email || rememberedEmail
 
   useEffect(() => {
     document.title = 'Tài khoản | AquaFlow'
   }, [])
 
-  const submit = async (values: LoginCredentials) => {
+  useEffect(() => {
+    if (!redirectAfterLogin || !isAuthenticated || !user) return
+    navigate(accountDestination(user, returnTo), { replace: true })
+  }, [redirectAfterLogin, isAuthenticated, user, navigate, returnTo])
+
+  const submit = async ({ email, password, rememberMe }: LoginFormValues) => {
     setSubmitting(true)
     setError(undefined)
     try {
-      await login(values)
+      await login({ email, password })
+      if (rememberMe) localStorage.setItem(REMEMBERED_EMAIL_KEY, email.trim())
+      else localStorage.removeItem(REMEMBERED_EMAIL_KEY)
       message.success('Đăng nhập thành công.')
-      navigate('/')
+      setRedirectAfterLogin(true)
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Đăng nhập thất bại.')
     } finally {
@@ -63,18 +70,18 @@ export function ShopAccountPage() {
           <div>
             <strong>{user.name}</strong>
             {user.email && <small>{user.email}</small>}
-            <small>{staff ? `${staff.roleName}${staff.isDemo ? ' · dùng thử' : ''}` : user.role}</small>
+            <small>{staff?.roleName ?? user.role}</small>
           </div>
-          <div className="af-shop-account-actions">
-            <Button type="primary" icon={<LayoutDashboard size={16} />} onClick={() => navigate(accountDestination(user))}>
-              {isCustomer(user) ? 'Đơn hàng của tôi' : 'Trang quản lý'}
-            </Button>
-            <Button danger icon={<LogOut size={16} />} onClick={() => logout()}>
-              Đăng xuất
-            </Button>
-          </div>
+          {/* Đăng xuất và đơn hàng đã có trong menu tài khoản ở đầu trang; nhân viên không có hồ sơ ở đây nên giữ lối về trang quản lý. */}
+          {!isCustomer(user) && (
+            <div className="af-shop-account-actions">
+              <Button type="primary" icon={<LayoutDashboard size={16} />} onClick={() => navigate(accountDestination(user))}>
+                Trang quản lý
+              </Button>
+            </div>
+          )}
         </section>
-        {isCustomer(user) && !user.isDemo && <CustomerAccountPanel />}
+        {isCustomer(user) && <CustomerAccountPanel />}
       </div>
     )
   }
@@ -84,15 +91,10 @@ export function ShopAccountPage() {
       <h1>Đăng nhập</h1>
       <div className="af-shop-account-grid">
         <section aria-label="Đăng nhập">
-          <Alert
-            type="info"
-            showIcon
-            style={{ marginBottom: 20 }}
-            title="Khách hàng đăng nhập để xem đơn của mình. Nhân viên đăng nhập để vào trang quản lý."
-          />
           {error && <Alert type="error" showIcon style={{ marginBottom: 20 }} title={error} />}
-          <Form<LoginCredentials>
+          <Form<LoginFormValues>
             name="shop-login"
+            initialValues={{ email: initialEmail, rememberMe: Boolean(rememberedEmail) }}
             layout="vertical"
             requiredMark={false}
             autoComplete="on"
@@ -103,6 +105,7 @@ export function ShopAccountPage() {
               label="Địa chỉ email"
               name="email"
               rules={[{ required: true, type: 'email', whitespace: true, message: 'Nhập email hợp lệ.' }]}
+              style={{ marginBottom: 12 }}
             >
               <Input
                 type="email"
@@ -122,7 +125,7 @@ export function ShopAccountPage() {
                 { min: 8, message: 'Mật khẩu tối thiểu 8 ký tự.' },
                 { max: 128, message: 'Mật khẩu tối đa 128 ký tự.' },
               ]}
-              style={{ marginBottom: 8 }}
+              style={{ marginBottom: 14 }}
             >
               <Input.Password
                 size="large"
@@ -131,9 +134,12 @@ export function ShopAccountPage() {
                 autoComplete="current-password"
               />
             </Form.Item>
-            <Link to="/forgot-password" className="af-shop-account-forgot">
-              Quên mật khẩu?
-            </Link>
+            <div className="af-shop-account-options">
+              <Form.Item name="rememberMe" valuePropName="checked" noStyle>
+                <Checkbox>Ghi nhớ tôi</Checkbox>
+              </Form.Item>
+              <Link to="/forgot-password">Quên mật khẩu?</Link>
+            </div>
             <Button
               type="primary"
               size="large"
@@ -146,6 +152,17 @@ export function ShopAccountPage() {
               Đăng nhập
             </Button>
           </Form>
+          <Divider plain>hoặc</Divider>
+          {/* Backend chưa có OAuth Google: nút vẫn hiện, bấm thì báo chưa hỗ trợ. */}
+          <Button
+            size="large"
+            block
+            className="af-shop-account-google"
+            icon={<GoogleMark />}
+            onClick={() => message.info('Đăng nhập bằng Google chưa hỗ trợ.')}
+          >
+            Đăng nhập bằng Google
+          </Button>
           {devAccounts.length > 0 && (
             <>
               <Divider plain>
@@ -163,17 +180,13 @@ export function ShopAccountPage() {
         </section>
 
         <section className="af-shop-account-side" aria-label="Chưa có tài khoản">
-          {backendFeatures.customerAccounts && (
-            <>
-              <Link to="/shop/register">
-                <Button size="large" block icon={<UserRoundPlus size={18} />}>
-                  Tạo tài khoản
-                </Button>
-              </Link>
-              <p>Lưu địa chỉ giao và xem lại đơn đã đặt.</p>
-              <Divider plain>hoặc</Divider>
-            </>
-          )}
+          <Link to="/shop/register">
+            <Button size="large" block icon={<UserRoundPlus size={18} />}>
+              Tạo tài khoản
+            </Button>
+          </Link>
+          <p>Lưu địa chỉ giao và xem lại đơn đã đặt.</p>
+          <Divider plain>hoặc</Divider>
           <ul className="af-shop-account-links">
             <li>
               <Link to="/shop">
@@ -186,25 +199,31 @@ export function ShopAccountPage() {
               </Link>
             </li>
             <li>
-              <Button
-                type="link"
-                icon={<FlaskConical size={16} />}
-                onClick={() => {
-                  enterDemo()
-                  navigate('/')
-                }}
-              >
-                Xem bản dùng thử
+              <Button type="link" icon={<Headphones size={16} />} onClick={() => setHelpOpen(true)}>
+                Hỗ trợ đăng nhập
               </Button>
             </li>
           </ul>
         </section>
       </div>
+      <Modal
+        title="Hỗ trợ đăng nhập"
+        open={helpOpen}
+        centered
+        onCancel={() => setHelpOpen(false)}
+        footer={
+          <Button type="primary" onClick={() => setHelpOpen(false)}>
+            Đã hiểu
+          </Button>
+        }
+      >
+        <p>Nếu bạn quên mật khẩu, hãy chọn "Quên mật khẩu?" hoặc liên hệ cửa hàng để được hỗ trợ.</p>
+      </Modal>
     </div>
   )
 }
 
-/** Trang đăng ký trong cửa hàng; form dùng chung với /register. */
+/** Trang đăng ký duy nhất của hệ thống. */
 export function ShopRegisterPage() {
   useEffect(() => {
     document.title = 'Tạo tài khoản | AquaFlow'
@@ -231,5 +250,29 @@ export function ShopRegisterPage() {
         </section>
       </div>
     </div>
+  )
+}
+
+/** Chữ G nhiều màu theo hướng dẫn nút "Sign in with Google". */
+function GoogleMark() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden>
+      <path
+        fill="#EA4335"
+        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+      />
+      <path
+        fill="#4285F4"
+        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+      />
+    </svg>
   )
 }

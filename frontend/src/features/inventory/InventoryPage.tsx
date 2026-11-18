@@ -1,44 +1,25 @@
 import { useState } from 'react'
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  Col,
-  ConfigProvider,
-  Empty,
-  Input,
-  Progress,
-  Row,
-  Segmented,
-  Statistic,
-  Table,
-  Tag,
-  Typography,
-  type TableColumnsType,
-} from 'antd'
+import { Badge, Button, Card, Input, Progress, Segmented, Table, Tag, Tooltip, Typography, type TableColumnsType } from 'antd'
 import { FilePlus2, PackagePlus, Search } from 'lucide-react'
 import { BulkBar } from '@/shared/components/BulkBar'
 import { CountLabel } from '@/shared/components/CountLabel'
 import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
-import { UNSUPPORTED_HINT, Unsupported } from '@/shared/components/Unsupported'
 import { usePendingReturns } from '@/features/live/returnApi'
-import { useIsDemo, useFeature } from '@/shared/features'
-import { awaitingReturnInspection } from '@/features/orders/types'
-import { useOrders } from '@/features/orders/useOrders'
 import { useColumnSort } from '@/shared/components/sortableColumn'
-import { currency } from '@/shared/utils/format'
-import { tablePagination, tableScrollHeight } from '@/shared/utils/table'
-import { LotsPanel } from './components/LotsPanel'
+import { tablePagination } from '@/shared/utils/table'
+import { LotsPanel, type LotFilter } from './components/LotsPanel'
+import { InventoryAttention, type AttentionItem } from './components/InventoryAttention'
 import { MovementsPanel } from './components/MovementsPanel'
-import { ReturnsPanel } from './components/ReturnsPanel'
+import { LiveReturnsPanel } from './components/LiveReturnsPanel'
 import { ReceiptsPanel } from './components/ReceiptsPanel'
 import { ReceiveStockModal } from './components/ReceiveStockModal'
 import { useExpiryWarningDays } from '@/features/settings/settingsService'
 import { daysUntilExpiry, expiryStatus, isoToVnDate } from './expiry'
 import { matchesSearch } from '@/shared/utils/search'
-import { useReceiptViews, useStockItems, type ReceiptView, type StockItem } from './useInventory'
+import { useLinkedQuery } from '@/shared/utils/useLinkedQuery'
+import { Link } from 'react-router'
+import { useReceiptPage, useStockItems, type ReceiptView, type StockItem } from './useInventory'
 
 type Filter = 'all' | 'low' | 'expiring' | 'expired'
 type View = 'stock' | 'lots' | 'receipts' | 'returns' | 'movements'
@@ -49,16 +30,15 @@ const expiryText = (item: StockItem) => (item.nearestExpiry ? isoToVnDate(item.n
 
 export function InventoryPage() {
   const stockQuery = useStockItems()
-  const receiptsQuery = useReceiptViews()
+  // Chỉ cần số phiếu nháp: lấy trang nhỏ nhất, số đếm theo trạng thái tính trên toàn bộ phiếu.
+  const receiptsQuery = useReceiptPage({ page: 0, size: 1 })
   const warningDays = useExpiryWarningDays()
-  const showReturns = useFeature('deliveryReturns')
-  const demo = useIsDemo()
-  const demoReturns = (useOrders(demo).data ?? []).filter(awaitingReturnInspection).length
-  const liveReturns = usePendingReturns(!demo)
-  const returnsCount = demo ? demoReturns : (liveReturns.data?.length ?? 0)
-  const [query, setQuery] = useState('')
+  const returnsCount = usePendingReturns().data?.length ?? 0
+  const [query, setQuery] = useLinkedQuery()
   const [filter, setFilter] = useState<Filter>('all')
   const [view, setView] = useState<View>('stock')
+  // Bấm từ khung "Cần xử lý" thì tab Lô hàng mở sẵn bộ lọc tương ứng.
+  const [lotFilter, setLotFilter] = useState<LotFilter>('stock')
   const [receiving, setReceiving] = useState<{
     productId?: string
     lines?: { productId: string; received: number }[]
@@ -73,7 +53,10 @@ export function InventoryPage() {
   const expired = products.filter(
     (item) => item.expiredOnHand > 0 || (item.onHand > 0 && expiryStatus(expiryText(item), warningDays) === 'expired'),
   )
-  const drafts = (receiptsQuery.data ?? []).filter((receipt) => receipt.status === 'DRAFT').length
+  const drafts = receiptsQuery.data?.statusCounts.DRAFT ?? 0
+  // Mặc định việc cần xử lý lên đầu: hết hạn → hết hàng → sắp hết → sắp hết hạn → còn lại.
+  const priority = (item: StockItem) =>
+    expired.includes(item) ? 0 : item.available === 0 ? 1 : isLow(item) ? 2 : expiring.includes(item) ? 3 : 4
   const lowLabel = hasThreshold ? 'Sắp hết' : 'Hết hàng'
   const visible = products
     .filter((item) =>
@@ -86,17 +69,81 @@ export function InventoryPage() {
             : true,
     )
     .filter((item) => matchesSearch(query, `${item.name} ${item.sku} ${item.brand ?? ''}`))
+    .sort((a, b) => priority(a) - priority(b) || a.name.localeCompare(b.name, 'vi'))
   // Chỉ tính các dòng còn hiện theo bộ lọc; số nhập gợi ý đủ gấp đôi ngưỡng tối thiểu, sửa được trong phiếu.
   const checked = visible.filter((item) => checkedIds.includes(item.id))
+  const suggestedReceipt = (items: StockItem[]) =>
+    items.map((item) => ({
+      productId: item.id,
+      received: item.threshold === undefined ? 1 : Math.max(item.threshold * 2 - item.available, 1),
+    }))
   const receiveChecked = () => {
-    setReceiving({
-      lines: checked.map((item) => ({
-        productId: item.id,
-        received: item.threshold === undefined ? 1 : Math.max(item.threshold * 2 - item.available, 1),
-      })),
-    })
+    setReceiving({ lines: suggestedReceipt(checked) })
     setCheckedIds([])
   }
+  const showStock = (next: Filter) => {
+    setView('stock')
+    setFilter(next)
+  }
+  // Xếp theo mức gấp: hàng hết hạn còn trong kho, sắp hết hàng, hàng hoàn chờ kiểm, sắp hết hạn, phiếu nháp.
+  const attention: AttentionItem[] = [
+    ...(expired.length
+      ? [
+          {
+            key: 'expired',
+            tone: 'danger' as const,
+            text: `${expired.length} mã hàng có lô đã hết hạn còn trong kho`,
+            action: {
+              label: 'Xem lô hết hạn',
+              onClick: () => {
+                setLotFilter('expired')
+                setView('lots')
+              },
+            },
+          },
+        ]
+      : []),
+    ...(lowStock.length
+      ? [
+          {
+            key: 'low',
+            tone: 'warning' as const,
+            text: hasThreshold ? `${lowStock.length} mã hàng sắp hết` : `${lowStock.length} mã hàng đã hết hàng bán được`,
+            action: { label: 'Tạo phiếu nhập', onClick: () => setReceiving({ lines: suggestedReceipt(lowStock) }) },
+          },
+        ]
+      : []),
+    ...(returnsCount
+      ? [
+          {
+            key: 'returns',
+            tone: 'warning' as const,
+            text: `${returnsCount} đơn giao thất bại chờ kiểm hàng hoàn`,
+            action: { label: 'Kiểm hàng', onClick: () => setView('returns') },
+          },
+        ]
+      : []),
+    ...(expiring.length
+      ? [
+          {
+            key: 'expiring',
+            tone: 'warning' as const,
+            text: `${expiring.length} mã hàng có lô hết hạn trong ${warningDays} ngày`,
+            action: { label: 'Xem', onClick: () => showStock('expiring') },
+          },
+        ]
+      : []),
+    ...(drafts
+      ? [
+          {
+            key: 'drafts',
+            tone: 'info' as const,
+            text: `${drafts} phiếu nhập nháp chưa nhập kho`,
+            action: { label: 'Xem phiếu', onClick: () => setView('receipts') },
+          },
+        ]
+      : []),
+  ]
 
   const sort = useColumnSort<StockItem>()
   const columns: TableColumnsType<StockItem> = [
@@ -105,9 +152,9 @@ export function InventoryPage() {
       dataIndex: 'name',
       render: (_, product) => (
         <div className="af-cell-stack">
-          <span className="af-cell-truncate" title={product.name}>
+          <Link className="af-cell-truncate" title="Xem sản phẩm" to={`/products?q=${encodeURIComponent(product.sku)}`}>
             {product.name}
-          </span>
+          </Link>
           <small className="af-cell-truncate" title={[product.sku, product.brand].filter(Boolean).join(' · ')}>
             {[product.sku, product.brand].filter(Boolean).join(' · ')}
           </small>
@@ -126,13 +173,8 @@ export function InventoryPage() {
               {product.onHand} <Typography.Text type="secondary">{product.unit?.toLowerCase()}</Typography.Text>
             </span>
             <small>
-              {product.threshold !== undefined ? (
-                `Tối thiểu ${product.threshold}`
-              ) : (
-                <>
-                  Khả dụng {product.available} · <Unsupported label="tối thiểu: chưa hỗ trợ" />
-                </>
-              )}
+              {/* Danh mục chỉ trả sản phẩm đang bán; hàng đã ngừng bán còn tồn thì không theo dõi mức tối thiểu. */}
+              {product.threshold !== undefined ? `Tối thiểu ${product.threshold}` : `Khả dụng ${product.available} · đã ngừng bán`}
               {product.reserved > 0 && ` · giữ ${product.reserved}`}
             </small>
           </div>
@@ -147,7 +189,11 @@ export function InventoryPage() {
       ),
     },
     {
-      title: 'Hạn sử dụng gần nhất',
+      title: (
+        <Tooltip title="Hạn của lô còn hàng sắp hết hạn sớm nhất">
+          <span>Hạn sử dụng</span>
+        </Tooltip>
+      ),
       key: 'expiry',
       width: 190,
       render: (_, product) => {
@@ -199,7 +245,6 @@ export function InventoryPage() {
   return (
     <Page
       title="Kho hàng"
-      description="Theo dõi tồn kho, tách lô đã hết hạn và kiểm nhận hàng từ nhà cung cấp."
       actions={
         <Button type="primary" icon={<FilePlus2 size={16} />} onClick={() => setReceiving({})}>
           Tạo phiếu nhập
@@ -212,71 +257,16 @@ export function InventoryPage() {
         </Card>
       ) : (
         <>
-          {drafts > 0 && view !== 'receipts' && (
-            <Alert
-              type="info"
-              showIcon
-              style={{ marginBottom: 12 }}
-              title={`Có ${drafts} phiếu nhập nháp chưa nhập kho.`}
-              action={
-                <Button size="small" onClick={() => setView('receipts')}>
-                  Xem phiếu
-                </Button>
-              }
-            />
-          )}
-          <ConfigProvider
-            theme={{ components: { Card: { bodyPadding: 12 }, Statistic: { titleFontSize: 12, contentFontSize: 20, lineHeight: 1.4 } } }}
-          >
-            <Row gutter={[12, 12]} className="af-stat-row af-inventory-stats">
-              <Col xs={12} lg={4}>
-                <Card loading={stockQuery.isPending}>
-                  <Statistic title="Mã hàng đang kinh doanh" value={products.length} />
-                </Card>
-              </Col>
-              <Col xs={12} lg={4}>
-                <Card loading={stockQuery.isPending}>
-                  <Statistic
-                    title={hasThreshold ? 'Tồn kho thấp' : 'Hết hàng bán được'}
-                    value={lowStock.length}
-                    className={lowStock.length ? 'af-stat-danger' : undefined}
-                  />
-                </Card>
-              </Col>
-              <Col xs={12} lg={4}>
-                <Card loading={stockQuery.isPending}>
-                  <Statistic
-                    title={`Hết hạn trong ${warningDays} ngày`}
-                    value={expiring.length}
-                    className={expiring.length ? 'af-stat-warning' : undefined}
-                  />
-                </Card>
-              </Col>
-              <Col xs={12} lg={4}>
-                <Card loading={stockQuery.isPending}>
-                  <Statistic
-                    title="Mã hàng có lô hết hạn"
-                    value={expired.length}
-                    className={expired.length ? 'af-stat-danger' : undefined}
-                  />
-                </Card>
-              </Col>
-              <Col xs={24} lg={8}>
-                <Card loading={stockQuery.isPending}>
-                  <Statistic
-                    title="Giá trị tồn (giá bán)"
-                    value={currency(products.reduce((sum, item) => sum + item.onHand * (item.salePrice ?? 0), 0))}
-                  />
-                </Card>
-              </Col>
-            </Row>
-          </ConfigProvider>
+          {!stockQuery.isPending && <InventoryAttention items={attention} />}
 
           <Card
             className="af-card af-tab-card"
             styles={{ body: { padding: 0 } }}
             activeTabKey={view}
-            onTabChange={(key) => setView(key as View)}
+            onTabChange={(key) => {
+              setLotFilter('stock')
+              setView(key as View)
+            }}
             tabList={[
               { key: 'stock', label: 'Tồn kho' },
               { key: 'lots', label: 'Lô hàng' },
@@ -292,22 +282,12 @@ export function InventoryPage() {
               { key: 'movements', label: 'Xuất / nhập kho' },
             ]}
           >
-            {view === 'returns' && !showReturns ? (
-              <Empty
-                className="af-unsupported-empty"
-                description={
-                  <>
-                    <strong>Chưa hỗ trợ</strong>
-                    <div className="af-text-muted">{UNSUPPORTED_HINT}</div>
-                  </>
-                }
-              />
-            ) : view === 'returns' ? (
-              <ReturnsPanel />
+            {view === 'returns' ? (
+              <LiveReturnsPanel />
             ) : view === 'movements' ? (
               <MovementsPanel />
             ) : view === 'lots' ? (
-              <LotsPanel />
+              <LotsPanel key={lotFilter} initialFilter={lotFilter} />
             ) : view === 'receipts' ? (
               <ReceiptsPanel onEdit={(receipt) => setReceiving({ receipt })} />
             ) : (
@@ -340,7 +320,7 @@ export function InventoryPage() {
                 </BulkBar>
                 <Table<StockItem>
                   key={`${filter}:${query}`}
-                  className="af-data-table af-table-flush"
+                  className="af-data-table af-table-flush af-table-dense"
                   size="middle"
                   rowKey="id"
                   columns={columns}
@@ -352,7 +332,7 @@ export function InventoryPage() {
                       ? 'Không có sản phẩm phù hợp.'
                       : 'Chưa có sản phẩm. Thêm sản phẩm ở trang Sản phẩm trước khi nhập kho.',
                   }}
-                  scroll={{ x: 1044, y: tableScrollHeight }}
+                  scroll={{ x: 1044 }}
                   rowSelection={{
                     selectedRowKeys: checked.map((item) => item.id),
                     onChange: (keys) => setCheckedIds(keys.map(String)),

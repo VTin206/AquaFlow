@@ -1,28 +1,30 @@
 import { useState } from 'react'
-import { Alert, Badge, Button, Dropdown } from 'antd'
-import { ArrowLeft, ChevronDown, Clock3, PackageSearch, Phone, Search, ShoppingCart, Waves } from 'lucide-react'
-import { Link, Outlet, useLocation, useNavigate } from 'react-router'
+import { Badge, Button, Dropdown } from 'antd'
+import { ArrowLeft, ChevronDown, Clock3, Phone, Search, ShoppingCart } from 'lucide-react'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
+import { isCustomer } from '@/features/auth/accountAccess'
 import { useAuth } from '@/features/auth/useAuth'
 import { useCart } from './cart'
 import { AccountMenu } from './components/AccountMenu'
 import { CartDrawer } from './components/CartDrawer'
 import { UkFlag, VietnamFlag } from './components/Flags'
+import { ShopEnter } from './components/ShopEnter'
 import { ShopFooter } from './components/ShopFooter'
-import { shopKeys, useShopContact, useShopDemo, useShopFeature } from './shopService'
+import { buildDrinkMenu, drinkMenuHref } from './drinkMenu'
+import { shopKeys, useShopContact, useShopProducts } from './shopService'
 import { useHomeLink, type FreshState } from '@/app/useHomeLink'
 import './shop.css'
 
 /**
  * Khung trang công khai cho khách, cũng là trang chủ khi chưa đăng nhập.
- * Bấm icon tài khoản để đăng nhập vào trang quản lý; dùng chung dữ liệu mẫu với trang quản lý trong cùng tab.
+ * Bấm icon tài khoản để đăng nhập vào trang quản lý.
  */
 export function ShopLayout() {
-  // Chỉ dùng cho nhãn báo đang xem dữ liệu mẫu.
-  const demo = useShopDemo()
-  const showTracking = useShopFeature('orderTracking')
   const settings = useShopContact()
-  const { demoGuest, logout } = useAuth()
+  const drinkMenuColumns = buildDrinkMenu(useShopProducts().data ?? [])
+  // Mục menu luôn là "Tra cứu đơn"; khách đã đăng nhập thì vào thẳng danh sách đơn của mình thay cho form nhập mã đơn.
+  const ownOrders = isCustomer(useAuth().user)
   const navigate = useNavigate()
   const location = useLocation()
   const goHome = useHomeLink('/shop', shopKeys.products)
@@ -33,6 +35,7 @@ export function ShopLayout() {
   const goBack = () => (location.key !== 'default' && !placed ? navigate(-1) : navigate('/shop'))
   const cart = useCart()
   const [cartOpen, setCartOpen] = useState(false)
+  const [megaClosed, setMegaClosed] = useState(false)
   const count = cart.reduce((sum, line) => sum + line.quantity, 0)
   const tel = settings?.phone?.replace(/\s/g, '')
   const hours = settings?.openingHours?.trim()
@@ -77,12 +80,56 @@ export function ShopLayout() {
       </div>
       <header className="af-shop-header">
         <div className="af-shop-header-inner">
-          <Link to="/shop" className="af-shop-brand" onClick={goHome}>
-            <span className="af-brand-mark">
-              <Waves size={22} strokeWidth={2.2} />
-            </span>
-            <strong>AquaFlow</strong>
+          <Link to="/shop" className="af-shop-brand" onClick={goHome} aria-label="AquaFlow - Trang chủ cửa hàng">
+            <img className="af-brand-logo" src="/images/aquaflow-logo.png" alt="AquaFlow" />
           </Link>
+          <nav className="af-shop-nav" aria-label="Điều hướng cửa hàng">
+            <NavLink to="/shop" end className={({ isActive }) => `af-shop-nav-link${isActive ? ' is-active' : ''}`}>
+              Trang chủ
+            </NavLink>
+            {/*
+              Menu mở khi rê chuột/focus; bấm thì đóng. Chỉ mở lại khi chuột đi vào lại hoặc focus từ ngoài đi vào:
+              không dựa vào lúc chuột rời/mất focus, vì menu ẩn dưới con trỏ hay chuyển trang cũng gây ra hai sự kiện đó.
+            */}
+            <div
+              className={`af-shop-nav-menu${megaClosed ? ' is-closed' : ''}`}
+              onMouseEnter={() => setMegaClosed(false)}
+              onFocus={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) setMegaClosed(false)
+              }}
+            >
+              <NavLink
+                to="/shop/drinks"
+                className={({ isActive }) => `af-shop-nav-link${isActive ? ' is-active' : ''}`}
+                aria-haspopup="true"
+                onClick={() => setMegaClosed(true)}
+              >
+                Nước uống
+              </NavLink>
+              <div className="af-shop-mega" role="menu" aria-label="Danh mục nước uống">
+                {drinkMenuColumns.map((column) => (
+                  <section key={column.title} className="af-shop-mega-column">
+                    <strong>{column.title}</strong>
+                    <ul>
+                      {column.items.map((item) => (
+                        <li key={item.label}>
+                          <Link to={drinkMenuHref(item.filter)} role="menuitem" onClick={() => setMegaClosed(true)}>
+                            {item.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+              </div>
+            </div>
+            <NavLink
+              to={ownOrders ? '/shop/orders' : '/track'}
+              className={({ isActive }) => `af-shop-nav-link${isActive ? ' is-active' : ''}`}
+            >
+              Tra cứu đơn
+            </NavLink>
+          </nav>
           <div className="af-shop-icons">
             <Button
               type="text"
@@ -90,18 +137,8 @@ export function ShopLayout() {
               icon={<Search size={24} />}
               aria-label="Tìm sản phẩm"
               title="Tìm sản phẩm"
-              onClick={() => navigate('/shop', { state: { focusSearch: Date.now() } })}
+              onClick={() => navigate('/shop/drinks', { state: { focusSearch: Date.now() } })}
             />
-            {showTracking && (
-              <Button
-                type="text"
-                shape="circle"
-                icon={<PackageSearch size={24} />}
-                aria-label="Tra cứu đơn"
-                title="Tra cứu đơn"
-                onClick={() => navigate('/track')}
-              />
-            )}
             <AccountMenu />
           </div>
           <Badge count={count} size="small" offset={[-4, 4]}>
@@ -118,33 +155,19 @@ export function ShopLayout() {
         </div>
       </header>
       <main className="af-shop-main">
-        {demo && (
-          <Alert
-            type="warning"
-            showIcon
-            title={
-              demoGuest
-                ? 'Đang xem như khách — dữ liệu mẫu, không gửi đơn tới cửa hàng'
-                : 'Bản dùng thử — dữ liệu mẫu, không gửi đơn tới cửa hàng'
-            }
-            action={
-              demoGuest ? (
-                <Button size="small" onClick={logout}>
-                  Thoát
-                </Button>
-              ) : undefined
-            }
-            style={{ marginBottom: 16 }}
-          />
-        )}
         {location.pathname !== '/shop' && (
           <Button type="link" className="af-shop-back" icon={<ArrowLeft size={16} />} onClick={goBack}>
             Quay lại
           </Button>
         )}
-        <ErrorBoundary key={location.pathname} homeHref="/shop"><Outlet key={fresh ?? 'page'} context={{ openCart: () => setCartOpen(true) }} /></ErrorBoundary>
+        <ErrorBoundary key={location.pathname} homeHref="/shop">
+          {/* Từng thẻ hiện fade-in-up nối tiếp; chạy lại mỗi lần đổi trang. */}
+          <ShopEnter key={fresh ?? 'page'}>
+            <Outlet context={{ openCart: () => setCartOpen(true) }} />
+          </ShopEnter>
+        </ErrorBoundary>
       </main>
-      <ShopFooter demo={demo} contact={settings} />
+      <ShopFooter contact={settings} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </div>
   )

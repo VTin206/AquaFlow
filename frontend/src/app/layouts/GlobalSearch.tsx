@@ -1,16 +1,18 @@
-import { useEffect, useState, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 import { Button, Input, Modal, Tooltip } from 'antd'
 import { Search } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { navGroups } from '@/app/navigation'
 import { canOpen } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/useStaff'
-import { useCustomers } from '@/features/customers/useCustomers'
+import { useCustomerSearch } from '@/features/customers/useCustomers'
 import { customerCode } from '@/features/customers/types'
 import { useCanManageProducts, useCatalog } from '@/features/inventory/useProductCatalog'
 import { OrderDetails } from '@/features/orders/components/OrderDetails'
-import { useOrderList } from '@/features/orders/orderData'
+import { useOrderPage } from '@/features/orders/orderData'
+import { ALL_ORDERS } from '@/features/orders/useOrderFilters'
 import { matchesSearch } from '@/shared/utils/search'
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import { modalWidth } from '@/shared/utils/modal'
 
 const GROUP_LIMIT = 5
@@ -22,18 +24,26 @@ function SearchPanel({ onClose, onOpenOrder }: { onClose: () => void; onOpenOrde
   const navigate = useNavigate()
   const staff = useStaff()
   const canManageProducts = useCanManageProducts()
-  const orders = useOrderList()
-  const customers = useCustomers()
-  const products = useCatalog(canManageProducts ? 'all' : 'active')
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
+  const keyword = query.trim()
+  // Đơn và khách tìm ở BE trên toàn bộ dữ liệu (kể cả đơn cũ), chờ ngừng gõ rồi mới gửi.
+  const searched = useDebouncedValue(keyword)
+  const orderFilters = useMemo(
+    () => ({ query: searched, group: 'all' as const, status: ALL_ORDERS, method: ALL_ORDERS, payment: ALL_ORDERS }),
+    [searched],
+  )
+  const orders = useOrderPage(orderFilters, 0, GROUP_LIMIT)
+  const customers = useCustomerSearch(searched, GROUP_LIMIT)
+  const products = useCatalog(canManageProducts ? 'all' : 'active')
 
   const go = (path: string) => {
     navigate(path)
     onClose()
   }
-  const keyword = query.trim()
   const top = <T,>(items: T[], matches: (item: T) => boolean) => items.filter(matches).slice(0, GROUP_LIMIT)
+  // Kết quả BE đã khớp từ khóa; chỉ hiện khi khớp với từ khóa đang gõ để không lộ kết quả cũ.
+  const settled = searched === keyword
 
   const pages: Hit[] = navGroups
     .flatMap((group) => group.items)
@@ -43,7 +53,7 @@ function SearchPanel({ onClose, onOpenOrder }: { onClose: () => void; onOpenOrde
   const records: Hit[] = !keyword
     ? []
     : [
-        ...top(orders.data ?? [], (order) => matchesSearch(keyword, `${order.code ?? order.id} ${order.customer} ${order.phone}`, order.phone)).map(
+        ...(settled ? (orders.data?.orders ?? []).slice(0, GROUP_LIMIT) : []).map(
           (order): Hit => ({
             key: `order:${order.id}`,
             group: 'Đơn hàng',
@@ -52,7 +62,7 @@ function SearchPanel({ onClose, onOpenOrder }: { onClose: () => void; onOpenOrde
             run: () => onOpenOrder(order.id),
           }),
         ),
-        ...top(customers.data ?? [], (customer) => matchesSearch(keyword, `${customerCode(customer)} ${customer.name} ${customer.phone}`, customer.phone)).map(
+        ...(settled ? (customers.data?.customers ?? []) : []).map(
           (customer): Hit => ({
             key: `customer:${customer.id}`,
             group: 'Khách hàng',
@@ -73,7 +83,7 @@ function SearchPanel({ onClose, onOpenOrder }: { onClose: () => void; onOpenOrde
       ]
   const hits = [...records, ...pages]
   const current = Math.min(active, Math.max(hits.length - 1, 0))
-  const loading = Boolean(keyword) && (orders.isPending || customers.isPending || products.isPending)
+  const loading = Boolean(keyword) && (!settled || orders.isPending || customers.isPending || products.isPending)
   const failed = Boolean(keyword) && (orders.isError || customers.isError || products.isError)
 
   const onKeyDown = (event: KeyboardEvent) => {

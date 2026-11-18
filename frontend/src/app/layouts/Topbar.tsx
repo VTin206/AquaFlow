@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Avatar, Button, Dropdown, Tooltip } from 'antd'
-import { Bell, ChevronDown, Clock3, Menu as MenuIcon, ShoppingCart, Waves } from 'lucide-react'
+import { Avatar, Button, Dropdown } from 'antd'
+import { ChevronDown, Clock3, Menu as MenuIcon } from 'lucide-react'
 import { Link } from 'react-router'
 import { useHomeLink } from '@/app/useHomeLink'
 import { useStaff } from '@/features/auth/useStaff'
-import { useFeature } from '@/shared/features'
 import { GlobalSearch } from './GlobalSearch'
 import { NotificationPopover } from './NotificationPopover'
 import { ThemeToggle } from './ThemeToggle'
@@ -44,7 +43,6 @@ function TopbarClock() {
 export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
   const staff = useStaff()
   const menuItems = useAccountMenuItems()
-  const showNotifications = useFeature('notifications')
   const goHome = useHomeLink('/')
 
   return (
@@ -57,37 +55,22 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
           icon={<MenuIcon size={20} />}
           onClick={onOpenNav}
         />
-        <Link to="/" className="af-topbar-brand" onClick={goHome}>
-          <span className="af-brand-mark">
-            <Waves size={22} strokeWidth={2.2} />
-          </span>
-          <strong>AquaFlow</strong>
+        <Link to="/" className="af-topbar-brand" onClick={goHome} aria-label="AquaFlow - Trang chủ quản trị">
+          <img className="af-brand-logo" src="/images/aquaflow-logo.png" alt="AquaFlow" />
         </Link>
         <span className="af-topbar-divider" aria-hidden />
         <TopbarClock />
       </div>
       <div className="af-topbar-right">
-        {staff?.isDemo && <span className="af-demo-label">Dữ liệu mẫu</span>}
         <GlobalSearch />
-        <Tooltip title={staff?.isDemo ? 'Trang khách đặt hàng (dùng chung dữ liệu mẫu trong tab này)' : 'Trang khách đặt hàng'}>
-          <Link to="/shop" className="af-notification-link" aria-label="Mở trang khách đặt hàng">
-            <ShoppingCart size={19} aria-hidden />
-          </Link>
-        </Tooltip>
-        {showNotifications ? (
-          <NotificationPopover />
-        ) : (
-          <Tooltip title="Thông báo: backend chưa hỗ trợ">
-            <Button type="text" className="af-topbar-icon" aria-label="Thông báo (chưa hỗ trợ)" icon={<Bell size={19} />} disabled />
-          </Tooltip>
-        )}
+        <NotificationPopover />
         <ThemeToggle />
         <Dropdown trigger={['click']} menu={{ items: menuItems }}>
           <button type="button" className="af-topbar-user af-account-menu" aria-label="Menu tài khoản">
             <Avatar className="af-avatar">{initialsOf(staff?.name ?? 'A')}</Avatar>
             <div className="af-topbar-user-text">
               <strong>{staff?.name ?? 'Quản trị viên'}</strong>
-              <small>{staff ? `${staff.roleName}${staff.isDemo ? ' · dùng thử' : ''}` : 'Quản trị viên'}</small>
+              <small>{staff?.roleName ?? 'Quản trị viên'}</small>
             </div>
             <ChevronDown size={14} aria-hidden />
           </button>

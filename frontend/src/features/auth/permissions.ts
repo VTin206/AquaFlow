@@ -29,12 +29,15 @@ const pageRoles: Record<string, RoleCode[]> = {
   '/orders': ['ADMIN', 'SALES_STAFF'],
   '/inventory': ['ADMIN', 'SALES_STAFF'],
   '/delivery': ['ADMIN', 'SALES_STAFF'],
-  '/driver': ['ADMIN', 'DELIVERY_STAFF'],
+  // Màn hình tài xế chỉ dành cho tài khoản giao hàng; chủ cửa hàng theo dõi chuyến ở trang Giao hàng.
+  '/driver': ['DELIVERY_STAFF'],
   '/products': ['ADMIN', 'SALES_STAFF'],
   '/suppliers': ['ADMIN', 'SALES_STAFF'],
   '/customers': ['ADMIN', 'SALES_STAFF'],
   '/reports': ['ADMIN'],
   '/activity': ['ADMIN'],
+  // Nội dung công khai trên trang khách: chỉ chủ cửa hàng sửa (BE: /api/v1/admin/shop-articles).
+  '/articles': ['ADMIN'],
   '/settings': ['ADMIN'],
   '/staff': ['ADMIN'],
 }
@@ -52,6 +55,11 @@ const actionRoles = {
   createOrder: ['ADMIN', 'SALES_STAFF'],
   /** Báo mất/vỡ, hoàn cọc làm đổi sổ cọc. */
   adjustBottles: ['ADMIN'],
+  /** Kiểm kê (sửa tồn), hủy phiếu thu ghi nhầm: đổi số liệu kế toán nên chỉ chủ cửa hàng. */
+  adjustStock: ['ADMIN'],
+  voidPayment: ['ADMIN'],
+  /** Sửa đơn còn chờ xác nhận. */
+  editOrder: ['ADMIN', 'SALES_STAFF'],
 } satisfies Record<string, RoleCode[]>
 
 export type GuardedAction = keyof typeof actionRoles

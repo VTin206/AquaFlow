@@ -15,11 +15,17 @@ export type CatalogProduct = {
   createdAt: string
   image: string | null
   lowStockThreshold?: number
+  /** Loại sản phẩm do cửa hàng quản lý; null là chưa phân loại. */
+  categoryId?: number | null
+  categoryName?: string | null
+  volumeMl?: number | null
 }
 export type CatalogSupplier = { id: number; name: string; phone: string | null; address: string | null; active: boolean }
 
 export const catalogApi = {
   products: () => api.get<CatalogProduct[]>('/products?active=true'),
   product: (id: string) => api.get<CatalogProduct>(`/products/${encodeURIComponent(id)}`),
+  /** Top 5 sản phẩm bán nhiều nhất 30 ngày qua, nhiều nhất trước; chỉ có mã, không có số lượng bán. */
+  bestSellers: () => api.get<number[]>('/products/best-sellers'),
   suppliers: () => api.get<CatalogSupplier[]>('/suppliers?active=true'),
 }

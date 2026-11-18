@@ -1,3 +1,4 @@
+import type { Tone } from '@/shared/components/ToneLabel'
 import type { OrderStatus } from './types'
 
 /**
@@ -5,11 +6,11 @@ import type { OrderStatus } from './types'
  * "Tất cả" gồm cả đơn đã hủy; muốn xem riêng thì lọc trạng thái trong nhóm này.
  */
 export const orderGroups = [
-  { key: 'need', label: 'Cần xử lý', statuses: ['Chờ xác nhận', 'Giao thất bại'] },
-  { key: 'active', label: 'Đang thực hiện', statuses: ['Đã xác nhận', 'Đang chuẩn bị', 'Đang giao'] },
-  { key: 'done', label: 'Đã xong', statuses: ['Đã giao', 'Đã hoàn tất'] },
-  { key: 'all', label: 'Tất cả', statuses: null },
-] as const satisfies readonly { key: string; label: string; statuses: readonly OrderStatus[] | null }[]
+  { key: 'need', label: 'Cần xử lý', tone: 'warning', statuses: ['Chờ xác nhận', 'Giao thất bại'] },
+  { key: 'active', label: 'Đang thực hiện', tone: 'info', statuses: ['Đã xác nhận', 'Đang chuẩn bị', 'Đang giao'] },
+  { key: 'done', label: 'Đã xong', tone: 'success', statuses: ['Đã giao', 'Đã hoàn tất'] },
+  { key: 'all', label: 'Tất cả', tone: 'neutral', statuses: null },
+] as const satisfies readonly { key: string; label: string; tone: Tone; statuses: readonly OrderStatus[] | null }[]
 
 export type OrderGroupKey = (typeof orderGroups)[number]['key']
 export const orderGroupKeys: OrderGroupKey[] = orderGroups.map((group) => group.key)

@@ -5,26 +5,28 @@ import { Page } from '@/shared/components/Page'
 import { QueryError } from '@/shared/components/QueryError'
 import { TransferQr } from '@/shared/payment/TransferQr'
 import { vietQrBanks } from '@/shared/payment/vietqr'
-import {
-  DEPOSIT_PER_BOTTLE,
-  EXCHANGEABLE_BRANDS,
-  FREE_DELIVERY_MIN_UNITS,
-  PICKUP_FEE,
-  PICKUP_FEE_BELOW,
-  SMALL_ORDER_FEE,
-  stairsSurcharge,
-} from '@/shared/policy'
-import { currency } from '@/shared/utils/format'
 import { useSettings, useUpdateSettings } from './settingsService'
-import { useIsDemo } from '@/shared/features'
+import { Unsupported } from '@/shared/components/Unsupported'
 import { ApiError } from '@/shared/api/client'
 import { type SettingsSnapshot } from './settingsApi'
-import type { StoreSettings } from './types'
+import { normalizeDeliveryFees, STAIR_FLOORS, type StoreSettings } from './types'
+import { depositRatesLabel, useBottleDepositRates } from '@/features/live/bottleDeposits'
+import { TextArea } from '@/shared/components/TextArea'
+import { useConfirm } from '@/shared/components/confirm'
+
+/** Nhóm ô trên trang, dùng để tóm tắt phần sẽ đổi trong hộp thoại xác nhận lưu. */
+const settingGroups: { label: string; keys: (keyof StoreSettings)[] }[] = [
+  { label: 'thông tin cửa hàng', keys: ['storeName', 'taxCode', 'address', 'phone', 'email', 'openingHours'] },
+  { label: 'tài khoản chuyển khoản', keys: ['bankName', 'bankAccount', 'bankHolder'] },
+  { label: 'ghi chú hóa đơn', keys: ['invoiceNote'] },
+  { label: 'cảnh báo kho', keys: ['expiryWarningDays', 'defaultLowStock'] },
+  { label: 'phí giao hàng', keys: ['deliveryFees'] },
+]
 
 export function SettingsPage() {
   const settingsQuery = useSettings()
   return (
-    <Page title="Cài đặt cửa hàng" description="Thông tin in trên hóa đơn, phiếu giao và các ngưỡng cảnh báo kho.">
+    <Page title="Cài đặt cửa hàng">
       {settingsQuery.isError && !settingsQuery.data ? (
         <Card>
           <QueryError error={settingsQuery.error} onRetry={settingsQuery.refetch} />
@@ -49,28 +51,47 @@ export function SettingsPage() {
 
 function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload: () => Promise<SettingsSnapshot> }) {
   const { message, modal } = App.useApp()
-  const demo = useIsDemo()
+  const ask = useConfirm()
   const [version, setVersion] = useState(settings.version)
   const [conflict, setConflict] = useState(false)
   const [form] = Form.useForm<StoreSettings>()
   const update = useUpdateSettings()
   const [dirty, setDirty] = useState(false)
   const preview = Form.useWatch([], form) ?? settings
+  const depositRates = useBottleDepositRates()
+  // Đủ một ô cho mỗi lầu trên form.
+  const toForm = (value: SettingsSnapshot): SettingsSnapshot =>
+    value.deliveryFees ? { ...value, deliveryFees: normalizeDeliveryFees(value.deliveryFees) } : value
 
   return (
     <Form<StoreSettings>
       form={form}
       layout="vertical"
       disabled={update.isPending}
-      initialValues={settings}
+      initialValues={toForm(settings)}
       onValuesChange={() => setDirty(true)}
-      onFinish={(values) =>
+      onFinish={async (values) => {
+        // Cài đặt áp dụng ngay cho mọi đơn mới, hóa đơn và mã QR chuyển khoản: liệt kê nhóm sẽ đổi trước khi lưu.
+        const changed = settingGroups
+          .filter((group) => group.keys.some((key) => JSON.stringify(values[key] ?? '') !== JSON.stringify(toForm(settings)[key] ?? '')))
+          .map((group) => group.label)
+        const ok = await ask({
+          title: 'Lưu cài đặt cửa hàng?',
+          content: (
+            <>
+              <p>Thay đổi: {changed.length ? changed.join(', ') : 'không có mục nào khác bản đang lưu'}.</p>
+              <p>Áp dụng ngay cho đơn mới, hóa đơn và mã QR chuyển khoản; đơn đã tạo giữ nguyên.</p>
+            </>
+          ),
+          okText: 'Lưu cài đặt',
+        })
+        if (!ok) return
         update.mutate(
           { ...values, version },
           {
             onSuccess: (saved: SettingsSnapshot) => {
               setVersion(saved.version)
-              form.setFieldsValue(saved)
+              form.setFieldsValue(toForm(saved))
               setConflict(false)
               message.success('Đã lưu cài đặt cửa hàng.')
               setDirty(false)
@@ -81,7 +102,7 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
             },
           },
         )
-      }
+      }}
     >
       {conflict && (
         <Alert
@@ -98,7 +119,7 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
                   onOk: async () => {
                     try {
                       const latest = await reload()
-                      form.setFieldsValue(latest)
+                      form.setFieldsValue(toForm(latest))
                       setVersion(latest.version)
                       setDirty(false)
                       setConflict(false)
@@ -116,10 +137,10 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
         />
       )}
       <Row gutter={[16, 16]}>
-        <Col xs={24} xl={15}>
+        <Col xs={24} xl={15} className="af-settings-col">
           <Card className="af-card af-settings-card" title="Thông tin cửa hàng">
             <Row gutter={16}>
-              <Col xs={24} md={14}>
+              <Col xs={24} md={12}>
                 <Form.Item
                   name="storeName"
                   label="Tên cửa hàng"
@@ -128,7 +149,7 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
                   <Input />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={10}>
+              <Col xs={24} md={12}>
                 <Form.Item
                   name="taxCode"
                   label="Mã số thuế"
@@ -175,127 +196,150 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
           </Card>
 
           <Card className="af-card af-settings-card" title="Chuyển khoản & hóa đơn">
-            <Row gutter={16}>
-              <Col xs={24} md={8}>
-                <Form.Item
-                  name="bankName"
-                  label="Ngân hàng"
-                  tooltip="Ngân hàng trong danh sách VietQR để tạo mã QR chuyển khoản theo đơn."
-                  dependencies={['bankAccount', 'bankHolder']}
-                  rules={[
-                    ({ getFieldValue }) => ({
-                      validator: (_, value) => {
-                        const filled = [value, getFieldValue('bankAccount'), getFieldValue('bankHolder')].filter((item) =>
-                          item?.trim(),
-                        ).length
-                        return filled === 0 || filled === 3
-                          ? Promise.resolve()
-                          : Promise.reject(new Error('Nhập đủ ngân hàng, số tài khoản và chủ tài khoản.'))
-                      },
-                    }),
-                  ]}
-                >
-                  <Select
-                    showSearch
-                    allowClear
-                    placeholder="Chọn ngân hàng"
-                    options={vietQrBanks.map((bank) => ({ value: bank.name, label: bank.name }))}
-                  />
+            <Row gutter={24}>
+              <Col xs={24} md={14}>
+                <Row gutter={16}>
+                  <Col xs={24} md={12}>
+                    <Form.Item
+                      name="bankName"
+                      label="Ngân hàng"
+                      tooltip="Ngân hàng trong danh sách VietQR để tạo mã QR chuyển khoản theo đơn."
+                      dependencies={['bankAccount', 'bankHolder']}
+                      rules={[
+                        ({ getFieldValue }) => ({
+                          validator: (_, value) => {
+                            const filled = [value, getFieldValue('bankAccount'), getFieldValue('bankHolder')].filter((item) =>
+                              item?.trim(),
+                            ).length
+                            return filled === 0 || filled === 3
+                              ? Promise.resolve()
+                              : Promise.reject(new Error('Nhập đủ ngân hàng, số tài khoản và chủ tài khoản.'))
+                          },
+                        }),
+                      ]}
+                    >
+                      <Select
+                        showSearch
+                        allowClear
+                        placeholder="Chọn ngân hàng"
+                        options={vietQrBanks.map((bank) => ({ value: bank.name, label: bank.name }))}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Form.Item name="bankAccount" label="Số tài khoản" rules={[{ pattern: /^\d{6,20}$/, message: 'Chỉ gồm 6–20 chữ số.' }]}>
+                      <Input inputMode="numeric" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24}>
+                    <Form.Item name="bankHolder" label="Chủ tài khoản" normalize={(value?: string) => value?.toUpperCase()}>
+                      <Input />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Form.Item name="invoiceNote" label="Ghi chú cuối hóa đơn" rules={[{ max: 200 }]}>
+                  <TextArea rows={2} showCount maxLength={200} />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={8}>
-                <Form.Item name="bankAccount" label="Số tài khoản" rules={[{ pattern: /^\d{6,20}$/, message: 'Chỉ gồm 6–20 chữ số.' }]}>
-                  <Input inputMode="numeric" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={8}>
-                <Form.Item name="bankHolder" label="Chủ tài khoản" normalize={(value?: string) => value?.toUpperCase()}>
-                  <Input />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Form.Item name="invoiceNote" label="Ghi chú cuối hóa đơn" rules={[{ max: 200 }]}>
-              <Input.TextArea rows={2} showCount maxLength={200} />
-            </Form.Item>
-          </Card>
-
-          <Card className="af-card af-settings-card" title="Cảnh báo kho">
-            <Row gutter={16}>
-              <Col xs={24} md={12}>
-                <Form.Item
-                  name="expiryWarningDays"
-                  label="Cảnh báo khi hạn dùng còn dưới (ngày)"
-                  tooltip="Áp dụng cho bộ lọc Sắp hết hạn ở Kho hàng và Lô hàng."
-                  rules={[{ required: true }, { type: 'integer', min: 1, max: 730, message: 'Từ 1 đến 730 ngày.' }]}
-                >
-                  <InputNumber min={1} max={730} precision={0} style={{ width: '100%' }} />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={12}>
-                <Form.Item
-                  name="defaultLowStock"
-                  label="Tồn tối thiểu mặc định cho sản phẩm mới"
-                  rules={[{ required: true }, { type: 'integer', min: 0, max: 1000000, message: 'Số nguyên không âm.' }]}
-                >
-                  <InputNumber min={0} max={1000000} precision={0} style={{ width: '100%' }} />
-                </Form.Item>
+              <Col xs={24} md={10}>
+                <TransferQr settings={preview} size={140} />
               </Col>
             </Row>
           </Card>
         </Col>
 
-        <Col xs={24} xl={9}>
-          <Card className="af-card af-settings-card" title="Xem trước đầu hóa đơn">
-            <div className="af-invoice-preview" aria-label="Xem trước đầu hóa đơn">
-              <strong>{preview.storeName || 'Tên cửa hàng'}</strong>
-              <span>{preview.address || 'Địa chỉ'}</span>
-              <span>
-                ĐT: {preview.phone || '—'}
-                {preview.taxCode ? ` · MST: ${preview.taxCode}` : ''}
-              </span>
-              {preview.bankAccount && (
-                <span>
-                  CK: {preview.bankName} {preview.bankAccount} · {preview.bankHolder}
-                </span>
-              )}
-              <em>{preview.invoiceNote}</em>
-            </div>
+        <Col xs={24} xl={9} className="af-settings-col">
+          <Card className="af-card af-settings-card" title="Phí giao hàng">
+            <Row gutter={12}>
+              <Col xs={12}>
+                <Form.Item
+                  name={['deliveryFees', 'freeFromUnits']}
+                  label="Miễn phí từ (bình/thùng)"
+                  rules={[
+                    { required: true, message: 'Nhập số bình/thùng.' },
+                    { type: 'integer', min: 0, max: 1000, message: 'Từ 0 đến 1.000.' },
+                  ]}
+                >
+                  <InputNumber min={0} max={1000} precision={0} style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+              <Col xs={12}>
+                <Form.Item
+                  name={['deliveryFees', 'smallOrderFee']}
+                  label="Phí đơn ít hơn (₫)"
+                  rules={[
+                    { required: true, message: 'Nhập phí giao.' },
+                    { type: 'integer', min: 0, max: 10000000, message: 'Từ 0 đến 10.000.000 ₫.' },
+                  ]}
+                >
+                  <InputNumber min={0} max={10000000} step={1000} precision={0} style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Typography.Text strong>Phụ phí thang bộ mỗi bình (₫)</Typography.Text>
+            <Row gutter={8} style={{ marginTop: 8 }}>
+              {Array.from({ length: STAIR_FLOORS }, (_, index) => (
+                <Col xs={12} sm={6} key={index}>
+                  <Form.Item
+                    name={['deliveryFees', 'stairsPerJug', index]}
+                    label={index === STAIR_FLOORS - 1 ? `Lầu ${index + 1}+` : `Lầu ${index + 1}`}
+                    rules={[
+                      { required: true, message: 'Nhập phụ phí.' },
+                      { type: 'integer', min: 0, max: 1000000, message: 'Từ 0 đến 1.000.000 ₫.' },
+                    ]}
+                  >
+                    <InputNumber min={0} max={1000000} step={1000} precision={0} style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
+              ))}
+            </Row>
+            <Typography.Paragraph type="secondary" className="af-form-hint">
+              Áp dụng cho đơn tạo sau khi lưu.
+            </Typography.Paragraph>
           </Card>
 
-          <Card className="af-card af-settings-card" title="Mã QR chuyển khoản (thử)">
-            <TransferQr settings={preview} amount={100000} note="AF1000" size={140} />
-            <p className="af-form-hint">
-              Mỗi đơn có mã QR riêng với số tiền còn phải thu và nội dung là mã đơn. Quét thử bằng ứng dụng ngân hàng để kiểm tra tên tài
-              khoản.
-            </p>
+          <Card className="af-card af-settings-card" title="Cảnh báo kho">
+            <Form.Item
+              name="expiryWarningDays"
+              label="Cảnh báo khi hạn dùng còn dưới (ngày)"
+              tooltip="Áp dụng cho bộ lọc Sắp hết hạn ở Kho hàng và Lô hàng."
+              rules={[{ required: true }, { type: 'integer', min: 1, max: 730, message: 'Từ 1 đến 730 ngày.' }]}
+            >
+              <InputNumber min={1} max={730} precision={0} style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item
+              name="defaultLowStock"
+              label="Tồn tối thiểu mặc định cho sản phẩm mới"
+              rules={[{ required: true }, { type: 'integer', min: 0, max: 1000000, message: 'Số nguyên không âm.' }]}
+            >
+              <InputNumber min={0} max={1000000} precision={0} style={{ width: '100%' }} />
+            </Form.Item>
           </Card>
 
-          {demo && (
-            <Card className="af-card af-settings-card" title="Chính sách vỏ & giao hàng">
-              <Descriptions
-                size="small"
-                column={1}
-                items={[
-                  { key: 'deposit', label: 'Cọc vỏ (khách chưa có vỏ)', children: `${currency(DEPOSIT_PER_BOTTLE)}/vỏ` },
-                  { key: 'brands', label: 'Đổi bù vỏ', children: EXCHANGEABLE_BRANDS.join(', ') },
-                  { key: 'pickup', label: 'Thu hồi tận nơi', children: `${currency(PICKUP_FEE)}/lần khi dưới ${PICKUP_FEE_BELOW} vỏ` },
-                  {
-                    key: 'delivery',
-                    label: 'Phí giao',
-                    children: `Miễn phí từ ${FREE_DELIVERY_MIN_UNITS} bình/thùng; ít hơn ${currency(SMALL_ORDER_FEE.min)}–${currency(SMALL_ORDER_FEE.max)}`,
-                  },
-                  {
-                    key: 'stairs',
-                    label: 'Thang bộ / bình',
-                    children: [1, 2, 3, 4].map((floor) => `L${floor}: ${currency(stairsSurcharge(floor, 1))}`).join(' · '),
-                  },
-                ]}
-              />
-              <Typography.Paragraph type="secondary" className="af-form-hint">
-                Mức mẫu tham khảo chính sách công khai của iWater. Nhóm cần chốt chính sách thật trước khi cho chỉnh ở đây.
-              </Typography.Paragraph>
-            </Card>
-          )}
+          <Card className="af-card af-settings-card" title="Chính sách vỏ">
+            <Descriptions
+              size="small"
+              column={1}
+              items={[
+                {
+                  key: 'deposit',
+                  label: 'Cọc mỗi vỏ (khách chưa có vỏ)',
+                  children: depositRates.isPending
+                    ? 'Đang tải…'
+                    : depositRates.isError
+                      ? 'Không tải được danh mục loại vỏ.'
+                      : depositRates.data.length
+                        ? depositRatesLabel(depositRates.data)
+                        : 'Chưa có loại vỏ đang lưu hành.',
+                },
+                { key: 'brands', label: 'Đổi bù vỏ', children: <Unsupported /> },
+                { key: 'pickup', label: 'Thu hồi tận nơi', children: <Unsupported /> },
+              ]}
+            />
+            <Typography.Paragraph type="secondary" className="af-form-hint">
+              Sửa tiền cọc ở Khách hàng › Vỏ bình.
+            </Typography.Paragraph>
+          </Card>
         </Col>
       </Row>
 
@@ -304,7 +348,7 @@ function SettingsForm({ settings, reload }: { settings: SettingsSnapshot; reload
           <Button
             disabled={!dirty}
             onClick={() => {
-              form.setFieldsValue(settings)
+              form.setFieldsValue(toForm(settings))
               setVersion(settings.version)
               setConflict(false)
               setDirty(false)

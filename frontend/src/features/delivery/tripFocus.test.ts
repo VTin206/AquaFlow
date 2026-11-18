@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DeliveryStop } from './deliveryApi'
-import { demoTripFocus, driverTripFocus, liveTripFocus, liveTripStatus } from './tripFocus'
+import { driverTripFocus, liveTripFocus, liveTripStatus } from './tripFocus'
 
 const stop = (orderStatus: string, outcome?: 'SUCCESS' | 'FAILED') =>
   ({ orderStatus, latestAttempt: outcome ? { outcome } : null }) as DeliveryStop
@@ -23,11 +23,11 @@ describe('liveTripFocus', () => {
     expect(liveTripFocus(trip('CREATED', [stop('PREPARING'), stop('OUT_FOR_DELIVERY')])).focus.title).toBe('Cần xuất kho 1 đơn')
   })
 
-  it('explains why settling is not available yet', () => {
+  it('shows progress without a hint line while results are missing', () => {
     const { focus, next } = liveTripFocus(trip('IN_PROGRESS', [stop('DELIVERED', 'SUCCESS'), stop('OUT_FOR_DELIVERY')]))
     expect(next).toBeUndefined()
     expect(focus.title).toBe('Đã có kết quả 1/2 điểm giao')
-    expect(focus.description).toContain('Ghi đủ kết quả')
+    expect(focus.description).toBeUndefined()
   })
 
   it('treats a failed delivery as a result and mentions it', () => {
@@ -58,12 +58,11 @@ describe('liveTripStatus', () => {
   })
 })
 
-describe('demoTripFocus', () => {
-  it('follows the demo trip status', () => {
-    expect(demoTripFocus({ status: 'Chờ xuất phát' }, 2, 0, 2).title).toBe('Cần xuất kho 2 đơn')
-    expect(demoTripFocus({ status: 'Đang giao' }, 0, 1, 3).title).toBe('Đã có kết quả 1/3 điểm giao')
-    expect(demoTripFocus({ status: 'Chờ đối soát' }, 0, 3, 3).tone).toBe('action')
-    expect(demoTripFocus({ status: 'Đã đối soát' }, 0, 3, 3).tone).toBe('done')
+describe('liveTripFocus on a partly dispatched trip', () => {
+  it('asks to dispatch the remaining orders before anything else', () => {
+    const { focus, next } = liveTripFocus(trip('IN_PROGRESS', [stop('OUT_FOR_DELIVERY'), stop('PREPARING')]))
+    expect(next).toBe('dispatch')
+    expect(focus.title).toBe('Cần xuất kho 1 đơn')
   })
 })
 

@@ -2,16 +2,30 @@ import { useRef, useState } from 'react'
 import { Alert, App, Button, Form, InputNumber, Modal, Skeleton, Table } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/features/auth/useAuth'
+import { customerKeys } from '@/features/customers/useCustomers'
 import { invalidateLiveData } from '@/features/live/invalidateLiveData'
 import { QueryError } from '@/shared/components/QueryError'
+import { useConfirm } from '@/shared/components/confirm'
 import { currency } from '@/shared/utils/format'
 import { deliveryBottleApi, type BottleReturnInput } from '../deliveryBottleApi'
+import { depositShortfall } from '../bottleDeposit'
 
-export function DeliveryBottlesButton({ assignmentId, orderCode }: { assignmentId: number; orderCode: string }) {
+export function DeliveryBottlesButton({
+  assignmentId,
+  orderCode,
+  size,
+}: {
+  assignmentId: number
+  orderCode: string
+  /** Cùng cỡ với các nút đứng cạnh (trong cửa sổ chuyến dùng nút nhỏ). */
+  size?: 'small' | 'middle'
+}) {
   const [open, setOpen] = useState(false)
   return (
     <>
-      <Button onClick={() => setOpen(true)}>Vỏ của đơn</Button>
+      <Button size={size} onClick={() => setOpen(true)}>
+        Vỏ của đơn
+      </Button>
       {open && <DeliveryBottlesModal assignmentId={assignmentId} orderCode={orderCode} onClose={() => setOpen(false)} />}
     </>
   )
@@ -29,6 +43,7 @@ export function DeliveryBottlesModal({
   const { user } = useAuth()
   const client = useQueryClient()
   const { message } = App.useApp()
+  const ask = useConfirm()
   const [form] = Form.useForm<Record<string, number>>()
   const lock = useRef(false)
   const retry = useRef<{ payload: string; id: string } | null>(null)
@@ -42,7 +57,7 @@ export function DeliveryBottlesModal({
       message.success('Đã thu vỏ và cập nhật sổ khách hàng.')
       form.resetFields()
       retry.current = null
-      await invalidateLiveData(client)
+      await Promise.all([invalidateLiveData(client), client.invalidateQueries({ queryKey: customerKeys.all })])
     },
     onError: (error: Error) => {
       message.error(error.message)
@@ -53,6 +68,8 @@ export function DeliveryBottlesModal({
     },
   })
   const data = query.data
+  const entering = Form.useWatch([], form) as Record<string, number | undefined> | undefined
+  const deposit = data ? depositShortfall(data.lines, entering ?? {}) : undefined
   return (
     <Modal
       open
@@ -91,13 +108,7 @@ export function DeliveryBottlesModal({
               title="Đơn chưa liên kết hồ sơ khách hàng"
               description="Chưa tự ghi sổ vỏ cho đơn này. Liên hệ cửa hàng để đối chiếu khách hàng và số vỏ thực giao."
             />
-          ) : (
-            <p>
-              {data.given
-                ? 'Vỏ giao thành công đã tự ghi vào sổ khách. Nhập đúng số vỏ thực nhận của từng loại để cập nhật sổ và tổng vỏ bàn giao chuyến.'
-                : 'Số vỏ dưới đây được chốt khi khởi hành; chỉ tự ghi vào sổ khách khi giao thành công.'}
-            </p>
-          )}
+          ) : null}
           {data.tracked && (
             <>
               <Table
@@ -111,15 +122,20 @@ export function DeliveryBottlesModal({
                   { title: 'Loại vỏ', dataIndex: 'name' },
                   { title: data.given ? 'Đã giao' : 'Dự kiến giao', dataIndex: 'given' },
                   { title: 'Đã thu', dataIndex: 'returned' },
-                  { title: 'Cọc / vỏ khi khởi hành', dataIndex: 'unitDeposit', render: currency },
+                  { title: 'Cọc / vỏ', dataIndex: 'unitDeposit', render: currency },
                 ]}
               />
+              {deposit && deposit.bottles > 0 && (
+                <p className="af-deposit-due">
+                  Thiếu {deposit.bottles} vỏ → cọc phải thu <strong>{currency(deposit.total)}</strong> · Thu cọc ở nút Thu tiền sau khi ghi số vỏ.
+                </p>
+              )}
               {data.canReturn && data.lines.some((l) => l.returned < l.given) && (
                 <Form
                   form={form}
                   layout="vertical"
                   disabled={save.isPending}
-                  onFinish={(values) => {
+                  onFinish={async (values) => {
                     if (lock.current) return
                     const lines = data.lines
                       .map((l) => ({ bottleTypeId: l.bottleTypeId, quantity: values[String(l.bottleTypeId)] ?? 0 }))
@@ -128,6 +144,22 @@ export function DeliveryBottlesModal({
                       message.warning('Nhập ít nhất một vỏ thực nhận.')
                       return
                     }
+                    // Ghi thẳng vào sổ vỏ của khách, không xóa được: nhắc lại số vỏ từng loại.
+                    lock.current = true
+                    const ok = await ask({
+                      title: `Xác nhận đã thu ${lines.reduce((sum, l) => sum + l.quantity, 0)} vỏ của đơn ${orderCode}?`,
+                      content: (
+                        <p>
+                          {lines
+                            .map((l) => `${l.quantity} × ${data.lines.find((x) => x.bottleTypeId === l.bottleTypeId)?.name ?? ''}`)
+                            .join(', ')}
+                          . Số vỏ được ghi ngay vào sổ khách hàng.
+                        </p>
+                      ),
+                      okText: 'Đã thu vỏ',
+                    })
+                    lock.current = false
+                    if (!ok) return
                     const payload = JSON.stringify(lines)
                     if (retry.current?.payload !== payload) retry.current = { payload, id: crypto.randomUUID() }
                     lock.current = true
@@ -160,22 +192,25 @@ export function DeliveryBottlesModal({
                   </Button>
                 </Form>
               )}
-              <p>Thu vỏ không tự hoàn cọc hoặc nhập kho nước. Các loại vỏ khác hoặc số vỏ ngoài đơn cần cửa hàng xử lý riêng.</p>
-              <h3>Lịch sử thu vỏ</h3>
-              <Table
-                rowKey={(r) => `${r.requestId}-${r.typeName}`}
-                size="small"
-                dataSource={data.receipts}
-                pagination={{ pageSize: 5, hideOnSinglePage: true }}
-                locale={{ emptyText: 'Chưa thu vỏ theo loại.' }}
-                scroll={{ x: 450 }}
-                columns={[
-                  { title: 'Thời gian', dataIndex: 'at', render: (value) => new Date(value).toLocaleString('vi-VN') },
-                  { title: 'Loại vỏ', dataIndex: 'typeName' },
-                  { title: 'Số vỏ', dataIndex: 'quantity' },
-                  { title: 'Người thu', dataIndex: 'actor' },
-                ]}
-              />
+              {data.receipts.length > 0 && (
+                <>
+                  <h3>Lịch sử thu vỏ</h3>
+                  <Table
+                    rowKey={(r) => `${r.requestId}-${r.typeName}`}
+                    size="small"
+                    dataSource={data.receipts}
+                    pagination={{ pageSize: 5, hideOnSinglePage: true }}
+                    locale={{ emptyText: 'Chưa thu vỏ theo loại.' }}
+                    scroll={{ x: 450 }}
+                    columns={[
+                      { title: 'Thời gian', dataIndex: 'at', render: (value) => new Date(value).toLocaleString('vi-VN') },
+                      { title: 'Loại vỏ', dataIndex: 'typeName' },
+                      { title: 'Số vỏ', dataIndex: 'quantity' },
+                      { title: 'Người thu', dataIndex: 'actor' },
+                    ]}
+                  />
+                </>
+              )}
             </>
           )}
         </>

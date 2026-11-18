@@ -18,11 +18,14 @@ public class StoreSettingsService {
     @Transactional
     public StoreSettingsResponse update(UpdateStoreSettingsRequest request, long actorId) {
         StoreSettingsResponse before = repository.get();
+        // Client cũ không gửi phí giao: giữ nguyên mức đang áp dụng.
+        StoreSettingsData next = request.settings().deliveryFees() == null
+                ? request.settings().withDeliveryFees(before.settings().deliveryFees()) : request.settings();
         if (before.version() != request.version()
-                || !repository.update(request.settings(), request.version(), actorId)) {
+                || !repository.update(next, request.version(), actorId)) {
             throw new ConflictException("Settings have changed; reload before saving");
         }
-        repository.audit(before.settings(), request.settings(), actorId);
+        repository.audit(before.settings(), next, actorId);
         return repository.get();
     }
 }

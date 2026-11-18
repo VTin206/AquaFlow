@@ -5,7 +5,6 @@ import { canOpen, homeOf } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/useStaff'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
-import { useMockSession } from './useAccountMenu'
 import { ErrorBoundary } from '../ErrorBoundary'
 
 // Ghi nhớ sidebar thu gọn giữa các lần mở app.
@@ -34,13 +33,14 @@ export function AppLayout() {
   const staff = useStaff()
   const { pathname } = useLocation()
 
-  useMockSession(staff)
-
-  // Mở trang không thuộc vai trò (gõ đường dẫn, đổi vai trò) thì về trang chính của vai trò đó.
+  // Mở trang không thuộc vai trò (gõ đường dẫn) thì về trang chính của vai trò đó.
   if (staff && !canOpen(staff.role, pathname)) return <Navigate to={homeOf(staff.role)} replace />
 
   return (
     <Layout className="af-shell">
+      <a className="af-skip-link" href="#main-content">
+        Bỏ qua điều hướng
+      </a>
       <Topbar onOpenNav={() => setNavOpen(true)} />
       <Layout>
         {/* Máy tính: menu cố định bên trái. Điện thoại/tablet (< 992px): ẩn, mở bằng nút ☰ trên thanh trên cùng. */}
@@ -57,7 +57,7 @@ export function AppLayout() {
         >
           <Sidebar onNavigate={() => setNavOpen(false)} />
         </Drawer>
-        <Layout.Content className="af-content">
+        <Layout.Content id="main-content" className="af-content">
           {/* Giữ khung app hiển thị trong lúc tải code của trang mới. */}
           <Suspense
             fallback={

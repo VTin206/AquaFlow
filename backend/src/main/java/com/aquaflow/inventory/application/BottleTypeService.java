@@ -44,6 +44,13 @@ public class BottleTypeService {
     @Transactional
     public BottleTypeResponse update(Long id, UpdateBottleTypeRequest request) {
         BottleType bottleType = getBottleType(id);
+        if (request.name() != null && !request.name().isBlank()) {
+            String name = request.name().trim();
+            if (bottleTypeRepository.existsByNameIgnoreCaseAndIdNot(name, id)) {
+                throw new ConflictException("Đã có loại vỏ \"" + name + "\".");
+            }
+            bottleType.rename(name);
+        }
         bottleType.update(request.depositUnitAmount());
         return toResponse(bottleType);
     }
@@ -51,6 +58,14 @@ public class BottleTypeService {
     @Transactional
     public void delete(Long id) {
         getBottleType(id).deactivate();
+    }
+
+    /** Cho loại vỏ đã ngừng lưu hành trở lại; gọi lại khi đang lưu hành không đổi gì. */
+    @Transactional
+    public BottleTypeResponse reactivate(Long id) {
+        BottleType bottleType = getBottleType(id);
+        bottleType.activate();
+        return toResponse(bottleType);
     }
 
     private BottleType getBottleType(Long id) {

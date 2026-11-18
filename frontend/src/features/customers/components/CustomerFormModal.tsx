@@ -1,13 +1,10 @@
-import { App, Button, Col, Form, Input, Modal, Row, Segmented } from 'antd'
-import { Plus, Trash2 } from 'lucide-react'
+import { App, Col, Form, Input, Modal, Row, Segmented } from 'antd'
 import type { Customer, CustomerDraft } from '../types'
 import { useSaveCustomer } from '../useCustomers'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
-import { useFeature, useIsDemo } from '@/shared/features'
-import { UNSUPPORTED_HINT } from '@/shared/components/Unsupported'
 import { modalWidth } from '@/shared/utils/modal'
 import { WardSelect } from '@/shared/address/WardSelect'
-import { AddressLineField } from '@/shared/address/AddressLineField'
+import { TextArea } from '@/shared/components/TextArea'
 
 type CustomerFormModalProps = { open: boolean; customer?: Customer; onClose: () => void; onSaved?: (customer: Customer) => void }
 
@@ -16,10 +13,6 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
   const [form] = Form.useForm<CustomerDraft>()
   const cancel = useConfirmDiscard(form, onClose)
   const save = useSaveCustomer()
-  const showType = useFeature('customerType')
-  const showExtras = useFeature('customerProfileExtras')
-  // Tài khoản thật quản lý địa chỉ giao (người nhận, khu vực, mặc định) trong hồ sơ khách.
-  const inlineAddresses = useIsDemo()
 
   return (
     <Modal
@@ -43,14 +36,14 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
                 phone: customer.phone,
                 type: customer.type,
                 area: customer.area,
-                addresses: customer.addresses.length ? customer.addresses : [''],
                 note: customer.note,
               }
-            : { type: 'Cá nhân', addresses: [''] }
+            : { type: 'Cá nhân' }
         }
         onFinish={(draft) =>
           save.mutate(
-            { id: customer?.id, draft },
+            // Địa chỉ giao (người nhận, khu vực, mặc định) quản lý trong hồ sơ khách; form này giữ nguyên.
+            { id: customer?.id, draft: { ...draft, addresses: customer?.addresses ?? [] } },
             {
               onSuccess: (saved) => {
                 message.success(customer ? 'Đã cập nhật hồ sơ khách hàng.' : `Đã thêm khách hàng ${saved.name}.`)
@@ -62,8 +55,8 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
           )
         }
       >
-        <Form.Item name="type" label="Loại khách" extra={showType ? undefined : UNSUPPORTED_HINT}>
-          <Segmented options={['Cá nhân', 'Doanh nghiệp']} disabled={!showType} />
+        <Form.Item name="type" label="Loại khách">
+          <Segmented options={['Cá nhân', 'Doanh nghiệp']} />
         </Form.Item>
         <Row gutter={16}>
           <Col xs={24} sm={14}>
@@ -97,42 +90,14 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
           name="area"
           label="Phường/Xã"
           tooltip="Dùng để lọc và xếp chuyến giao."
-          extra={showExtras ? undefined : UNSUPPORTED_HINT}
           rules={[{ max: 80 }]}
         >
-          <WardSelect disabled={!showExtras} />
+          <WardSelect />
         </Form.Item>
-        {inlineAddresses && (
-          <Form.List name="addresses">
-            {(fields, { add, remove }) => (
-              <div className="af-address-list">
-                <div className="af-form-label">Địa chỉ giao hàng</div>
-                {fields.map((field, index) => (
-                  <div className="af-address-row" key={field.key}>
-                    <Form.Item name={field.name} rules={[{ max: 255 }]} noStyle>
-                      <AddressLineField label={`Địa chỉ ${index + 1}`} />
-                    </Form.Item>
-                    <Button
-                      type="text"
-                      danger
-                      icon={<Trash2 size={16} />}
-                      aria-label={`Xóa địa chỉ ${index + 1}`}
-                      disabled={fields.length === 1}
-                      onClick={() => remove(field.name)}
-                    />
-                  </div>
-                ))}
-                <Button type="dashed" icon={<Plus size={15} />} onClick={() => add('')} disabled={fields.length >= 5}>
-                  Thêm địa chỉ
-                </Button>
-              </div>
-            )}
-          </Form.List>
-        )}
-        <Form.Item name="note" label="Ghi chú" extra={showExtras ? undefined : UNSUPPORTED_HINT} rules={[{ max: 500 }]}>
-          <Input.TextArea rows={2} placeholder="Giờ nhận hàng thuận tiện, người liên hệ, lưu ý giao nhận..." disabled={!showExtras} />
+        <Form.Item name="note" label="Ghi chú" rules={[{ max: 500 }]}>
+          <TextArea rows={2} maxLength={500} placeholder="Giờ nhận hàng thuận tiện, người liên hệ, lưu ý giao nhận..." />
         </Form.Item>
-        {!inlineAddresses && !customer && <p className="af-form-hint">Thêm địa chỉ giao trong hồ sơ khách sau khi lưu.</p>}
+        {!customer && <p className="af-form-hint">Thêm địa chỉ giao trong hồ sơ khách sau khi lưu.</p>}
       </Form>
     </Modal>
   )

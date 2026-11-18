@@ -62,6 +62,17 @@ beforeEach(() => {
   const style = window.getComputedStyle.bind(window)
   vi.spyOn(window, 'getComputedStyle').mockImplementation((element) => style(element))
 })
+// Hộp xác nhận cũ còn trong DOM sau khi đóng: chỉ bấm nút của hộp mới mở.
+const clickedConfirms = new WeakSet<HTMLElement>()
+const confirmDialog = async (name: string) => {
+  const button = await waitFor(() => {
+    const fresh = screen.getAllByRole('button', { name }).filter((item) => !clickedConfirms.has(item))
+    if (!fresh.length) throw new Error(`Chưa thấy hộp xác nhận "${name}"`)
+    return fresh[fresh.length - 1]
+  })
+  clickedConfirms.add(button)
+  fireEvent.click(button)
+}
 afterEach(() => {
   cleanup()
   clients.splice(0).forEach((c) => c.clear())
@@ -86,12 +97,14 @@ test('requires a refund reason and reuses request id on retry without losing the
   expect(bottleLedgerApi.create).not.toHaveBeenCalled()
   fireEvent.change(screen.getByLabelText('Lý do / mã đơn để đối chiếu'), { target: { value: 'Đã trả vỏ' } })
   fireEvent.click(screen.getByRole('button', { name: 'Xác nhận ghi nhận' }))
+  await confirmDialog('Ghi vào sổ')
   await waitFor(() => expect(bottleLedgerApi.create).toHaveBeenCalledTimes(1))
   const first = vi.mocked(bottleLedgerApi.create).mock.calls[0][1]
   expect(first.amount).toBe(50000)
   expect(first.kind).toBe('REFUND')
   await screen.findByText('Mất kết nối')
   fireEvent.click(screen.getByRole('button', { name: 'Xác nhận ghi nhận' }))
+  await confirmDialog('Ghi vào sổ')
   await waitFor(() => expect(bottleLedgerApi.create).toHaveBeenCalledTimes(2))
   expect(vi.mocked(bottleLedgerApi.create).mock.calls[1][1].requestId).toBe(first.requestId)
 })

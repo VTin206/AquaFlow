@@ -1,5 +1,6 @@
 package com.aquaflow.customer.api.dto;
 
+import com.aquaflow.shared.address.DeliveryWard;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -21,6 +22,7 @@ public record CustomerRequest(
         String customerType,
 
         @Size(max = 150, message = "Area must not exceed 150 characters")
+        @DeliveryWard
         String area,
 
         @Size(max = 1000, message = "Note must not exceed 1000 characters")

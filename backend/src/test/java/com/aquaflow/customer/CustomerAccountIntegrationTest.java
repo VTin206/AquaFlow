@@ -39,13 +39,38 @@ class CustomerAccountIntegrationTest {
     }
     private String address(boolean isDefault) throws Exception {
         return json.writeValueAsString(Map.of("recipientName", " Người nhận ", "recipientPhone", "090 123 4567",
-                "addressLine", " 12 Đường A ", "area", " Quận 1 ", "isDefault", isDefault));
+                "addressLine", " 12 Đường A ", "area", " Phường Bến Thành ", "isDefault", isDefault));
     }
     private long addAddress(String token, boolean isDefault) throws Exception {
         var result = mvc.perform(post(BASE + "/addresses").header("Authorization", token).contentType("application/json").content(address(isDefault)))
                 .andExpect(status().isCreated()).andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.recipientName").value("Người nhận")).andReturn();
         return json.readTree(result.getResponse().getContentAsString()).get("id").asLong();
+    }
+    @Test void changePasswordChecksCurrentPasswordAndEndsExistingSessions() throws Exception {
+        String token = register("0971111190");
+        String email = json.readTree(mvc.perform(get(BASE + "/profile").header("Authorization", token))
+                .andReturn().getResponse().getContentAsString()).get("email").asText();
+        mvc.perform(post(BASE + "/password").header("Authorization", token).contentType("application/json")
+                .content("{\"currentPassword\":\"wrong-password\",\"newPassword\":\"New-password-2026\"}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post(BASE + "/password").header("Authorization", token).contentType("application/json")
+                .content("{\"currentPassword\":\"" + PASSWORD + "\",\"newPassword\":\"short\"}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post(BASE + "/password").header("Authorization", token).contentType("application/json")
+                .content("{\"currentPassword\":\"" + PASSWORD + "\",\"newPassword\":\"" + PASSWORD + "\"}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post(BASE + "/password").header("Authorization", token).contentType("application/json")
+                .content("{\"currentPassword\":\"" + PASSWORD + "\",\"newPassword\":\"New-password-2026\"}"))
+                .andExpect(status().isNoContent());
+        mvc.perform(get(BASE + "/profile").header("Authorization", token)).andExpect(status().isUnauthorized());
+        assertThat(auth.login(new LoginRequest(email, "New-password-2026")).accessToken()).isNotBlank();
+    }
+    @Test void customerSeesOwnBottlesAndDeposit() throws Exception {
+        String token = register("0971111191");
+        mvc.perform(get(BASE + "/bottles").header("Authorization", token)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.bottles").isEmpty()).andExpect(jsonPath("$.depositPaid").value(0));
+        mvc.perform(get(BASE + "/bottles")).andExpect(status().isUnauthorized());
     }
     @Test void profileUpdatesBothRecordsWithoutChangingEmailRoleOrCredentials() throws Exception {
         String token = register("0971111101");

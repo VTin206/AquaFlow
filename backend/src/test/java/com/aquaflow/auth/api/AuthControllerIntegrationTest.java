@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -49,9 +50,17 @@ class AuthControllerIntegrationTest {
     @MockBean private com.aquaflow.inventory.repository.InventoryReturnRepository inventoryReturnRepository;
     @MockBean private com.aquaflow.activity.ActivityRepository activityRepository;
     @MockBean private com.aquaflow.report.ReportRepository reportRepository;
+    @MockBean private com.aquaflow.inventory.brand.BrandService brandService;
+    @MockBean private com.aquaflow.inventory.repository.BestSellerRepository bestSellerRepository;
     @MockBean private com.aquaflow.delivery.repository.DeliveryRepository deliveryRepository;
     @MockBean private com.aquaflow.customer.order.repository.DispatchRepository dispatchRepository;
+    @MockBean private com.aquaflow.customer.order.repository.OrderTrackingRepository orderTrackingRepository;
+    @MockBean private com.aquaflow.auth.repository.RefreshTokenRepository refreshTokenRepository;
+    @MockBean private com.aquaflow.customer.order.repository.OrderQueryRepository orderQueryRepository;
+    @MockBean private com.aquaflow.customer.order.repository.OrderReturnRepository orderReturnRepository;
+    @MockBean private com.aquaflow.customer.repository.CustomerQueryRepository customerQueryRepository;
     @MockBean private com.aquaflow.inventory.application.StockDispatchService stockDispatchService;
+    @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.inventory.application.StockAdjustmentService stockAdjustmentService;
     @MockBean private com.aquaflow.workspace.repository.StoreSettingsRepository storeSettingsRepository;
     @MockBean private com.aquaflow.workspace.repository.NotificationRepository notificationRepository;
 
@@ -85,6 +94,11 @@ class AuthControllerIntegrationTest {
     private UserRepository userRepository;
 
     // Test này tắt JPA nên phải giả lập các repository của module inventory
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.aquaflow.inventory.repository.ProductCategoryRepository productCategoryRepository;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.aquaflow.content.repository.ShopArticleRepository shopArticleRepository;
+
     @MockBean
     private ProductRepository productRepository;
 
@@ -120,6 +134,7 @@ class AuthControllerIntegrationTest {
                 "0900000000",
                 passwordEncoder.encode("correct-password"),
                 UserStatus.ACTIVE);
+        org.springframework.test.util.ReflectionTestUtils.setField(activeUser, "id", 1L);
     }
 
     @Test
@@ -133,7 +148,12 @@ class AuthControllerIntegrationTest {
                 .andExpect(jsonPath("$.accessToken").isNotEmpty())
                 .andExpect(jsonPath("$.tokenType").value("Bearer"))
                 .andExpect(jsonPath("$.user.email").value("an@example.com"))
-                .andExpect(jsonPath("$.user.role").value("CUSTOMER"));
+                .andExpect(jsonPath("$.user.role").value("CUSTOMER"))
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.startsWith("af_refresh="),
+                        org.hamcrest.Matchers.containsString("HttpOnly"),
+                        org.hamcrest.Matchers.containsString("SameSite=Strict"))))
+                .andExpect(jsonPath("$.refreshToken").doesNotExist());
     }
 
     @Test
@@ -145,6 +165,38 @@ class AuthControllerIntegrationTest {
                         .content("{\"email\":\"an@example.com\",\"password\":\"wrong-password\"}"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("Unauthorized"));
+    }
+
+    @Test
+    void repeatedFailedLoginsFromOneAddressAreLimited() throws Exception {
+        when(userRepository.findByEmailIgnoreCase("an@example.com")).thenReturn(Optional.of(activeUser));
+        for (int i = 0; i < AuthController.LOGIN_FAILURE_LIMIT; i++) {
+            mockMvc.perform(login("10.9.0.1", "wrong-password")).andExpect(status().isUnauthorized());
+        }
+
+        // Đủ số lần sai thì chặn cả mật khẩu đúng, để không dò tiếp được.
+        mockMvc.perform(login("10.9.0.1", "correct-password"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().string("Retry-After", "900"))
+                .andExpect(jsonPath("$.status").value(429))
+                .andExpect(jsonPath("$.message").isNotEmpty());
+        // Địa chỉ khác không bị ảnh hưởng.
+        mockMvc.perform(login("10.9.0.2", "correct-password")).andExpect(status().isOk());
+    }
+
+    @Test
+    void successfulLoginsAreNotCounted() throws Exception {
+        when(userRepository.findByEmailIgnoreCase("an@example.com")).thenReturn(Optional.of(activeUser));
+        for (int i = 0; i <= AuthController.LOGIN_FAILURE_LIMIT; i++) {
+            mockMvc.perform(login("10.9.0.3", "correct-password")).andExpect(status().isOk());
+        }
+    }
+
+    private org.springframework.test.web.servlet.RequestBuilder login(String address, String password) {
+        return post("/api/v1/auth/login")
+                .with(request -> { request.setRemoteAddr(address); return request; })
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"an@example.com\",\"password\":\"" + password + "\"}");
     }
 
     @Test

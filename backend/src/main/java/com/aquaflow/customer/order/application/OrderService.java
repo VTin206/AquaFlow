@@ -10,8 +10,21 @@ import com.aquaflow.customer.order.domain.Order;
 import com.aquaflow.customer.order.domain.OrderChannel;
 import com.aquaflow.customer.order.domain.FulfillmentType;
 import com.aquaflow.customer.order.domain.OrderItem;
+import com.aquaflow.customer.order.api.dto.OrderListItem;
+import com.aquaflow.customer.order.api.dto.OrderPageResponse;
 import com.aquaflow.customer.order.repository.OrderItemRepository;
+import com.aquaflow.customer.order.repository.OrderQueryRepository;
 import com.aquaflow.customer.order.repository.OrderRepository;
+import com.aquaflow.shared.api.BadRequestException;
+import com.aquaflow.shared.api.PageRequestParams;
+import java.time.Clock;
+import java.time.OffsetDateTime;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import com.aquaflow.inventory.application.ReservationLine;
 import com.aquaflow.inventory.application.StockReservationService;
 import com.aquaflow.inventory.domain.Product;
@@ -25,26 +38,37 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
 public class OrderService {
 
+    /** Giới hạn cửa sổ "tập đơn đang xử lý" để lượng dữ liệu luôn nhỏ. */
+    public static final int MAX_WORKING_SET_DAYS = 90;
+
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final StockReservationService stockReservationService;
     private final ProductRepository productRepository;
+    private final OrderQueryRepository orderQueryRepository;
+    private final com.aquaflow.workspace.repository.StoreSettingsRepository storeSettings;
+    private final Clock clock;
 
     public OrderService(
             OrderRepository orderRepository,
             OrderItemRepository orderItemRepository,
             StockReservationService stockReservationService,
-            ProductRepository productRepository) {
+            ProductRepository productRepository,
+            OrderQueryRepository orderQueryRepository,
+            com.aquaflow.workspace.repository.StoreSettingsRepository storeSettings,
+            Clock clock) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.stockReservationService = stockReservationService;
         this.productRepository = productRepository;
+        this.orderQueryRepository = orderQueryRepository;
+        this.storeSettings = storeSettings;
+        this.clock = clock;
     }
 
     @Transactional
@@ -147,7 +171,7 @@ public class OrderService {
                         ? (note == null ? "" : note + "\n") + "Số tầng đi thang bộ: " + stairFloor : note);
 
         BigDecimal subtotal = BigDecimal.ZERO;
-        long units = 0, jugs = 0;
+        long units = 0, stairsUnits = 0;
         List<OrderItem> items = new java.util.ArrayList<>();
 
         for (OrderItemRequest itemRequest : itemRequests) {
@@ -165,13 +189,13 @@ public class OrderService {
                     product.getSalePrice());
 
             units += itemRequest.quantity();
-            if (DeliveryPricing.isJug(product.getUnit())) jugs += itemRequest.quantity();
+            if (DeliveryPricing.carriesStairsFee(product.getUnit())) stairsUnits += itemRequest.quantity();
             items.add(item);
             subtotal = subtotal.add(item.getLineTotal());
         }
 
         BigDecimal fee = channel == OrderChannel.WEB && fulfillmentType == FulfillmentType.DELIVERY
-                ? DeliveryPricing.calculate(subtotal, units, jugs, stairFloor).deliveryFee() : BigDecimal.ZERO;
+                ? DeliveryPricing.calculate(subtotal, units, stairsUnits, stairFloor, storeSettings.deliveryFees()).deliveryFee() : BigDecimal.ZERO;
         if (expectedTotal != null && expectedTotal.compareTo(subtotal.add(fee)) != 0)
             throw new ConflictException("Giá hoặc phí giao đã thay đổi. Vui lòng tải lại phí giao và kiểm tra tổng tiền.");
         order.updateAmounts(
@@ -179,6 +203,7 @@ public class OrderService {
                 BigDecimal.ZERO,
                 fee);
 
+        order.assignTrackingToken(TrackingTokens.generate());
         Order savedOrder = orderRepository.save(order);
         orderItemRepository.saveAll(items);
 
@@ -186,18 +211,53 @@ public class OrderService {
     }
 
     private String generateOrderCode() {
-        return "AF-" + UUID.randomUUID()
-                .toString()
-                .replace("-", "")
-                .substring(0, 20)
-                .toUpperCase(Locale.ROOT);
+        return String.format(Locale.ROOT, "AF-%06d", orderRepository.nextOrderCodeNumber());
     }
 
-    public List<OrderResponse> findAll() {
-        return orderRepository.findAll()
-                .stream()
-                .map(this::toResponse)
+    /** Trang Đơn hàng: lọc/tìm/phân trang ở SQL, mới nhất trước. */
+    public OrderPageResponse search(OrderSearch search, PageRequestParams page) {
+        OrderQueryRepository.IdPage ids = orderQueryRepository.search(search, page);
+        return new OrderPageResponse(
+                listItems(ids.ids()), page.page(), page.size(), ids.total(), page.totalPages(ids.total()),
+                orderQueryRepository.statusCounts());
+    }
+
+    /** Đơn còn việc phải làm cộng đơn tạo trong {@code days} ngày gần nhất, cho các màn hình vận hành. */
+    public List<OrderListItem> workingSet(int days) {
+        if (days < 1 || days > MAX_WORKING_SET_DAYS) {
+            throw new BadRequestException("days must be between 1 and " + MAX_WORKING_SET_DAYS);
+        }
+        OffsetDateTime since = OffsetDateTime.now(clock).minusDays(days);
+        return listItems(orderQueryRepository.workingSetIds(since));
+    }
+
+    /** Lịch sử đơn của một khách cho nhân viên (hồ sơ khách), mới nhất trước. */
+    public List<OrderListItem> customerOrders(long customerId) {
+        return listItems(orderQueryRepository.customerOrderIds(customerId));
+    }
+
+    /** Nạp đơn, dòng hàng và số dư thanh toán theo lô, giữ đúng thứ tự {@code ids}. */
+    private List<OrderListItem> listItems(List<Long> ids) {
+        if (ids.isEmpty()) return List.of();
+        Map<Long, Order> orders = orderRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(Order::getId, Function.identity()));
+        Map<Long, List<OrderItem>> items = itemsByOrder(ids);
+        Map<Long, OrderQueryRepository.Balance> balances = orderQueryRepository.balances(ids);
+        Set<Long> failed = orderQueryRepository.lastAttemptFailed(ids);
+        return ids.stream()
+                .filter(orders::containsKey)
+                .map(id -> {
+                    OrderQueryRepository.Balance balance = balances.getOrDefault(id, OrderQueryRepository.Balance.ZERO);
+                    return new OrderListItem(toResponse(orders.get(id), items.getOrDefault(id, List.of())),
+                            balance.paid(), balance.due(), balance.refundDue(), balance.returned(), failed.contains(id));
+                })
                 .toList();
+    }
+
+    private Map<Long, List<OrderItem>> itemsByOrder(Collection<Long> orderIds) {
+        return orderItemRepository.findAllByOrder_IdIn(orderIds).stream()
+                .sorted(Comparator.comparing(OrderItem::getId))
+                .collect(Collectors.groupingBy(item -> item.getOrder().getId()));
     }
 
     @Transactional
@@ -235,10 +295,70 @@ public class OrderService {
                 });
     }
 
+    /**
+     * Sửa đơn còn chờ xác nhận (chưa giữ hàng nên không đụng tồn kho): thay người nhận, địa chỉ, giờ hẹn, ghi chú và
+     * toàn bộ dòng hàng theo giá hiện tại. Phí giao giữ nguyên; tổng mới không được nhỏ hơn số khách đã trả.
+     */
+    @Transactional
+    public OrderResponse updatePending(Long id, com.aquaflow.customer.order.api.dto.OrderUpdateRequest request) {
+        Order order = orderRepository.findForUpdateById(id)
+                .orElseThrow(() -> new NotFoundException("Order not found: " + id));
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new ConflictException("Chỉ sửa được đơn đang chờ xác nhận");
+        }
+        if (order.getFulfillmentType() == FulfillmentType.DELIVERY
+                && (isBlank(request.recipientName()) || isBlank(request.recipientPhone()) || isBlank(request.deliveryAddress()))) {
+            throw new BadRequestException("Recipient name, recipient phone, and delivery address are required for delivery orders");
+        }
+
+        BigDecimal subtotal = BigDecimal.ZERO;
+        List<OrderItem> items = new java.util.ArrayList<>();
+        for (OrderItemRequest itemRequest : request.items()) {
+            Product product = productRepository.findById(itemRequest.productId())
+                    .filter(Product::isActive)
+                    .orElseThrow(() -> new NotFoundException("Active product not found: " + itemRequest.productId()));
+            OrderItem item = new OrderItem(order, product.getId(), itemRequest.quantity(), product.getSalePrice());
+            items.add(item);
+            subtotal = subtotal.add(item.getLineTotal());
+        }
+        BigDecimal paid = orderQueryRepository.balances(List.of(id))
+                .getOrDefault(id, OrderQueryRepository.Balance.ZERO).paid();
+        if (subtotal.add(order.getDeliveryFee()).compareTo(paid) < 0) {
+            throw new ConflictException("Tổng đơn mới nhỏ hơn số khách đã trả; hãy hoàn tiền trước khi bớt hàng.");
+        }
+
+        order.updateDetails(request.recipientName(), request.recipientPhone(), request.deliveryAddress(),
+                request.deliveryArea(), request.requestedDeliveryAt(), request.note());
+        order.updateAmounts(subtotal, BigDecimal.ZERO, order.getDeliveryFee());
+        orderItemRepository.deleteAll(orderItemRepository.findAllByOrder_Id(id));
+        orderItemRepository.flush();
+        orderItemRepository.saveAll(items);
+        return toResponse(orderRepository.save(order));
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    /** Khách tự hủy đơn của mình khi đơn còn chờ xác nhận (chưa giữ hàng). */
+    @Transactional
+    public OrderResponse cancelForCustomer(Long id, Long customerId) {
+        Order order = orderRepository.findForUpdateById(id)
+                .filter(found -> customerId.equals(found.getCustomerId()))
+                .orElseThrow(() -> new NotFoundException("Order not found: " + id));
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new ConflictException("Đơn đã được cửa hàng xác nhận, vui lòng gọi cửa hàng để hủy.");
+        }
+        order.transitionTo(OrderStatus.CANCELLED);
+        return toResponse(orderRepository.save(order));
+    }
+
     public List<OrderResponse> findAllByCustomerId(Long customerId) {
-        return orderRepository.findAllByCustomerId(customerId)
-                .stream()
-                .map(this::toResponse)
+        List<Order> orders = orderRepository.findAllByCustomerId(customerId);
+        if (orders.isEmpty()) return List.of();
+        Map<Long, List<OrderItem>> items = itemsByOrder(orders.stream().map(Order::getId).toList());
+        return orders.stream()
+                .map(order -> toResponse(order, items.getOrDefault(order.getId(), List.of())))
                 .toList();
     }
 
@@ -256,11 +376,14 @@ public class OrderService {
     }
 
     private OrderResponse toResponse(Order order) {
-        List<OrderResponse.OrderItemResponse> items =
-                orderItemRepository.findAllByOrder_Id(order.getId())
-                        .stream()
-                        .map(this::toItemResponse)
-                        .toList();
+        return toResponse(order, orderItemRepository.findAllByOrder_Id(order.getId()));
+    }
+
+    private OrderResponse toResponse(Order order, List<OrderItem> orderItems) {
+        List<OrderResponse.OrderItemResponse> items = orderItems
+                .stream()
+                .map(this::toItemResponse)
+                .toList();
 
         return new OrderResponse(
                 order.getId(),
@@ -284,7 +407,8 @@ public class OrderService {
                 order.getConfirmedAt(),
                 order.getCancelledAt(),
                 order.getNote(),
-                items
+                items,
+                order.getTrackingToken()
         );
     }
 

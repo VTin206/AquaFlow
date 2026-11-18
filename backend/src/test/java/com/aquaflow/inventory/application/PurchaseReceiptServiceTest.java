@@ -88,6 +88,27 @@ class PurchaseReceiptServiceTest {
     }
 
     @Test
+    void receiverNameIsSavedTrimmedAndCanBeChangedOrClearedWhileDraft() {
+        stubSupplierAndProduct();
+        when(batchRepository.findByProductIdAndLotCode(10L, "L1")).thenReturn(Optional.empty());
+        when(batchRepository.save(any(ProductBatch.class))).thenAnswer(inv -> withId(inv.getArgument(0), 100L));
+        when(receiptRepository.save(any(PurchaseReceipt.class))).thenAnswer(inv -> withId(inv.getArgument(0), 7L));
+
+        PurchaseReceiptResponse created = service.create(new PurchaseReceiptRequest(1L, RECEIVED_AT, null,
+                List.of(item("L1", EXPIRES_ON, 10, 10)), "  Nguyễn An  "), 5L);
+        assertThat(created.receiverName()).isEqualTo("Nguyễn An");
+
+        PurchaseReceipt draft = withId(new PurchaseReceipt(supplier, RECEIVED_AT, 5L, null), 7L);
+        when(receiptRepository.findForUpdateById(7L)).thenReturn(Optional.of(draft));
+        when(batchRepository.findByProductIdAndLotCode(10L, "L1"))
+                .thenReturn(Optional.of(withId(new ProductBatch(product, "L1", null, EXPIRES_ON), 100L)));
+        assertThat(service.update(7L, new PurchaseReceiptRequest(1L, RECEIVED_AT, null,
+                List.of(item("L1", EXPIRES_ON, 10, 10)), "Trần Bình")).receiverName()).isEqualTo("Trần Bình");
+        // Client cũ không gửi field này: phiếu không có người kiểm nhận.
+        assertThat(service.update(7L, request(item("L1", EXPIRES_ON, 10, 10))).receiverName()).isNull();
+    }
+
+    @Test
     void createRejectsExpiryBeforeReceivedDate() {
         when(supplierRepository.findById(1L)).thenReturn(Optional.of(supplier));
 

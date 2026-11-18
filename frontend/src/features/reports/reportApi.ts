@@ -7,10 +7,10 @@ export type ReportRow = Record<string, string | number | null>
 export type ReportPage = { content: ReportRow[]; page: number; size: number; totalElements: number }
 export type LiveReport = {
   from: string; to: string; timezone: string; generatedAt: string
-  sales: Record<'ordersCreated' | 'ordersCancelled' | 'ordersDelivered' | 'goods' | 'discounts' | 'deliveryFees' | 'returnsValue' | 'revenue' | 'cashIn' | 'transferIn' | 'refunds' | 'netPayments' | 'undatedDeliveredOrders', number>
+  sales: Record<'averageOrderValue' | 'newCustomers' | 'ordersCreated' | 'ordersCancelled' | 'ordersDelivered' | 'goods' | 'discounts' | 'deliveryFees' | 'returnsValue' | 'revenue' | 'cashIn' | 'transferIn' | 'refunds' | 'netPayments' | 'undatedDeliveredOrders' | 'estimatedCost' | 'estimatedGrossProfit' | 'unpricedCostLines' | 'totalCostLines', number>
   days: { date: string; revenue: number; collected: number; orders: number }[]
   channels: { channel: keyof typeof channelLabels; orders: number; revenue: number }[]
-  deposits: { collected: number; refunded: number; forfeited?: number; held: number; bottlesHeld: number }
+  deposits: { collected: number; refunded: number; forfeited?: number; held: number; bottlesHeld: number; bottlesGiven: number; bottlesReceived: number; bottlesLost: number; uncoveredDeposit: number }
   receipts: { count: number; value: number; damaged: number }
 }
 const params = (query: object) => {
@@ -20,5 +20,7 @@ const params = (query: object) => {
 }
 export const reportApi = {
   summary: (query: ReportQuery) => api.get<LiveReport>(`/admin/reports/summary?${params(query)}`),
-  section: (section: ReportSection, query: ReportQuery, page = 0, size = 20) => api.get<ReportPage>(`/admin/reports/${section}?${params({ ...query, page, size })}`),
+  /** {@code q}: chỉ tab Khách hàng dùng, tìm theo tên hoặc số điện thoại. */
+  section: (section: ReportSection, query: ReportQuery, page = 0, size = 20, q?: string) =>
+    api.get<ReportPage>(`/admin/reports/${section}?${params({ ...query, page, size, q: q?.trim() || undefined })}`),
 }

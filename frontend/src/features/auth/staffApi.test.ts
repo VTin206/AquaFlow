@@ -31,6 +31,9 @@ describe('staff accounts and delivery REST resources', () => {
       expect(canOpen(role, '/settings')).toBe(false)
     }
     expect(homeOf('DELIVERY_STAFF')).toBe('/driver')
+    expect(canOpen('DELIVERY_STAFF', '/driver')).toBe(true)
+    expect(canOpen('ADMIN', '/driver')).toBe(false)
+    expect(canOpen('SALES_STAFF', '/driver')).toBe(false)
     expect(canOpen('SALES_STAFF', '/delivery')).toBe(true)
     expect(canOpen('DELIVERY_STAFF', '/orders')).toBe(false)
   })

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Button, Card, Empty, Table, Tag } from 'antd'
+import { Button, Card, Empty, Table, Tag, Typography } from 'antd'
 import { Truck } from 'lucide-react'
 import { Money } from '@/shared/components/Money'
 import { dueTone } from '@/shared/utils/money'
@@ -27,22 +27,35 @@ type WaitingOrdersCardProps = {
   error?: ReactNode
 }
 
-/** Đơn chờ xếp chuyến: chọn đơn rồi tạo chuyến. Dùng chung cho bản dùng thử và tài khoản thật. */
+/** Đơn chờ xếp chuyến: chọn đơn rồi tạo chuyến. */
 export function WaitingOrdersCard({ orders, loading, selected, onSelect, onCreate, error }: WaitingOrdersCardProps) {
   const chosen = orders.filter((order) => selected.includes(order.id))
+  const chosenIds = chosen.map((order) => order.id)
+  // Bấm chỗ nào trên dòng cũng chọn/bỏ chọn đơn; ô vuông tự xử lý nên bỏ qua để không đổi hai lần.
+  const toggleRow = (id: string, target: EventTarget) => {
+    if (target instanceof Element && target.closest('.ant-table-selection-column, button, a, input, label')) return
+    onSelect(chosenIds.includes(id) ? chosenIds.filter((item) => item !== id) : [...chosenIds, id])
+  }
+  // Không có đơn chờ thì thu khung về một dòng tiêu đề, nhường chỗ cho danh sách chuyến bên dưới.
+  const idle = !orders.length && !loading && !error
   return (
     <Card
       className="af-card"
-      styles={{ body: { padding: 0 } }}
+      styles={{ body: { padding: 0, display: idle ? 'none' : undefined }, header: idle ? { borderBottom: 0 } : undefined }}
       title={
         <span className="af-panel-title">
           Đơn chờ xếp chuyến <Tag>{orders.length}</Tag>
         </span>
       }
       extra={
-        <Button type="primary" icon={<Truck size={16} />} disabled={!chosen.length} onClick={onCreate}>
-          {chosen.length ? `Tạo chuyến (${chosen.length} đơn)` : 'Chọn đơn để tạo chuyến'}
-        </Button>
+        // Chưa chọn đơn: chỉ gợi ý bằng chữ, không để nút bị khóa xám lẫn màu với chữ trên nút.
+        chosen.length ? (
+          <Button type="primary" icon={<Truck size={16} />} onClick={onCreate}>
+            {`Tạo chuyến (${chosen.length} đơn)`}
+          </Button>
+        ) : (
+          <Typography.Text type="secondary">{idle ? 'Không có đơn chờ giao' : 'Chọn đơn để tạo chuyến'}</Typography.Text>
+        )
       }
     >
       {error ?? (
@@ -54,9 +67,13 @@ export function WaitingOrdersCard({ orders, loading, selected, onSelect, onCreat
           dataSource={orders}
           pagination={false}
           scroll={{ x: 820, y: 320 }}
-          rowSelection={{ selectedRowKeys: chosen.map((order) => order.id), onChange: (keys) => onSelect(keys as string[]) }}
+          rowSelection={{ selectedRowKeys: chosenIds, onChange: (keys) => onSelect(keys as string[]) }}
+          rowClassName="af-row-clickable"
+          onRow={(order) => ({ onClick: (event) => toggleRow(order.id, event.target) })}
           locale={{
-            emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có đơn chờ giao. Đơn giao đang chuẩn bị sẽ hiện ở đây." />,
+            emptyText: (
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có đơn chờ giao. Đơn giao đang chuẩn bị sẽ hiện ở đây." />
+            ),
           }}
           columns={[
             {
@@ -93,7 +110,9 @@ export function WaitingOrdersCard({ orders, loading, selected, onSelect, onCreat
               dataIndex: 'appointment',
               width: 140,
               render: (value?: string) =>
-                value ? new Date(value).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '—',
+                value
+                  ? new Date(value).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
+                  : '—',
             },
             { title: 'Bình', dataIndex: 'jugs', width: 80, align: 'right', render: (jugs: number) => jugs || '—' },
             {

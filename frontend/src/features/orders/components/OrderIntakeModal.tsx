@@ -3,9 +3,9 @@ import { Alert, App, AutoComplete, Button, Col, DatePicker, Form, Input, InputNu
 import dayjs, { type Dayjs } from 'dayjs'
 import { Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { customerCode, type Customer } from '@/features/customers/types'
-import { useCustomers } from '@/features/customers/useCustomers'
+import { useCustomer, useCustomerSearch } from '@/features/customers/useCustomers'
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import { QueryError } from '@/shared/components/QueryError'
-import { useFeature } from '@/shared/features'
 import { useConfirmDiscard } from '@/shared/hooks/useConfirmDiscard'
 import { focusNextOnEnter } from '@/shared/utils/forms'
 import { currency } from '@/shared/utils/format'
@@ -15,6 +15,7 @@ import {
   addQuickLine,
   bestSellers,
   contactSuggestions,
+  intakeValuesOf,
   lastOrderOf,
   samePhone,
   shortProductName,
@@ -22,11 +23,20 @@ import {
   type IntakeValues,
 } from '../orderIntake'
 import { orderedAtOf, walkInName, type Order } from '../types'
-import { useIntakeAddresses, useIntakeProducts, useSubmitIntake, type IntakeAddress, type IntakeProduct } from '../useOrderIntake'
+import {
+  useIntakeAddresses,
+  useIntakeProducts,
+  useSaveOrderEdit,
+  useSubmitIntake,
+  type IntakeAddress,
+  type IntakeProduct,
+} from '../useOrderIntake'
+import type { LiveOrder } from '@/features/live/orderApi'
 import { FormSection } from '@/shared/components/FormSection'
 import { ModalTotalFooter } from '@/shared/components/ModalTotalFooter'
 import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
 import { WardSelect } from '@/shared/address/WardSelect'
+import { TextArea } from '@/shared/components/TextArea'
 
 type OrderIntakeModalProps = {
   onClose: () => void
@@ -34,6 +44,8 @@ type OrderIntakeModalProps = {
   onCreated?: (id: string) => void
   /** Tạo đơn từ hồ sơ khách. */
   defaultCustomer?: Customer
+  /** Sửa đơn còn chờ xác nhận: điền sẵn đơn, khóa kênh và hình thức nhận, lưu đè thay vì tạo mới. */
+  editing?: LiveOrder
 }
 
 const QUICK_PRODUCTS = 4
@@ -42,24 +54,27 @@ const priceAndStock = (product: IntakeProduct) =>
   `${currency(product.price)}${product.available === undefined ? '' : ` · còn ${product.available}`}`
 
 /** Nhận đơn bắt đầu từ số điện thoại: khách quen tự điền thông tin và đặt lại đơn trước chỉ với một lần bấm. */
-export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderIntakeModalProps) {
+export function OrderIntakeModal({ onClose, onCreated, defaultCustomer, editing }: OrderIntakeModalProps) {
   const { message } = App.useApp()
   const [form] = Form.useForm<IntakeValues>()
   const cancel = useConfirmDiscard(form, onClose)
-  const showBottles = useFeature('bottleLedger')
-  const showDebt = useFeature('customerDebt')
   const { products, isPending: loadingProducts, error: productsError, refetch: refetchProducts } = useIntakeProducts()
-  const customersQuery = useCustomers()
   const { data: orders = [] } = useOrderList()
   const submit = useSubmitIntake()
+  const saveEdit = useSaveOrderEdit()
+  const saving = submit.isPending || saveEdit.isPending
 
-  const customers = customersQuery.data ?? []
   // Khách theo số đang gõ; mở từ hồ sơ thì giữ đúng khách đó cho đến khi nhân viên đổi số.
   const [typedPhone, setTypedPhone] = useState(defaultCustomer?.phone ?? '')
   const [pinned, setPinned] = useState(defaultCustomer)
-  const customer = pinned
-    ? (customers.find((item) => item.id === pinned.id) ?? pinned)
-    : customers.find((item) => samePhone(item.phone, typedPhone))
+  const typed = typedPhone.trim()
+  // Tìm khách ở BE theo tên/số đang gõ (từ 2 ký tự), chờ ngừng gõ rồi mới gửi.
+  const searched = useDebouncedValue(typed.length >= 2 ? typed : '')
+  const customersQuery = useCustomerSearch(searched)
+  const customers = customersQuery.data?.customers ?? []
+  // Khách mở từ hồ sơ: đọc lại để số đơn, công nợ, vỏ luôn mới nhất.
+  const { data: pinnedFresh } = useCustomer(pinned?.id)
+  const customer = pinned ? (pinnedFresh ?? pinned) : customers.find((item) => samePhone(item.phone, typedPhone))
   const { addresses, isError: addressesFailed, refetch: refetchAddresses } = useIntakeAddresses(customer)
   const lastOrder = lastOrderOf(orders, customer?.id, typedPhone)
 
@@ -106,7 +121,7 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
   const filledFor = useRef(defaultCustomer?.id)
   const addressFilledFor = useRef<string>(undefined)
   useEffect(() => {
-    if (customer?.id === filledFor.current) return
+    if (editing || customer?.id === filledFor.current) return
     const hadCustomer = filledFor.current !== undefined
     filledFor.current = customer?.id
     addressFilledFor.current = undefined
@@ -114,7 +129,7 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
   })
   // Tự điền địa chỉ mặc định, mỗi khách một lần để không đè phần nhân viên đã sửa.
   useEffect(() => {
-    if (!delivery || !customer || !addresses || addressFilledFor.current === customer.id) return
+    if (editing || !delivery || !customer || !addresses || addressFilledFor.current === customer.id) return
     addressFilledFor.current = customer.id
     const saved = addresses.find((item) => item.isDefault)
     if (saved) applyAddress(saved)
@@ -124,6 +139,7 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
   const contactOrder = customer ? undefined : lastOrder
   const orderFilledFor = useRef<string>(undefined)
   useEffect(() => {
+    if (editing) return
     const key = contactOrder && phoneDigits(contactOrder.phone)
     if (key === orderFilledFor.current) return
     const hadOrder = orderFilledFor.current !== undefined
@@ -153,31 +169,30 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
     else message.success(`Đã điền theo đơn ${order.code ?? order.id}. Kiểm tra lại rồi tạo đơn.`)
   }
 
-  const typed = typedPhone.trim()
   const suggestions = !customer && typed.length >= 2 ? contactSuggestions(customers, orders, typed) : []
   const isNewPhone = !customer && !lastOrder && phoneDigits(typed).length >= 10
   const customerFacts = customer
     ? [
         customerCode(customer),
         `${customer.orders} đơn`,
-        ...(showBottles ? [`đang giữ ${customer.bottlesHeld} vỏ`] : []),
-        ...(showDebt && customer.debt > 0 ? [`còn nợ ${currency(customer.debt)}`] : []),
+        `đang giữ ${customer.bottlesHeld} vỏ`,
+        ...(customer.debt > 0 ? [`còn nợ ${currency(customer.debt)}`] : []),
       ].join(' · ')
     : ''
 
   return (
     <Modal
       open
-      title="Tiếp nhận đơn hàng"
+      title={editing ? `Sửa đơn ${editing.orderCode}` : 'Tiếp nhận đơn hàng'}
       width={modalWidth.large}
       styles={modalScrollBody}
-      okText="Tạo đơn chờ xác nhận"
+      okText={editing ? 'Lưu thay đổi' : 'Tạo đơn chờ xác nhận'}
       cancelText="Hủy"
       okButtonProps={{ disabled: loadingProducts || Boolean(productsError) }}
-      confirmLoading={submit.isPending}
+      confirmLoading={saving}
       onOk={() => form.submit()}
-      onCancel={submit.isPending ? undefined : cancel}
-      mask={{ closable: !submit.isPending }}
+      onCancel={saving ? undefined : cancel}
+      mask={{ closable: !saving }}
       footer={(_, { OkBtn, CancelBtn }) => (
         <ModalTotalFooter label="Tiền hàng dự kiến" value={currency(goods)}>
           <CancelBtn />
@@ -192,30 +207,45 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
           name="order-intake"
           form={form}
           layout="vertical"
-          disabled={submit.isPending}
+          disabled={saving}
           scrollToFirstError={{ block: 'center', focus: true }}
           onKeyDown={focusNextOnEnter}
-          initialValues={{
-            phone: defaultCustomer?.phone,
-            customer: defaultCustomer?.name,
-            method: 'Giao tận nơi',
-            channel: 'Điện thoại',
-            lines: [{ quantity: 1 }],
-          }}
+          initialValues={
+            editing
+              ? intakeValuesOf(editing)
+              : {
+                  phone: defaultCustomer?.phone,
+                  customer: defaultCustomer?.name,
+                  method: 'Giao tận nơi',
+                  channel: 'Điện thoại',
+                  lines: [{ quantity: 1 }],
+                }
+          }
           // Lỗi nằm ở phần đang thu gọn thì mở ra để nhân viên thấy.
           onFinishFailed={() => setEditingFor(customer?.id)}
           onFinish={(values) =>
-            submit.mutate(
-              { values, customerId: customer?.id },
-              {
-                onSuccess: ({ id, code }) => {
-                  message.success(`Đã tạo đơn ${code}. Đơn đang chờ xác nhận.`)
-                  onClose()
-                  onCreated?.(id)
-                },
-                onError: (error) => message.error(error.message),
-              },
-            )
+            editing
+              ? saveEdit.mutate(
+                  { id: editing.id, values },
+                  {
+                    onSuccess: () => {
+                      message.success(`Đã lưu đơn ${editing.orderCode}.`)
+                      onClose()
+                    },
+                    onError: (error) => message.error(error.message),
+                  },
+                )
+              : submit.mutate(
+                  { values, customerId: customer?.id },
+                  {
+                    onSuccess: ({ id, code }) => {
+                      message.success(`Đã tạo đơn ${code}. Đơn đang chờ xác nhận.`)
+                      onClose()
+                      onCreated?.(id)
+                    },
+                    onError: (error) => message.error(error.message),
+                  },
+                )
           }
         >
           {customersQuery.isError && (
@@ -310,6 +340,7 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
                   <Col xs={24} sm={14}>
                     <Form.Item name="method" label="Hình thức nhận" rules={[{ required: true }]}>
                       <Segmented
+                        disabled={!!editing}
                         block
                         options={[
                           { value: 'Giao tận nơi', label: 'Giao tận nơi' },
@@ -320,7 +351,10 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
                   </Col>
                   <Col xs={24} sm={10}>
                     <Form.Item name="channel" label="Kênh tiếp nhận" rules={[{ required: true }]}>
-                      <Select options={['Điện thoại', 'Tại quầy', 'Tin nhắn'].map((value) => ({ value, label: value }))} />
+                      <Select
+                        disabled={!!editing}
+                        options={['Điện thoại', 'Tại quầy', 'Tin nhắn'].map((value) => ({ value, label: value }))}
+                      />
                     </Form.Item>
                   </Col>
                 </Row>
@@ -334,6 +368,9 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
                         action={<Button onClick={() => void refetchAddresses()}>Thử lại</Button>}
                       />
                     )}
+                    <Form.Item name="area" label="Phường/Xã" hidden={contactCollapsed} rules={[{ max: 150, message: 'Tối đa 150 ký tự.' }]}>
+                      <WardSelect />
+                    </Form.Item>
                     <Form.Item
                       name="address"
                       label="Địa chỉ giao hàng"
@@ -351,9 +388,6 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
                           if (saved) applyAddress(saved)
                         }}
                       />
-                    </Form.Item>
-                    <Form.Item name="area" label="Phường/Xã" hidden={contactCollapsed} rules={[{ max: 150, message: 'Tối đa 150 ký tự.' }]}>
-                      <WardSelect />
                     </Form.Item>
                     <Form.Item
                       name="appointment"
@@ -475,12 +509,12 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer }: OrderI
 
               <FormSection title="Ghi chú">
                 <Form.Item name="note" rules={[{ max: 500, message: 'Tối đa 500 ký tự.' }]}>
-                  <Input.TextArea aria-label="Ghi chú" rows={3} placeholder="Hướng dẫn tìm địa chỉ, lưu ý giao nhận..." />
+                  <TextArea aria-label="Ghi chú" rows={3} maxLength={500} placeholder="Hướng dẫn tìm địa chỉ, lưu ý giao nhận..." />
                 </Form.Item>
                 <p className="af-form-hint">
                   Đơn mới ở trạng thái chờ xác nhận. Tồn kho được kiểm tra và giữ hàng khi xác nhận đơn. Phí giao và tổng tiền cuối cùng do
                   hệ thống tính.
-                  {showBottles && ' Khách chưa có vỏ để đổi đặt cọc riêng khi nhận hàng, không gộp vào tiền hàng.'}
+                  {' Khách chưa có vỏ để đổi đặt cọc riêng khi nhận hàng, không gộp vào tiền hàng.'}
                 </p>
               </FormSection>
             </div>

@@ -1,7 +1,7 @@
 import type { Ref } from 'react'
 import { Button, Input, Select, Typography, type InputRef } from 'antd'
 import { Droplets, FunnelX, LayoutGrid, Search } from 'lucide-react'
-import { brandGroups, catalogCategories, normalizeSearch } from '@/features/inventory/catalogGroups'
+import { brandGroups, normalizeSearch, sortCategoryNames } from '@/features/inventory/catalogGroups'
 import { ALL, brandOf, categoryOf, countBy, emptyFilters, shopGroups, type ShopFilterState } from '../shopGroups'
 import type { ShopProduct } from '../shopService'
 
@@ -23,7 +23,8 @@ export function ShopFilters({ products, filters, visibleCount, onChange, searchR
       count: countBy(products, filters, 'brand', (product) => brandOf(product) === name),
     }))
     .sort((a, b) => b.count - a.count)
-  const categories = [...new Set(products.map(categoryOf))].sort((a, b) => catalogCategories.indexOf(a) - catalogCategories.indexOf(b))
+  // Loại sản phẩm do cửa hàng đặt, theo thứ tự tạo loại; chưa phân loại xuống cuối.
+  const categories = sortCategoryNames(products.map((product) => ({ name: categoryOf(product), id: product.catalog?.categoryId })))
   const groups = shopGroups.map((item) => ({ key: item.key, label: item.label, count: countBy(products, filters, 'group', item.match) }))
   const hasFilters = filters.brand !== ALL || filters.group !== ALL || filters.category !== ALL || filters.query.trim() !== ''
   const brandValue = filters.brand === ALL ? undefined : filters.brand

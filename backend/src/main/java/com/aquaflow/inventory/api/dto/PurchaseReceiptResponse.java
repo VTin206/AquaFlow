@@ -15,6 +15,11 @@ public record PurchaseReceiptResponse(
         Long confirmedBy,
         Instant confirmedAt,
         String note,
-        List<PurchaseItemResponse> items
+        List<PurchaseItemResponse> items,
+        String receiverName
 ) {
+    public PurchaseReceiptResponse(Long id, Long supplierId, String supplierName, PurchaseReceiptStatus status, Instant receivedAt,
+                                   Long createdBy, Long confirmedBy, Instant confirmedAt, String note, List<PurchaseItemResponse> items) {
+        this(id, supplierId, supplierName, status, receivedAt, createdBy, confirmedBy, confirmedAt, note, items, null);
+    }
 }

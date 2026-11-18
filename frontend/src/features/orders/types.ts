@@ -14,8 +14,6 @@ export type Payment = {
   /** Nhân viên ghi phiếu. */
   by?: string
 }
-export type PaymentDraft = Pick<Payment, 'amount' | 'method' | 'reference'>
-export type RefundDraft = Pick<Payment, 'method' | 'reference'>
 export type OrderEvent = { at: string; message: string; by?: string }
 /** Hàng khách trả lại sau khi đã nhận. */
 export type OrderReturn = {
@@ -28,30 +26,13 @@ export type OrderReturn = {
   restocked: boolean
   refunded: number
 }
-export type ReturnDraft = {
-  lines: { productId: string; quantity: number }[]
-  reason: string
-  restock: boolean
-  refundMethod?: Payment['method']
-  refundReference?: string
-}
 /** Một dòng hàng theo lô; `lotCode` trống khi sản phẩm không quản lý theo lô. */
 export type LotLine = { productId: string; name: string; unit: string; lotCode?: string; expiryDate?: string; quantity: number }
 /** Một lần xuất kho đi giao (DISPATCH): xuất toàn bộ hàng của đơn, ghi theo lô FEFO. */
 export type StockDispatch = { at: string; by?: string; tripId?: string; lines: LotLine[] }
 /** Kiểm hàng mang về sau khi giao thất bại: chỉ phần bán lại được mới nhập lại kho (RETURN). */
 export type ReturnInspection = { at: string; by?: string; note?: string; lines: (LotLine & { sellable: number; damaged: number })[] }
-export type ReturnInspectionDraft = { sellable: number[]; note?: string }
 
-export type DeliveryResult = {
-  success: boolean
-  receiver?: string
-  reason?: string
-  /** Vỏ rỗng thu về khi giao bình. */
-  bottlesReturned?: number
-  /** Tiền cọc thu thêm cho vỏ khách giữ; tách khỏi phiếu thu tiền hàng. */
-  depositCollected?: number
-}
 /** Vỏ bình bàn giao kèm đơn. */
 export type OrderBottles = { delivered: number; returned: number; deposit: number }
 
@@ -89,25 +70,13 @@ export type Order = {
   bottles?: OrderBottles
   /** Thời điểm khách nhận hàng (giao thành công hoặc nhận tại quầy). */
   deliveredAt?: string
+  /** Đơn chưa xong và lần giao gần nhất thất bại (BE: lastAttemptFailed); trạng thái vẫn là trạng thái cũ, ví dụ Đang giao. */
+  lastAttemptFailed?: boolean
   returns?: OrderReturn[]
   dispatches?: StockDispatch[]
   returnInspections?: ReturnInspection[]
   /** Mã bí mật trong liên kết tra cứu gửi cho khách. */
   trackingToken?: string
-}
-
-export type OrderDraft = {
-  customer?: string
-  phone?: string
-  address?: string
-  area?: string
-  method: Order['method']
-  channel: Order['channel']
-  lines: { productId: string; quantity: number }[]
-  deliveryFee: number
-  floor?: number
-  appointment?: string
-  note?: string
 }
 
 export const paidAmount = (order: Order) =>
@@ -148,10 +117,6 @@ export const orderedAtOf = (order: Pick<Order, 'history' | 'time'>) => {
   return at ? { label: relativeDateTime(at), full: new Date(at).toLocaleString('vi-VN') } : { label: order.time, full: order.time }
 }
 
-/** Hàng đang ở ngoài kho chờ kiểm: lần xuất gần nhất (hoặc cả đơn với dữ liệu cũ chưa ghi lần xuất). */
-export const returnLinesOf = (order: Order): LotLine[] =>
-  order.dispatches?.at(-1)?.lines ?? order.lines.map(({ productId, name, unit, quantity }) => ({ productId, name, unit, quantity }))
-
 /** Giao thất bại nhưng chưa kiểm hàng mang về thì chưa được hủy hay giao lại. */
 export const awaitingReturnInspection = (order: Order) => {
   if (order.status !== 'Giao thất bại') return false
@@ -160,16 +125,6 @@ export const awaitingReturnInspection = (order: Order) => {
 }
 
 export type DeliveryAttempt = { at: string; by?: string; success: boolean; reason?: string }
-/** Các lần giao suy ra từ lịch sử đơn (giao thành công / thất bại). */
-export const deliveryAttempts = (order: Pick<Order, 'history'>): DeliveryAttempt[] =>
-  order.history
-    .filter((event) => /^Giao (thành công|thất bại)/.test(event.message))
-    .map((event) => ({
-      at: event.at,
-      by: event.by,
-      success: event.message.startsWith('Giao thành công'),
-      reason: event.message.startsWith('Giao thất bại') ? event.message.replace(/^Giao thất bại:\s*/, '') : undefined,
-    }))
 
 /** Giá trị hàng đã nhận trả lại. */
 export const returnedValue = (order: Pick<Order, 'returns'>) =>
@@ -234,6 +189,33 @@ export function deliveryTimingOf(order: Order, now = Date.now()) {
     title: `Đặt lúc ${orderedAtOf(order).full}`,
   }
   return { main, sub }
+}
+
+/**
+ * Mức ưu tiên xử lý, cùng thứ tự với danh sách phân trang ở BE (OrderQueryRepository):
+ * 0 giao thất bại, 1 quá giờ hẹn, 2 chờ xác nhận, 3 đang xử lý, 4 đã giao còn nợ, 5 xong/hủy.
+ */
+export function orderPriority(order: Order, now = Date.now()) {
+  if (order.status === 'Giao thất bại' || order.lastAttemptFailed) return 0
+  if (isOverdue(order, now)) return 1
+  if (order.status === 'Chờ xác nhận') return 2
+  if (OPEN_DELIVERY.includes(order.status)) return 3
+  if (order.status === 'Đã giao' && amountDue(order) > 0) return 4
+  return 5
+}
+
+/**
+ * Thứ tự mặc định của bảng Đơn hàng: mức ưu tiên trước; trong mức, việc cần làm sớm nhất trước, tính theo giờ hẹn
+ * hoặc lúc đặt nếu không hẹn (đơn "giao sớm nhất" cần làm ngay từ lúc đặt). Đơn đã xong/hủy mới nhất trước.
+ */
+export function compareOrderPriority(a: Order, b: Order, now = Date.now()) {
+  const rankA = orderPriority(a, now)
+  const rankB = orderPriority(b, now)
+  if (rankA !== rankB) return rankA - rankB
+  const createdA = createdAtOf(a) ?? a.time
+  const createdB = createdAtOf(b) ?? b.time
+  if (rankA === 5) return createdB.localeCompare(createdA)
+  return (a.appointment ?? createdA).localeCompare(b.appointment ?? createdB) || createdA.localeCompare(createdB)
 }
 
 /** Sắp xếp "Hẹn giao": đơn chưa xong lên trước theo giờ cần giao (hẹn, hoặc lúc đặt nếu không hẹn); đơn đã xong theo lúc đặt mới nhất. */

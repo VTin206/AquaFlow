@@ -2,13 +2,15 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Checkbox, Form, Input, Modal, Popconfirm, Table, Tag, Tooltip } from 'antd'
 import { Pencil } from 'lucide-react'
+import { customerKeys } from '@/features/customers/useCustomers'
 import { api } from '@/shared/api/client'
 import { QueryError } from '@/shared/components/QueryError'
 import { invalidateLiveData } from './invalidateLiveData'
 import { modalWidth } from '@/shared/utils/modal'
 import { WardSelect } from '@/shared/address/WardSelect'
+import { TextArea } from '@/shared/components/TextArea'
 
-type Address = {
+export type Address = {
   id: number
   customerId: number
   recipientName: string
@@ -17,14 +19,14 @@ type Address = {
   area: string | null
   isDefault: boolean
 }
-type AddressDraft = Omit<Address, 'id' | 'customerId'>
+export type AddressDraft = Omit<Address, 'id' | 'customerId'>
 
 export function LiveCustomerAddresses({
   customerId,
   customerName,
   onClose,
 }: {
-  customerId: number
+  customerId: number | string
   customerName: string
   onClose: () => void
 }) {
@@ -33,8 +35,14 @@ export function LiveCustomerAddresses({
   const [form] = Form.useForm<AddressDraft>()
   const [editing, setEditing] = useState<Address | null | undefined>()
   const path = `/sales/customers/${customerId}/addresses`
+  const source = {
+    list: () => api.get<Address[]>(path),
+    create: (input: AddressDraft) => api.post<Address>(path, input),
+    update: (id: number, input: AddressDraft) => api.put<Address>(`${path}/${id}`, input),
+    remove: (id: number) => api.delete<void>(`${path}/${id}`),
+  }
   const key = ['live', 'customer-addresses', customerId]
-  const addresses = useQuery({ queryKey: key, queryFn: () => api.get<Address[]>(path) })
+  const addresses = useQuery({ queryKey: key, queryFn: () => source.list() })
   const save = useMutation({
     mutationFn: (draft: AddressDraft) => {
       const input = {
@@ -44,19 +52,21 @@ export function LiveCustomerAddresses({
         area: draft.area?.trim() || null,
         isDefault: Boolean(draft.isDefault),
       }
-      return editing ? api.put<Address>(`${path}/${editing.id}`, input) : api.post<Address>(path, input)
+      return editing ? source.update(editing.id, input) : source.create(input)
     },
     onSuccess: () => {
       void invalidateLiveData(queryClient)
+      void queryClient.invalidateQueries({ queryKey: customerKeys.all })
       setEditing(undefined)
       message.success('Đã lưu địa chỉ.')
     },
     onError: (error: Error) => message.error(error.message),
   })
   const remove = useMutation({
-    mutationFn: (id: number) => api.delete<void>(`${path}/${id}`),
+    mutationFn: (id: number) => source.remove(id),
     onSuccess: () => {
       void invalidateLiveData(queryClient)
+      void queryClient.invalidateQueries({ queryKey: customerKeys.all })
       message.success('Đã xóa địa chỉ.')
     },
     onError: (error: Error) => message.error(error.message),
@@ -131,11 +141,11 @@ export function LiveCustomerAddresses({
           >
             <Input />
           </Form.Item>
-          <Form.Item label="Địa chỉ" name="addressLine" rules={[{ required: true }]}>
-            <Input.TextArea />
-          </Form.Item>
           <Form.Item label="Phường/Xã" name="area" rules={[{ max: 150 }]}>
             <WardSelect />
+          </Form.Item>
+          <Form.Item label="Địa chỉ" name="addressLine" rules={[{ required: true }, { max: 255 }]}>
+            <TextArea maxLength={255} />
           </Form.Item>
           <Form.Item name="isDefault" valuePropName="checked">
             <Checkbox>Địa chỉ mặc định</Checkbox>

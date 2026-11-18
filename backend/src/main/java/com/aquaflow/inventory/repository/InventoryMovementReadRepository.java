@@ -29,6 +29,8 @@ public class InventoryMovementReadRepository {
                    b.lot_code, b.expires_on, u.full_name AS actor_name,
                    CASE WHEN m.reference_type = 'PURCHASE_RECEIPT'
                         THEN 'PN-' || lpad(m.reference_id::text, greatest(5, length(m.reference_id::text)), '0')
+                        WHEN m.reference_type = 'ADJUSTMENT'
+                        THEN 'DC-' || lpad(m.reference_id::text, greatest(5, length(m.reference_id::text)), '0')
                         ELSE COALESCE(o.order_code, 'Đơn #' || m.reference_id::text) END AS reference_code
             """;
     private static final RowMapper<InventoryMovementResponse> MAPPER = (rs, row) -> {
@@ -53,7 +55,7 @@ public class InventoryMovementReadRepository {
         if (from != null) { where.append(" AND m.occurred_at >= :from"); params.addValue("from", Timestamp.from(from)); }
         if (to != null) { where.append(" AND m.occurred_at < :to"); params.addValue("to", Timestamp.from(to)); }
         if (query != null && !query.isBlank()) {
-            where.append(" AND strpos(lower(concat_ws(' ', p.name, p.sku, b.lot_code, o.order_code, m.reference_id::text, u.full_name, CASE WHEN m.reference_type = 'PURCHASE_RECEIPT' THEN 'PN-' || lpad(m.reference_id::text, greatest(5, length(m.reference_id::text)), '0') END)), lower(:q)) > 0");
+            where.append(" AND strpos(lower(concat_ws(' ', p.name, p.sku, b.lot_code, o.order_code, m.reference_id::text, u.full_name, CASE WHEN m.reference_type = 'PURCHASE_RECEIPT' THEN 'PN-' || lpad(m.reference_id::text, greatest(5, length(m.reference_id::text)), '0') WHEN m.reference_type = 'ADJUSTMENT' THEN 'DC-' || lpad(m.reference_id::text, greatest(5, length(m.reference_id::text)), '0') END)), lower(:q)) > 0");
             params.addValue("q", query.trim());
         }
         long total = jdbc.queryForObject("SELECT COUNT(*) " + SOURCE + where, params, Long.class);

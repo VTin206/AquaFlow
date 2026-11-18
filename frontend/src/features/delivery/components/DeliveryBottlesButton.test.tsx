@@ -55,6 +55,17 @@ beforeEach(() => {
   const style = window.getComputedStyle.bind(window)
   vi.spyOn(window, 'getComputedStyle').mockImplementation((element) => style(element))
 })
+// Hộp xác nhận cũ còn trong DOM sau khi đóng: chỉ bấm nút của hộp mới mở.
+const clickedConfirms = new WeakSet<HTMLElement>()
+const confirmDialog = async (name: string) => {
+  const button = await waitFor(() => {
+    const fresh = screen.getAllByRole('button', { name }).filter((item) => !clickedConfirms.has(item))
+    if (!fresh.length) throw new Error(`Chưa thấy hộp xác nhận "${name}"`)
+    return fresh[fresh.length - 1]
+  })
+  clickedConfirms.add(button)
+  fireEvent.click(button)
+}
 afterEach(() => {
   cleanup()
   clients.splice(0).forEach((c) => c.clear())
@@ -72,6 +83,7 @@ test('submits each bottle type and refreshes the remaining quantities after succ
   fireEvent.change(await screen.findByLabelText('Vỏ A — còn tối đa 2 vỏ'), { target: { value: '2' } })
   fireEvent.change(screen.getByLabelText('Vỏ B — còn tối đa 1 vỏ'), { target: { value: '1' } })
   fireEvent.click(screen.getByRole('button', { name: 'Xác nhận đã thu vỏ' }))
+  await confirmDialog('Đã thu vỏ')
   await waitFor(() =>
     expect(deliveryBottleApi.receive).toHaveBeenCalledWith(5, {
       requestId: expect.any(String),
@@ -89,9 +101,11 @@ test('preserves payload and request id on retry; changing quantities creates a n
   const input = await screen.findByLabelText('Vỏ A — còn tối đa 2 vỏ')
   fireEvent.change(input, { target: { value: '1' } })
   fireEvent.click(screen.getByRole('button', { name: 'Xác nhận đã thu vỏ' }))
+  await confirmDialog('Đã thu vỏ')
   await waitFor(() => expect(deliveryBottleApi.receive).toHaveBeenCalledTimes(1))
   await screen.findByText('Mất kết nối')
   fireEvent.click(screen.getByRole('button', { name: 'Xác nhận đã thu vỏ' }))
+  await confirmDialog('Đã thu vỏ')
   await waitFor(() => expect(deliveryBottleApi.receive).toHaveBeenCalledTimes(2))
   expect(vi.mocked(deliveryBottleApi.receive).mock.calls[1][1].requestId).toBe(
     vi.mocked(deliveryBottleApi.receive).mock.calls[0][1].requestId,
@@ -99,6 +113,7 @@ test('preserves payload and request id on retry; changing quantities creates a n
   await waitFor(() => expect(screen.getByRole('button', { name: 'Xác nhận đã thu vỏ' }).getAttribute('class')).not.toContain('loading'))
   fireEvent.change(input, { target: { value: '2' } })
   fireEvent.click(screen.getByRole('button', { name: 'Xác nhận đã thu vỏ' }))
+  await confirmDialog('Đã thu vỏ')
   await waitFor(() => expect(deliveryBottleApi.receive).toHaveBeenCalledTimes(3))
   expect(vi.mocked(deliveryBottleApi.receive).mock.calls[2][1].requestId).not.toBe(
     vi.mocked(deliveryBottleApi.receive).mock.calls[0][1].requestId,

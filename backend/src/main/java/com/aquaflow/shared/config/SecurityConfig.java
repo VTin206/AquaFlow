@@ -61,8 +61,12 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/health", "/error").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/register").permitAll()
+                        // Làm mới/đăng xuất xác thực bằng cookie refresh HttpOnly (SameSite=Strict), không bằng access token đã hết hạn.
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/password-reset-requests", "/api/v1/auth/password-resets").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/store-profile").permitAll()
+                        // Tin tức, chính sách đã đăng; quản lý (cả bản nháp) ở /api/v1/admin/shop-articles chỉ ADMIN.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/shop-articles", "/api/v1/shop-articles/*").permitAll()
                         // Public catalog is intentionally limited to the existing collection/detail endpoints.
                         // Do not use /** here: future administrative sub-resources must not become public by accident.
                         .requestMatchers(HttpMethod.GET,
@@ -71,16 +75,31 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/suppliers/**").hasAnyRole("ADMIN", "SALES_STAFF")
                         // NhÃ¢n viÃªn láº­p/sá»­a phiáº¿u nháº­p/xÃ¡c nháº­n (cá»™ng tá»“n)/há»§y phiáº¿u
                         .requestMatchers("/api/v1/purchase-receipts/**").hasAnyRole("ADMIN", "SALES_STAFF")
+                        // Kiểm kê (điều chỉnh tồn) chỉ chủ cửa hàng.
+                        .requestMatchers("/api/v1/inventory/adjustments/**", "/api/v1/inventory/adjustments").hasRole("ADMIN")
                         .requestMatchers("/api/v1/inventory/**").hasAnyRole("ADMIN", "SALES_STAFF")
+                        // Thương hiệu: nhân viên xem để lọc sản phẩm; chỉ chủ cửa hàng thêm/sửa/xóa.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/brands", "/api/v1/brands/*").hasAnyRole("ADMIN", "SALES_STAFF")
+                        .requestMatchers("/api/v1/brands", "/api/v1/brands/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/products/**", "/api/v1/bottle-types/**", "/api/v1/suppliers/**").hasAnyRole("ADMIN", "SALES_STAFF")
+                        // Loại sản phẩm chỉ cho nhân viên cửa hàng; trang khách đọc tên loại trong ProductResponse.
+                        .requestMatchers("/api/v1/product-categories", "/api/v1/product-categories/**").hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/store-settings").hasAnyRole("ADMIN", "SALES_STAFF", "DELIVERY_STAFF")
                         .requestMatchers("/api/v1/store-settings/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        // Nhận trả hàng làm giảm doanh thu và có thể hoàn tiền: chỉ chủ cửa hàng.
+                        .requestMatchers(HttpMethod.POST, "/api/v1/sales/orders/*/returns").hasRole("ADMIN")
+                        // Hủy phiếu thu và hủy giao dịch vỏ/cọc ghi nhầm chỉ chủ cửa hàng.
+                        .requestMatchers(HttpMethod.POST, "/api/v1/sales/orders/*/payments/*/void",
+                                "/api/v1/sales/customers/*/bottle-transactions/*/void").hasRole("ADMIN")
                         .requestMatchers("/api/v1/sales/**").hasAnyRole("ADMIN", "SALES_STAFF")
                         .requestMatchers(HttpMethod.POST, "/api/v1/delivery-quotes").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/customer/orders/guest").permitAll()
+                        // Khách tra cứu đơn không cần đăng nhập; controller tự giới hạn số lần theo IP.
+                        .requestMatchers(HttpMethod.POST, "/api/v1/order-tracking/lookups").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/order-tracking/*").permitAll()
 
                         // Delivery option lists expose store-wide data and are restricted to store staff.
                         .requestMatchers(HttpMethod.GET,

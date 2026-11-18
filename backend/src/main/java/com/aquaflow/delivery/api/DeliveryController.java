@@ -30,8 +30,13 @@ public class DeliveryController {
     public DeliveryController(DeliveryService service) { this.service = service; }
 
     @GetMapping
-    public List<TripResponse> list(@AuthenticationPrincipal AuthUserDetails user, Authentication auth) {
-        return service.list(user.user().getId(), canReadAll(auth));
+    @io.swagger.v3.oas.annotations.Operation(summary = "Trips, newest first",
+            description = "orderId: only trips that carried this order. days (1–365): only unfinished trips and trips "
+                    + "with activity in the last N days. Without filters every trip is returned.")
+    public List<TripResponse> list(@AuthenticationPrincipal AuthUserDetails user, Authentication auth,
+                                   @RequestParam(required = false) Long orderId,
+                                   @RequestParam(required = false) Integer days) {
+        return service.list(user.user().getId(), canReadAll(auth), orderId, days);
     }
 
     @GetMapping("/{id}")

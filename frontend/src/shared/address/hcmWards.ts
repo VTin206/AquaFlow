@@ -172,3 +172,26 @@ export const hcmWards: readonly string[] = [
   'Xã Xuân Thới Sơn',
   'Xã Xuyên Mộc',
 ]
+
+// Các đơn vị nhập từ tỉnh Bình Dương cũ (24 phường, 12 xã) và Bà Rịa - Vũng Tàu cũ (11 phường, 18 xã, 1 đặc khu)
+// theo Nghị quyết 1685/NQ-UBTVQH15. Cửa hàng chỉ giao trong địa bàn TP. Hồ Chí Minh cũ nên loại các đơn vị này.
+const fromBinhDuong = [
+  'Phường An Phú', 'Phường Bến Cát', 'Phường Bình Cơ', 'Phường Bình Dương', 'Phường Bình Hòa', 'Phường Chánh Hiệp',
+  'Phường Chánh Phú Hòa', 'Phường Dĩ An', 'Phường Đông Hòa', 'Phường Hòa Lợi', 'Phường Lái Thiêu', 'Phường Long Nguyên',
+  'Phường Phú An', 'Phường Phú Lợi', 'Phường Tân Đông Hiệp', 'Phường Tân Hiệp', 'Phường Tân Khánh', 'Phường Tân Uyên',
+  'Phường Tây Nam', 'Phường Thới Hòa', 'Phường Thủ Dầu Một', 'Phường Thuận An', 'Phường Thuận Giao', 'Phường Vĩnh Tân',
+  'Xã An Long', 'Xã Bàu Bàng', 'Xã Bắc Tân Uyên', 'Xã Dầu Tiếng', 'Xã Long Hòa', 'Xã Minh Thạnh',
+  'Xã Phú Giáo', 'Xã Phước Hòa', 'Xã Phước Thành', 'Xã Thanh An', 'Xã Thường Tân', 'Xã Trừ Văn Thố',
+]
+const fromBaRiaVungTau = [
+  'Phường Bà Rịa', 'Phường Long Hương', 'Phường Phú Mỹ', 'Phường Phước Thắng', 'Phường Rạch Dừa', 'Phường Tam Long',
+  'Phường Tam Thắng', 'Phường Tân Hải', 'Phường Tân Phước', 'Phường Tân Thành', 'Phường Vũng Tàu',
+  'Xã Bàu Lâm', 'Xã Bình Châu', 'Xã Bình Giã', 'Xã Châu Đức', 'Xã Châu Pha', 'Xã Đất Đỏ', 'Xã Hồ Tràm', 'Xã Hòa Hiệp',
+  'Xã Hòa Hội', 'Xã Kim Long', 'Xã Long Điền', 'Xã Long Hải', 'Xã Long Sơn', 'Xã Ngãi Giao', 'Xã Nghĩa Thành',
+  'Xã Phước Hải', 'Xã Xuân Sơn', 'Xã Xuyên Mộc', 'Đặc khu Côn Đảo',
+]
+const outsideOldHcm = new Set([...fromBinhDuong, ...fromBaRiaVungTau])
+
+/** 102 phường, xã mới nằm trên địa bàn TP. Hồ Chí Minh cũ (78 phường, 24 xã): khu vực cửa hàng giao hàng. */
+export const deliveryWards: readonly string[] = hcmWards.filter((ward) => !outsideOldHcm.has(ward))
+export const DELIVERY_AREA = 'TP. Hồ Chí Minh cũ'

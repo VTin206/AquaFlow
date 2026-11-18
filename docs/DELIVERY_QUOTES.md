@@ -6,12 +6,12 @@ Checkout thật gọi `POST /api/v1/delivery-quotes` (không cần đăng nhập
 {"items":[{"productId":1,"quantity":2}],"stairFloor":2}
 ```
 
-API trả `subtotal`, `baseFee`, `stairsFee`, `deliveryFee`, `total`. Giá sản phẩm lấy từ DB; sản phẩm ngừng bán bị từ chối. Báo phí không giữ hàng.
+API trả `subtotal`, `baseFee`, `stairsFee`, `deliveryFee`, `total` và `fees` (mức phí đang áp dụng theo Cài đặt cửa hàng: `freeFromUnits`, `smallOrderFee`, `stairsPerJug`), để trang đặt hàng hiện đúng cách tính. Giá sản phẩm lấy từ DB; sản phẩm ngừng bán bị từ chối. Báo phí không giữ hàng.
 
-Chính sách áp dụng giống Demo theo yêu cầu cửa hàng:
+Chính sách (mức mặc định, cửa hàng đổi được ở trang Cài đặt):
 
 - Dưới 3 sản phẩm: phí cơ bản 15.000đ; từ 3 sản phẩm miễn phí cơ bản.
-- Bình nước (đơn vị `Bình` hoặc `binh`, không phân biệt hoa thường): thang bộ tầng 1–2 là 2.000đ/bình/tầng; tầng 3 là 8.000đ/bình; từ tầng 4 là 12.000đ/bình.
+- Bình và thùng (đơn vị `Bình`/`Thùng`, không phân biệt hoa thường hay dấu) chịu phụ thu thang bộ theo từng cái: lầu 1 là 2.000đ, lầu 2 là 4.000đ, lầu 3 là 8.000đ, từ lầu 4 là 12.000đ mỗi bình/thùng. Chai, lon lẻ không tính.
 - `stairFloor` từ 0 đến 30; 0 là tầng trệt hoặc có thang máy. Không tính khoảng cách/khu vực. Miễn phí cơ bản không miễn phụ thu thang bộ.
 - Tổng này chưa gồm cọc vỏ; checkout giải thích tiền cọc riêng.
 

@@ -3,18 +3,88 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#205b96" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="theme-color" content="#087fad" />
+    <link rel="icon" type="image/png" href="/images/aquaflow-logo.png" />
     <meta name="description" content="AquaFlow — quản lý bán hàng, kho hàng và giao nhận cho đại lý nước tinh khiết." />
     <title>AquaFlow | Quản lý đại lý nước</title>
+    <script>
+      // Nền tối ngay từ đầu theo chế độ màu đã lưu (cùng khóa với app/colorMode.ts), tránh chớp trắng. Không dùng data-theme: thuộc tính đó do ThemedArea quản lý.
+      try {
+        var afMode = localStorage.getItem('aquaflow.color-mode')
+        if (afMode === 'dark' || (afMode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.setAttribute('data-startup-theme', 'dark')
+        }
+      } catch (e) {}
+    </script>
+    <style>
+      /* Không có màn hình chờ; khối này chỉ hiện khi không tải được app hoặc trình duyệt tắt JavaScript. Màu chép từ app/palette.ts. */
+      /* Nền lúc chờ tải code trùng màu nền app (palette.ts: bg) để không chớp trắng khi mở/tải lại trang. */
+      body {
+        margin: 0;
+        background: #f8fafc;
+      }
+      html[data-startup-theme='dark'] body {
+        background: #0f172a;
+      }
+      .af-startup {
+        --s-strong: #16324f;
+        --s-text: #52687b;
+        --s-accent: #087fad;
+        align-items: center;
+        box-sizing: border-box;
+        color: var(--s-text);
+        display: none;
+        flex-direction: column;
+        font-family: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        font-size: 13px;
+        justify-content: center;
+        line-height: 1.55;
+        min-height: 100vh;
+        min-height: 100dvh;
+        padding: 24px 16px;
+        text-align: center;
+      }
+      html[data-startup-theme='dark'] .af-startup {
+        --s-strong: #e2e8f0;
+        --s-text: #94a3b8;
+        --s-accent: #3aa6d6;
+      }
+      .af-startup[data-state='failed'] {
+        display: flex;
+      }
+      .af-startup p {
+        margin: 0 0 8px;
+        max-width: 320px;
+      }
+      .af-startup a {
+        color: var(--s-accent);
+        font-weight: 500;
+      }
+      #af-startup-title {
+        color: var(--s-strong);
+        font-size: 15px;
+        font-weight: 600;
+      }
+    </style>
+    <noscript>
+      <style>
+        .af-startup {
+          display: flex;
+        }
+        .af-startup p:not(.af-startup-noscript),
+        .af-startup a {
+          display: none;
+        }
+      </style>
+    </noscript>
   </head>
   <body>
     <div id="root">
-      <main style="max-width:600px;margin:48px auto;padding:24px;font-family:system-ui,sans-serif;line-height:1.6;color:#172b4d;background:#fff;border-radius:16px">
-        <h1 id="af-startup-title">Đang mở AquaFlow…</h1>
-        <p id="af-startup-description" role="status">Nếu chờ lâu, hãy kiểm tra kết nối mạng và tải lại trang.</p>
-        <a href="" style="color:#205b96">Tải lại trang</a>
-        <noscript><p>Bạn cần bật JavaScript trong trình duyệt để sử dụng AquaFlow.</p></noscript>
+      <main class="af-startup" id="af-startup" role="status">
+        <p id="af-startup-title">Không khởi động được AquaFlow</p>
+        <p id="af-startup-description">Kiểm tra kết nối mạng rồi tải lại trang. Nếu vẫn gặp lỗi, vui lòng thử lại sau.</p>
+        <a href="">Tải lại trang</a>
+        <noscript><p class="af-startup-noscript">Bạn cần bật JavaScript trong trình duyệt để sử dụng AquaFlow.</p></noscript>
       </main>
     </div>
     <script type="module" src="/src/bootstrap.ts"></script>

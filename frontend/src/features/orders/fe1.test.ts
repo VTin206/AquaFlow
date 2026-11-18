@@ -18,6 +18,7 @@ describe('FE1 access and API contracts', () => {
       const user = { name: 'Customer', role }
       expect(isStaff(user)).toBe(false)
       expect(isCustomer(user)).toBe(true)
+      expect(accountDestination(user)).toBe('/shop')
       expect(accountDestination(user, '/delivery')).toBe('/shop/orders')
       expect(accountDestination(user, '/shop/orders/12')).toBe('/shop/orders/12')
       expect(accountDestination(user, '//example.com')).toBe('/shop/orders')
@@ -72,6 +73,8 @@ describe('FE1 access and API contracts', () => {
     ] as Awaited<ReturnType<typeof deliveryApi.attempts>>)
     const history = await orderDeliveryHistory(12)
     expect(history.map((row) => row.trip.id)).toEqual([1, 2])
+    // Chỉ xin BE các chuyến chở đơn này, không tải toàn bộ chuyến.
+    expect(deliveryApi.list).toHaveBeenCalledWith({ orderId: 12 })
     expect(history[0].attempts.map((attempt) => attempt.outcome)).toEqual(['FAILED', 'SUCCESS'])
     expect(deliveryApi.attempts).toHaveBeenCalledTimes(2)
     expect(deliveryApi.attempts).not.toHaveBeenCalledWith(3, 12)

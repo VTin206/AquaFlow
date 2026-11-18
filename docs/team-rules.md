@@ -7,7 +7,7 @@
 1. Mỗi thành viên chịu trách nhiệm với chức năng/module được phân công.
 2. Không tự ý sửa code thuộc module của người khác nếu chưa trao đổi.
 3. Mọi công việc phải được quản lý bằng GitHub Issues và GitHub Projects.
-4. Không code trực tiếp trên `main` hoặc `develop`.
+4. Không code trực tiếp trên `main`. Được phép code trực tiếp trên `develop` khi maintainer/chủ repository yêu cầu hoặc chấp thuận rõ ràng; vẫn phải kiểm tra working tree, test và commit theo quy định.
 5. Mọi thay đổi phải đi qua Pull Request.
 6. Code phải build và được kiểm tra trước khi tạo PR.
 7. Khi thay đổi API hoặc database, phải thông báo cho các thành viên liên quan.
@@ -276,7 +276,7 @@ Nếu Backend thay đổi API, phải cập nhật Swagger/OpenAPI và thông b�
 
 ## 12. Năm điều không được vi phạm
 
-1. **Không push trực tiếp vào `main`.**
+1. **Không push trực tiếp vào `main`.** Có thể push trực tiếp vào `develop` khi maintainer/chủ repository đã yêu cầu hoặc chấp thuận rõ ràng và các kiểm tra bắt buộc đã đạt.
 2. **Không merge code chưa review.**
 3. **Không tự ý sửa database dùng chung.**
 4. **Không commit password, token hoặc file `.env`.**

@@ -43,6 +43,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 @AutoConfigureMockMvc
 class ProductControllerIntegrationTest {
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.aquaflow.inventory.repository.ProductCategoryRepository productCategoryRepository;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.aquaflow.content.repository.ShopArticleRepository shopArticleRepository;
+
     @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.inventory.repository.ProductRepository productRepository;
     @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.payment.PaymentRepository paymentRepository;
     @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.bottle.BottleLedgerRepository bottleLedgerRepository;
@@ -54,9 +59,17 @@ class ProductControllerIntegrationTest {
     @MockitoBean private com.aquaflow.inventory.repository.InventoryReturnRepository inventoryReturnRepository;
     @MockitoBean private com.aquaflow.activity.ActivityRepository activityRepository;
     @MockitoBean private com.aquaflow.report.ReportRepository reportRepository;
+    @MockitoBean private com.aquaflow.inventory.brand.BrandService brandService;
+    @MockitoBean private com.aquaflow.inventory.repository.BestSellerRepository bestSellerRepository;
     @MockitoBean private com.aquaflow.delivery.repository.DeliveryRepository deliveryRepository;
     @MockitoBean private com.aquaflow.customer.order.repository.DispatchRepository dispatchRepository;
+    @MockitoBean private com.aquaflow.customer.order.repository.OrderTrackingRepository orderTrackingRepository;
+    @MockitoBean private com.aquaflow.auth.repository.RefreshTokenRepository refreshTokenRepository;
+    @MockitoBean private com.aquaflow.customer.order.repository.OrderQueryRepository orderQueryRepository;
+    @MockitoBean private com.aquaflow.customer.order.repository.OrderReturnRepository orderReturnRepository;
+    @MockitoBean private com.aquaflow.customer.repository.CustomerQueryRepository customerQueryRepository;
     @MockitoBean private com.aquaflow.inventory.application.StockDispatchService stockDispatchService;
+    @MockitoBean private com.aquaflow.inventory.application.StockAdjustmentService stockAdjustmentService;
     @MockitoBean private com.aquaflow.workspace.repository.StoreSettingsRepository storeSettingsRepository;
     @MockitoBean private com.aquaflow.workspace.repository.NotificationRepository notificationRepository;
 
@@ -113,6 +126,25 @@ class ProductControllerIntegrationTest {
 
     @MockitoBean
     private OrderService orderService;
+
+    @Test
+    void anonymousUserGetsBestSellerIdsFromLast30DaysWithoutSalesFigures() throws Exception {
+        when(bestSellerRepository.topProductIds(any(), org.mockito.ArgumentMatchers.eq(3), org.mockito.ArgumentMatchers.eq(5)))
+                .thenReturn(List.of(7L, 2L));
+        Instant before = Instant.now();
+
+        mockMvc.perform(get("/api/v1/products/best-sellers"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0]").value(7))
+                .andExpect(jsonPath("$[1]").value(2));
+
+        // Khoảng tính là 30 ngày tính tới lúc gọi.
+        verify(bestSellerRepository).topProductIds(argThat(since ->
+                !since.isAfter(before.minus(java.time.Duration.ofDays(30)).plusSeconds(60))
+                        && !since.isBefore(before.minus(java.time.Duration.ofDays(30)).minusSeconds(60))),
+                org.mockito.ArgumentMatchers.eq(3), org.mockito.ArgumentMatchers.eq(5));
+    }
 
     @Test
     void anonymousUserCanListProducts() throws Exception {
@@ -268,11 +300,13 @@ class ProductControllerIntegrationTest {
     @Test
     @WithMockUser(roles = "SALES_STAFF")
     void salesStaffCanReadOrderList() throws Exception {
-        when(orderService.findAll()).thenReturn(List.of());
+        when(orderService.search(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new com.aquaflow.customer.order.api.dto.OrderPageResponse(
+                        List.of(), 0, 20, 0, 0, java.util.Map.of()));
 
         mockMvc.perform(get("/api/v1/sales/orders"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
+                .andExpect(jsonPath("$.items").isArray());
     }
 
     private ProductResponse sampleProduct() {

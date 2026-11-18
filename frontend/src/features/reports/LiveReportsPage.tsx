@@ -1,104 +1,413 @@
 import { useState } from 'react'
+import { filterOn } from '@/shared/utils/filterOn'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, App, Button, Card, Col, DatePicker, Descriptions, Row, Select, Space, Statistic, Table, Tabs, Typography } from 'antd'
+import { Alert, App, Button, Card, Checkbox, Input, Popover, Segmented, Select, Table, Tabs, Typography } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
+import { Columns3, FileSpreadsheet, FunnelX, Search } from 'lucide-react'
+import { normalizeSearch } from '@/shared/utils/search'
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import { Page } from '@/shared/components/Page'
+import { PeriodPicker } from '@/shared/components/PeriodPicker'
 import { QueryError } from '@/shared/components/QueryError'
+import { StatChange, StatTile, StatTiles, StatWarning } from '@/shared/components/StatTiles'
 import { currency } from '@/shared/utils/format'
-import { reportApi, channelLabels, type ReportQuery, type ReportSection, type ReportRow } from './reportApi'
-import { RevenueChart } from './charts'
-import { autoGranularity, groupRevenue, reportPresets } from './periods'
+import { reportApi, channelLabels, type LiveReport, type ReportQuery, type ReportSection, type ReportRow } from './reportApi'
+import { DriverDeliveryChart, ProductShareChart, RevenueChart, TopProductsChart } from './charts'
+import { metricLabels, rankProducts, slowMovers, useProductSales, type ProductSale, type SalesMetric } from './productSales'
+import { SlowMovers } from './SlowMovers'
+import { useStockItems } from '@/features/inventory/useInventory'
+import { autoGranularity, granularityLabels, groupRevenue, reportPresets, type Granularity } from './periods'
 import { previousRange } from './reportService'
 import type { ReportColumn } from './exportLiveReport'
 import './reports.css'
+import { useStaff } from '@/features/auth/useStaff'
 
 const sections: Record<ReportSection, { title: string; key: string; columns: ReportColumn[] }> = {
   products: { title: 'Sản phẩm bán', key: 'productId', columns: [
     { key: 'sku', title: 'Mã hàng' }, { key: 'name', title: 'Sản phẩm' }, { key: 'unit', title: 'Đơn vị' }, { key: 'sold', title: 'SL đã giao' }, { key: 'returned', title: 'SL khách trả' }, { key: 'revenue', title: 'Tiền hàng sau giảm giá / trả lại', money: true },
   ] },
   inventory: { title: 'Nhập – xuất – tồn', key: 'productId', columns: [
-    { key: 'name', title: 'Sản phẩm' }, { key: 'unit', title: 'Đơn vị' }, { key: 'opening', title: 'Tồn đầu' }, { key: 'received', title: 'Nhập NCC' }, { key: 'restocked', title: 'Hoàn nhập kho' }, { key: 'issued', title: 'Xuất kho' }, { key: 'adjustments', title: 'Điều chỉnh (+/−)' }, { key: 'closing', title: 'Tồn cuối' }, { key: 'damaged', title: 'Loại khi nhận NCC' }, { key: 'discarded', title: 'Loại khi hoàn hàng' },
+    { key: 'name', title: 'Sản phẩm' }, { key: 'unit', title: 'Đơn vị' }, { key: 'opening', title: 'Tồn đầu' }, { key: 'received', title: 'Nhập NCC' }, { key: 'restocked', title: 'Hoàn nhập kho' }, { key: 'issued', title: 'Xuất kho' }, { key: 'adjustments', title: 'Điều chỉnh (+/−)' }, { key: 'closing', title: 'Tồn cuối' }, { key: 'latestUnitCost', title: 'Giá nhập gần nhất', money: true }, { key: 'closingValue', title: 'Giá trị tồn cuối kỳ', money: true }, { key: 'damaged', title: 'Loại khi nhận NCC' }, { key: 'discarded', title: 'Loại khi hoàn hàng' },
   ] },
   delivery: { title: 'Giao hàng', key: 'driverId', columns: [
-    { key: 'driver', title: 'Tài xế' }, { key: 'delivered', title: 'Lần giao thành công' }, { key: 'failed', title: 'Lần thất bại' }, { key: 'appointed', title: 'Giao có hẹn' }, { key: 'late', title: 'Giao trễ hẹn' }, { key: 'settledTrips', title: 'Chuyến đối soát' }, { key: 'cashReported', title: 'Tiền báo nộp', money: true }, { key: 'cashConfirmed', title: 'Tiền xác nhận nhận', money: true }, { key: 'cashDifference', title: 'Chênh lệch báo − nhận', money: true },
+    { key: 'driver', title: 'Tài xế' }, { key: 'ordersDispatched', title: 'Đơn đã xuất' }, { key: 'ordersSucceeded', title: 'Đơn giao thành công' }, { key: 'ordersFailed', title: 'Đơn giao thất bại' }, { key: 'successRate', title: 'Tỷ lệ thành công' }, { key: 'redeliveredOrders', title: 'Đơn giao lại' }, { key: 'delivered', title: 'Lần giao thành công' }, { key: 'failed', title: 'Lần thất bại' }, { key: 'redelivered', title: 'Lần giao lại' }, { key: 'appointed', title: 'Giao có hẹn' }, { key: 'late', title: 'Giao trễ hẹn' }, { key: 'settledTrips', title: 'Chuyến đối soát' }, { key: 'cashReported', title: 'Tiền báo nộp', money: true }, { key: 'cashConfirmed', title: 'Tiền xác nhận nhận', money: true }, { key: 'cashDifference', title: 'Chênh lệch báo − nhận', money: true },
   ] },
   customers: { title: 'Khách hàng', key: 'key', columns: [
-    { key: 'name', title: 'Khách hàng' }, { key: 'orders', title: 'Đơn giao trong kỳ' }, { key: 'revenue', title: 'Doanh thu sau hàng trả', money: true },
+    { key: 'name', title: 'Khách hàng' }, { key: 'orders', title: 'Đơn giao trong kỳ' }, { key: 'revenue', title: 'Doanh thu sau hàng trả', money: true }, { key: 'lastOrder', title: 'Mua gần nhất' }, { key: 'daysSinceLastOrder', title: 'Ngày chưa mua' },
   ] },
 }
+/** Bảng nhiều cột: mặc định chỉ hiện cột chính, cột còn lại bật thêm qua nút "Cột" (file Excel vẫn đủ cột). */
+const coreColumns: Partial<Record<ReportSection, string[]>> = {
+  inventory: ['name', 'unit', 'opening', 'received', 'issued', 'closing', 'latestUnitCost', 'closingValue'],
+  delivery: ['driver', 'ordersDispatched', 'ordersSucceeded', 'ordersFailed', 'successRate', 'redelivered', 'late'],
+}
+
 const dailyColumns: ReportColumn[] = [{ key: 'date', title: 'Ngày' }, { key: 'revenue', title: 'Doanh thu', money: true }, { key: 'collected', title: 'Thanh toán ròng', money: true }, { key: 'orders', title: 'Đơn tạo' }]
-const columnsOf = (columns: ReportColumn[]) => columns.map(column => ({ title: column.title, dataIndex: column.key, key: column.key, render: (value: string | number | null) => column.money ? currency(Number(value ?? 0)) : value, width: column.money ? 180 : 140 }))
+/** Tiêu đề ngắn trên màn hình cho cột có tên dài; file Excel vẫn dùng tên đầy đủ. */
+const shortTitles: Record<string, string> = {
+  latestUnitCost: 'Giá nhập',
+  ordersDispatched: 'Đơn xuất',
+  ordersSucceeded: 'Thành công',
+  ordersFailed: 'Thất bại',
+  successRate: 'Tỷ lệ',
+  cashDifference: 'Chênh lệch',
+  revenue: 'Doanh thu',
+}
+/**
+ * Cột tên (sản phẩm, tài xế, khách) rộng nhất, một dòng, ghim trái khi cuộn ngang; cột số vừa tiêu đề một dòng,
+ * canh phải. Bảng cuộn trong khung nên cần độ rộng cố định cho từng cột.
+ */
+const nameKeys = ['name', 'driver']
+const NAME_WIDTH = 240
+const titleOf = (column: ReportColumn) => shortTitles[column.key] ?? column.title
+const widthOf = (column: ReportColumn) =>
+  nameKeys.includes(column.key) ? NAME_WIDTH : Math.max(column.money ? 130 : column.key === 'sku' ? 130 : 90, Math.ceil(titleOf(column).length * 8.5) + 36)
+/** Bảng sản phẩm bán (đủ mọi sản phẩm trong kỳ): bấm tiêu đề SL đã giao hoặc Doanh thu để xếp; mặc định bán nhiều nhất trước. */
+const sortableSales = <T extends { key: string }>(columns: T[]) => columns.map((column) =>
+  column.key === 'sold' || column.key === 'revenue'
+    ? { ...column, sorter: (a: ReportRow, b: ReportRow) => Number(a[column.key] ?? 0) - Number(b[column.key] ?? 0), sortDirections: ['descend', 'ascend'] as ('descend' | 'ascend')[], defaultSortOrder: column.key === 'sold' ? ('descend' as const) : undefined }
+    : column)
+
+const columnsOf = (columns: ReportColumn[]) => columns.map(column => {
+  const isName = nameKeys.includes(column.key)
+  const format = (value: string | number | null) => column.money ? value == null ? 'Chưa có giá nhập' : currency(Number(value)) : value ?? '—'
+  return {
+    title: titleOf(column) === column.title ? column.title : <span title={column.title}>{titleOf(column)}</span>,
+    dataIndex: column.key,
+    key: column.key,
+    // Cột tên không đặt độ rộng: nhận hết phần còn lại của bảng (tối thiểu NAME_WIDTH qua scroll.x).
+    width: isName ? undefined : widthOf(column),
+    ellipsis: isName ? { showTitle: true } : undefined,
+    render: format,
+    fixed: isName ? ('left' as const) : undefined,
+    className: isName ? undefined : 'af-nowrap',
+    align: !isName && !['sku', 'unit', 'date', 'lastOrder'].includes(column.key) ? ('right' as const) : undefined,
+  }
+})
+const tableWidthOf = (columns: ReportColumn[]) => columns.reduce((sum, column) => sum + widthOf(column), 0)
+/** Tên khách có hồ sơ mở được hồ sơ; khách vãng lai và khách chỉ có số điện thoại thì không. */
+const customerColumns = columnsOf(sections.customers.columns).map((column) => column.key !== 'name' ? column : {
+  ...column,
+  render: (name: string | number | null, row: ReportRow) => row.key === 'guest' || String(row.key).startsWith('SĐT ') || !row.key
+    ? name
+    : <Link to={`/customers?customerId=${encodeURIComponent(String(row.key))}`}>{name}</Link>,
+})
+
+/** Chỉ số chính, nhãn ngắn. */
+const kpis = [
+  { title: 'Doanh thu', key: 'revenue', money: true },
+  { title: 'Đã thu', key: 'netPayments', money: true },
+  { title: 'Đơn đã giao', key: 'ordersDelivered', money: false },
+  { title: 'Đơn tạo', key: 'ordersCreated', money: false },
+] as const
+
+type ReportLine = { label: string; value: number | null | undefined; money?: boolean; total?: boolean }
+
+/** Danh sách nhãn – số có đường kẻ: dòng tổng in đậm, số 0 làm mờ. */
+function ReportList({ title, lines, columns = false }: { title: string; lines: ReportLine[]; columns?: boolean }) {
+  return (
+    <section className="af-report-list">
+      <h3>{title}</h3>
+      <dl className={columns ? 'af-report-lines is-columns' : 'af-report-lines'}>
+        {lines.map(({ label, value, money, total }) => {
+          const number = Number(value ?? 0)
+          const className = [total ? 'is-total' : '', number ? '' : 'is-zero'].filter(Boolean).join(' ')
+          return (
+            <div key={label} className={className || undefined}>
+              <dt>{label}</dt>
+              <dd>{money ? currency(number) : number}</dd>
+            </div>
+          )
+        })}
+      </dl>
+    </section>
+  )
+}
+
+/** Doanh thu theo kênh kèm thanh tỉ lệ để thấy ngay kênh nào bán nhiều. */
+function ChannelList({ channels }: { channels: LiveReport['channels'] }) {
+  const top = Math.max(1, ...channels.map((item) => item.revenue))
+  const sorted = [...channels].sort((a, b) => b.revenue - a.revenue)
+  return (
+    <section className="af-report-list">
+      <h3>Theo kênh</h3>
+      <dl className="af-report-lines">
+        {sorted.map(({ channel, orders, revenue }) => (
+          <div key={channel} className={revenue ? 'af-report-channel' : 'af-report-channel is-zero'}>
+            <dt>
+              {channelLabels[channel] ?? channel} <small>{orders} đơn</small>
+            </dt>
+            <dd>{currency(revenue)}</dd>
+            <span className="af-report-channel-bar" aria-hidden>
+              <span style={{ width: `${(revenue / top) * 100}%` }} />
+            </span>
+          </div>
+        ))}
+        {!sorted.length && <Typography.Text type="secondary">Chưa có đơn trong kỳ.</Typography.Text>}
+      </dl>
+    </section>
+  )
+}
+
+/** Bảng chi tiết vừa phần còn lại của màn hình: danh sách cuộn trong bảng, trang không phải cuộn. */
+// Luôn thấy ít nhất 10 dòng (dòng gọn ~39px); màn hình cao thì giãn theo màn hình.
+const reportTableHeight = 'max(390px, calc(100dvh - 540px))'
+
+/** Tab có biểu đồ: xem bằng nút Bảng | Biểu đồ thay vì để biểu đồ đẩy bảng xuống. */
+const chartTabs: string[] = ['products', 'delivery']
+
+const shownColumns = (columns: ReportColumn[], core?: string[], extra: string[] = []) =>
+  core ? columns.filter((column) => core.includes(column.key) || extra.includes(column.key)) : columns
+
+/** Nút "Cột" cạnh hàng tab, chỉ cho bảng có cột phụ. */
+function ColumnPicker({ columns, core, extra, onExtraChange }: {
+  columns: ReportColumn[]
+  core?: string[]
+  extra: string[]
+  onExtraChange: (keys: string[]) => void
+}) {
+  const optional = core ? columns.filter((column) => !core.includes(column.key)) : []
+  if (!optional.length) return null
+  return (
+    <Popover trigger="click" placement="bottomRight" title="Cột thêm" content={
+        <Checkbox.Group className="af-report-column-picker" value={extra} onChange={(keys) => onExtraChange(keys as string[])}
+          options={optional.map((column) => ({ value: column.key, label: column.title }))} />
+      }>
+        <Button size="small" icon={<Columns3 size={15} />}>Cột{extra.length ? ` (+${extra.length})` : ''}</Button>
+    </Popover>
+  )
+}
+
+/**
+ * Biểu đồ tab Sản phẩm bán: xếp hạng và tỷ lệ tính trên mọi sản phẩm của kỳ (không theo trang bảng).
+ * Mặc định theo số lượng vì hàng bán nhiều mà giá thấp (bình 19L) dễ bị hàng giá cao che khi xếp theo tiền.
+ */
+function ProductCharts({ query, metric, onMetricChange: setMetric }: { query: ReportQuery; metric: SalesMetric; onMetricChange: (metric: SalesMetric) => void }) {
+  const sales = useProductSales(query)
+  if (sales.isError) return <QueryError error={sales.error} onRetry={sales.refetch} />
+  if (sales.isPending) return <Typography.Text type="secondary">Đang tải báo cáo…</Typography.Text>
+  const hasSales = rankProducts(sales.data ?? [], metric).length > 0
+  return <>
+    {hasSales ? <BestSellerCharts rows={sales.data ?? []} metric={metric} onMetricChange={setMetric} /> : <Typography.Text type="secondary">Chưa bán sản phẩm nào trong kỳ.</Typography.Text>}
+  </>
+}
+
+/** Bán chậm tính trên cả danh mục đang bán, nên sản phẩm chưa bán lần nào trong kỳ cũng có mặt. */
+function SlowMoversTable({ query }: { query: ReportQuery }) {
+  const sales = useProductSales(query)
+  const stock = useStockItems()
+  if (sales.isError) return <QueryError error={sales.error} onRetry={sales.refetch} />
+  if (stock.isError) return <QueryError error={stock.error} onRetry={stock.refetch} />
+  if (sales.isPending || stock.isPending) return <Typography.Text type="secondary">Đang tải báo cáo…</Typography.Text>
+  return <SlowMovers rows={slowMovers(sales.data ?? [], stock.data ?? [])} />
+}
+
+function BestSellerCharts({ rows, metric, onMetricChange: setMetric }: { rows: ProductSale[]; metric: SalesMetric; onMetricChange: (metric: SalesMetric) => void }) {
+  return <>
+    <div className="af-report-chart-tools">
+      <Segmented<SalesMetric> size="small" aria-label="Xếp hạng theo" value={metric} onChange={setMetric}
+        options={(Object.keys(metricLabels) as SalesMetric[]).map((value) => ({ value, label: `Theo ${metricLabels[value].toLowerCase()}` }))} />
+    </div>
+    <div className="af-report-products-charts">
+      <section>
+        <h3>8 sản phẩm bán chạy nhất</h3>
+        <TopProductsChart rows={rows} metric={metric} />
+      </section>
+      <section>
+        <h3>Tỷ lệ {metricLabels[metric].toLowerCase()}</h3>
+        <ProductShareChart rows={rows} metric={metric} />
+      </section>
+    </div>
+    {metric === 'quantity' && <Typography.Text type="secondary" className="af-report-chart-note">Số lượng đã trừ hàng khách trả, cộng theo đơn vị bán của từng sản phẩm (bình, thùng, chai…).</Typography.Text>}
+  </>
+}
 
 export function LiveReportsPage() {
+  const staff = useStaff()
+  return staff?.role === 'ADMIN' ? <LiveReportContent /> : <Alert type="warning" showIcon title="Chỉ ADMIN được xem báo cáo." />
+}
+
+/** Kỳ trên địa chỉ trang; sai định dạng, quá 366 ngày hoặc vượt hôm nay thì bỏ qua để dùng mặc định. */
+function rangeFromParams(from: string | null, to: string | null, today: Dayjs): [Dayjs, Dayjs] | undefined {
+  if (!from || !to) return undefined
+  const start = dayjs(from)
+  const end = dayjs(to)
+  if (!start.isValid() || !end.isValid() || start.format('YYYY-MM-DD') !== from || end.format('YYYY-MM-DD') !== to) return undefined
+  if (end.isBefore(start, 'day') || end.diff(start, 'day') > 365 || end.isAfter(today, 'day')) return undefined
+  return [start, end]
+}
+
+const CUSTOM_RANGE = 'Tùy chọn'
+const quickRanges = ['Hôm nay', 'Tháng này', 'Tháng trước']
+
+function LiveReportContent() {
   const { message } = App.useApp()
-  const [dates, setDates] = useState<[Dayjs, Dayjs]>([dayjs().subtract(29, 'day'), dayjs()])
-  const [channel, setChannel] = useState<ReportQuery['channel']>()
-  const [method, setMethod] = useState<ReportQuery['method']>()
+  const [granularity, setGranularity] = useState<Granularity>()
+  // Kỳ, kênh, hình thức nằm trên địa chỉ trang (cùng tab) để tải lại hay gửi link vẫn đúng chỗ đang xem.
+  const [search, setSearch] = useSearchParams()
+  const today = dayjs(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()))
+  const [rangeError, setRangeError] = useState<string>()
+  // Mặc định tháng này: chủ đại lý chốt số theo tháng.
+  const dates = rangeFromParams(search.get('from'), search.get('to'), today) ?? [today.startOf('month'), today]
+  const channelParam = search.get('channel')
+  const channel = channelParam && channelParam in channelLabels ? channelParam as ReportQuery['channel'] : undefined
+  const methodParam = search.get('method')
+  const method = methodParam === 'DELIVERY' || methodParam === 'COUNTER' ? methodParam : undefined
+  const updateParams = (changes: Record<string, string | undefined>) => setSearch(params => {
+    for (const [name, value] of Object.entries(changes)) {
+      if (value) params.set(name, value)
+      else params.delete(name)
+    }
+    return params
+  }, { replace: true })
+  const setDates = ([from, to]: [Dayjs, Dayjs]) => updateParams({ from: from.format('YYYY-MM-DD'), to: to.format('YYYY-MM-DD') })
+  const setChannel = (value?: ReportQuery['channel']) => updateParams({ channel: value })
+  const setMethod = (value?: ReportQuery['method']) => updateParams({ method: value })
+  const [customRange, setCustomRange] = useState(false)
+  const [view, setView] = useState<'table' | 'chart'>('table')
+  const [productList, setProductList] = useState<'all' | 'slow'>('all')
+  // Tiêu chí xếp hạng của biểu đồ Sản phẩm bán; bảng thì bấm tiêu đề cột để sắp xếp.
+  const [salesMetric, setSalesMetric] = useState<SalesMetric>('quantity')
   const [page, setPage] = useState(0)
+  // Từ khóa tìm của từng tab: Sản phẩm bán và Nhập – xuất – tồn lọc tại chỗ trên đủ dòng của kỳ.
+  const [searches, setSearches] = useState<Partial<Record<ReportSection, string>>>({})
+  const searchBox = (key: ReportSection) => key === 'customers'
+    ? customerSearchBox
+    : <Input className="af-report-search" aria-label={key === 'products' ? 'Tìm sản phẩm' : 'Tìm sản phẩm tồn kho'} allowClear prefix={<Search size={16} className="af-input-icon" />} placeholder="Tìm tên hoặc mã hàng" value={searches[key] ?? ''} onChange={(event) => { setSearches({ ...searches, [key]: event.target.value }); setPage(0) }} />
+  const tableToolbar = (key: ReportSection) => key === 'delivery' ? null : <div className="af-report-list-switch">
+    {key !== 'products' || productList === 'all' ? searchBox(key) : <span />}
+    {key === 'products' && <Segmented<'all' | 'slow'> aria-label="Danh sách sản phẩm" value={productList} onChange={setProductList} options={[{ value: 'all', label: 'Tất cả' }, { value: 'slow', label: 'Bán chậm' }]} />}
+  </div>
   const [size, setSize] = useState(20)
   const [exporting, setExporting] = useState(false)
-  const [search, setSearch] = useSearchParams()
   const selected = search.get('tab') ?? 'overview'
   const tab = selected in sections ? selected as ReportSection : 'overview'
   const query: ReportQuery = { from: dates[0].format('YYYY-MM-DD'), to: dates[1].format('YYYY-MM-DD'), channel, method }
+  const productSales = useProductSales(query, tab === 'products')
+  const [extraColumns, setExtraColumns] = useState<Partial<Record<ReportSection, string[]>>>({})
   const summary = useQuery({ queryKey: ['live', 'reports', 'summary', query], queryFn: () => reportApi.summary(query) })
   const priorQuery = { ...query, ...previousRange(query) }
   const previous = useQuery({ queryKey: ['live', 'reports', 'summary', priorQuery], queryFn: () => reportApi.summary(priorQuery) })
-  const details = useQuery({ queryKey: ['live', 'reports', tab, query, page, size], queryFn: () => reportApi.section(tab as ReportSection, query, page, size), enabled: tab !== 'overview' })
+  const [customerSearch, setCustomerSearch] = useState('')
+  const customerQ = useDebouncedValue(customerSearch.trim(), 300)
+  const q = tab === 'customers' ? customerQ : ''
+  // Nhập – xuất – tồn lấy một lần đủ sản phẩm (tối đa 100) để tìm tại chỗ.
+  const [detailPage, detailSize] = tab === 'inventory' ? [0, 100] : [page, size]
+  const details = useQuery({ queryKey: ['live', 'reports', tab, query, detailPage, detailSize, q], queryFn: () => (q ? reportApi.section(tab as ReportSection, query, detailPage, detailSize, q) : reportApi.section(tab as ReportSection, query, detailPage, detailSize)), enabled: tab !== 'overview' })
+  const keyword = tab === 'products' || tab === 'inventory' ? normalizeSearch((searches[tab] ?? '').trim()) : ''
+  const matches = (row: ReportRow) => !keyword || normalizeSearch(`${row.name ?? ''} ${row.sku ?? ''}`).includes(keyword)
+  const productRows = (productSales.rows ?? []).filter(matches)
+  const inventoryRows = (tab === 'inventory' ? details.data?.content ?? [] : []).filter(matches)
+  // Bảng lấy đủ dòng của kỳ để tìm và sắp xếp tại chỗ; các tab khác phân trang ở máy chủ.
+  const localRows = (key: string) => key === 'products' ? productRows : key === 'inventory' ? inventoryRows : undefined
+  const customerSearchBox = <Input className="af-report-search" aria-label="Tìm khách hàng" allowClear prefix={<Search size={16} className="af-input-icon" />} placeholder="Tìm tên hoặc số điện thoại" value={customerSearch} onChange={(event) => { setCustomerSearch(event.target.value); setPage(0) }} />
+  const unit = granularity ?? autoGranularity(query)
+  const detailRows = details.data?.content ?? []
+  const num = (value: string | number | null) => Number(value ?? 0)
   const report = summary.data
   const selectedSection = tab === 'overview' ? undefined : sections[tab]
   const rows: ReportRow[] = tab === 'overview' ? report?.days ?? [] : details.data?.content ?? []
   const columns = selectedSection?.columns ?? dailyColumns
-  return <Page title="Báo cáo" description="Doanh thu, thanh toán, kho và giao hàng từ dữ liệu thực tế, theo ngày Việt Nam."
-    actions={<Space wrap>
-      <DatePicker.RangePicker allowClear={false} value={dates} format="DD/MM/YYYY" presets={reportPresets()} disabledDate={date => date.isAfter(dayjs(), 'day')}
-        onChange={value => { if (value?.[0] && value[1]) { setDates([value[0], value[1]]); setPage(0) } }} />
-      <Select allowClear placeholder="Mọi kênh" value={channel} style={{ width: 150 }} options={Object.entries(channelLabels).map(([value, label]) => ({ value, label }))} onChange={value => { setChannel(value); setPage(0) }} />
-      <Select allowClear placeholder="Mọi hình thức" value={method} style={{ width: 170 }} options={[{ value: 'DELIVERY', label: 'Giao tận nơi' }, { value: 'COUNTER', label: 'Tại quầy' }]} onChange={value => { setMethod(value); setPage(0) }} />
-      <Button onClick={() => { void summary.refetch(); void previous.refetch(); if (tab !== 'overview') void details.refetch() }}>Làm mới</Button>
-      <Button loading={exporting} disabled={!report || summary.isError || (tab !== 'overview' && (details.isError || details.isPending)) || !rows.length} onClick={async () => {
+  // Chọn nhanh kỳ hay dùng; kỳ khác chọn "Tùy chọn" rồi mới hiện ô chọn khoảng ngày.
+  const presets = reportPresets(today).filter(({ label }) => quickRanges.includes(label))
+  const activePreset = presets.find(({ value }) => value[0].isSame(dates[0], 'day') && value[1].isSame(dates[1], 'day'))?.label
+  const rangeMode = customRange || !activePreset ? CUSTOM_RANGE : activePreset
+  // Tồn kho tính cho cả cửa hàng: lọc kênh/hình thức không đổi số liệu nên khóa lại ở tab này.
+  const filtersApply = tab !== 'inventory'
+  return <Page title="Báo cáo"
+    actions={<Button icon={<FileSpreadsheet size={16} />} loading={exporting} disabled={!report || summary.isError || (tab !== 'overview' && (details.isError || details.isPending)) || !rows.length} onClick={async () => {
         if (!report) return
         setExporting(true)
         try { const { downloadLiveReport } = await import('./exportLiveReport'); await downloadLiveReport(report, query, selectedSection?.title ?? 'Doanh thu theo ngày', columns, rows, tab === 'overview' ? undefined : page) }
         catch { message.error('Không thể xuất báo cáo. Vui lòng thử lại.') }
         finally { setExporting(false) }
-      }}>{tab === 'overview' ? 'Xuất Excel theo ngày' : 'Xuất Excel trang này'}</Button>
-    </Space>}>
-    <Alert type="info" showIcon title="Kỳ báo cáo tối đa 366 ngày, gồm cả ngày bắt đầu và kết thúc."
-      description="Kênh và hình thức áp dụng cho doanh thu, thanh toán, sản phẩm, khách hàng và kết quả giao. Kho, nhập hàng, sổ cọc và đối soát tài xế tính cho cả cửa hàng." />
+      }}>{tab === 'overview' ? 'Xuất Excel theo ngày' : 'Xuất Excel trang này'}</Button>}>
+    <div className="af-report-filters">
+      <Segmented<string> aria-label="Kỳ báo cáo" value={rangeMode} onChange={value => {
+        if (value === CUSTOM_RANGE) { setCustomRange(true); return }
+        const preset = presets.find(({ label }) => label === value)
+        if (!preset) return
+        setCustomRange(false); setRangeError(undefined); setDates([preset.value[0], preset.value[1]]); setPage(0)
+      }} options={[...presets.map(({ label }) => label), CUSTOM_RANGE]} />
+      {rangeMode === CUSTOM_RANGE && <PeriodPicker maxDays={366} allowClear={false} value={dates} presets={reportPresets(today).filter(({ label }) => !quickRanges.includes(label))}
+        onChange={value => { if (value?.[0] && value[1]) { if (value[1].diff(value[0], 'day') > 365 || value[1].isAfter(today, 'day')) { setRangeError('Chọn tối đa 366 ngày và không vượt quá hôm nay.'); return }; setRangeError(undefined); setDates([value[0], value[1]]); setPage(0) } }} />}
+      <Select allowClear placeholder="Mọi kênh" disabled={!filtersApply} value={channel} className={filterOn(Boolean(channel))} style={{ width: 140 }} options={Object.entries(channelLabels).map(([value, label]) => ({ value, label }))} onChange={value => { setChannel(value); setPage(0) }} />
+      <Select<NonNullable<ReportQuery['method']>> allowClear placeholder="Mọi hình thức" disabled={!filtersApply} value={method} className={filterOn(Boolean(method))} style={{ width: 150 }} options={[{ value: 'DELIVERY', label: 'Giao tận nơi' }, { value: 'COUNTER', label: 'Tại quầy' }]} onChange={value => { setMethod(value); setPage(0) }} />
+      {(channel || method) && <Button type="link" icon={<FunnelX size={15} />} onClick={() => { updateParams({ channel: undefined, method: undefined }); setPage(0) }}>Xóa lọc</Button>}
+    </div>
+    {rangeError && <Alert type="warning" showIcon title={rangeError} />}
     {summary.isError ? <QueryError error={summary.error} onRetry={summary.refetch} /> : <>
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        {[['Doanh thu sau giảm giá / hàng trả', report?.sales.revenue, true], ['Thanh toán ròng đã xác nhận', report?.sales.netPayments, true], ['Đơn đã giao trong kỳ', report?.sales.ordersDelivered, false], ['Đơn tạo trong kỳ', report?.sales.ordersCreated, false]].map(([title, value, money]) => <Col xs={24} sm={12} xl={6} key={String(title)}><Card loading={summary.isPending}><Statistic title={title} value={money ? currency(Number(value ?? 0)) : Number(value ?? 0)} /></Card></Col>)}
-      </Row>
-      {report && <p>Doanh thu kỳ trước: {previous.isError ? 'Không tải được' : previous.isPending ? 'Đang tải…' : currency(previous.data?.sales.revenue ?? 0)} · Đơn hủy trong kỳ: {report.sales.ordersCancelled}</p>}
+      <StatTiles label="Chỉ số chính của kỳ">
+        {kpis.map(({ title, key, money }) => {
+          const value = Number(report?.sales[key] ?? 0)
+          return <StatTile key={key} title={title} loading={summary.isPending} money={money} value={report ? value : undefined} note={report && <>
+            <StatChange current={value} previous={previous.data?.sales[key]} />
+            {key === 'ordersCreated' && report.sales.ordersCancelled > 0 && <span>{report.sales.ordersCancelled} đơn đã hủy</span>}
+          </>} />
+        })}
+        <StatTile title="Lãi gộp ước tính" loading={summary.isPending}
+          money value={!report ? undefined : report.sales.unpricedCostLines === 0 ? Number(report.sales.estimatedGrossProfit ?? 0) : 'Chưa đủ giá nhập'}
+          note={report && (report.sales.unpricedCostLines > 0
+            ? report.sales.totalCostLines > 0 && <StatWarning label="Thiếu giá nhập">{report.sales.unpricedCostLines}/{report.sales.totalCostLines} dòng hàng</StatWarning>
+            : report.sales.revenue > 0 && <span>Biên lãi {(Number(report.sales.estimatedGrossProfit ?? 0) / report.sales.revenue * 100).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}% doanh thu</span>)} />
+      </StatTiles>
       {!!report?.sales.undatedDeliveredOrders && <Alert type="warning" showIcon title={`Có ${report.sales.undatedDeliveredOrders} đơn đã giao thiếu thời điểm giao, chưa thể tính vào doanh thu theo kỳ.`} />}
-      <Tabs activeKey={tab} onChange={key => { setSearch(params => { params.set('tab', key); return params }, { replace: true }); setPage(0) }} items={[
+      <Tabs activeKey={tab} tabBarExtraContent={tab !== 'overview' && <div className="af-report-tab-tools">
+        {chartTabs.includes(tab) && <Segmented<'table' | 'chart'> size="small" aria-label="Kiểu xem" value={view} onChange={setView} options={[{ value: 'table', label: 'Bảng' }, { value: 'chart', label: 'Biểu đồ' }]} />}
+        {(view === 'table' || !chartTabs.includes(tab)) && <ColumnPicker columns={sections[tab].columns} core={coreColumns[tab]} extra={extraColumns[tab] ?? []}
+          onExtraChange={(keys) => setExtraColumns((previous) => ({ ...previous, [tab]: keys }))} />}
+      </div>} onChange={key => { setSearch(params => { params.set('tab', key); return params }, { replace: true }); setPage(0) }} items={[
         { key: 'overview', label: 'Tổng quan', children: report && <>
-          <Card title="Doanh thu và thanh toán theo kỳ"><RevenueChart data={groupRevenue(report.days, autoGranularity(query))} /></Card>
-          <Row gutter={[16, 16]} style={{ marginTop: 16 }}><Col xs={24} lg={12}><Card title="Đối chiếu doanh thu"><Descriptions column={1} items={[
-            { key: 'goods', label: 'Tiền hàng đã giao', children: currency(report.sales.goods) },
-            { key: 'discounts', label: 'Giảm giá', children: currency(report.sales.discounts) },
-            { key: 'fees', label: 'Phí giao', children: currency(report.sales.deliveryFees) },
-            { key: 'returns', label: 'Hàng khách trả trong kỳ', children: currency(report.sales.returnsValue) },
-          ]} /><Typography.Text type="secondary">Hoàn kho của đơn giao thất bại không trừ doanh thu lần nữa. Giá vốn và lãi gộp chưa được tính do chưa có giá vốn chốt theo lần bán.</Typography.Text></Card></Col>
-          <Col xs={24} lg={12}><Card title="Thanh toán đã xác nhận"><Descriptions column={1} items={[
-            { key: 'cash', label: 'Thu tiền mặt', children: currency(report.sales.cashIn) }, { key: 'bank', label: 'Thu chuyển khoản', children: currency(report.sales.transferIn) }, { key: 'refunds', label: 'Chi hoàn', children: currency(report.sales.refunds) },
-          ]} /><Typography.Text type="secondary">Tính theo thời điểm xác nhận thanh toán, có thể gồm tiền cọc trong khoản thu. Tiền tài xế bàn giao không được cộng lần nữa.</Typography.Text></Card></Col></Row>
-          <Card title="Theo kênh" style={{ marginTop: 16 }}><Table rowKey="channel" pagination={false} dataSource={report.channels} columns={[{ title: 'Kênh', dataIndex: 'channel', render: (v: keyof typeof channelLabels) => channelLabels[v] }, { title: 'Đơn tạo', dataIndex: 'orders' }, { title: 'Doanh thu', dataIndex: 'revenue', render: currency }]} /></Card>
-          <Card title="Nhập hàng và sổ cọc toàn cửa hàng" style={{ marginTop: 16 }}><Descriptions column={2} items={[
-            { key: 'receipts', label: 'Phiếu nhập xác nhận', children: report.receipts.count }, { key: 'value', label: 'Giá trị hàng đạt nhập', children: currency(report.receipts.value) },
-            { key: 'deposit', label: 'Số dư cọc cuối kỳ', children: currency(report.deposits.held) }, { key: 'bottles', label: 'Vỏ còn ngoài cửa hàng', children: report.deposits.bottlesHeld },
-            { key: 'collected', label: 'Thu cọc trong kỳ', children: currency(report.deposits.collected) }, { key: 'refunded', label: 'Hoàn cọc trong kỳ', children: currency(report.deposits.refunded) },
-            { key: 'forfeited', label: 'Cọc cấn trừ mất/vỡ', children: currency(report.deposits.forfeited ?? 0) },
-          ]} /><Typography.Text type="secondary">Sổ cọc/vỏ chỉ phản ánh giao dịch đã lưu; không suy từ đơn hàng.</Typography.Text></Card>
+          <Card title="Doanh thu và thanh toán theo kỳ" extra={<Segmented<Granularity> size="small" aria-label="Gom biểu đồ theo" value={unit} onChange={setGranularity} options={(Object.keys(granularityLabels) as Granularity[]).map((value) => ({ value, label: granularityLabels[value] }))} />}><RevenueChart data={groupRevenue(report.days, unit)} /></Card>
+          <Card className="af-report-overview">
+            <div className="af-report-overview-grid">
+              <ReportList title="Đối chiếu doanh thu" lines={[
+                { label: 'Tiền hàng đã giao', value: report.sales.goods, money: true },
+                { label: '− Giảm giá', value: report.sales.discounts, money: true },
+                { label: '+ Phí giao', value: report.sales.deliveryFees, money: true },
+                { label: '− Hàng khách trả', value: report.sales.returnsValue, money: true },
+                { label: 'Doanh thu', value: report.sales.revenue, money: true, total: true },
+              ]} />
+              <ReportList title="Thanh toán đã xác nhận" lines={[
+                { label: 'Tiền mặt', value: report.sales.cashIn, money: true },
+                { label: 'Chuyển khoản', value: report.sales.transferIn, money: true },
+                { label: '− Chi hoàn', value: report.sales.refunds, money: true },
+                { label: 'Đã thu', value: report.sales.netPayments, money: true, total: true },
+              ]} />
+              <ChannelList channels={report.channels} />
+            </div>
+          </Card>
+          <Card className="af-report-overview">
+            <ReportList title="Sổ cọc và vỏ bình toàn cửa hàng" columns lines={[
+              { label: 'Số dư cọc cuối kỳ', value: report.deposits.held, money: true },
+              { label: 'Vỏ còn ngoài cửa hàng', value: report.deposits.bottlesHeld },
+              { label: 'Thu cọc trong kỳ', value: report.deposits.collected, money: true },
+              { label: 'Hoàn cọc trong kỳ', value: report.deposits.refunded, money: true },
+              { label: 'Cọc cấn trừ mất/vỡ', value: report.deposits.forfeited ?? 0, money: true },
+              { label: 'Cọc chưa đủ nghĩa vụ vỏ', value: report.deposits.uncoveredDeposit, money: true },
+              { label: 'Vỏ giao kèm', value: report.deposits.bottlesGiven },
+              { label: 'Vỏ thu lại', value: report.deposits.bottlesReceived },
+              { label: 'Vỏ mất / vỡ', value: report.deposits.bottlesLost },
+            ]} />
+          </Card>
         </> },
         ...Object.entries(sections).map(([key, section]) => ({ key, label: section.title, children: details.isError ? <QueryError error={details.error} onRetry={details.refetch} /> : <Card>
-          {key === 'inventory' && <p>Tồn đầu + nhập NCC + hoàn nhập + điều chỉnh − xuất = tồn cuối. Hàng loại bỏ không nhập vào tồn. Số dư lịch sử được tính lùi từ tồn hiện tại và sổ kho.</p>}
-          {key === 'delivery' && <p>Kết quả tính theo từng lần giao; đối soát tính theo ngày bàn giao và không phải doanh thu hay thanh toán của khách.</p>}
-          {key === 'customers' && <p>Khách chưa gắn hồ sơ được gộp vào Khách vãng lai.</p>}
-          <Table<ReportRow> rowKey={section.key} loading={details.isPending} columns={columnsOf(section.columns)} dataSource={details.data?.content ?? []} scroll={{ x: key === 'inventory' || key === 'delivery' ? 1500 : 900 }} locale={{ emptyText: 'Chưa có dữ liệu trong kỳ.' }}
-            pagination={{ current: page + 1, pageSize: size, total: details.data?.totalElements ?? 0, showSizeChanger: true, pageSizeOptions: [20, 50, 100], onChange: (next, nextSize) => { setPage(nextSize === size ? next - 1 : 0); setSize(nextSize) } }} />
+          {key === 'products' && view === 'chart' ? (
+            <ProductCharts query={query} metric={salesMetric} onMetricChange={setSalesMetric} />
+          ) : key === 'products' && productList === 'slow' ? (
+            <>{tableToolbar('products')}<SlowMoversTable query={query} /></>
+          ) : chartTabs.includes(key) && view === 'chart' ? (
+            details.isPending ? <Typography.Text type="secondary">Đang tải báo cáo…</Typography.Text>
+              : !detailRows.length ? <Typography.Text type="secondary">Chưa có dữ liệu trong kỳ.</Typography.Text>
+              : <>
+                <Typography.Text type="secondary" className="af-report-chart-note">8 tài xế nhiều lượt giao nhất trong trang đang xem. Đủ số liệu xem ở chế độ Bảng.</Typography.Text>
+                <DriverDeliveryChart rows={detailRows.map((row) => ({ driver: String(row.driver), delivered: num(row.delivered), late: num(row.late), failed: num(row.failed) }))} />
+              </>
+          ) : (
+            <>{tableToolbar(key as ReportSection)}<Table<ReportRow> className="af-report-table" size="small" rowKey={section.key} loading={key === 'products' ? productSales.isPending : details.isPending} columns={key === 'customers' ? customerColumns : key === 'products' ? sortableSales(columnsOf(shownColumns(section.columns, coreColumns.products, extraColumns.products))) : columnsOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection]))} dataSource={localRows(key) ?? details.data?.content ?? []} scroll={{ x: tableWidthOf(shownColumns(section.columns, coreColumns[key as ReportSection], extraColumns[key as ReportSection])), y: reportTableHeight }} locale={{ emptyText: details.isPending ? 'Đang tải báo cáo…' : keyword && localRows(key) ? 'Không có sản phẩm phù hợp.' : 'Chưa có dữ liệu trong kỳ.' }}
+            pagination={{ current: page + 1, pageSize: size, total: localRows(key)?.length ?? details.data?.totalElements ?? 0, showSizeChanger: true, pageSizeOptions: [20, 50, 100], onChange: (next, nextSize) => { setPage(nextSize === size ? next - 1 : 0); setSize(nextSize) } }} /></>
+          )}
         </Card> })),
       ]} />
     </>}
