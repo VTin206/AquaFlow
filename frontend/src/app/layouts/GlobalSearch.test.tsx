@@ -7,6 +7,7 @@ import { GlobalSearch } from './GlobalSearch'
 const opened = vi.fn()
 const searchedOrders = vi.fn()
 const searchedCustomers = vi.fn()
+const searchState = vi.hoisted(() => ({ productError: false }))
 
 vi.mock('@/features/auth/useStaff', () => ({ useStaff: () => ({ role: 'SALES_STAFF', name: 'Trang' }) }))
 // Đơn và khách tìm ở BE: giả lập lọc như server theo từ khóa nhận được; debounce bỏ qua trong test.
@@ -41,7 +42,7 @@ vi.mock('@/features/inventory/useProductCatalog', () => ({
       { id: '2', sku: 'N5', name: 'Nước 5L ngừng bán', active: false },
     ],
     isPending: false,
-    isError: false,
+    isError: searchState.productError,
   }),
 }))
 vi.mock('@/features/orders/components/OrderDetails', () => ({
@@ -72,6 +73,31 @@ beforeAll(() => {
 afterEach(cleanup)
 
 describe('GlobalSearch', () => {
+  afterEach(() => {
+    searchState.productError = false
+  })
+
+  it('opens from the trigger button and Meta+K', () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <GlobalSearch />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tìm nhanh' }))
+    expect(screen.getByRole('textbox', { name: 'Tìm nhanh' })).toBeTruthy()
+
+    cleanup()
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <GlobalSearch />
+      </MemoryRouter>,
+    )
+
+    fireEvent.keyDown(window, { key: 'k', metaKey: true })
+    expect(screen.getByRole('textbox', { name: 'Tìm nhanh' })).toBeTruthy()
+  })
+
   it('opens with Ctrl+K and hides pages the role cannot open', () => {
     open()
     expect(screen.getByRole('option', { name: /Đơn hàng/ })).toBeTruthy()
@@ -96,11 +122,27 @@ describe('GlobalSearch', () => {
     expect(screen.queryByRole('option', { name: /DH-007/ })).toBeNull()
   })
 
+  it('opens the customer page with the normalized customer code when clicked', () => {
+    const input = open()
+    fireEvent.change(input, { target: { value: 'trần bình' } })
+    fireEvent.click(screen.getByRole('button', { name: /Trần Bình/ }))
+    expect(screen.getByTestId('where').textContent).toBe('/customers?q=KH-003')
+  })
+
   it('moves through results with the arrow keys', () => {
     const input = open()
     fireEvent.keyDown(input, { key: 'ArrowDown' })
     fireEvent.keyDown(input, { key: 'Enter' })
     expect(screen.getByTestId('where').textContent).toBe('/orders')
+  })
+
+  it('wraps ArrowUp to the last result before opening it', () => {
+    const input = open()
+    const options = screen.getAllByRole('option')
+    fireEvent.keyDown(input, { key: 'ArrowUp' })
+    expect(input.getAttribute('aria-activedescendant')).toBe(`af-hit-${options.length - 1}`)
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(screen.getByTestId('where').textContent).toBe('/customers')
   })
 
   it('links an active product to its filtered page and skips inactive ones', () => {
@@ -114,5 +156,11 @@ describe('GlobalSearch', () => {
   it('reports when nothing matches', () => {
     fireEvent.change(open(), { target: { value: 'khong-co-gi' } })
     expect(screen.getByRole('status').textContent).toBe('Không tìm thấy kết quả phù hợp.')
+  })
+
+  it('reports partial failures when the product search fails', () => {
+    searchState.productError = true
+    fireEvent.change(open(), { target: { value: 'nuoc' } })
+    expect(screen.getByRole('status').textContent).toBe('Một phần dữ liệu không tải được nên kết quả có thể thiếu.')
   })
 })
