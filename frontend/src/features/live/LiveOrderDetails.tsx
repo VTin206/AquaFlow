@@ -23,6 +23,8 @@ import { dueTone } from '@/shared/utils/money'
 import { useStaff } from '@/features/auth/useStaff'
 import { can } from '@/features/auth/permissions'
 import { OrderIntakeModal } from '@/features/orders/components/OrderIntakeModal'
+import { AssignDriverModal } from '@/features/delivery/components/AssignDriverModal'
+import { activeTripOf } from '@/features/delivery/driverChoices'
 import { Pencil } from 'lucide-react'
 import { tripLabels } from '@/features/delivery/deliveryApi'
 import { catalogApi } from './catalogApi'
@@ -66,6 +68,7 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
   const canTakeReturns = staff?.role === 'ADMIN'
   const [returning, setReturning] = useState(false)
   const [editingOrder, setEditingOrder] = useState(false)
+  const [assigningDriver, setAssigningDriver] = useState(false)
   const canEdit = !!staff && can(staff.role, 'editOrder')
   const returns = useOrderReturns(id)
   const activity = useOrderActivity(id, canManage)
@@ -217,11 +220,23 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
           </Button>
         </Popconfirm>
       ) : canDispatch(order) ? (
-        <Link to="/delivery" onClick={onClose}>
-          <Button type="primary" disabled={update.isPending}>
-            Xếp chuyến
+        // Đơn chưa ở chuyến nào: chọn tài xế ngay tại đây; đã ở chuyến thì mở trang Giao hàng như cũ.
+        canSeeTrips &&
+        trips.isSuccess &&
+        !activeTripOf(
+          order.id,
+          trips.data.map((entry) => entry.trip),
+        ) ? (
+          <Button type="primary" disabled={update.isPending} onClick={() => setAssigningDriver(true)}>
+            Giao cho tài xế
           </Button>
-        </Link>
+        ) : (
+          <Link to="/delivery" onClick={onClose}>
+            <Button type="primary" disabled={update.isPending}>
+              Xếp chuyến
+            </Button>
+          </Link>
+        )
       ) : null
     ) : null
 
@@ -503,6 +518,7 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
     >
       {printer.portal}
       {editingOrder && order && <OrderIntakeModal editing={order} onClose={() => setEditingOrder(false)} />}
+      {assigningDriver && order && <AssignDriverModal order={order} onClose={() => setAssigningDriver(false)} />}
       {returning && order && (
         <LiveOrderReturnModal
           order={{
