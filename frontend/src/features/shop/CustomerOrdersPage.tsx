@@ -375,8 +375,8 @@ export function CustomerOrderPage() {
               />
             )}
             <div className="af-shop-track-actions">
-              {/* Khách tự hủy khi cửa hàng chưa xác nhận; đã xác nhận thì phải gọi cửa hàng. */}
-              {order.status === 'PENDING' && (
+              {/* Khách tự hủy khi cửa hàng chưa chuẩn bị hàng; đang chuẩn bị trở đi thì phải gọi cửa hàng. */}
+              {(order.status === 'PENDING' || order.status === 'CONFIRMED') && (
                 <Popconfirm
                   title="Hủy đơn này?"
                   okText="Hủy đơn"

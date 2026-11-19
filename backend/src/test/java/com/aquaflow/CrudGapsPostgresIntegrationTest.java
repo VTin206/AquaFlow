@@ -93,15 +93,20 @@ class CrudGapsPostgresIntegrationTest {
 
     // 2. Khách tự hủy đơn
     @Test
-    void customerCancelsOnlyOwnPendingOrder() {
+    void customerCancelsOwnOrderUntilTheStoreStartsPreparingIt() {
         long order = pendingOrder(customer, 2);
         long other = jdbc.queryForObject("INSERT INTO customers(full_name) VALUES ('Other') RETURNING id", Long.class);
         assertThatThrownBy(() -> orders.cancelForCustomer(order, other)).isInstanceOf(NotFoundException.class);
         assertThat(orders.cancelForCustomer(order, customer).status()).isEqualTo(OrderStatus.CANCELLED);
 
+        // Đơn web tự xác nhận khi đủ hàng, nên khách vẫn tự hủy được đơn đã xác nhận.
         long confirmed = pendingOrder(customer, 1);
         jdbc.update("UPDATE orders SET status='CONFIRMED' WHERE id=?", confirmed);
-        assertThatThrownBy(() -> orders.cancelForCustomer(confirmed, customer)).isInstanceOf(ConflictException.class);
+        assertThat(orders.cancelForCustomer(confirmed, customer).status()).isEqualTo(OrderStatus.CANCELLED);
+
+        long preparing = pendingOrder(customer, 1);
+        jdbc.update("UPDATE orders SET status='PREPARING' WHERE id=?", preparing);
+        assertThatThrownBy(() -> orders.cancelForCustomer(preparing, customer)).isInstanceOf(ConflictException.class);
     }
 
     // 3. Kiểm kê lô

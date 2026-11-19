@@ -45,7 +45,7 @@ type OrderIntakeModalProps = {
   onCreated?: (id: string) => void
   /** Tạo đơn từ hồ sơ khách. */
   defaultCustomer?: Customer
-  /** Sửa đơn còn chờ xác nhận: điền sẵn đơn, khóa kênh và hình thức nhận, lưu đè thay vì tạo mới. */
+  /** Sửa đơn chưa chuẩn bị hàng: điền sẵn đơn, khóa kênh và hình thức nhận, lưu đè thay vì tạo mới. */
   editing?: LiveOrder
 }
 

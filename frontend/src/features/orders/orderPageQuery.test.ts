@@ -54,7 +54,8 @@ describe('order list modes', () => {
       payments: [],
       paymentBalance: { paid: 0, due: 100000, refundDue: 0 },
     } as unknown as Order
-    const active: OrderListFilters = { ...all, group: 'active' }
+    // Đơn đã xác nhận nằm ở nhóm "Đơn mới" (đơn web tự xác nhận, chờ chuẩn bị).
+    const active: OrderListFilters = { ...all, group: 'new' }
     expect(matchesOrderFilters(order, { ...active, query: 'nuoc khoang', payment: 'Còn phải thu' })).toBe(true)
     expect(matchesOrderFilters(order, { ...active, query: '+84 901 234 567' })).toBe(true)
     expect(matchesOrderFilters(order, { ...active, payment: 'Đã thanh toán' })).toBe(false)

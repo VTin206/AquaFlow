@@ -99,16 +99,16 @@ public class OrderService {
                     "Customer profile not found for current account");
         }
 
-        return createOrder(
+        return autoConfirm(createOrder(
                 request,
                 customerId,
                 userId,
-                OrderChannel.WEB);
+                OrderChannel.WEB));
     }
 
     @Transactional
     public OrderResponse createForGuest(GuestOrderCreateRequest request) {
-        return createOrder(
+        return autoConfirm(createOrder(
                 request.recipientName(),
                 request.recipientPhone(),
                 request.deliveryAddress(),
@@ -120,7 +120,22 @@ public class OrderService {
                 null,
                 OrderChannel.WEB,
                 FulfillmentType.DELIVERY, request.stairFloor(), request.expectedTotal(),
-                request.requestedDeliveryUntil());
+                request.requestedDeliveryUntil()));
+    }
+
+    /**
+     * Đơn khách đặt trên web: đủ hàng thì tự giữ hàng và chuyển "Đã xác nhận" ngay, nhân viên không phải bấm Xác nhận
+     * mà chỉ việc chuẩn bị. Thiếu hàng thì đơn ở lại "Chờ xác nhận" để nhân viên gọi khách đổi món hoặc hủy.
+     */
+    private OrderResponse autoConfirm(OrderResponse created) {
+        Order order = orderRepository.findForUpdateById(created.id())
+                .orElseThrow(() -> new NotFoundException("Order not found: " + created.id()));
+        var lines = orderItemRepository.findAllByOrder_Id(order.getId()).stream()
+                .map(item -> new ReservationLine(item.getId(), item.getProductId(), item.getQuantity()))
+                .toList();
+        if (!stockReservationService.tryReserve(lines)) return created;
+        order.transitionTo(OrderStatus.CONFIRMED);
+        return toResponse(orderRepository.save(order));
     }
 
     private OrderResponse createOrder(
@@ -307,8 +322,10 @@ public class OrderService {
     public OrderResponse updatePending(Long id, com.aquaflow.customer.order.api.dto.OrderUpdateRequest request) {
         Order order = orderRepository.findForUpdateById(id)
                 .orElseThrow(() -> new NotFoundException("Order not found: " + id));
-        if (order.getStatus() != OrderStatus.PENDING) {
-            throw new ConflictException("Chỉ sửa được đơn đang chờ xác nhận");
+        // Đơn web tự xác nhận ngay khi đủ hàng, nên đơn đã xác nhận (chưa chuẩn bị) vẫn phải sửa được.
+        boolean reserved = order.getStatus() == OrderStatus.CONFIRMED;
+        if (order.getStatus() != OrderStatus.PENDING && !reserved) {
+            throw new ConflictException("Chỉ sửa được đơn chưa chuẩn bị hàng (chờ xác nhận hoặc đã xác nhận)");
         }
         if (order.getFulfillmentType() == FulfillmentType.DELIVERY
                 && (isBlank(request.recipientName()) || isBlank(request.recipientPhone()) || isBlank(request.deliveryAddress()))) {
@@ -334,9 +351,14 @@ public class OrderService {
         order.updateDetails(request.recipientName(), request.recipientPhone(), request.deliveryAddress(),
                 request.deliveryArea(), request.requestedDeliveryAt(), request.requestedDeliveryUntil(), request.note());
         order.updateAmounts(subtotal, BigDecimal.ZERO, order.getDeliveryFee());
-        orderItemRepository.deleteAll(orderItemRepository.findAllByOrder_Id(id));
+        List<OrderItem> oldItems = orderItemRepository.findAllByOrder_Id(id);
+        if (reserved) stockReservationService.discardForEdit(oldItems.stream().map(OrderItem::getId).toList());
+        orderItemRepository.deleteAll(oldItems);
         orderItemRepository.flush();
-        orderItemRepository.saveAll(items);
+        List<OrderItem> saved = orderItemRepository.saveAll(items);
+        // Giữ lại hàng theo dòng mới; thiếu hàng thì ném lỗi và cả lần sửa được hoàn tác.
+        if (reserved) stockReservationService.reserve(saved.stream()
+                .map(item -> new ReservationLine(item.getId(), item.getProductId(), item.getQuantity())).toList());
         return toResponse(orderRepository.save(order));
     }
 
@@ -344,16 +366,19 @@ public class OrderService {
         return value == null || value.isBlank();
     }
 
-    /** Khách tự hủy đơn của mình khi đơn còn chờ xác nhận (chưa giữ hàng). */
+    /** Khách tự hủy đơn của mình khi cửa hàng chưa chuẩn bị hàng; đơn đã giữ hàng thì nhả hàng. */
     @Transactional
     public OrderResponse cancelForCustomer(Long id, Long customerId) {
         Order order = orderRepository.findForUpdateById(id)
                 .filter(found -> customerId.equals(found.getCustomerId()))
                 .orElseThrow(() -> new NotFoundException("Order not found: " + id));
-        if (order.getStatus() != OrderStatus.PENDING) {
-            throw new ConflictException("Đơn đã được cửa hàng xác nhận, vui lòng gọi cửa hàng để hủy.");
+        boolean reserved = order.getStatus() == OrderStatus.CONFIRMED;
+        if (order.getStatus() != OrderStatus.PENDING && !reserved) {
+            throw new ConflictException("Cửa hàng đã chuẩn bị đơn, vui lòng gọi cửa hàng để hủy.");
         }
         order.transitionTo(OrderStatus.CANCELLED);
+        if (reserved) stockReservationService.release(orderItemRepository.findAllByOrder_Id(id).stream()
+                .map(OrderItem::getId).toList());
         return toResponse(orderRepository.save(order));
     }
 

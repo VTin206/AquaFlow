@@ -155,11 +155,14 @@ public class Order {
         this.deliveryFee = validatedDeliveryFee;
     }
 
-    /** Sửa thông tin nhận hàng khi đơn còn chờ xác nhận; kênh, hình thức nhận và phí giao giữ nguyên. */
+    /**
+     * Sửa thông tin nhận hàng khi cửa hàng chưa chuẩn bị hàng (chờ xác nhận hoặc đã xác nhận); kênh, hình thức nhận
+     * và phí giao giữ nguyên.
+     */
     public void updateDetails(String recipientName, String recipientPhone, String deliveryAddress, String deliveryArea,
                               OffsetDateTime requestedDeliveryAt, OffsetDateTime requestedDeliveryUntil, String note) {
-        if (status != OrderStatus.PENDING) {
-            throw new com.aquaflow.shared.api.ConflictException("Chỉ sửa được đơn đang chờ xác nhận");
+        if (status != OrderStatus.PENDING && status != OrderStatus.CONFIRMED) {
+            throw new com.aquaflow.shared.api.ConflictException("Chỉ sửa được đơn chưa chuẩn bị hàng (chờ xác nhận hoặc đã xác nhận)");
         }
         this.recipientName = recipientName;
         this.recipientPhone = recipientPhone;

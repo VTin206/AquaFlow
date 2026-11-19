@@ -49,9 +49,10 @@ export function OrdersPage() {
 
   const counts = countsQuery.data ?? {}
   const countOf = (value: OrderStatus) => counts[value] ?? 0
-  const countGroup = (key: OrderGroupKey) => statuses.filter((value) => inOrderGroup(key, value)).reduce((sum, value) => sum + countOf(value), 0)
-  // Chưa chọn nhóm: mở thẳng việc cần làm; hết việc thì xem tất cả.
-  const activeGroup: OrderGroupKey = group || (countGroup('need') > 0 ? 'need' : 'all')
+  const countGroup = (key: OrderGroupKey) =>
+    statuses.filter((value) => inOrderGroup(key, value)).reduce((sum, value) => sum + countOf(value), 0)
+  // Chưa chọn nhóm: mở thẳng đơn mới cần chuẩn bị, rồi tới việc cần xử lý; hết việc thì xem tất cả.
+  const activeGroup: OrderGroupKey = group || (countGroup('new') > 0 ? 'new' : countGroup('need') > 0 ? 'need' : 'all')
   const groupStatuses = statusesInGroup(activeGroup, statuses)
   const statusValue = groupStatuses.includes(status as never) ? status : ALL
   const statusOptions = [

@@ -391,7 +391,7 @@ class OrderServiceTest {
     }
 
     @Test
-    void createForGuestUsesDatabasePriceStartsPendingAndDoesNotReserveStock() {
+    void createForGuestUsesDatabasePriceAndStaysPendingWhenStockIsShort() {
         Product product = new Product(
                 "SKU-GUEST-101",
                 "Guest Product",
@@ -407,12 +407,17 @@ class OrderServiceTest {
         AtomicReference<List<OrderItem>> savedItems =
                 new AtomicReference<>(List.of());
 
+        AtomicReference<Order> savedOrder = new AtomicReference<>();
         when(orderRepository.save(any(Order.class)))
                 .thenAnswer(invocation -> {
                     Order order = invocation.getArgument(0);
                     ReflectionTestUtils.setField(order, "id", 26L);
+                    savedOrder.set(order);
                     return order;
                 });
+        when(orderRepository.findForUpdateById(26L)).thenAnswer(invocation -> Optional.ofNullable(savedOrder.get()));
+        // Không đủ hàng: đơn web không tự xác nhận được, ở lại Chờ xác nhận.
+        when(stockReservationService.tryReserve(anyList())).thenReturn(false);
         when(orderItemRepository.saveAll(anyList()))
                 .thenAnswer(invocation -> {
                     List<OrderItem> items = invocation.getArgument(0);
