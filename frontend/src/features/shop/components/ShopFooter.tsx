@@ -86,8 +86,7 @@ export function ShopFooter({ contact }: Props) {
           </nav>
         )}
         {hasContact && (
-          // id "lien-he": mục "Liên hệ" trên menu cuộn tới đây.
-          <section id="lien-he" aria-labelledby="af-footer-contact">
+          <section aria-labelledby="af-footer-contact">
             <h2 id="af-footer-contact">Liên hệ</h2>
             <ul className="af-shop-footer-contact">
               {contact?.storeName && (

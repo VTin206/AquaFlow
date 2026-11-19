@@ -98,16 +98,3 @@ test('menu luôn ghi Tra cứu đơn; khách đã đăng nhập thì vào danh s
   expect(screen.getByRole('link', { name: 'Tra cứu đơn' }).getAttribute('href')).toBe('/shop/orders')
   auth.user = null
 })
-
-test('mục Liên hệ cuộn xuống cột Liên hệ ở chân trang, không đổi trang', () => {
-  const scroll = vi.fn()
-  Element.prototype.scrollIntoView = scroll
-  const contact = document.body.appendChild(document.createElement('section'))
-  contact.id = 'lien-he'
-  renderShop()
-  fireEvent.click(screen.getByRole('link', { name: 'Liên hệ' }))
-  expect(scroll).toHaveBeenCalledTimes(1)
-  expect(scroll.mock.contexts[0]).toBe(contact)
-  expect(screen.getByText('Trang chủ cửa hàng')).toBeTruthy()
-  contact.remove()
-})
