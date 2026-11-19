@@ -104,6 +104,16 @@ class OwnerAlertPostgresIntegrationTest {
         assertThat(count(admin, "ORDER_PENDING", id, false)).isEqualTo(1);
     }
 
+    @Test void deliveryWindowIsOverdueOnlyAfterItsEnd() {
+        long inWindow = order("PREPARING", "DELIVERY", NOW.minusSeconds(3600));
+        jdbc.update("UPDATE orders SET requested_delivery_until = ? WHERE id = ?", Timestamp.from(NOW.plusSeconds(3600)), inWindow);
+        long pastWindow = order("PREPARING", "DELIVERY", NOW.minusSeconds(4 * 3600));
+        jdbc.update("UPDATE orders SET requested_delivery_until = ? WHERE id = ?", Timestamp.from(NOW.minusSeconds(3600)), pastWindow);
+        alerts.refresh();
+        assertThat(count(admin, "ORDER_OVERDUE", inWindow, false)).isZero();
+        assertThat(count(admin, "ORDER_OVERDUE", pastWindow, true)).isEqualTo(1);
+    }
+
     @Test void overdueOnlyForOpenDeliveryOrdersStrictlyPastAppointment() {
         long late = order("PREPARING", "DELIVERY", NOW.minusSeconds(1));
         long atBoundary = order("PREPARING", "DELIVERY", NOW);

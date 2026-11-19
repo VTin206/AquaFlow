@@ -350,10 +350,12 @@ public class DeliveryRepository {
         var named = new NamedParameterJdbcTemplate(jdbc);
         var tripIds = new MapSqlParameterSource("ids", trips.stream().map(TripRow::id).toList());
         record Stop(long tripId, long assignmentId, long orderId, String orderCode, String orderStatus, String recipientName,
-                    String recipientPhone, String deliveryAddress, AttemptResponse attempt, OffsetDateTime requestedAt, String note) {}
+                    String recipientPhone, String deliveryAddress, AttemptResponse attempt, OffsetDateTime requestedAt, String note,
+                    OffsetDateTime requestedUntil) {}
         List<Stop> stops = named.query("""
                 SELECT a.trip_id, a.id AS assignment_id, o.id AS order_id, o.order_code, o.status AS order_status,
                        o.recipient_name, o.recipient_phone, o.delivery_address, o.requested_delivery_at, o.note,
+                       o.requested_delivery_until,
                        da.id AS attempt_id, da.attempt_no, da.outcome, da.recipient_name AS actual_recipient,
                        da.failure_reason, da.note AS attempt_note, da.attempted_at
                 FROM delivery_assignments a JOIN orders o ON o.id = a.order_id
@@ -365,7 +367,8 @@ public class DeliveryRepository {
                 """, tripIds, (rs, i) -> new Stop(rs.getLong("trip_id"), rs.getLong("assignment_id"), rs.getLong("order_id"),
                 rs.getString("order_code"), rs.getString("order_status"), rs.getString("recipient_name"),
                 rs.getString("recipient_phone"), rs.getString("delivery_address"), mapAttempt(rs),
-                rs.getObject("requested_delivery_at", OffsetDateTime.class), rs.getString("note")));
+                rs.getObject("requested_delivery_at", OffsetDateTime.class), rs.getString("note"),
+                rs.getObject("requested_delivery_until", OffsetDateTime.class)));
         Map<Long, List<LoadLineResponse>> loads = orderLoads(named, stops.stream().map(Stop::assignmentId).toList());
         Map<Long, HandoverResponse> handovers = new HashMap<>();
         named.query("SELECT * FROM handover_records WHERE trip_id IN (:ids)", tripIds, rs -> {
@@ -381,7 +384,8 @@ public class DeliveryRepository {
             assigned.computeIfAbsent(stop.tripId(), id -> new ArrayList<>()).add(new AssignmentResponse(
                     stop.assignmentId(), stop.orderId(), stop.orderCode(), stop.orderStatus(), stop.recipientName(),
                     stop.recipientPhone(), stop.deliveryAddress(), stop.attempt(),
-                    loads.getOrDefault(stop.assignmentId(), List.of()), stop.requestedAt(), stop.note()));
+                    loads.getOrDefault(stop.assignmentId(), List.of()), stop.requestedAt(), stop.note(),
+                    stop.requestedUntil()));
         }
         return trips.stream().map(trip -> new TripResponse(trip.id(), trip.driverId(), trip.driverName(), trip.vehicle(),
                 trip.status(), trip.createdAt(), trip.startedAt(), trip.endedAt(),

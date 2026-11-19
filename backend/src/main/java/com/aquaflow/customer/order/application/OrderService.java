@@ -119,7 +119,8 @@ public class OrderService {
                 null,
                 null,
                 OrderChannel.WEB,
-                FulfillmentType.DELIVERY, request.stairFloor(), request.expectedTotal());
+                FulfillmentType.DELIVERY, request.stairFloor(), request.expectedTotal(),
+                request.requestedDeliveryUntil());
     }
 
     private OrderResponse createOrder(
@@ -139,7 +140,8 @@ public class OrderService {
                 customerId,
                 createdBy,
                 channel,
-                request.fulfillmentType(), request.stairFloor(), request.expectedTotal());
+                request.fulfillmentType(), request.stairFloor(), request.expectedTotal(),
+                request.requestedDeliveryUntil());
     }
 
     private OrderResponse createOrder(
@@ -153,7 +155,8 @@ public class OrderService {
             Long customerId,
             Long createdBy,
             OrderChannel channel,
-            FulfillmentType fulfillmentType, int stairFloor, BigDecimal expectedTotal) {
+            FulfillmentType fulfillmentType, int stairFloor, BigDecimal expectedTotal,
+            java.time.OffsetDateTime requestedDeliveryUntil) {
 
         Order order = new Order(
                 generateOrderCode(),
@@ -169,6 +172,7 @@ public class OrderService {
                 BigDecimal.ZERO,
                 channel == OrderChannel.WEB && fulfillmentType == FulfillmentType.DELIVERY
                         ? (note == null ? "" : note + "\n") + "Số tầng đi thang bộ: " + stairFloor : note);
+        order.scheduleDeliveryUntil(requestedDeliveryUntil);
 
         BigDecimal subtotal = BigDecimal.ZERO;
         long units = 0, stairsUnits = 0;
@@ -328,7 +332,7 @@ public class OrderService {
         }
 
         order.updateDetails(request.recipientName(), request.recipientPhone(), request.deliveryAddress(),
-                request.deliveryArea(), request.requestedDeliveryAt(), request.note());
+                request.deliveryArea(), request.requestedDeliveryAt(), request.requestedDeliveryUntil(), request.note());
         order.updateAmounts(subtotal, BigDecimal.ZERO, order.getDeliveryFee());
         orderItemRepository.deleteAll(orderItemRepository.findAllByOrder_Id(id));
         orderItemRepository.flush();
@@ -408,7 +412,8 @@ public class OrderService {
                 order.getCancelledAt(),
                 order.getNote(),
                 items,
-                order.getTrackingToken()
+                order.getTrackingToken(),
+                order.getRequestedDeliveryUntil()
         );
     }
 

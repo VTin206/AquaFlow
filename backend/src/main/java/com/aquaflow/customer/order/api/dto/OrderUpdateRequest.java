@@ -35,5 +35,19 @@ public record OrderUpdateRequest(
         List<@NotNull @Valid OrderItemRequest> items,
 
         @Size(max = 500, message = "Note must not exceed 500 characters")
-        String note) {
+        String note,
+
+        /** Cuối khung giờ giao; null khi hẹn một mốc giờ. */
+        OffsetDateTime requestedDeliveryUntil) {
+
+    public OrderUpdateRequest(String recipientName, String recipientPhone, String deliveryAddress, String deliveryArea,
+            OffsetDateTime requestedDeliveryAt, List<OrderItemRequest> items, String note) {
+        this(recipientName, recipientPhone, deliveryAddress, deliveryArea, requestedDeliveryAt, items, note, null);
+    }
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @jakarta.validation.constraints.AssertTrue(message = "Khung giờ giao không hợp lệ")
+    public boolean isDeliveryWindowValid() {
+        return com.aquaflow.customer.order.domain.DeliveryWindow.isValid(requestedDeliveryAt, requestedDeliveryUntil);
+    }
 }

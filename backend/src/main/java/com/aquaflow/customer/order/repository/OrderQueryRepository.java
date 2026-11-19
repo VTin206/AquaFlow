@@ -64,7 +64,7 @@ public class OrderQueryRepository {
                 SELECT CASE
                     WHEN %s THEN 0
                     WHEN o.status IN ('PENDING', 'CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY') AND o.fulfillment_type = 'DELIVERY'
-                        AND o.requested_delivery_at < CURRENT_TIMESTAMP THEN 1
+                        AND COALESCE(o.requested_delivery_until, o.requested_delivery_at) < CURRENT_TIMESTAMP THEN 1
                     WHEN o.status = 'PENDING' THEN 2
                     WHEN o.status IN ('CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY') THEN 3
                     WHEN o.status = 'DELIVERED' AND b.due > 0 THEN 4

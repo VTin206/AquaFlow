@@ -48,14 +48,31 @@ public record OrderCreateRequest(
 
         String note,
         @jakarta.validation.constraints.Min(0) @jakarta.validation.constraints.Max(30) int stairFloor,
-        @jakarta.validation.constraints.PositiveOrZero java.math.BigDecimal expectedTotal
+        @jakarta.validation.constraints.PositiveOrZero java.math.BigDecimal expectedTotal,
+
+        /** Cuối khung giờ giao; null khi hẹn một mốc giờ requestedDeliveryAt. */
+        OffsetDateTime requestedDeliveryUntil
 
 ) {
     public OrderCreateRequest(Long customerId, OrderChannel channel, FulfillmentType fulfillmentType,
             String recipientName, String recipientPhone, String deliveryAddress, String deliveryArea,
             OffsetDateTime requestedDeliveryAt, List<OrderItemRequest> items, String note) {
         this(customerId, channel, fulfillmentType, recipientName, recipientPhone, deliveryAddress,
-                deliveryArea, requestedDeliveryAt, items, note, 0, null);
+                deliveryArea, requestedDeliveryAt, items, note, 0, null, null);
+    }
+
+    public OrderCreateRequest(Long customerId, OrderChannel channel, FulfillmentType fulfillmentType,
+            String recipientName, String recipientPhone, String deliveryAddress, String deliveryArea,
+            OffsetDateTime requestedDeliveryAt, List<OrderItemRequest> items, String note, int stairFloor,
+            java.math.BigDecimal expectedTotal) {
+        this(customerId, channel, fulfillmentType, recipientName, recipientPhone, deliveryAddress,
+                deliveryArea, requestedDeliveryAt, items, note, stairFloor, expectedTotal, null);
+    }
+
+    @JsonIgnore
+    @AssertTrue(message = "Khung giờ giao không hợp lệ")
+    public boolean isDeliveryWindowValid() {
+        return com.aquaflow.customer.order.domain.DeliveryWindow.isValid(requestedDeliveryAt, requestedDeliveryUntil);
     }
 
 

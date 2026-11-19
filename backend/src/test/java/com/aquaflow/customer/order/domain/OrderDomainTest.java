@@ -57,6 +57,31 @@ class OrderDomainTest {
     }
 
     @Test
+    void acceptsDeliveryWindowAfterStartAndUpToTwelveHours() {
+        Order order = createOrder();
+
+        order.scheduleDeliveryUntil(OffsetDateTime.parse("2027-01-15T11:00:00+07:00"));
+
+        assertThat(order.getRequestedDeliveryUntil()).isEqualTo(OffsetDateTime.parse("2027-01-15T11:00:00+07:00"));
+        assertThat(DeliveryWindow.deadline(order.getRequestedDeliveryAt(), order.getRequestedDeliveryUntil()))
+                .isEqualTo(order.getRequestedDeliveryUntil());
+        order.scheduleDeliveryUntil(null);
+        assertThat(order.getRequestedDeliveryUntil()).isNull();
+    }
+
+    @Test
+    void rejectsDeliveryWindowEndingBeforeStartOrLongerThanTwelveHours() {
+        Order order = createOrder();
+
+        assertThatThrownBy(() -> order.scheduleDeliveryUntil(OffsetDateTime.parse("2027-01-15T09:00:00+07:00")))
+                .isInstanceOf(com.aquaflow.shared.api.BadRequestException.class)
+                .hasMessage("Khung giờ giao không hợp lệ");
+        assertThatThrownBy(() -> order.scheduleDeliveryUntil(OffsetDateTime.parse("2027-01-15T21:30:00+07:00")))
+                .isInstanceOf(com.aquaflow.shared.api.BadRequestException.class);
+        assertThat(DeliveryWindow.isValid(null, OffsetDateTime.parse("2027-01-15T11:00:00+07:00"))).isFalse();
+    }
+
+    @Test
     void calculatesOrderItemLineTotal() {
         OrderItem item = new OrderItem(
                 createOrder(),
