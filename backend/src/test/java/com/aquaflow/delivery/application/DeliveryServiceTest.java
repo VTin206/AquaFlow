@@ -66,7 +66,7 @@ class DeliveryServiceTest {
     @BeforeEach
     void setUp() {
         service = new DeliveryService(repository, assignmentDispatch, redeliveryReservations,
-                orderRepository, orderItemRepository, bottleLedger, java.time.Clock.systemUTC());
+                orderRepository, orderItemRepository, bottleLedger, org.mockito.Mockito.mock(com.aquaflow.delivery.repository.VehicleRepository.class), java.time.Clock.systemUTC());
     }
 
     @Test

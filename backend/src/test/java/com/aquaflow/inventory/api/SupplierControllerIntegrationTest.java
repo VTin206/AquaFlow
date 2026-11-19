@@ -47,6 +47,7 @@ class SupplierControllerIntegrationTest {
     @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.delivery.application.DeliveryBottleService deliveryBottleService;
     @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.auth.repository.PasswordResetRepository passwordResetRepository;
     @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.auth.repository.RegistrationVerificationRepository registrationVerificationRepository;
+    @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.delivery.repository.VehicleRepository vehicleRepository;
     @MockitoBean private com.aquaflow.auth.repository.RoleRepository roleRepository;
 
     @MockitoBean private com.aquaflow.inventory.repository.InventoryMovementReadRepository inventoryMovementReadRepository;
