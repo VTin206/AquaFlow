@@ -2767,3 +2767,6 @@
 .af-shop-track-card .af-checkout-totals .is-total {
   margin: 8px -16px;
 }
+.af-shop-pager {
+  margin-top: 24px;
+}
