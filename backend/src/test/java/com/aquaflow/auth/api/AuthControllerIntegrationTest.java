@@ -45,6 +45,7 @@ class AuthControllerIntegrationTest {
     @org.springframework.boot.test.mock.mockito.MockBean private com.aquaflow.delivery.application.DeliveryBottleService deliveryBottleService;
     @MockBean private com.aquaflow.auth.repository.PasswordResetRepository passwordResetRepository;
     @MockBean private com.aquaflow.auth.repository.RegistrationVerificationRepository registrationVerificationRepository;
+    @MockBean private com.aquaflow.delivery.repository.VehicleRepository vehicleRepository;
     @MockBean private com.aquaflow.auth.repository.RoleRepository roleRepository;
 
     @MockBean private com.aquaflow.inventory.repository.InventoryMovementReadRepository inventoryMovementReadRepository;

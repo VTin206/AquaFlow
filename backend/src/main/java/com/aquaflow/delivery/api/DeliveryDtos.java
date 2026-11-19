@@ -16,9 +16,23 @@ import java.util.List;
 public final class DeliveryDtos {
     private DeliveryDtos() {}
 
+    /** {@code vehicleId}: xe trong danh mục (kiểm tra xe rảnh và sức chở); {@code vehicle}: biển số gõ tay như cũ. */
     public record CreateTripRequest(
             @Positive Long driverId,
-            @Size(max = 40) String vehicle) {}
+            @Size(max = 40) String vehicle,
+            @Positive Long vehicleId) {
+        public CreateTripRequest(Long driverId, String vehicle) { this(driverId, vehicle, null); }
+    }
+
+    /** Thêm/sửa xe. Sức chở tính theo kiện: mỗi bình, thùng hay chai trên đơn là một kiện. */
+    public record VehicleRequest(
+            @jakarta.validation.constraints.NotBlank @Size(max = 40) String plate,
+            @Size(max = 100) String name,
+            @NotNull @Min(1) @jakarta.validation.constraints.Max(10000) Integer capacity,
+            Boolean active) {}
+
+    /** {@code busyTripId}: chuyến đang giữ xe (chưa xuất phát hoặc còn đơn chưa giao xong); null là xe rảnh. */
+    public record VehicleResponse(Long id, String plate, String name, int capacity, boolean active, Long busyTripId) {}
 
     public record AssignDriverRequest(@NotNull @Positive Long driverId) {}
 
@@ -27,7 +41,10 @@ public final class DeliveryDtos {
     }
 
     public record UpdateTripRequest(@NotNull @Pattern(regexp = "CANCELLED") String status) {}
-    public record DriverResponse(Long id, String name) {}
+    /** {@code busyTripId}: chuyến đang giữ tài xế; null là tài xế rảnh. */
+    public record DriverResponse(Long id, String name, Long busyTripId) {
+        public DriverResponse(Long id, String name) { this(id, name, null); }
+    }
     public record AvailableOrderResponse(Long id, String orderCode, String recipientName,
                                          String deliveryAddress, boolean deliveryFailed,
                                          boolean redeliveryEligible) {}
@@ -120,10 +137,21 @@ public final class DeliveryDtos {
         }
     }
 
+    /**
+     * {@code vehicleId}/{@code vehicleCapacity}: xe trong danh mục và sức chở (kiện), null khi chuyến chỉ ghi biển số.
+     * {@code loadUnits}: số kiện của các đơn đang trên chuyến.
+     */
     public record TripResponse(
             Long id, Long driverId, String driverName, String vehicle,
             String status, OffsetDateTime createdAt,
             OffsetDateTime startedAt, OffsetDateTime endedAt,
             Long createdBy, List<AssignmentResponse> orders,
-            HandoverResponse settlement) {}
+            HandoverResponse settlement, Long vehicleId, Integer vehicleCapacity, int loadUnits) {
+        public TripResponse(Long id, Long driverId, String driverName, String vehicle, String status,
+                OffsetDateTime createdAt, OffsetDateTime startedAt, OffsetDateTime endedAt, Long createdBy,
+                List<AssignmentResponse> orders, HandoverResponse settlement) {
+            this(id, driverId, driverName, vehicle, status, createdAt, startedAt, endedAt, createdBy, orders, settlement,
+                    null, null, 0);
+        }
+    }
 }

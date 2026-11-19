@@ -16,6 +16,8 @@ export type WaitingOrder = {
   /** Cuối khung giờ khách chọn. */
   appointmentUntil?: string
   jugs: number
+  /** Số kiện (mọi bình, thùng, chai) để so với sức chở của xe. */
+  units: number
   /** null: đã thu một phần mà chưa biết số còn lại. */
   due: number | null
   redelivery: boolean

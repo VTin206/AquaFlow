@@ -4,8 +4,8 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { WaitingOrdersCard, type WaitingOrder } from './WaitingOrdersCard'
 
 const orders: WaitingOrder[] = [
-  { id: '1', code: 'DH-1', customer: 'Anh Minh', address: '12 Lê Lợi', jugs: 2, due: 0, redelivery: false },
-  { id: '2', code: 'DH-2', customer: 'Chị Lan', address: '5 Hai Bà Trưng', jugs: 1, due: 0, redelivery: false },
+  { id: '1', code: 'DH-1', customer: 'Anh Minh', address: '12 Lê Lợi', jugs: 2, units: 2, due: 0, redelivery: false },
+  { id: '2', code: 'DH-2', customer: 'Chị Lan', address: '5 Hai Bà Trưng', jugs: 1, units: 1, due: 0, redelivery: false },
 ]
 
 beforeEach(() => {

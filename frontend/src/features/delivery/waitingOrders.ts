@@ -12,6 +12,7 @@ export const toWaitingOrder = (item: AvailableOrder, order?: Order): WaitingOrde
   appointment: order?.appointment,
   appointmentUntil: order?.appointmentUntil,
   jugs: order ? jugCount(order) : 0,
+  units: order ? order.lines.reduce((sum, line) => sum + line.quantity, 0) : 0,
   due: order ? knownAmountDue(order) : null,
   redelivery: item.redeliveryEligible,
   orderedAt: order ? orderedAtOf(order) : undefined,

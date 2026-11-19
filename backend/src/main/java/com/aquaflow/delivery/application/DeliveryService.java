@@ -3,6 +3,7 @@ package com.aquaflow.delivery.application;
 import com.aquaflow.delivery.api.DeliveryDtos.*;
 import com.aquaflow.delivery.repository.DeliveryRepository;
 import com.aquaflow.delivery.repository.DeliveryRepository.TripRow;
+import com.aquaflow.delivery.repository.VehicleRepository;
 import com.aquaflow.customer.order.api.dto.DispatchResponse;
 import com.aquaflow.customer.order.repository.OrderItemRepository;
 import com.aquaflow.customer.order.repository.OrderRepository;
@@ -29,6 +30,7 @@ public class DeliveryService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final DeliveryBottleService bottleLedger;
+    private final VehicleRepository vehicles;
     private final Clock clock;
 
     /** Giới hạn của bộ lọc "chuyến gần đây". */
@@ -37,13 +39,14 @@ public class DeliveryService {
     public DeliveryService(DeliveryRepository repository, AssignmentDispatchService assignmentDispatch,
                           RedeliveryReservationService redeliveryReservations,
                           OrderRepository orderRepository, OrderItemRepository orderItemRepository, DeliveryBottleService bottleLedger,
-                          Clock clock) {
+                          VehicleRepository vehicles, Clock clock) {
         this.repository = repository;
         this.assignmentDispatch = assignmentDispatch;
         this.redeliveryReservations = redeliveryReservations;
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.bottleLedger = bottleLedger;
+        this.vehicles = vehicles;
         this.clock = clock;
     }
 
@@ -69,7 +72,13 @@ public class DeliveryService {
         return repository.viewTrip(trip);
     }
 
-    public List<DriverResponse> drivers(boolean admin) { requireStoreStaff(admin); return repository.drivers(); }
+    /** Tài xế đang hoạt động, kèm chuyến đang giữ họ (nếu có) để màn hình xếp chuyến biết ai đang bận. */
+    public List<DriverResponse> drivers(boolean admin) {
+        requireStoreStaff(admin);
+        var busy = vehicles.busyTripByDriver();
+        return repository.drivers().stream()
+                .map(driver -> new DriverResponse(driver.id(), driver.name(), busy.get(driver.id()))).toList();
+    }
 
     public List<AvailableOrderResponse> availableOrders(boolean admin) {
         requireStoreStaff(admin);
@@ -104,9 +113,21 @@ public class DeliveryService {
     @Transactional
     public TripResponse create(CreateTripRequest request, long actorId, boolean admin) {
         requireStoreStaff(admin);
-        String driverName = request.driverId() == null ? null : requireActiveDriver(request.driverId());
-        Long id = repository.createTrip(actorId, request.driverId(), driverName,
-                DeliveryRepository.clean(request.vehicle()));
+        String driverName = null;
+        if (request.driverId() != null) {
+            driverName = requireActiveDriver(request.driverId());
+            requireDriverFree(request.driverId(), driverName, null);
+        }
+        String plate = DeliveryRepository.clean(request.vehicle());
+        if (request.vehicleId() != null) {
+            var vehicle = vehicles.lock(request.vehicleId());
+            if (!vehicle.active()) throw new ConflictException("Xe " + vehicle.plate() + " đã ngừng sử dụng");
+            vehicles.vehicleBusy(vehicle.id(), null).ifPresent(busy -> {
+                throw new ConflictException("Xe " + vehicle.plate() + " đang ở chuyến #" + busy.tripId() + " " + statusText(busy.status()));
+            });
+            plate = vehicle.plate();
+        }
+        Long id = repository.createTrip(actorId, request.driverId(), driverName, plate, request.vehicleId());
         return repository.viewTrip(repository.findTrip(id));
     }
 
@@ -116,6 +137,7 @@ public class DeliveryService {
         TripRow trip = repository.lockTrip(tripId);
         requireStatus(trip, "CREATED");
         String name = requireActiveDriver(request.driverId());
+        requireDriverFree(request.driverId(), name, tripId);
         repository.assignDriver(tripId, request.driverId(), name);
         return repository.viewTrip(repository.findTrip(tripId));
     }
@@ -148,6 +170,7 @@ public class DeliveryService {
                 || order.deliveryFailed() || repository.hasDispatch(order.id())) {
             throw new ConflictException("Chỉ được thêm đơn DELIVERY đang PREPARING vào chuyến");
         }
+        requireCapacity(trip, order.id());
         repository.addOrder(tripId, order.id());
         return repository.viewTrip(repository.findTrip(tripId));
     }
@@ -261,6 +284,29 @@ public class DeliveryService {
         // Only records the physical handover; it does NOT create a payment/refund or restock.
         repository.settleTrip(tripId, actorId, trip.driverId(), request);
         return repository.viewTrip(repository.findTrip(tripId));
+    }
+
+    /** Tài xế đang ở chuyến khác chưa xuất phát hoặc chưa giao xong thì không xếp thêm. */
+    private void requireDriverFree(long driverId, String name, Long tripId) {
+        vehicles.lockDriver(driverId);
+        vehicles.driverBusy(driverId, tripId).ifPresent(busy -> {
+            throw new ConflictException("Tài xế " + name + " đang ở chuyến #" + busy.tripId() + " " + statusText(busy.status()));
+        });
+    }
+
+    /** Chuyến có xe trong danh mục: tổng số kiện không được vượt sức chở. */
+    private void requireCapacity(TripRow trip, long orderId) {
+        if (trip.vehicleId() == null || trip.vehicleCapacity() == null) return;
+        int loaded = vehicles.tripUnits(trip.id());
+        var order = vehicles.orderLoad(orderId);
+        int over = loaded + order.units() - trip.vehicleCapacity();
+        if (over > 0)
+            throw new ConflictException("Xe " + trip.vehicle() + " chở tối đa " + trip.vehicleCapacity() + " kiện; chuyến đã có "
+                    + loaded + " kiện, đơn " + order.orderCode() + " thêm " + order.units() + " kiện, vượt " + over + " kiện");
+    }
+
+    private static String statusText(String status) {
+        return "CREATED".equals(status) ? "(chờ xuất phát)" : "(đang giao)";
     }
 
     private String requireActiveDriver(long driverId) {

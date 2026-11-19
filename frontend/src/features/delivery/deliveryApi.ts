@@ -86,7 +86,24 @@ export type DeliveryTrip = {
   createdBy: number
   orders: DeliveryStop[]
   settlement: (SettlementInput & { id: number; receivedBy: number; handedOverAt: string }) | null
+  /** Xe trong danh mục và sức chở (kiện); null khi chuyến chỉ ghi biển số. */
+  vehicleId?: number | null
+  vehicleCapacity?: number | null
+  /** Số kiện (bình, thùng, chai) của các đơn đang trên chuyến. */
+  loadUnits?: number
 }
+/** `busyTripId`: chuyến đang giữ tài xế (chưa xuất phát hoặc còn đơn chưa giao xong). */
+export type DeliveryDriver = { id: number; name: string; busyTripId?: number | null }
+/** Xe giao hàng; sức chở tính theo kiện: mỗi bình, thùng hay chai trên đơn là một kiện. */
+export type Vehicle = {
+  id: number
+  plate: string
+  name: string | null
+  capacity: number
+  active: boolean
+  busyTripId: number | null
+}
+export type VehicleInput = { plate: string; name?: string; capacity: number; active?: boolean }
 export type ResultInput = { outcome: 'SUCCESS' | 'FAILED'; recipientName?: string; failureReason?: string; note?: string }
 export const tripLabels = { CREATED: 'Chờ khởi hành', IN_PROGRESS: 'Đang giao', COMPLETED: 'Đã đối soát', CANCELLED: 'Đã hủy' }
 const base = '/delivery/trips'
@@ -101,9 +118,12 @@ export const deliveryApi = {
   assignmentAttempts: (id: number) => api.get<DeliveryAttempt[]>(`/delivery/assignments/${id}/attempts`),
   list: (query: TripListQuery = {}) => api.get<DeliveryTrip[]>(base, { params: query }),
   detail: (id: number) => api.get<DeliveryTrip>(`${base}/${id}`),
-  drivers: () => api.get<{ id: number; name: string }[]>('/delivery/drivers'),
+  drivers: () => api.get<DeliveryDriver[]>('/delivery/drivers'),
+  vehicles: () => api.get<Vehicle[]>('/delivery/vehicles'),
+  createVehicle: (input: VehicleInput) => api.post<Vehicle>('/delivery/vehicles', input),
+  updateVehicle: (id: number, input: VehicleInput) => api.put<Vehicle>(`/delivery/vehicles/${id}`, input),
   available: () => api.get<AvailableOrder[]>('/delivery/available-orders'),
-  create: (input: { driverId?: number; vehicle?: string }) => api.post<DeliveryTrip>(base, input),
+  create: (input: { driverId?: number; vehicle?: string; vehicleId?: number }) => api.post<DeliveryTrip>(base, input),
   assign: (id: number, driverId: number) => api.put<DeliveryTrip>(`${base}/${id}/driver`, { driverId }),
   add: (id: number, orderId: number, redelivery = false) => api.post<DeliveryStop>(`${base}/${id}/orders`, { orderId, redelivery }),
   dispatch: (id: number) => api.post<DeliveryTrip>(`${base}/${id}/dispatch`),
