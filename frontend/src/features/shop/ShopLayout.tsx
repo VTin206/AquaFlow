@@ -104,9 +104,9 @@ export function ShopLayout() {
                 aria-haspopup="true"
                 onClick={() => setMegaClosed(true)}
               >
-                Nước uống
+                Sản phẩm
               </NavLink>
-              <div className="af-shop-mega" role="menu" aria-label="Danh mục nước uống">
+              <div className="af-shop-mega" role="menu" aria-label="Danh mục sản phẩm">
                 {drinkMenuColumns.map((column) => (
                   <section key={column.title} className="af-shop-mega-column">
                     <strong>{column.title}</strong>

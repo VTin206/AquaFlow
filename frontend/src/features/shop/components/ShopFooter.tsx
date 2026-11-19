@@ -24,7 +24,7 @@ export function ShopFooter({ contact }: Props) {
           <p>Chọn sản phẩm yêu thích, đặt nhanh trong vài bước và nhận nước tận nơi.</p>
         </div>
         <Link to="/shop/drinks" className="af-shop-footer-cta">
-          Xem nước uống <ArrowRight size={17} aria-hidden />
+          Xem sản phẩm <ArrowRight size={17} aria-hidden />
         </Link>
       </div>
       <div className={`af-shop-footer-grid ${hasContact ? 'has-contact' : ''}`}>
@@ -44,7 +44,7 @@ export function ShopFooter({ contact }: Props) {
           <h2 id="af-footer-info">Góc thông tin</h2>
           <ul>
             <li>
-              <Link to="/shop/drinks">Nước uống</Link>
+              <Link to="/shop/drinks">Sản phẩm</Link>
             </li>
             {latest && (
               <li>

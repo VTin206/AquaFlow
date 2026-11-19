@@ -29,7 +29,7 @@ function filtersFromParams(params: URLSearchParams): ShopFilterState {
   }
 }
 
-/** Catalog riêng cho mục Nước uống, tách khỏi trang chủ giới thiệu cửa hàng. */
+/** Catalog riêng cho mục Sản phẩm, tách khỏi trang chủ giới thiệu cửa hàng. */
 export function DrinksPage() {
   const { openCart } = useOutletContext<{ openCart: () => void }>()
   const location = useLocation()
@@ -70,7 +70,7 @@ export function DrinksPage() {
   }, [focusSearch])
 
   useEffect(() => {
-    document.title = `Nước uống | ${contact?.storeName ?? 'AquaFlow'}`
+    document.title = `Sản phẩm | ${contact?.storeName ?? 'AquaFlow'}`
   }, [contact?.storeName])
 
   const products = productsQuery.data ?? []
@@ -80,7 +80,7 @@ export function DrinksPage() {
 
   return (
     <div className="af-shop-page">
-      <section id="products" ref={catalogRef} className="af-shop-catalog" aria-label="Danh sách nước uống">
+      <section id="products" ref={catalogRef} className="af-shop-catalog" aria-label="Danh sách sản phẩm">
         <ShopFilters products={products} filters={filters} visibleCount={visible.length} onChange={updateFilters} searchRef={searchRef} />
 
         {productsQuery.isError ? (
