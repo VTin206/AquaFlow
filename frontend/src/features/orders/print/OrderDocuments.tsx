@@ -4,6 +4,7 @@ import { PrintHeader } from '@/shared/print/PrintHeader'
 import { currency, printDate } from '@/shared/utils/format'
 import type { StoreSettings } from '@/features/settings/types'
 import { jugCount, knownAmountDue, paidAmount, returnedValue, type Order } from '../types'
+import { formatDeliveryWindow } from '@/shared/utils/deliveryWindow'
 
 type DocumentProps = { order: Order; settings?: StoreSettings }
 /** `depositRate`: mức cọc theo loại vỏ của đơn (`useOrderDepositLabel`); thiếu thì để trống cho tài xế ghi. */
@@ -137,7 +138,7 @@ export function DeliverySlipDocument({ order, settings, depositRate }: SlipProps
           Địa chỉ: <strong>{order.address}</strong>
           {order.floor ? ` · Lầu ${order.floor} (thang bộ)` : ''}
         </span>
-        <span>Giờ hẹn: {order.appointment ? new Date(order.appointment).toLocaleString('vi-VN') : 'Trong ngày'}</span>
+        <span>Giờ hẹn: {order.appointment ? formatDeliveryWindow(order.appointment, order.appointmentUntil) : 'Trong ngày'}</span>
         <span>Ghi chú: {order.note || '—'}</span>
       </section>
       <table className="af-doc-table">

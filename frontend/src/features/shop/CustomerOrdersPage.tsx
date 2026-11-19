@@ -22,6 +22,7 @@ import { currency } from '@/shared/utils/format'
 import { useCartActions } from './cart'
 import { customerOrderApi } from './customerOrderApi'
 import { shopKeys, useShopContact, useTransferAccount } from './shopService'
+import { formatDeliveryWindow } from '@/shared/utils/deliveryWindow'
 
 type Products = Awaited<ReturnType<typeof catalogApi.products>>
 const PAGE_SIZE = 10
@@ -269,7 +270,11 @@ export function CustomerOrderPage() {
                 {order.requestedDeliveryAt && (
                   <>
                     <dt>Giờ hẹn</dt>
-                    <dd>{time(order.requestedDeliveryAt)}</dd>
+                    <dd>
+                      {order.requestedDeliveryUntil
+                        ? formatDeliveryWindow(order.requestedDeliveryAt, order.requestedDeliveryUntil)
+                        : time(order.requestedDeliveryAt)}
+                    </dd>
                   </>
                 )}
                 {visibleNote(order.note) && (

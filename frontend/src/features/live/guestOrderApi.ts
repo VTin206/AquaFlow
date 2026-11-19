@@ -9,6 +9,8 @@ export type GuestOrderInput = {
   deliveryArea: string
   items: { productId: number; quantity: number }[]
   requestedDeliveryAt?: string
+  /** Cuối khung giờ khách chọn. */
+  requestedDeliveryUntil?: string
   note?: string
   stairFloor?: number
   expectedTotal?: number

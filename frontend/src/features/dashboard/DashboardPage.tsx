@@ -22,6 +22,7 @@ import { useOrderList } from '@/features/orders/orderData'
 import { ordersLink } from '@/features/orders/useOrderFilters'
 import { amountDue, createdAtOf, orderedAtOf, type Order } from '@/features/orders/types'
 import { dayFromToday, localDay, useDailyRevenue } from '@/features/reports/reportService'
+import { withWindowEnd } from '@/shared/utils/deliveryWindow'
 
 type LowStockRow = { id: string; name: string; unit: string; stock: number; threshold?: number }
 
@@ -365,7 +366,9 @@ export function DashboardPage() {
                   <ul className="af-dash-shipping">
                     {delivery.remaining.slice(0, TASK_LIMIT).map((order) => (
                       <li key={order.id}>
-                        <time className={delivery.isLate(order) ? 'af-text-danger' : undefined}>{appointmentLabel(order.appointment)}</time>
+                        <time className={delivery.isLate(order) ? 'af-text-danger' : undefined}>
+                          {withWindowEnd(appointmentLabel(order.appointment), order.appointmentUntil)}
+                        </time>
                         <div className="af-cell-stack">
                           <span>
                             {order.customer} <small>{order.code ?? order.id}</small>

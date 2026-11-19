@@ -14,8 +14,8 @@ import { readProfile, saveProfile, useCart, useCartActions } from './cart'
 import { submitCheckoutOnce } from './checkoutSubmit'
 import { CheckoutReview } from './components/CheckoutReview'
 import { CheckoutDeposit } from './components/CheckoutDeposit'
-import { disabledOutsideHours, formatOpeningHours, isWithinOpeningHours, parseOpeningHours } from './openingHours'
-import { usePlaceWebOrder, useShopContact, useShopProducts } from './shopService'
+import { DELIVERY_SLOTS, slotStarted, slotText, slotWindow, type DeliverySlotKey } from '@/shared/utils/deliveryWindow'
+import { usePlaceWebOrder, useShopProducts } from './shopService'
 import { useAuth } from '@/features/auth/useAuth'
 import { isCustomer } from '@/features/auth/accountAccess'
 import { accountKey, customerAccountApi, type SavedAddress } from './customerAccountApi'
@@ -29,7 +29,8 @@ type CheckoutForm = {
   address: string
   area: string
   when: 'asap' | 'scheduled'
-  appointment?: Dayjs
+  deliveryDate?: Dayjs
+  slot?: DeliverySlotKey
   note?: string
   remember: boolean
   saveAddress?: boolean
@@ -53,7 +54,6 @@ export function CheckoutPage() {
   const cart = useCart()
   const actions = useCartActions()
   const products = useShopProducts()
-  const openingHours = parseOpeningHours(useShopContact()?.openingHours)
   const mutation = usePlaceWebOrder()
   const { message } = App.useApp()
   const navigate = useNavigate()
@@ -130,13 +130,16 @@ export function CheckoutPage() {
     if (submitLock.current || mutation.isPending || invalid || quoteBlocked || !cart.length || products.isError || products.isPending)
       return
     setSubmitError(undefined)
+    // Ngày và khung đã chọn trước đó vẫn có thể còn trong form, nên chỉ gửi khi khách đang chọn "Chọn khung giờ".
+    const chosen =
+      values.when === 'scheduled' && values.deliveryDate && values.slot ? slotWindow(values.deliveryDate, values.slot) : undefined
     const draft = {
       customer: values.customer.trim(),
       phone: values.phone.replace(/[\s().-]/g, ''),
       address: values.address.trim(),
       area: values.area.trim(),
-      // Giờ đã chọn trước đó vẫn có thể còn trong form, nên chỉ gửi khi khách đang chọn "Chọn giờ".
-      appointment: values.when === 'scheduled' ? values.appointment?.toISOString() : undefined,
+      appointment: chosen?.from.toISOString(),
+      appointmentUntil: chosen?.until.toISOString(),
       note: values.note?.trim(),
       lines: cart,
       floor: values.floor ?? 0,
@@ -345,40 +348,58 @@ export function CheckoutPage() {
                   <Radio.Group
                     options={[
                       { value: 'asap', label: 'Giao sớm nhất' },
-                      { value: 'scheduled', label: 'Chọn giờ' },
+                      { value: 'scheduled', label: 'Chọn khung giờ' },
                     ]}
                   />
                 </Form.Item>
-                <Form.Item noStyle shouldUpdate={(previous: CheckoutForm, next: CheckoutForm) => previous.when !== next.when}>
-                  {({ getFieldValue }) =>
-                    getFieldValue('when') === 'scheduled' && (
-                      <Form.Item
-                        name="appointment"
-                        label="Giờ nhận mong muốn"
-                        extra={openingHours ? `Cửa hàng giao trong giờ mở cửa ${formatOpeningHours(openingHours)}.` : undefined}
-                        rules={[
-                          { required: true, message: 'Chọn giờ nhận hàng.' },
-                          {
-                            validator: (_, value?: Dayjs) => {
-                              if (!value) return Promise.resolve()
-                              if (!value.isAfter(dayjs())) return Promise.reject(new Error('Chọn giờ trong tương lai.'))
-                              if (openingHours && !isWithinOpeningHours(value, openingHours))
-                                return Promise.reject(new Error(`Chọn giờ trong khoảng ${formatOpeningHours(openingHours)}.`))
-                              return Promise.resolve()
-                            },
-                          },
-                        ]}
-                      >
-                        <DatePicker
-                          showTime
-                          format="DD/MM/YYYY HH:mm"
-                          disabledDate={(date) => date.isBefore(dayjs(), 'day')}
-                          disabledTime={() => (openingHours ? disabledOutsideHours(openingHours) : {})}
-                          style={{ width: '100%' }}
-                        />
-                      </Form.Item>
-                    )
+                <Form.Item
+                  noStyle
+                  shouldUpdate={(previous: CheckoutForm, next: CheckoutForm) =>
+                    previous.when !== next.when || previous.deliveryDate !== next.deliveryDate
                   }
+                >
+                  {({ getFieldValue }) => {
+                    if (getFieldValue('when') !== 'scheduled') return null
+                    const date: Dayjs | undefined = getFieldValue('deliveryDate')
+                    return (
+                      <>
+                        <Form.Item name="deliveryDate" label="Ngày nhận" rules={[{ required: true, message: 'Chọn ngày nhận hàng.' }]}>
+                          <DatePicker
+                            format="DD/MM/YYYY"
+                            // Hôm nay hết khung thì không chọn được nữa.
+                            disabledDate={(day) =>
+                              day.isBefore(dayjs(), 'day') ||
+                              (day.isSame(dayjs(), 'day') && DELIVERY_SLOTS.every((slot) => slotStarted(day, slot.key)))
+                            }
+                            onChange={() => form.setFieldValue('slot', undefined)}
+                            style={{ width: '100%' }}
+                          />
+                        </Form.Item>
+                        <Form.Item
+                          name="slot"
+                          label="Khung giờ"
+                          rules={[
+                            { required: true, message: 'Chọn khung giờ nhận hàng.' },
+                            {
+                              validator: (_, value?: DeliverySlotKey) =>
+                                value && date && slotStarted(date, value)
+                                  ? Promise.reject(new Error('Khung giờ này đã bắt đầu, chọn khung sau.'))
+                                  : Promise.resolve(),
+                            },
+                          ]}
+                        >
+                          <Radio.Group
+                            className="af-checkout-slots"
+                            options={DELIVERY_SLOTS.map((slot) => ({
+                              value: slot.key,
+                              label: slotText(slot),
+                              disabled: !date || slotStarted(date, slot.key),
+                            }))}
+                          />
+                        </Form.Item>
+                      </>
+                    )
+                  }}
                 </Form.Item>
                 <Form.Item name="note" label="Ghi chú (không bắt buộc)" rules={[{ max: 500 }]}>
                   <TextArea rows={1} maxLength={500} placeholder="Ví dụ: gọi trước khi đến" />

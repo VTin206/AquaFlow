@@ -9,6 +9,7 @@ export const toWaitingOrder = (item: AvailableOrder, order?: Order): WaitingOrde
   customer: item.recipientName || order?.customer || 'Khách hàng',
   address: item.deliveryAddress ?? '',
   appointment: order?.appointment,
+  appointmentUntil: order?.appointmentUntil,
   jugs: order ? jugCount(order) : 0,
   due: order ? knownAmountDue(order) : null,
   redelivery: item.redeliveryEligible,

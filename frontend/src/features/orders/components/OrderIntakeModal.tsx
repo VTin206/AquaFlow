@@ -37,6 +37,7 @@ import { ModalTotalFooter } from '@/shared/components/ModalTotalFooter'
 import { modalScrollBody, modalWidth } from '@/shared/utils/modal'
 import { WardSelect } from '@/shared/address/WardSelect'
 import { TextArea } from '@/shared/components/TextArea'
+import { DELIVERY_SLOTS, slotStarted, slotText, withWindowEnd } from '@/shared/utils/deliveryWindow'
 
 type OrderIntakeModalProps = {
   onClose: () => void
@@ -390,21 +391,69 @@ export function OrderIntakeModal({ onClose, onCreated, defaultCustomer, editing 
                       />
                     </Form.Item>
                     <Form.Item
-                      name="appointment"
-                      label="Giờ nhận mong muốn"
-                      rules={[
-                        {
-                          validator: (_, value?: Dayjs) =>
-                            !value || value.isAfter(dayjs()) ? Promise.resolve() : Promise.reject(new Error('Chọn giờ trong tương lai.')),
-                        },
-                      ]}
+                      noStyle
+                      shouldUpdate={(previous: IntakeValues, next: IntakeValues) =>
+                        previous.deliveryDate !== next.deliveryDate || previous.slot !== next.slot
+                      }
                     >
-                      <DatePicker
-                        showTime
-                        format="DD/MM/YYYY HH:mm"
-                        disabledDate={(date) => date.isBefore(dayjs(), 'day')}
-                        style={{ width: '100%' }}
-                      />
+                      {({ getFieldValue }) => {
+                        const date: Dayjs | undefined = getFieldValue('deliveryDate')
+                        const legacy: Dayjs | undefined = getFieldValue('appointment')
+                        const legacyUntil: Dayjs | undefined = getFieldValue('appointmentUntil')
+                        // Đơn cũ hẹn giờ lẻ: giữ được giờ đó khi vẫn để đúng ngày cũ.
+                        const keepLegacy = legacy && date?.isSame(legacy, 'day')
+                        return (
+                          <Row gutter={12}>
+                            <Col span={10}>
+                              <Form.Item name="deliveryDate" label="Ngày nhận">
+                                <DatePicker
+                                  format="DD/MM/YYYY"
+                                  disabledDate={(day) => day.isBefore(dayjs(), 'day')}
+                                  onChange={() => form.setFieldValue('slot', undefined)}
+                                  style={{ width: '100%' }}
+                                />
+                              </Form.Item>
+                            </Col>
+                            <Col span={14}>
+                              <Form.Item
+                                name="slot"
+                                label="Khung giờ"
+                                rules={[
+                                  {
+                                    validator: (_, value?: IntakeValues['slot']) => {
+                                      if (date && !value) return Promise.reject(new Error('Chọn khung giờ.'))
+                                      if (!date && value && value !== 'legacy') return Promise.reject(new Error('Chọn ngày nhận.'))
+                                      if (date && value && value !== 'legacy' && slotStarted(date, value))
+                                        return Promise.reject(new Error('Khung giờ này đã bắt đầu.'))
+                                      return Promise.resolve()
+                                    },
+                                  },
+                                ]}
+                              >
+                                <Select
+                                  allowClear
+                                  placeholder="Giao sớm nhất"
+                                  options={[
+                                    ...(keepLegacy
+                                      ? [
+                                          {
+                                            value: 'legacy',
+                                            label: `Giữ giờ cũ ${withWindowEnd(legacy.format('HH:mm'), legacyUntil?.toISOString())}`,
+                                          },
+                                        ]
+                                      : []),
+                                    ...DELIVERY_SLOTS.map((slot) => ({
+                                      value: slot.key,
+                                      label: slotText(slot),
+                                      disabled: !date || slotStarted(date, slot.key),
+                                    })),
+                                  ]}
+                                />
+                              </Form.Item>
+                            </Col>
+                          </Row>
+                        )
+                      }}
                     </Form.Item>
                   </>
                 )}

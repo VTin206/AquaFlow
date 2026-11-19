@@ -31,6 +31,8 @@ export type LiveOrder = {
   deliveryAddress: string | null
   deliveryArea: string | null
   requestedDeliveryAt: string | null
+  /** Cuối khung giờ giao; null khi hẹn một mốc giờ requestedDeliveryAt. */
+  requestedDeliveryUntil?: string | null
   subtotal: number
   discountAmount: number
   deliveryFee: number
@@ -47,7 +49,14 @@ export type OrderStatus = LiveOrder['status']
 /** Theo OrderCreateRequest; nhân viên không tạo đơn kênh WEB (đơn web đi luồng khách hàng). */
 export type OrderUpdateInput = Pick<
   OrderInput,
-  'recipientName' | 'recipientPhone' | 'deliveryAddress' | 'deliveryArea' | 'requestedDeliveryAt' | 'items' | 'note'
+  | 'recipientName'
+  | 'recipientPhone'
+  | 'deliveryAddress'
+  | 'deliveryArea'
+  | 'requestedDeliveryAt'
+  | 'requestedDeliveryUntil'
+  | 'items'
+  | 'note'
 >
 export type OrderInput = {
   customerId: number | null
@@ -58,6 +67,8 @@ export type OrderInput = {
   deliveryAddress: string | null
   deliveryArea: string | null
   requestedDeliveryAt: string | null
+  /** Cuối khung giờ giao; null khi hẹn một mốc giờ requestedDeliveryAt. */
+  requestedDeliveryUntil?: string | null
   items: { productId: number; quantity: number }[]
   note: string | null
 }

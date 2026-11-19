@@ -1,4 +1,5 @@
 import { relativeDateTime } from '@/shared/utils/format'
+import { deliveryDeadline, formatDeliveryWindow, withWindowEnd } from '@/shared/utils/deliveryWindow'
 export type OrderStatus =
   'Chờ xác nhận' | 'Đã xác nhận' | 'Đang chuẩn bị' | 'Đang giao' | 'Đã giao' | 'Giao thất bại' | 'Đã hoàn tất' | 'Đã hủy'
 
@@ -63,6 +64,8 @@ export type Order = {
   /** Lầu giao bằng thang bộ (0: tầng trệt hoặc có thang máy), dùng tính phụ thu. */
   floor?: number
   appointment?: string
+  /** Cuối khung giờ giao khách chọn; không có khi hẹn một mốc giờ. */
+  appointmentUntil?: string
   note?: string
   payments: Payment[]
   history: OrderEvent[]
@@ -132,10 +135,10 @@ export const returnedValue = (order: Pick<Order, 'returns'>) =>
 
 const OPEN_DELIVERY: OrderStatus[] = ['Chờ xác nhận', 'Đã xác nhận', 'Đang chuẩn bị', 'Đang giao', 'Giao thất bại']
 
-/** Số phút trễ so với giờ hẹn: đơn chưa giao tính tới hiện tại, đơn đã giao tính tới lúc nhận. 0 nếu đúng hẹn. */
+/** Số phút trễ so với giờ hẹn (đơn hẹn theo khung thì so với cuối khung): đơn chưa giao tính tới hiện tại, đơn đã giao tính tới lúc nhận. 0 nếu đúng hẹn. */
 export function minutesLate(order: Order, now = Date.now()) {
   if (order.method !== 'Giao tận nơi' || !order.appointment || order.status === 'Đã hủy') return 0
-  const due = Date.parse(order.appointment)
+  const due = Date.parse(deliveryDeadline(order.appointment, order.appointmentUntil)!)
   const end = OPEN_DELIVERY.includes(order.status) ? now : order.deliveredAt ? Date.parse(order.deliveredAt) : due
   return Math.max(0, Math.floor((end - due) / 60_000))
 }
@@ -146,11 +149,11 @@ export const isOverdue = (order: Order, now = Date.now()) => OPEN_DELIVERY.inclu
 /** Giờ hẹn của đơn giao chưa xong; `tone` đỏ khi đã trễ, cam khi còn dưới 1 giờ. Không có hẹn hoặc đã giao xong thì null. */
 export function appointmentOf(order: Order, now = Date.now()) {
   if (order.method !== 'Giao tận nơi' || !order.appointment || !OPEN_DELIVERY.includes(order.status)) return null
-  const minutesLeft = (Date.parse(order.appointment) - now) / 60_000
+  const minutesLeft = (Date.parse(deliveryDeadline(order.appointment, order.appointmentUntil)!) - now) / 60_000
   const tone = isOverdue(order, now) ? 'danger' : minutesLeft <= 60 ? 'warning' : 'muted'
   return {
-    label: `Hẹn ${relativeDateTime(order.appointment, new Date(now))}`,
-    full: new Date(order.appointment).toLocaleString('vi-VN'),
+    label: `Hẹn ${withWindowEnd(relativeDateTime(order.appointment, new Date(now)), order.appointmentUntil)}`,
+    full: formatDeliveryWindow(order.appointment, order.appointmentUntil),
     tone,
   } as const
 }
@@ -170,7 +173,7 @@ export function deliveryTimingOf(order: Order, now = Date.now()) {
       ? { label: 'Tại quầy', tone: 'muted' }
       : appointment
         ? {
-            label: relativeDateTime(order.appointment!, new Date(now)),
+            label: withWindowEnd(relativeDateTime(order.appointment!, new Date(now)), order.appointmentUntil),
             tone: appointment.tone === 'muted' ? 'normal' : appointment.tone,
             title: `Hẹn giao ${appointment.full}`,
           }
@@ -239,7 +242,18 @@ export const lateLabel = (minutes: number) => {
 /** Thông tin đơn khách xem được trên trang tra cứu. */
 export type PublicOrder = Pick<
   Order,
-  'id' | 'customer' | 'address' | 'status' | 'method' | 'lines' | 'deliveryFee' | 'total' | 'appointment' | 'deliveredAt' | 'trackingToken'
+  | 'id'
+  | 'customer'
+  | 'address'
+  | 'status'
+  | 'method'
+  | 'lines'
+  | 'deliveryFee'
+  | 'total'
+  | 'appointment'
+  | 'appointmentUntil'
+  | 'deliveredAt'
+  | 'trackingToken'
 > & {
   paid: number
   due: number

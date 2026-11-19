@@ -1,3 +1,4 @@
+import { deliveryDeadline } from '@/shared/utils/deliveryWindow'
 import type { Order, OrderStatus } from '@/features/orders/types'
 import { localDay } from '@/features/reports/reportService'
 
@@ -25,6 +26,10 @@ export function deliveryToday(orders: Order[], now = new Date()) {
     const at = order.deliveredAt ?? order.appointment
     return at !== undefined && localDay(at) === today
   })
-  const isLate = (order: Order) => order.appointment !== undefined && Date.parse(order.appointment) < now.getTime()
+  // Đơn hẹn theo khung giờ chỉ trễ khi đã qua cuối khung.
+  const isLate = (order: Order) => {
+    const deadline = deliveryDeadline(order.appointment, order.appointmentUntil)
+    return deadline !== undefined && Date.parse(deadline) < now.getTime()
+  }
   return { remaining, delivered: delivered.length, late: remaining.filter(isLate).length, isLate }
 }

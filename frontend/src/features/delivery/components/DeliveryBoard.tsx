@@ -12,6 +12,7 @@ import { isOverdue, knownAmountDue, type Order, type OrderStatus } from '@/featu
 import { localDay, dayFromToday } from '@/features/reports/reportService'
 import { useLiveTrips } from '../useLiveTrips'
 import { groupDeliveries, readCollapsed, writeCollapsed } from '../deliveryBoard'
+import { formatDeliveryWindow, withWindowEnd } from '@/shared/utils/deliveryWindow'
 
 const timeOfDay = (iso: string) => new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
 /** Hôm nay chỉ hiện giờ; ngày khác hiện thêm ngày/tháng. */
@@ -32,9 +33,9 @@ function DeliveryRow({ order, failureReason, orphan, onDetails }: RowProps) {
     <li className="af-board-row">
       <time
         className={late ? 'af-text-danger' : order.appointment ? undefined : 'af-text-muted'}
-        title={order.appointment && new Date(order.appointment).toLocaleString('vi-VN')}
+        title={order.appointment && formatDeliveryWindow(order.appointment, order.appointmentUntil)}
       >
-        {appointmentLabel(order.appointment)}
+        {withWindowEnd(appointmentLabel(order.appointment), order.appointmentUntil)}
       </time>
       <div className="af-cell-stack">
         <span>

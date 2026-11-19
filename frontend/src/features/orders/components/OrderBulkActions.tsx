@@ -16,6 +16,7 @@ import { toWaitingOrder } from '@/features/delivery/waitingOrders'
 import { useOrderStepRequests } from '../orderData'
 import { DeliverySlipDocument, InvoiceDocument } from '../print/OrderDocuments'
 import { amountDue, awaitingReturnInspection, orderedAtOf, type Order } from '../types'
+import { formatDeliveryWindow } from '@/shared/utils/deliveryWindow'
 
 const codeOf = (order: Order) => order.code ?? order.id
 
@@ -136,7 +137,11 @@ export function OrderBulkActions({ orders, onSelect }: { orders: Order[]; onSele
       { title: 'Hình thức', width: 14, value: (order) => order.method },
       { title: 'Kênh', width: 12, value: (order) => order.channel },
       { title: 'Trạng thái', width: 16, value: (order) => order.status },
-      { title: 'Hẹn giao', width: 20, value: (order) => (order.appointment ? new Date(order.appointment).toLocaleString('vi-VN') : '') },
+      {
+        title: 'Hẹn giao',
+        width: 20,
+        value: (order) => (order.appointment ? formatDeliveryWindow(order.appointment, order.appointmentUntil) : ''),
+      },
       { title: 'Sản phẩm', width: 40, value: (order) => order.items },
       { title: 'Tổng tiền', width: 16, format: 'money', value: (order) => order.total },
       { title: 'Còn phải thu', width: 16, format: 'money', value: amountDue },

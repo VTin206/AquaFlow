@@ -6,6 +6,7 @@ import { useStaff } from '@/features/auth/useStaff'
 import { currency } from '@/shared/utils/format'
 import type { OrderFocus } from '../orderFocus'
 import type { Order, OrderLine } from '../types'
+import { formatDeliveryWindow } from '@/shared/utils/deliveryWindow'
 
 const focusIcons: Record<OrderFocus['tone'], LucideIcon> = {
   action: CircleArrowRight,
@@ -57,7 +58,7 @@ export function OrderParty({ order }: { order: Order }) {
       )}
       {order.appointment && (
         <p>
-          <span>Hẹn giao</span> {new Date(order.appointment).toLocaleString('vi-VN')}
+          <span>Hẹn giao</span> {formatDeliveryWindow(order.appointment, order.appointmentUntil)}
         </p>
       )}
       {order.note && (

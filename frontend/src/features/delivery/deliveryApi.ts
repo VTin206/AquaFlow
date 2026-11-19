@@ -50,6 +50,8 @@ export type DeliveryStop = {
   recipientPhone: string | null
   deliveryAddress: string | null
   requestedDeliveryAt?: string | null
+  /** Cuối khung giờ giao; null khi hẹn một mốc giờ requestedDeliveryAt. */
+  requestedDeliveryUntil?: string | null
   note?: string | null
   latestAttempt: DeliveryAttempt | null
   items: { productId: number; productName: string; unit: string; lotCode: string; quantity: number }[]
