@@ -195,3 +195,5 @@ const outsideOldHcm = new Set([...fromBinhDuong, ...fromBaRiaVungTau])
 /** 102 phường, xã mới nằm trên địa bàn TP. Hồ Chí Minh cũ (78 phường, 24 xã): khu vực cửa hàng giao hàng. */
 export const deliveryWards: readonly string[] = hcmWards.filter((ward) => !outsideOldHcm.has(ward))
 export const DELIVERY_AREA = 'TP. Hồ Chí Minh cũ'
+/** Phần đã sáp nhập vào TP. Hồ Chí Minh nhưng cửa hàng chưa giao, ghi kèm khi báo khu vực giao cho khách. */
+export const DELIVERY_AREA_EXCLUDES = 'Bình Dương, Bà Rịa - Vũng Tàu'

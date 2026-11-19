@@ -1,5 +1,6 @@
 import { ArrowRight, Clock3, Mail, MapPin, Phone, ShieldCheck, Truck } from 'lucide-react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
+import { loginReturnState } from '@/features/auth/accountAccess'
 import { usePublishedArticles } from '@/features/articles/useArticles'
 
 type Props = {
@@ -14,6 +15,8 @@ export function ShopFooter({ contact }: Props) {
   const latest = usePublishedArticles('NEWS').data?.[0]
   const policies = usePublishedArticles('POLICY').data ?? []
   const openingHours = contact?.openingHours?.trim()
+  // Đăng nhập/đăng ký xong quay lại trang đang xem.
+  const returnState = loginReturnState(useLocation())
 
   return (
     <footer className="af-shop-footer">
@@ -24,7 +27,7 @@ export function ShopFooter({ contact }: Props) {
           <p>Chọn sản phẩm yêu thích, đặt nhanh trong vài bước và nhận nước tận nơi.</p>
         </div>
         <Link to="/shop/drinks" className="af-shop-footer-cta">
-          Xem nước uống <ArrowRight size={17} aria-hidden />
+          Xem sản phẩm <ArrowRight size={17} aria-hidden />
         </Link>
       </div>
       <div className={`af-shop-footer-grid ${hasContact ? 'has-contact' : ''}`}>
@@ -36,15 +39,19 @@ export function ShopFooter({ contact }: Props) {
           </div>
           <p>Nước uống đóng bình, đóng chai từ các thương hiệu quen thuộc, nhập theo lô rõ hạn dùng và giao tận nơi trong khu vực.</p>
           <div className="af-shop-footer-trust" aria-label="Cam kết dịch vụ">
-            <span><Truck size={15} aria-hidden /> Giao tận nơi</span>
-            <span><ShieldCheck size={15} aria-hidden /> Nguồn hàng rõ ràng</span>
+            <span>
+              <Truck size={15} aria-hidden /> Giao tận nơi
+            </span>
+            <span>
+              <ShieldCheck size={15} aria-hidden /> Nguồn hàng rõ ràng
+            </span>
           </div>
         </section>
         <nav aria-labelledby="af-footer-info">
           <h2 id="af-footer-info">Góc thông tin</h2>
           <ul>
             <li>
-              <Link to="/shop/drinks">Nước uống</Link>
+              <Link to="/shop/drinks">Sản phẩm</Link>
             </li>
             {latest && (
               <li>
@@ -55,10 +62,14 @@ export function ShopFooter({ contact }: Props) {
               <Link to="/track">Tra cứu đơn</Link>
             </li>
             <li>
-              <Link to="/shop/account">Đăng nhập</Link>
+              <Link to="/shop/account" state={returnState}>
+                Đăng nhập
+              </Link>
             </li>
             <li>
-              <Link to="/shop/register">Tạo tài khoản</Link>
+              <Link to="/shop/register" state={returnState}>
+                Tạo tài khoản
+              </Link>
             </li>
           </ul>
         </nav>

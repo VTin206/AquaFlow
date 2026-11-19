@@ -55,18 +55,18 @@ const renderShop = () =>
     </MemoryRouter>,
   )
 
-const drinksLink = () => screen.getByRole('link', { name: 'Nước uống' })
+const drinksLink = () => screen.getByRole('link', { name: 'Sản phẩm' })
 const menuBox = () => drinksLink().parentElement!
 const closed = () => menuBox().classList.contains('is-closed')
 
-test('bấm "Nước uống" đóng menu; menu không tự mở lại khi focus chuyển đi hoặc menu ẩn dưới con trỏ', () => {
+test('bấm "Sản phẩm" đóng menu; menu không tự mở lại khi focus chuyển đi hoặc menu ẩn dưới con trỏ', () => {
   renderShop()
   fireEvent.mouseEnter(menuBox())
   act(() => drinksLink().focus())
   fireEvent.click(drinksLink())
   expect(closed()).toBe(true)
 
-  // Trang Nước uống lấy focus và menu vừa ẩn khiến con trỏ "rời" vùng menu: vẫn phải đóng.
+  // Trang Sản phẩm lấy focus và menu vừa ẩn khiến con trỏ "rời" vùng menu: vẫn phải đóng.
   act(() => screen.getByLabelText('Tìm nước').focus())
   fireEvent.mouseLeave(menuBox())
   expect(closed()).toBe(true)

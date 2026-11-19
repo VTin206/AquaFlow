@@ -32,6 +32,34 @@
   color: inherit;
   text-decoration: underline;
 }
+/* Có giờ mở cửa thì một hàng không đủ chỗ cho phần chú thích khu vực; chú thích vẫn xem được khi rê chuột. */
+.af-shop-topbar-inner:has(.af-shop-topbar-hours) .af-shop-topbar-area-detail {
+  display: none;
+}
+/* Chưa đủ rộng cho một hàng: hotline, đăng nhập, ngôn ngữ ở hàng trên; khu vực giao xuống hàng riêng. */
+@media (max-width: 1180px) {
+  .af-shop-topbar-area {
+    order: 1;
+    flex-basis: 100%;
+  }
+}
+@media (min-width: 641px) and (max-width: 1180px) {
+  .af-shop-topbar-inner:has(.af-shop-topbar-hours) .af-shop-topbar-area-detail {
+    display: inline;
+  }
+}
+/* Hộp hỏi khu vực giao lần đầu vào cửa hàng: icon đứng đầu dòng, chữ xuống dòng thẳng hàng. */
+.af-shop-area-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+.af-shop-area-notice > svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--af-primary);
+}
 .af-shop-topbar-account {
   margin-left: auto;
   display: inline-flex;
@@ -178,7 +206,7 @@
 .af-shop-nav-menu:focus-within .af-shop-mega {
   display: grid;
 }
-/* Vừa bấm "Nước uống" hoặc một mục trong menu: ẩn cho tới khi chuột/focus đi vào lại. */
+/* Vừa bấm "Sản phẩm" hoặc một mục trong menu: ẩn cho tới khi chuột/focus đi vào lại. */
 .af-shop-nav-menu.is-closed .af-shop-mega {
   display: none;
 }
@@ -1939,6 +1967,20 @@
 .af-shop-cart-actions .ant-btn {
   width: 100%;
 }
+/* Chân giỏ hàng ghim dưới drawer: tổng tiền sát mép trên, đặt hàng một hàng, mua tiếp và xóa hết hàng dưới. */
+.af-shop-cart-checkout .af-order-summary {
+  margin-top: 0;
+}
+.af-shop-cart-checkout .af-form-hint {
+  margin: 6px 0 0;
+}
+.af-shop-cart-checkout .af-shop-cart-order {
+  margin-top: 14px;
+}
+.af-shop-cart-checkout .af-shop-cart-actions {
+  gap: 10px;
+  margin-top: 10px;
+}
 .af-shop-cart-foot {
   display: flex;
   align-items: center;
@@ -2058,6 +2100,7 @@
   }
   .af-shop-topbar-hours,
   .af-shop-topbar-label,
+  .af-shop-topbar-area-detail,
   .af-shop-topbar-register {
     display: none;
   }
@@ -2259,6 +2302,12 @@
   transform: translateX(16px) scale(0.78);
   will-change: transform, opacity;
   transform-origin: center;
+}
+/* Bình đã tách nền: bỏ khung trắng, bóng đổ ôm theo dáng bình. */
+.af-shop-product-item.is-cutout {
+  padding: 0;
+  border-radius: 0;
+  background: none;
 }
 .af-shop-product-carousel .slick-active .af-shop-product-item {
   animation: af-shop-product-focus 3.8s cubic-bezier(0.22, 0.8, 0.28, 1) both;

@@ -99,7 +99,7 @@ function LookupForm() {
           ) : (
             <>
               <p>Có tài khoản? Đăng nhập để xem mọi đơn đã đặt.</p>
-              <Link to="/shop/account">
+              <Link to="/shop/account" state={{ from: '/shop/orders' }}>
                 <Button size="large" block icon={<LogIn size={18} />}>
                   Đăng nhập
                 </Button>
