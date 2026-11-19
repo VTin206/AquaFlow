@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Alert, Button, Checkbox, Form, Input } from 'antd'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { LockKeyhole, Mail, Phone, UserRound, UserRoundPlus } from 'lucide-react'
 import { authService } from './authService'
 import { focusNextOnEnter } from '@/shared/utils/forms'
+import { loginReturnState } from './accountAccess'
 
 type RegisterValues = { fullName: string; phone: string; email: string; password: string; confirm: string; agree: boolean }
 
@@ -16,6 +17,8 @@ export function RegisterForm({ size = 'large' }: { size?: 'middle' | 'large' }) 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>()
   const [registeredEmail, setRegisteredEmail] = useState<string>()
+  // Đăng nhập ngay sau khi đăng ký vẫn quay về trang khách đang xem trước đó.
+  const returnState = loginReturnState(useLocation())
   const submit = async (values: RegisterValues) => {
     setLoading(true)
     setError(undefined)
@@ -37,7 +40,7 @@ export function RegisterForm({ size = 'large' }: { size?: 'middle' | 'large' }) 
         title="Tạo tài khoản thành công"
         description="Bạn có thể đăng nhập để đặt hàng và xem đơn của mình."
         action={
-          <Link to="/shop/account" state={{ email: registeredEmail }}>
+          <Link to="/shop/account" state={{ ...returnState, email: registeredEmail }}>
             <Button type="primary">Đăng nhập</Button>
           </Link>
         }

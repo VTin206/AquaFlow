@@ -1,5 +1,6 @@
 import { ArrowRight, Clock3, Mail, MapPin, Phone, ShieldCheck, Truck } from 'lucide-react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
+import { loginReturnState } from '@/features/auth/accountAccess'
 import { usePublishedArticles } from '@/features/articles/useArticles'
 
 type Props = {
@@ -14,6 +15,8 @@ export function ShopFooter({ contact }: Props) {
   const latest = usePublishedArticles('NEWS').data?.[0]
   const policies = usePublishedArticles('POLICY').data ?? []
   const openingHours = contact?.openingHours?.trim()
+  // Đăng nhập/đăng ký xong quay lại trang đang xem.
+  const returnState = loginReturnState(useLocation())
 
   return (
     <footer className="af-shop-footer">
@@ -36,8 +39,12 @@ export function ShopFooter({ contact }: Props) {
           </div>
           <p>Nước uống đóng bình, đóng chai từ các thương hiệu quen thuộc, nhập theo lô rõ hạn dùng và giao tận nơi trong khu vực.</p>
           <div className="af-shop-footer-trust" aria-label="Cam kết dịch vụ">
-            <span><Truck size={15} aria-hidden /> Giao tận nơi</span>
-            <span><ShieldCheck size={15} aria-hidden /> Nguồn hàng rõ ràng</span>
+            <span>
+              <Truck size={15} aria-hidden /> Giao tận nơi
+            </span>
+            <span>
+              <ShieldCheck size={15} aria-hidden /> Nguồn hàng rõ ràng
+            </span>
           </div>
         </section>
         <nav aria-labelledby="af-footer-info">
@@ -55,10 +62,14 @@ export function ShopFooter({ contact }: Props) {
               <Link to="/track">Tra cứu đơn</Link>
             </li>
             <li>
-              <Link to="/shop/account">Đăng nhập</Link>
+              <Link to="/shop/account" state={returnState}>
+                Đăng nhập
+              </Link>
             </li>
             <li>
-              <Link to="/shop/register">Tạo tài khoản</Link>
+              <Link to="/shop/register" state={returnState}>
+                Tạo tài khoản
+              </Link>
             </li>
           </ul>
         </nav>
