@@ -50,9 +50,9 @@ test('bấm đúng ô vuông chỉ đổi một lần', () => {
 
 test('lọc theo phường, đơn cùng phường nằm cạnh nhau và nút tạo chuyến ghi tổng số bình', async () => {
   const mixed: WaitingOrder[] = [
-    { id: '1', code: 'DH-1', customer: 'Anh Minh', address: '12 Lê Lợi', area: 'Phường Bến Thành', jugs: 2, due: 0, redelivery: false },
-    { id: '2', code: 'DH-2', customer: 'Chị Lan', address: '5 Hai Bà Trưng', area: 'Phường Tân Định', jugs: 1, due: 0, redelivery: false },
-    { id: '3', code: 'DH-3', customer: 'Cô Hoa', address: '40 Lý Tự Trọng', area: 'Phường Bến Thành', jugs: 3, due: 0, redelivery: false },
+    { id: '1', code: 'DH-1', customer: 'Anh Minh', address: '12 Lê Lợi', area: 'Phường Bến Thành', jugs: 2, units: 2, due: 0, redelivery: false },
+    { id: '2', code: 'DH-2', customer: 'Chị Lan', address: '5 Hai Bà Trưng', area: 'Phường Tân Định', jugs: 1, units: 1, due: 0, redelivery: false },
+    { id: '3', code: 'DH-3', customer: 'Cô Hoa', address: '40 Lý Tự Trọng', area: 'Phường Bến Thành', jugs: 3, units: 3, due: 0, redelivery: false },
   ]
   render(<WaitingOrdersCard orders={mixed} loading={false} selected={['1', '3']} onSelect={() => {}} onCreate={() => {}} />)
   const names = () => screen.getAllByText(/^(Anh Minh|Chị Lan|Cô Hoa)$/).map((cell) => cell.textContent)

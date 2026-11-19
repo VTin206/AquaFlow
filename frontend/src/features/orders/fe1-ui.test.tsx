@@ -190,7 +190,8 @@ describe('counter handover', () => {
 
   it('keeps delivery orders on the trip workflow', async () => {
     show(order)
-    expect((await screen.findByRole('link', { name: 'Xếp chuyến' })).getAttribute('href')).toBe('/delivery')
+    // Đơn giao tận nơi chưa ở chuyến nào: chọn tài xế ngay trong chi tiết đơn, không bàn giao tại quầy.
+    expect(await screen.findByRole('button', { name: 'Giao cho tài xế' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: /Bàn giao tại quầy/ })).toBeNull()
   })
 
