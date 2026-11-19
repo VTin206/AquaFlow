@@ -16,6 +16,7 @@ import { Link } from 'react-router'
 import { articleDate } from '@/features/articles/articleApi'
 import { usePublishedArticles } from '@/features/articles/useArticles'
 import { ArticleIcon } from '@/features/articles/articleIcons'
+import { productCutoutImage } from '@/features/inventory/productImages'
 import type { ShopProduct } from '../shopService'
 
 type Props = {
@@ -28,7 +29,15 @@ type Props = {
  * Phần giới thiệu trước danh mục: banner kèm tin mới, ưu đãi, lý do chọn và cách đặt hàng.
  */
 export function ShopIntro({ phone, products, onShop }: Props) {
-  const showcase = products.filter((product) => product.image && product.available !== false).slice(0, 9)
+  const withImage = products.filter((product) => product.image && product.available !== false)
+  // Banner ưu tiên bình đã tách nền để ảnh nằm thẳng trên nền xanh; chưa có bản tách nền thì giữ ảnh gốc trong khung trắng.
+  const cutouts = withImage.flatMap((product) => {
+    const src = productCutoutImage(product.image)
+    return src ? [{ id: product.id, name: product.name, src }] : []
+  })
+  const showcase = (
+    cutouts.length ? cutouts : withImage.map((product) => ({ id: product.id, name: product.name, src: product.image }))
+  ).slice(0, 9)
   const productSlides = showcase
   const tel = phone?.replace(/\s/g, '')
   const news = usePublishedArticles('NEWS')
@@ -47,7 +56,11 @@ export function ShopIntro({ phone, products, onShop }: Props) {
         <div className="af-shop-banner-slider" role="region" aria-label="Banner giới thiệu cửa hàng">
           <section className="af-shop-banner" aria-label="Giới thiệu cửa hàng">
             <div className="af-shop-banner-copy">
-              <h1>Nước uống sạch<br />giao tận nhà</h1>
+              <h1>
+                Nước uống sạch
+                <br />
+                giao tận nhà
+              </h1>
               <p>Bình 19L, nước suối đóng chai, nước khoáng từ các thương hiệu quen thuộc. Đặt vài bước, cửa hàng giao tới tận cửa.</p>
               <div className="af-shop-banner-actions">
                 <Button type="primary" size="large" icon={<ShoppingCart size={18} />} onClick={onShop}>
@@ -83,9 +96,14 @@ export function ShopIntro({ phone, products, onShop }: Props) {
                   pauseOnDotsHover={false}
                   infinite={productSlides.length > 1}
                 >
-                {productSlides.map((product) => (
-                  <div key={product.id} className="af-shop-product-slide">
-                    <img src={product.image} alt={product.name} className="af-shop-product-item" loading="lazy" />
+                  {productSlides.map((product) => (
+                    <div key={product.id} className="af-shop-product-slide">
+                      <img
+                        src={product.src}
+                        alt={product.name}
+                        className={`af-shop-product-item${cutouts.length ? ' is-cutout' : ''}`}
+                        loading="lazy"
+                      />
                     </div>
                   ))}
                 </Carousel>

@@ -2267,6 +2267,12 @@
   will-change: transform, opacity;
   transform-origin: center;
 }
+/* Bình đã tách nền: bỏ khung trắng, bóng đổ ôm theo dáng bình. */
+.af-shop-product-item.is-cutout {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+}
 .af-shop-product-carousel .slick-active .af-shop-product-item {
   animation: af-shop-product-focus 3.8s cubic-bezier(0.22, 0.8, 0.28, 1) both;
 }
