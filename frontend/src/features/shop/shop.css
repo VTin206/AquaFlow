@@ -32,6 +32,34 @@
   color: inherit;
   text-decoration: underline;
 }
+/* Có giờ mở cửa thì một hàng không đủ chỗ cho phần chú thích khu vực; chú thích vẫn xem được khi rê chuột. */
+.af-shop-topbar-inner:has(.af-shop-topbar-hours) .af-shop-topbar-area-detail {
+  display: none;
+}
+/* Chưa đủ rộng cho một hàng: hotline, đăng nhập, ngôn ngữ ở hàng trên; khu vực giao xuống hàng riêng. */
+@media (max-width: 1180px) {
+  .af-shop-topbar-area {
+    order: 1;
+    flex-basis: 100%;
+  }
+}
+@media (min-width: 641px) and (max-width: 1180px) {
+  .af-shop-topbar-inner:has(.af-shop-topbar-hours) .af-shop-topbar-area-detail {
+    display: inline;
+  }
+}
+/* Hộp hỏi khu vực giao lần đầu vào cửa hàng: icon đứng đầu dòng, chữ xuống dòng thẳng hàng. */
+.af-shop-area-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+.af-shop-area-notice > svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--af-primary);
+}
 .af-shop-topbar-account {
   margin-left: auto;
   display: inline-flex;
@@ -2072,6 +2100,7 @@
   }
   .af-shop-topbar-hours,
   .af-shop-topbar-label,
+  .af-shop-topbar-area-detail,
   .af-shop-topbar-register {
     display: none;
   }

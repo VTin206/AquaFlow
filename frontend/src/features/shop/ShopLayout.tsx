@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Badge, Button, Dropdown } from 'antd'
-import { ArrowLeft, ChevronDown, Clock3, Phone, Search, ShoppingCart } from 'lucide-react'
+import { ArrowLeft, ChevronDown, Clock3, MapPin, Phone, Search, ShoppingCart } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
 import { isCustomer } from '@/features/auth/accountAccess'
@@ -8,12 +8,14 @@ import { useAuth } from '@/features/auth/useAuth'
 import { useCart } from './cart'
 import { AccountMenu } from './components/AccountMenu'
 import { CartDrawer } from './components/CartDrawer'
+import { DeliveryAreaNotice } from './components/DeliveryAreaNotice'
 import { UkFlag, VietnamFlag } from './components/Flags'
 import { ShopEnter } from './components/ShopEnter'
 import { ShopFooter } from './components/ShopFooter'
 import { buildDrinkMenu, drinkMenuHref } from './drinkMenu'
 import { shopKeys, useShopContact, useShopProducts } from './shopService'
 import { useHomeLink, type FreshState } from '@/app/useHomeLink'
+import { DELIVERY_AREA, DELIVERY_AREA_EXCLUDES } from '@/shared/address/hcmWards'
 import './shop.css'
 
 /**
@@ -24,7 +26,8 @@ export function ShopLayout() {
   const settings = useShopContact()
   const drinkMenuColumns = buildDrinkMenu(useShopProducts().data ?? [])
   // Mục menu luôn là "Tra cứu đơn"; khách đã đăng nhập thì vào thẳng danh sách đơn của mình thay cho form nhập mã đơn.
-  const ownOrders = isCustomer(useAuth().user)
+  const { user, isAuthenticated, restoring } = useAuth()
+  const ownOrders = isCustomer(user)
   const navigate = useNavigate()
   const location = useLocation()
   const goHome = useHomeLink('/shop', shopKeys.products)
@@ -38,6 +41,8 @@ export function ShopLayout() {
   const [megaClosed, setMegaClosed] = useState(false)
   const count = cart.reduce((sum, line) => sum + line.quantity, 0)
   const tel = settings?.phone?.replace(/\s/g, '')
+  // Hỏi khu vực giao ở trang mua hàng cho khách chưa đăng nhập; tra cứu đơn, đăng nhập thì không chen vào.
+  const askArea = !restoring && !isAuthenticated && /^\/(?:shop(?:\/drinks|\/products\/[^/]+)?|checkout)\/?$/.test(location.pathname)
   const hours = settings?.openingHours?.trim()
 
   return (
@@ -56,6 +61,10 @@ export function ShopLayout() {
               <Clock3 size={14} aria-hidden /> Mở cửa {hours}
             </span>
           )}
+          <span className="af-shop-topbar-area" title={`Chỉ giao trong ${DELIVERY_AREA}, chưa gồm ${DELIVERY_AREA_EXCLUDES}`}>
+            <MapPin size={14} aria-hidden /> Chỉ giao trong {DELIVERY_AREA}
+            <span className="af-shop-topbar-area-detail">(chưa gồm {DELIVERY_AREA_EXCLUDES})</span>
+          </span>
           <span className="af-shop-topbar-account">
             <AccountMenu variant="text" />
           </span>
@@ -169,6 +178,7 @@ export function ShopLayout() {
       </main>
       <ShopFooter contact={settings} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
+      {askArea && <DeliveryAreaNotice phone={settings?.phone} />}
     </div>
   )
 }
