@@ -10,7 +10,8 @@ import { liveTripStatus, type TripViewStatus } from '../tripFocus'
 import { inTripRange, tripGroupOf, type TripGroup, type TripRange as Range } from '../tripGroups'
 import { TripStatusTag } from './TripStatusTag'
 
-const statusRank: Record<TripViewStatus, number> = { 'Chờ đối soát': 0, 'Chờ xuất phát': 1, 'Đang giao': 2, 'Đã đối soát': 3, 'Đã hủy': 4 }
+// Cùng thứ tự với các tab: theo đường đi của một chuyến.
+const statusRank: Record<TripViewStatus, number> = { 'Chờ xuất phát': 0, 'Đang giao': 1, 'Chờ đối soát': 2, 'Đã đối soát': 3, 'Đã hủy': 4 }
 const shortTime = (value: string) =>
   new Date(value).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
 
@@ -30,8 +31,8 @@ export function TripsList({ trips, loading, dueLabel, onOpen }: TripsListProps) 
   const inRange = trips.filter((trip) => inTripRange(trip, range))
   const count = (group: TripGroup) =>
     group === 'all' ? inRange.length : inRange.filter((trip) => tripGroupOf(liveTripStatus(trip)) === group).length
-  // Chưa chọn nhóm: mở thẳng việc cần làm, hết việc thì xem tất cả.
-  const group: TripGroup = chosenGroup ?? (count('settle') ? 'settle' : count('running') ? 'running' : 'all')
+  // "Tất cả" đứng đầu và mở sẵn; số trên từng tab cho biết còn bao nhiêu chuyến cần làm.
+  const group: TripGroup = chosenGroup ?? 'all'
   const visible = inRange
     .filter((trip) => group === 'all' || tripGroupOf(liveTripStatus(trip)) === group)
     .filter((trip) => matchesSearch(search, `#${trip.id} ${trip.id} ${trip.driverName ?? ''} ${trip.vehicle ?? ''}`))
@@ -45,10 +46,11 @@ export function TripsList({ trips, loading, dueLabel, onOpen }: TripsListProps) 
           value={group}
           onChange={setGroup}
           options={[
-            { value: 'settle', label: <CountLabel label="Chờ đối soát" count={count('settle')} urgent tone="warning" /> },
-            { value: 'running', label: <CountLabel label="Đang giao" count={count('running')} tone="info" /> },
-            { value: 'done', label: <CountLabel label="Đã xong" count={count('done')} tone="success" /> },
             { value: 'all', label: <CountLabel label="Tất cả" count={count('all')} /> },
+            { value: 'waiting', label: <CountLabel label="Chờ xuất phát" count={count('waiting')} tone="warning" /> },
+            { value: 'running', label: <CountLabel label="Đang giao" count={count('running')} tone="info" /> },
+            { value: 'settle', label: <CountLabel label="Chờ đối soát" count={count('settle')} urgent tone="warning" /> },
+            { value: 'done', label: <CountLabel label="Đã xong" count={count('done')} tone="success" /> },
           ]}
         />
         <div className="af-trips-filters">

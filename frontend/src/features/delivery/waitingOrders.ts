@@ -8,6 +8,7 @@ export const toWaitingOrder = (item: AvailableOrder, order?: Order): WaitingOrde
   code: item.orderCode,
   customer: item.recipientName || order?.customer || 'Khách hàng',
   address: item.deliveryAddress ?? '',
+  area: order?.area?.trim() || undefined,
   appointment: order?.appointment,
   appointmentUntil: order?.appointmentUntil,
   jugs: order ? jugCount(order) : 0,

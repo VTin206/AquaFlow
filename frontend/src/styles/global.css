@@ -3522,6 +3522,24 @@ html:has(.af-shell) body {
 }
 
 /* Tạo chuyến: tiêu đề nhỏ trên danh sách đơn, cách phần chọn tài xế bằng một đường kẻ. */
+/* Đơn chờ xếp chuyến: màn hình hẹp thì tiêu đề, bộ lọc phường và nút tạo chuyến xuống dòng thay vì tràn ngang. */
+@media (max-width: 640px) {
+  .af-waiting-card .ant-card-head-wrapper {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-block: 10px;
+  }
+  .af-waiting-card .ant-card-head-title {
+    overflow: visible;
+    white-space: normal;
+  }
+  .af-waiting-card .af-panel-title {
+    flex-wrap: wrap;
+  }
+  .af-waiting-card .ant-card-extra {
+    margin-inline-start: 0;
+  }
+}
 .af-trip-stops-title {
   margin: 0;
   padding-top: 12px;
