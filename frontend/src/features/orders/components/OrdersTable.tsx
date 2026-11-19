@@ -61,7 +61,7 @@ export function OrdersTable({
           <Button type="link" size="small" onClick={() => setSelectedId(id)} aria-label={`Xem đơn ${order.code ?? id}`}>
             {order.code ?? id}
           </Button>
-          {!compact && order.status === 'Chờ xác nhận' && <span className="af-new-tag">Mới</span>}
+          {!compact && (order.status === 'Chờ xác nhận' || order.status === 'Đã xác nhận') && <span className="af-new-tag">Mới</span>}
         </span>
       ),
     },
@@ -173,13 +173,7 @@ export function OrdersTable({
             dataSource={rows}
             loading={loading}
             size="small"
-            pagination={
-              compact
-                ? false
-                : server
-                  ? serverTablePagination(server)
-                  : tablePagination
-            }
+            pagination={compact ? false : server ? serverTablePagination(server) : tablePagination}
             locale={{ emptyText }}
             scroll={{ x: tableMinWidth }}
             rowSelection={

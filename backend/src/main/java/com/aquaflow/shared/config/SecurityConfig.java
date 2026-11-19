@@ -105,8 +105,12 @@ public class SecurityConfig {
                         // Delivery option lists expose store-wide data and are restricted to store staff.
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/delivery/drivers",
-                                "/api/v1/delivery/available-orders")
+                                "/api/v1/delivery/available-orders",
+                                "/api/v1/delivery/vehicles")
                                 .hasAnyRole("ADMIN", "SALES_STAFF")
+                        // Danh mục xe chỉ chủ cửa hàng thêm/sửa.
+                        .requestMatchers(HttpMethod.POST, "/api/v1/delivery/vehicles").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/delivery/vehicles/*").hasRole("ADMIN")
 
                         // Read endpoints are available to store staff and drivers. DeliveryService applies
                         // trip/driver ownership checks before returning data to DELIVERY_STAFF.

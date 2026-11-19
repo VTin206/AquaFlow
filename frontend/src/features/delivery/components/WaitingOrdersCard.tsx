@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
-import { Button, Card, Empty, Table, Tag, Typography } from 'antd'
+import { useState, type ReactNode } from 'react'
+import { Button, Card, Empty, Select, Table, Tag, Typography } from 'antd'
 import { Truck } from 'lucide-react'
 import { Money } from '@/shared/components/Money'
 import { dueTone } from '@/shared/utils/money'
@@ -10,10 +10,14 @@ export type WaitingOrder = {
   code: string
   customer: string
   address: string
+  /** Phường/xã giao, để lọc và gom các đơn gần nhau vào một chuyến. */
+  area?: string
   appointment?: string
   /** Cuối khung giờ khách chọn. */
   appointmentUntil?: string
   jugs: number
+  /** Số kiện (mọi bình, thùng, chai) để so với sức chở của xe. */
+  units: number
   /** null: đã thu một phần mà chưa biết số còn lại. */
   due: number | null
   redelivery: boolean
@@ -30,9 +34,30 @@ type WaitingOrdersCardProps = {
   error?: ReactNode
 }
 
-/** Đơn chờ xếp chuyến: chọn đơn rồi tạo chuyến. */
+const NO_AREA = 'Chưa rõ phường'
+const areaOf = (order: WaitingOrder) => order.area ?? NO_AREA
+
+/** Đơn chờ xếp chuyến: lọc theo phường, chọn đơn rồi tạo chuyến. */
 export function WaitingOrdersCard({ orders, loading, selected, onSelect, onCreate, error }: WaitingOrdersCardProps) {
+  const [area, setArea] = useState<string>()
+  // Mỗi phường kèm số đơn và số bình để biết gom bao nhiêu đơn thì đủ một chuyến.
+  const areas = [...new Set(orders.map(areaOf))]
+    .sort((a, b) => (a === NO_AREA ? 1 : b === NO_AREA ? -1 : a.localeCompare(b, 'vi')))
+    .map((name) => {
+      const inArea = orders.filter((order) => areaOf(order) === name)
+      return { name, count: inArea.length, jugs: inArea.reduce((sum, order) => sum + order.jugs, 0) }
+    })
+  // Phường đang lọc không còn đơn (vừa xếp chuyến hết) thì quay về tất cả.
+  const areaFilter = area && areas.some((item) => item.name === area) ? area : undefined
+  // Đơn cùng phường nằm cạnh nhau; trong một phường giữ thứ tự cũ.
+  const rank = new Map(areas.map((item, index) => [item.name, index]))
+  const shown = orders
+    .filter((order) => !areaFilter || areaOf(order) === areaFilter)
+    .map((order, index) => ({ order, index }))
+    .sort((a, b) => rank.get(areaOf(a.order))! - rank.get(areaOf(b.order))! || a.index - b.index)
+    .map(({ order }) => order)
   const chosen = orders.filter((order) => selected.includes(order.id))
+  const chosenJugs = chosen.reduce((sum, order) => sum + order.jugs, 0)
   const chosenIds = chosen.map((order) => order.id)
   // Bấm chỗ nào trên dòng cũng chọn/bỏ chọn đơn; ô vuông tự xử lý nên bỏ qua để không đổi hai lần.
   const toggleRow = (id: string, target: EventTarget) => {
@@ -43,18 +68,36 @@ export function WaitingOrdersCard({ orders, loading, selected, onSelect, onCreat
   const idle = !orders.length && !loading && !error
   return (
     <Card
-      className="af-card"
+      className="af-card af-waiting-card"
       styles={{ body: { padding: 0, display: idle ? 'none' : undefined }, header: idle ? { borderBottom: 0 } : undefined }}
       title={
         <span className="af-panel-title">
           Đơn chờ xếp chuyến <Tag>{orders.length}</Tag>
+          {areas.length > 1 && (
+            <Select
+              size="small"
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              aria-label="Lọc theo phường"
+              placeholder="Tất cả phường"
+              value={areaFilter}
+              onChange={setArea}
+              popupMatchSelectWidth={false}
+              style={{ minWidth: 180 }}
+              options={areas.map((item) => ({
+                value: item.name,
+                label: `${item.name} · ${item.count} đơn${item.jugs ? ` · ${item.jugs} bình` : ''}`,
+              }))}
+            />
+          )}
         </span>
       }
       extra={
         // Chưa chọn đơn: chỉ gợi ý bằng chữ, không để nút bị khóa xám lẫn màu với chữ trên nút.
         chosen.length ? (
           <Button type="primary" icon={<Truck size={16} />} onClick={onCreate}>
-            {`Tạo chuyến (${chosen.length} đơn)`}
+            {`Tạo chuyến (${chosen.length} đơn${chosenJugs ? ` · ${chosenJugs} bình` : ''})`}
           </Button>
         ) : (
           <Typography.Text type="secondary">{idle ? 'Không có đơn chờ giao' : 'Chọn đơn để tạo chuyến'}</Typography.Text>
@@ -67,10 +110,11 @@ export function WaitingOrdersCard({ orders, loading, selected, onSelect, onCreat
           size="middle"
           rowKey="id"
           loading={loading}
-          dataSource={orders}
+          dataSource={shown}
           pagination={false}
-          scroll={{ x: 820, y: 320 }}
-          rowSelection={{ selectedRowKeys: chosenIds, onChange: (keys) => onSelect(keys as string[]) }}
+          scroll={{ x: 960, y: 320 }}
+          // Giữ đơn đã chọn ở phường khác khi đổi bộ lọc, để gom đơn nhiều phường vào một chuyến.
+          rowSelection={{ selectedRowKeys: chosenIds, preserveSelectedRowKeys: true, onChange: (keys) => onSelect(keys as string[]) }}
           rowClassName="af-row-clickable"
           onRow={(order) => ({ onClick: (event) => toggleRow(order.id, event.target) })}
           locale={{
@@ -107,6 +151,14 @@ export function WaitingOrdersCard({ orders, loading, selected, onSelect, onCreat
                   </small>
                 </div>
               ),
+            },
+            {
+              title: 'Phường',
+              key: 'area',
+              width: 180,
+              // Một dòng; tên dài thì cắt và hiện đủ khi rê chuột.
+              ellipsis: { showTitle: true },
+              render: (_, order) => order.area ?? <Typography.Text type="secondary">—</Typography.Text>,
             },
             {
               title: 'Hẹn giao',

@@ -6,20 +6,21 @@ import {
   deliveryApi,
   type AvailableOrder,
   type DeliveryAttempt,
+  type DeliveryDriver,
+  type Vehicle,
   type DeliveryStop,
   type DeliveryTrip,
   type ResultInput,
   type SettlementInput,
   type TripCollections,
 } from './deliveryApi'
-import { useAvailableOrders, useDeliveryDrivers, useLiveTrip, useLiveTrips, useTripCollections } from './useLiveTrips'
+import { useAvailableOrders, useDeliveryDrivers, useLiveTrip, useLiveTrips, useTripCollections, useVehicles } from './useLiveTrips'
 
 type Q<T> = { data?: T; isPending: boolean; isError: boolean; error: Error | null; refetch: () => unknown }
-type Driver = { id: number; name: string }
 export type CreateResult = { tripId: number; failed: { item: WaitingOrder; error: string }[] }
 
 export type TripOps = {
-  create: (values: { driverId?: number; vehicle?: string }, orders: WaitingOrder[]) => Promise<CreateResult>
+  create: (values: { driverId?: number; vehicle?: string; vehicleId?: number }, orders: WaitingOrder[]) => Promise<CreateResult>
   dispatchAll: (trip: DeliveryTrip) => Promise<unknown>
   dispatchStop: (trip: DeliveryTrip, stop: DeliveryStop) => Promise<unknown>
   depart: (trip: DeliveryTrip) => Promise<unknown>
@@ -38,7 +39,8 @@ export type TripBackend = {
   useTrips: () => Q<DeliveryTrip[]>
   useDetail: (id: number) => Q<DeliveryTrip>
   useCollections: (id: number) => Q<TripCollections>
-  useDrivers: (enabled?: boolean) => Q<Driver[]>
+  useDrivers: (enabled?: boolean) => Q<DeliveryDriver[]>
+  useVehicles: (enabled?: boolean) => Q<Vehicle[]>
   useAvailable: () => Q<AvailableOrder[]>
   ops: TripOps
 }
@@ -48,10 +50,15 @@ const liveTripBackend: TripBackend = {
   useDetail: useLiveTrip,
   useCollections: useTripCollections,
   useDrivers: useDeliveryDrivers,
+  useVehicles,
   useAvailable: useAvailableOrders,
   ops: {
     create: async (values, orders) => {
-      const trip = await deliveryApi.create({ driverId: values.driverId, vehicle: values.vehicle?.trim() || undefined })
+      const trip = await deliveryApi.create({
+        driverId: values.driverId,
+        vehicleId: values.vehicleId,
+        vehicle: values.vehicleId ? undefined : values.vehicle?.trim() || undefined,
+      })
       const result = await runEach(orders, (order) => deliveryApi.add(trip.id, Number(order.id), order.redelivery))
       return { tripId: trip.id, failed: result.failed }
     },

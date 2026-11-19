@@ -26,9 +26,15 @@ public class DeliveryRepository {
 
     public DeliveryRepository(JdbcTemplate jdbc) { this.jdbc = jdbc; }
 
+    /** {@code vehicleId}/{@code vehicleCapacity}: xe trong danh mục, null khi chuyến chỉ ghi biển số. */
     public record TripRow(Long id, Long driverId, String driverName, String vehicle,
                           String status, Long createdBy, OffsetDateTime createdAt,
-                          OffsetDateTime startedAt, OffsetDateTime endedAt) {}
+                          OffsetDateTime startedAt, OffsetDateTime endedAt, Long vehicleId, Integer vehicleCapacity) {
+        public TripRow(Long id, Long driverId, String driverName, String vehicle, String status, Long createdBy,
+                       OffsetDateTime createdAt, OffsetDateTime startedAt, OffsetDateTime endedAt) {
+            this(id, driverId, driverName, vehicle, status, createdBy, createdAt, startedAt, endedAt, null, null);
+        }
+    }
 
     public record OrderRow(Long id, String status, String fulfillmentType, boolean deliveryFailed) {}
 
@@ -36,8 +42,9 @@ public class DeliveryRepository {
 
     private static final String TRIP_SELECT = """
             SELECT t.id, t.driver_id, COALESCE(u.full_name, t.driver_name) AS driver_name,
-                   t.vehicle, t.status, t.created_by, t.created_at, t.started_at, t.ended_at
-            FROM delivery_trips t LEFT JOIN users u ON u.id = t.driver_id
+                   COALESCE(v.plate, t.vehicle) AS vehicle, t.status, t.created_by, t.created_at, t.started_at, t.ended_at,
+                   t.vehicle_id, v.capacity_units AS vehicle_capacity
+            FROM delivery_trips t LEFT JOIN users u ON u.id = t.driver_id LEFT JOIN vehicles v ON v.id = t.vehicle_id
             """;
 
     private static final RowMapper<TripRow> TRIP_MAPPER = (rs, rowNum) -> new TripRow(
@@ -45,7 +52,8 @@ public class DeliveryRepository {
             rs.getString("driver_name"), rs.getString("vehicle"), rs.getString("status"),
             rs.getLong("created_by"), rs.getObject("created_at", OffsetDateTime.class),
             rs.getObject("started_at", OffsetDateTime.class),
-            rs.getObject("ended_at", OffsetDateTime.class));
+            rs.getObject("ended_at", OffsetDateTime.class),
+            rs.getObject("vehicle_id", Long.class), rs.getObject("vehicle_capacity", Integer.class));
 
     public TripRow lockTrip(long id) {
         return jdbc.query(TRIP_SELECT + " WHERE t.id = ? FOR UPDATE OF t", TRIP_MAPPER, id)
@@ -77,10 +85,14 @@ public class DeliveryRepository {
     }
 
     public Long createTrip(long creatorId, Long driverId, String driverName, String vehicle) {
+        return createTrip(creatorId, driverId, driverName, vehicle, null);
+    }
+
+    public Long createTrip(long creatorId, Long driverId, String driverName, String vehicle, Long vehicleId) {
         return jdbc.queryForObject("""
-                INSERT INTO delivery_trips(created_by, driver_id, driver_name, vehicle)
-                VALUES (?, ?, ?, ?) RETURNING id
-                """, Long.class, creatorId, driverId, driverName, vehicle);
+                INSERT INTO delivery_trips(created_by, driver_id, driver_name, vehicle, vehicle_id)
+                VALUES (?, ?, ?, ?, ?) RETURNING id
+                """, Long.class, creatorId, driverId, driverName, vehicle, vehicleId);
     }
 
     public List<DriverResponse> drivers() {
@@ -387,9 +399,16 @@ public class DeliveryRepository {
                     loads.getOrDefault(stop.assignmentId(), List.of()), stop.requestedAt(), stop.note(),
                     stop.requestedUntil()));
         }
+        // Số kiện trên mỗi chuyến, để màn hình xếp chuyến so với sức chở của xe.
+        Map<Long, Integer> units = new HashMap<>();
+        named.query("""
+                SELECT a.trip_id, COALESCE(SUM(oi.quantity), 0) AS units FROM delivery_assignments a
+                JOIN order_items oi ON oi.order_id = a.order_id WHERE a.trip_id IN (:ids) AND a.active GROUP BY a.trip_id
+                """, tripIds, rs -> { units.put(rs.getLong("trip_id"), rs.getInt("units")); });
         return trips.stream().map(trip -> new TripResponse(trip.id(), trip.driverId(), trip.driverName(), trip.vehicle(),
                 trip.status(), trip.createdAt(), trip.startedAt(), trip.endedAt(),
-                trip.createdBy(), assigned.getOrDefault(trip.id(), List.of()), handovers.get(trip.id()))).toList();
+                trip.createdBy(), assigned.getOrDefault(trip.id(), List.of()), handovers.get(trip.id()),
+                trip.vehicleId(), trip.vehicleCapacity(), units.getOrDefault(trip.id(), 0))).toList();
     }
 
     /**

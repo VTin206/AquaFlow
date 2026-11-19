@@ -42,3 +42,9 @@ export function useDeliveryDrivers(enabled = true) {
   const who = useWho()
   return useQuery({ queryKey: ['live', 'delivery-drivers', ...who], queryFn: deliveryApi.drivers, enabled })
 }
+
+/** Danh mục xe, kèm chuyến đang giữ từng xe. */
+export function useVehicles(enabled = true) {
+  const who = useWho()
+  return useQuery({ queryKey: ['live', 'delivery-vehicles', ...who], queryFn: deliveryApi.vehicles, enabled })
+}

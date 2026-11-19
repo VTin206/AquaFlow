@@ -17,6 +17,8 @@ const mocks = vi.hoisted(() => ({
   user: null as null | { name: string; role: string; email?: string; phone?: string | null },
   profile: null as null | { customer: string; phone: string; address: string; area: string },
   mutateAsync: vi.fn(),
+  bank: undefined as undefined | { bankName: string; bankAccount: string; bankHolder: string },
+  bottleTypeId: undefined as number | undefined,
 }))
 
 vi.mock('@/features/auth/useAuth', () => ({ useAuth: () => ({ user: mocks.user }) }))
@@ -32,8 +34,9 @@ vi.mock('./cart', () => ({
 }))
 vi.mock('./shopService', () => ({
   useShopContact: () => ({ openingHours: '6:00 – 21:00 hằng ngày' }),
-  useShopProducts: () => ({ data: [{ id: '1', name: 'Nước 19L', price: 50000, unit: 'Bình', available: true }], isPending: false, isError: false }),
+  useShopProducts: () => ({ data: [{ id: '1', name: 'Nước 19L', price: 50000, unit: 'Bình', available: true, bottleTypeId: mocks.bottleTypeId }], isPending: false, isError: false }),
   usePlaceWebOrder: () => ({ mutateAsync: mocks.mutateAsync, isPending: false }),
+  useTransferAccount: () => mocks.bank,
 }))
 
 const renderPage = () =>
@@ -73,6 +76,8 @@ beforeEach(() => {
   vi.mocked(customerAccountApi.addresses).mockReset().mockResolvedValue([])
   vi.mocked(customerAccountApi.createAddress).mockClear()
   mocks.profile = null
+  mocks.bottleTypeId = undefined
+  mocks.bank = { bankName: 'MB', bankAccount: '123', bankHolder: 'AQUAFLOW' }
   mocks.mutateAsync.mockReset()
   mocks.mutateAsync.mockResolvedValue({ id: 5, orderCode: 'AF-5' })
 })
@@ -188,7 +193,7 @@ test('chưa báo được phí giao thì ghi tạm tính và khóa đặt đơn'
   expect(screen.getAllByText('Chưa có báo phí').length).toBeGreaterThan(0)
   expect(screen.getAllByText('Tạm tính').length).toBeGreaterThan(0)
   expect(screen.queryByText('Tổng cộng')).toBeNull()
-  expect(screen.getByText('Thanh toán khi nhận hàng')).toBeTruthy()
+  expect(screen.getByLabelText('Trả khi nhận hàng')).toBeTruthy()
   expect((screen.getAllByRole('button', { name: /Đặt đơn/ })[0] as HTMLButtonElement).disabled).toBe(true)
 })
 
@@ -196,7 +201,7 @@ test('đổi tầng tải phí mới và gửi tổng tiền đã báo khi đặ
   renderPage()
   await waitFor(() => expect(deliveryQuoteApi.quote).toHaveBeenCalledWith([{ productId: 1, quantity: 2 }], 0))
   vi.mocked(deliveryQuoteApi.quote).mockResolvedValue({ subtotal: 100000, baseFee: 15000, stairsFee: 16000, deliveryFee: 31000, total: 131000 })
-  fireEvent.change(screen.getByLabelText('Số tầng phải đi thang bộ'), { target: { value: '3' } })
+  fireEvent.change(screen.getByLabelText('Số tầng đi thang bộ'), { target: { value: '3' } })
   await waitFor(() => expect(deliveryQuoteApi.quote).toHaveBeenLastCalledWith([{ productId: 1, quantity: 2 }], 3))
   type('Tên người nhận', 'Khách Test')
   type('Số điện thoại', '0901234567')
@@ -243,4 +248,59 @@ test('khách vãng lai thấy lối đăng nhập quay lại trang đặt hàng;
   mocks.user = { name: 'Khách', role: 'CUSTOMER', email: 'k@example.com', phone: '0901234567' }
   renderPage()
   expect(screen.queryByRole('link', { name: 'Đăng nhập' })).toBeNull()
+})
+
+test('giao tới cổng, sảnh thì không hỏi số tầng, báo phí 0 tầng và ghi vào đầu ghi chú', async () => {
+  renderPage()
+  expect(screen.getByLabelText('Giao tận phòng')).toHaveProperty('checked', true)
+  fireEvent.change(screen.getByLabelText('Số tầng đi thang bộ'), { target: { value: '3' } })
+  await waitFor(() => expect(deliveryQuoteApi.quote).toHaveBeenLastCalledWith([{ productId: 1, quantity: 2 }], 3))
+  fireEvent.click(screen.getByLabelText('Giao tới cổng, sảnh'))
+  await waitFor(() => expect(screen.queryByLabelText('Số tầng đi thang bộ')).toBeNull())
+  await waitFor(() => expect(deliveryQuoteApi.quote).toHaveBeenLastCalledWith([{ productId: 1, quantity: 2 }], 0))
+  type('Tên người nhận', 'Khách Test')
+  type('Số điện thoại', '0901234567')
+  await fillDelivery()
+  type('Ghi chú (không bắt buộc)', 'gọi trước')
+  await placeOrder()
+  await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledTimes(1))
+  expect(mocks.mutateAsync.mock.calls[0][0]).toMatchObject({ floor: 0, note: 'Giao tới cổng/sảnh · gọi trước' })
+})
+
+test('chọn chuyển khoản trước thì báo mã QR hiện sau khi xác nhận và ghi vào ghi chú đơn', async () => {
+  renderPage()
+  fireEvent.click(screen.getByLabelText('Chuyển khoản trước'))
+  expect(await screen.findByText(/trang theo dõi đơn sẽ hiện mã QR/)).toBeTruthy()
+  type('Tên người nhận', 'Khách Test')
+  type('Số điện thoại', '0901234567')
+  await fillDelivery()
+  await placeOrder()
+  await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledTimes(1))
+  expect(mocks.mutateAsync.mock.calls[0][0]).toMatchObject({ note: 'Giao tận phòng · Muốn chuyển khoản trước' })
+})
+
+test('cửa hàng chưa có số tài khoản thì chuyển khoản trước vẫn hiện nhưng khóa', () => {
+  mocks.bank = undefined
+  renderPage()
+  expect(screen.getByLabelText('Chuyển khoản trước (chưa hỗ trợ)')).toHaveProperty('disabled', true)
+  expect(screen.getByLabelText('Trả khi nhận hàng')).toHaveProperty('checked', true)
+})
+
+test('bình đổi vỏ thì hỏi có vỏ đổi hay cọc vỏ mới; chọn cọc thì ghi vào ghi chú đơn', async () => {
+  mocks.bottleTypeId = 7
+  renderPage()
+  expect(screen.getByLabelText('Có vỏ đổi')).toHaveProperty('checked', true)
+  expect(screen.getAllByText('Đổi vỏ cùng loại khi nhận hàng, không tính cọc.').length).toBeGreaterThan(0)
+  fireEvent.click(screen.getByLabelText('Chưa có vỏ, cọc vỏ mới'))
+  type('Tên người nhận', 'Khách Test')
+  type('Số điện thoại', '0901234567')
+  await fillDelivery()
+  await placeOrder()
+  await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledTimes(1))
+  expect(mocks.mutateAsync.mock.calls[0][0]).toMatchObject({ note: 'Giao tận phòng · Chưa có vỏ, cọc vỏ mới' })
+})
+
+test('giỏ không có sản phẩm đổi vỏ thì không hỏi vỏ bình', () => {
+  renderPage()
+  expect(screen.queryByLabelText('Có vỏ đổi')).toBeNull()
 })

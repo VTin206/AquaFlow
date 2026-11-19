@@ -3,9 +3,13 @@ import { Button } from 'antd'
 import { bottleTypeApi } from '@/features/live/bottleTypeApi'
 import { currency } from '@/shared/utils/format'
 import type { CheckoutLine } from './CheckoutReview'
+import type { ShellChoice } from '../checkoutChoices'
 
-/** Deposit is an estimate for no exchanged shells, not a sale payment or a confirmed charge. */
-export function CheckoutDeposit({ lines }: { lines: CheckoutLine[] }) {
+/**
+ * Deposit is an estimate for no exchanged shells, not a sale payment or a confirmed charge.
+ * `choice`: khách chọn có vỏ đổi thì không hiện tiền cọc; chọn cọc vỏ mới (hoặc chưa chọn) thì hiện cọc dự kiến.
+ */
+export function CheckoutDeposit({ lines, choice }: { lines: CheckoutLine[]; choice?: ShellChoice }) {
   const quantities = new Map<number, number>()
   for (const line of lines) {
     const id = line.product?.bottleTypeId
@@ -21,6 +25,7 @@ export function CheckoutDeposit({ lines }: { lines: CheckoutLine[] }) {
     refetchInterval: 30000,
   })
   if (quantities.size === 0) return <p>Cửa hàng xác nhận tiền cọc nếu sản phẩm cần đổi vỏ.</p>
+  if (choice === 'exchange') return <p>Đổi vỏ cùng loại khi nhận hàng, không tính cọc.</p>
   if (rates.isError) return <p role="alert">Chưa cập nhật được giá cọc. Cửa hàng sẽ xác nhận trước khi giao. <Button size="small" onClick={() => void rates.refetch()}>Tải lại giá cọc</Button></p>
   if (rates.isPending) return <p role="status">Đang tải giá cọc theo loại vỏ…</p>
   const rows = [...quantities].map(([id, quantity]) => ({ type: rates.data.find(t => t.id === id && t.active), quantity }))

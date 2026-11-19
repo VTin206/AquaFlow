@@ -334,8 +334,13 @@ class DispatchPostgresIntegrationTest {
     void cannotDispatchAnAssignmentThroughAnotherTrip() {
         batch("WRONG-TRIP", 10, 5);
         prepare();
+        // Chuyến đích dùng tài xế khác: một tài xế không được ở hai chuyến chưa xuất phát cùng lúc.
+        long otherDriverId = jdbc.queryForObject("""
+                INSERT INTO users (role_id, full_name, email, password_hash)
+                VALUES ((SELECT id FROM roles WHERE code = 'DELIVERY_STAFF'), 'Other driver', ?, 'unused') RETURNING id
+                """, Long.class, UUID.randomUUID() + "@other.dispatch.test");
         long targetTripId = delivery.create(
-                new com.aquaflow.delivery.api.DeliveryDtos.CreateTripRequest(driverId, null), actorId, true).id();
+                new com.aquaflow.delivery.api.DeliveryDtos.CreateTripRequest(otherDriverId, null), actorId, true).id();
         assignToTrip();
 
         assertThatThrownBy(() -> delivery.dispatchAssignment(targetTripId, orderId, actorId, true))
