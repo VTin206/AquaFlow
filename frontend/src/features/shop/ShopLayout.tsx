@@ -26,8 +26,7 @@ export function ShopLayout() {
   const settings = useShopContact()
   const drinkMenuColumns = buildDrinkMenu(useShopProducts().data ?? [])
   // Mục menu luôn là "Tra cứu đơn"; khách đã đăng nhập thì vào thẳng danh sách đơn của mình thay cho form nhập mã đơn.
-  const { user, isAuthenticated, restoring } = useAuth()
-  const ownOrders = isCustomer(user)
+  const ownOrders = isCustomer(useAuth().user)
   const navigate = useNavigate()
   const location = useLocation()
   const goHome = useHomeLink('/shop', shopKeys.products)
@@ -41,8 +40,8 @@ export function ShopLayout() {
   const [megaClosed, setMegaClosed] = useState(false)
   const count = cart.reduce((sum, line) => sum + line.quantity, 0)
   const tel = settings?.phone?.replace(/\s/g, '')
-  // Hỏi khu vực giao ở trang mua hàng cho khách chưa đăng nhập; tra cứu đơn, đăng nhập thì không chen vào.
-  const askArea = !restoring && !isAuthenticated && /^\/(?:shop(?:\/drinks|\/products\/[^/]+)?|checkout)\/?$/.test(location.pathname)
+  // Mới vào web là hỏi khu vực giao, ở các trang mua hàng; tra cứu đơn, đăng nhập thì không chen vào.
+  const askArea = /^\/(?:shop(?:\/drinks|\/products\/[^/]+)?|checkout)\/?$/.test(location.pathname)
   const hours = settings?.openingHours?.trim()
 
   return (
