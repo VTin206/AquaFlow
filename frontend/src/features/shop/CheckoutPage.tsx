@@ -15,7 +15,16 @@ import { submitCheckoutOnce } from './checkoutSubmit'
 import { CheckoutReview } from './components/CheckoutReview'
 import { CheckoutDeposit } from './components/CheckoutDeposit'
 import { DELIVERY_SLOTS, slotStarted, slotText, slotWindow, type DeliverySlotKey } from '@/shared/utils/deliveryWindow'
-import { usePlaceWebOrder, useShopProducts } from './shopService'
+import { usePlaceWebOrder, useShopProducts, useTransferAccount } from './shopService'
+import {
+  CUSTOMER_NOTE_MAX,
+  DELIVERY_PLACES,
+  PAYMENT_CHOICES,
+  checkoutNote,
+  stairFloors,
+  type DeliveryPlace,
+  type PaymentChoice,
+} from './checkoutChoices'
 import { useAuth } from '@/features/auth/useAuth'
 import { isCustomer } from '@/features/auth/accountAccess'
 import { accountKey, customerAccountApi, type SavedAddress } from './customerAccountApi'
@@ -34,7 +43,9 @@ type CheckoutForm = {
   note?: string
   remember: boolean
   saveAddress?: boolean
+  place: DeliveryPlace
   floor: number
+  payment: PaymentChoice
 }
 
 const nextStepHint = 'Sau khi đặt, cửa hàng sẽ xác nhận đơn rồi giao hàng cho bạn.'
@@ -59,7 +70,12 @@ export function CheckoutPage() {
   const navigate = useNavigate()
   const { openCart } = useOutletContext<{ openCart: () => void }>()
   const [form] = Form.useForm<CheckoutForm>()
-  const floor: number = Form.useWatch('floor', form) ?? 0
+  const place: DeliveryPlace = Form.useWatch('place', form) ?? 'room'
+  // Giao ở cổng/sảnh thì không đi thang bộ: báo phí và gửi đơn với 0 tầng.
+  const floor = stairFloors(place, Form.useWatch('floor', form) ?? 0)
+  const payment: PaymentChoice = Form.useWatch('payment', form) ?? 'cod'
+  // Cửa hàng chưa nhập số tài khoản thì chưa nhận chuyển khoản; vẫn hiện lựa chọn nhưng khóa và ghi "chưa hỗ trợ".
+  const canTransfer = Boolean(useTransferAccount())
   const [submitError, setSubmitError] = useState<string>()
   const [placedLiveOrder, setPlacedLiveOrder] = useState<LiveOrder>()
   const submitLock = useRef(false)
@@ -140,9 +156,9 @@ export function CheckoutPage() {
       area: values.area.trim(),
       appointment: chosen?.from.toISOString(),
       appointmentUntil: chosen?.until.toISOString(),
-      note: values.note?.trim(),
+      note: checkoutNote(values.place, canTransfer ? values.payment : 'cod', values.note),
       lines: cart,
-      floor: values.floor ?? 0,
+      floor: stairFloors(values.place, values.floor ?? 0),
       expectedTotal: quote.data!.total,
     }
     void submitCheckoutOnce(
@@ -280,7 +296,16 @@ export function CheckoutPage() {
             name="checkout"
             layout="vertical"
             scrollToFirstError={{ focus: true, block: 'center' }}
-            initialValues={{ ...accountDefaults, ...profile, when: 'asap', floor: 0, remember: Boolean(profile), saveAddress: true }}
+            initialValues={{
+              ...accountDefaults,
+              ...profile,
+              when: 'asap',
+              place: 'room',
+              floor: 0,
+              payment: 'cod',
+              remember: Boolean(profile),
+              saveAddress: true,
+            }}
             onFinish={submit}
             onKeyDown={handleFormKeys}
           >
@@ -311,25 +336,14 @@ export function CheckoutPage() {
                     <Input inputMode="tel" autoComplete="tel" />
                   </Form.Item>
                 </div>
-                {/* Phường/xã và số tầng chung một hàng; phần giải thích nằm trong dấu (?) cạnh nhãn để form ngắn lại. */}
-                <div className="af-checkout-place">
-                  <Form.Item
-                    name="area"
-                    label="Phường/Xã"
-                    tooltip="Cửa hàng giao trong khu vực TP. Hồ Chí Minh cũ (chưa gồm Bình Dương, Bà Rịa - Vũng Tàu)."
-                    rules={[{ required: true, whitespace: true, message: 'Chọn phường/xã giao hàng.' }, { max: 150 }]}
-                  >
-                    <WardSelect />
-                  </Form.Item>
-                  <Form.Item
-                    name="floor"
-                    label="Số tầng phải đi thang bộ"
-                    tooltip="Nhập 0 nếu giao tầng trệt hoặc có thang máy."
-                    rules={[{ required: true }, { type: 'integer', min: 0, max: 30 }]}
-                  >
-                    <InputNumber min={0} max={30} precision={0} />
-                  </Form.Item>
-                </div>
+                <Form.Item
+                  name="area"
+                  label="Phường/Xã"
+                  tooltip="Cửa hàng giao trong khu vực TP. Hồ Chí Minh cũ (chưa gồm Bình Dương, Bà Rịa - Vũng Tàu)."
+                  rules={[{ required: true, whitespace: true, message: 'Chọn phường/xã giao hàng.' }, { max: 150 }]}
+                >
+                  <WardSelect />
+                </Form.Item>
                 <Form.Item
                   name="address"
                   label="Địa chỉ giao"
@@ -337,6 +351,22 @@ export function CheckoutPage() {
                 >
                   <TextArea autoComplete="street-address" rows={1} maxLength={255} placeholder="Số nhà, tên đường, tòa nhà, tầng" />
                 </Form.Item>
+                {/* Nơi nhận và số tầng chung một hàng; giao ở cổng/sảnh thì không hỏi số tầng. */}
+                <div className={`af-checkout-place${place === 'gate' ? ' is-gate' : ''}`}>
+                  <Form.Item name="place" label="Nhận hàng">
+                    <Radio.Group options={DELIVERY_PLACES} />
+                  </Form.Item>
+                  {place === 'room' && (
+                    <Form.Item
+                      name="floor"
+                      label="Số tầng đi thang bộ"
+                      tooltip="Nhập 0 nếu giao tầng trệt hoặc có thang máy."
+                      rules={[{ required: true }, { type: 'integer', min: 0, max: 30 }]}
+                    >
+                      <InputNumber min={0} max={30} precision={0} />
+                    </Form.Item>
+                  )}
+                </div>
                 <DeliveryFeeSummary
                   fee={fee}
                   quote={quoteBlocked ? undefined : quote.data}
@@ -401,8 +431,8 @@ export function CheckoutPage() {
                     )
                   }}
                 </Form.Item>
-                <Form.Item name="note" label="Ghi chú (không bắt buộc)" rules={[{ max: 500 }]}>
-                  <TextArea rows={1} maxLength={500} placeholder="Ví dụ: gọi trước khi đến" />
+                <Form.Item name="note" label="Ghi chú (không bắt buộc)" rules={[{ max: CUSTOMER_NOTE_MAX }]}>
+                  <TextArea rows={1} maxLength={CUSTOMER_NOTE_MAX} placeholder="Ví dụ: gọi trước khi đến" />
                 </Form.Item>
                 {canSaveAddress && (
                   <Form.Item name="saveAddress" valuePropName="checked" className="af-checkout-remember">
@@ -414,9 +444,25 @@ export function CheckoutPage() {
                 </Form.Item>
               </Card>
               <div className="af-checkout-payment">
-                <Wallet size={20} aria-hidden />
-                <strong>Thanh toán khi nhận hàng</strong>
-                <span>hoặc chuyển khoản trước sau khi cửa hàng xác nhận đơn</span>
+                <Form.Item
+                  name="payment"
+                  label={
+                    <>
+                      <Wallet size={18} aria-hidden /> Thanh toán
+                    </>
+                  }
+                >
+                  <Radio.Group
+                    options={PAYMENT_CHOICES.map((choice) =>
+                      choice.value === 'transfer' && !canTransfer
+                        ? { ...choice, label: `${choice.label} (chưa hỗ trợ)`, disabled: true }
+                        : choice,
+                    )}
+                  />
+                </Form.Item>
+                {payment === 'transfer' && canTransfer && (
+                  <p>Cửa hàng xác nhận giá xong, trang theo dõi đơn sẽ hiện mã QR để bạn chuyển khoản.</p>
+                )}
               </div>
               <p className="af-form-hint af-checkout-next-phone">{nextStepHint}</p>
             </div>
