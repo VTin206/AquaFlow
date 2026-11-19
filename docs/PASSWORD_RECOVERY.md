@@ -23,6 +23,8 @@ Gửi thư xử lý trong hàng đợi bộ nhớ có giới hạn để phản 
 
 ## Gmail SMTP
 
+Hướng dẫn từng bước (tạo Gmail cửa hàng, mật khẩu ứng dụng, nạp `.env`, xử lý lỗi): [EMAIL_SETUP.md](EMAIL_SETUP.md). Cùng cấu hình SMTP này dùng cho mã xác nhận email khi đăng ký.
+
 Google: [SMTP và STARTTLS](https://developers.google.com/workspace/gmail/imap/imap-smtp), [tạo App Password](https://support.google.com/mail/answer/185833).
 
 1. Chọn Gmail của cửa hàng, bật xác minh hai bước, tạo App Password nếu tài khoản hỗ trợ. Không dùng mật khẩu đăng nhập Gmail thông thường.

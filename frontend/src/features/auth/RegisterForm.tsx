@@ -5,33 +5,91 @@ import { LockKeyhole, Mail, Phone, UserRound, UserRoundPlus } from 'lucide-react
 import { authService } from './authService'
 import { focusNextOnEnter } from '@/shared/utils/forms'
 import { loginReturnState } from './accountAccess'
+import { EmailCodeModal } from './EmailCodeModal'
 
 type RegisterValues = { fullName: string; phone: string; email: string; password: string; confirm: string; agree: boolean }
 
+const failureText = (failure: unknown) => (failure instanceof Error ? failure.message : 'Đăng ký thất bại. Vui lòng thử lại.')
+
 /**
  * Form đăng ký tài khoản khách hàng, dùng ở trang /shop/register.
- * Tạo tài khoản CUSTOMER qua API; sau đó khách đăng nhập bằng email và mật khẩu vừa chọn.
+ * Khi cửa hàng bật xác nhận email, bấm "Tạo tài khoản" sẽ gửi mã 6 số tới email và mở cửa sổ nhập mã;
+ * nhập đúng mã mới tạo tài khoản CUSTOMER. Sau đó khách đăng nhập bằng email và mật khẩu vừa chọn.
  */
 export function RegisterForm({ size = 'large' }: { size?: 'middle' | 'large' }) {
   const [form] = Form.useForm<RegisterValues>()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>()
   const [registeredEmail, setRegisteredEmail] = useState<string>()
+  // Thông tin đang chờ nhập mã xác nhận email.
+  const [pending, setPending] = useState<{ values: RegisterValues; sentAt: number; resendAt: number }>()
+  const [codeError, setCodeError] = useState<string>()
+  const [verifying, setVerifying] = useState(false)
+  const [resending, setResending] = useState(false)
   // Đăng nhập ngay sau khi đăng ký vẫn quay về trang khách đang xem trước đó.
   const returnState = loginReturnState(useLocation())
+  const finish = async (values: RegisterValues, code?: string) => {
+    await authService.register(values, code)
+    form.resetFields()
+    setPending(undefined)
+    setRegisteredEmail(values.email.trim())
+  }
   const submit = async (values: RegisterValues) => {
     setLoading(true)
     setError(undefined)
     try {
-      await authService.register(values)
-      form.resetFields()
-      setRegisteredEmail(values.email.trim())
+      const sent = await authService.requestRegisterCode(values)
+      if (!sent.required) await finish(values)
+      else {
+        setCodeError(undefined)
+        const sentAt = Date.now()
+        setPending({ values, sentAt, resendAt: sentAt + sent.resendAfterSeconds * 1000 })
+      }
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'Đăng ký thất bại. Vui lòng thử lại.')
+      setError(failureText(failure))
     } finally {
       setLoading(false)
     }
   }
+  const verify = async (code: string) => {
+    if (!pending || verifying) return
+    setVerifying(true)
+    setCodeError(undefined)
+    try {
+      await finish(pending.values, code)
+    } catch (failure) {
+      setCodeError(failureText(failure))
+    } finally {
+      setVerifying(false)
+    }
+  }
+  const resend = async () => {
+    if (!pending) return
+    setResending(true)
+    setCodeError(undefined)
+    try {
+      const sent = await authService.requestRegisterCode(pending.values)
+      const sentAt = Date.now()
+      setPending({ ...pending, sentAt, resendAt: sentAt + sent.resendAfterSeconds * 1000 })
+    } catch (failure) {
+      setCodeError(failureText(failure))
+    } finally {
+      setResending(false)
+    }
+  }
+  const codeModal = (
+    <EmailCodeModal
+      email={pending?.values.email.trim()}
+      sentAt={pending?.sentAt ?? 0}
+      resendAt={pending?.resendAt ?? 0}
+      verifying={verifying}
+      resending={resending}
+      error={codeError}
+      onVerify={verify}
+      onResend={resend}
+      onCancel={() => setPending(undefined)}
+    />
+  )
   if (registeredEmail)
     return (
       <Alert
@@ -48,6 +106,7 @@ export function RegisterForm({ size = 'large' }: { size?: 'middle' | 'large' }) 
     )
   return (
     <>
+      {codeModal}
       {error && <Alert type="error" showIcon title={error} style={{ marginBottom: 16 }} />}
       <Form
         form={form}

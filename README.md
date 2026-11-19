@@ -95,6 +95,8 @@ APP_BOOTSTRAP_ADMIN_PASSWORD=<first-admin-password-at-least-12-characters>
 APP_BOOTSTRAP_ADMIN_NAME=Administrator
 ```
 
+Gửi email (quên mật khẩu, mã xác nhận khi đăng ký) cần Gmail SMTP: xem [docs/EMAIL_SETUP.md](docs/EMAIL_SETUP.md).
+
 ## Quy ước phát triển
 
 - Mỗi module sở hữu domain, application service và adapter REST của mình.
