@@ -25,7 +25,30 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
         <strong>{currency(subtotal)}</strong>
       </div>
       <p className="af-form-hint">Chưa gồm phí giao và tiền cọc vỏ nếu có.</p>
+      <Button
+        className="af-shop-cart-order"
+        type="primary"
+        size="large"
+        block
+        disabled={invalid}
+        onClick={() => {
+          onClose()
+          navigate('/checkout')
+        }}
+      >
+        Đặt hàng
+      </Button>
       <div className="af-shop-cart-actions">
+        {/* Đang ở trang nào cũng về danh mục sản phẩm để chọn thêm. */}
+        <Button
+          size="large"
+          onClick={() => {
+            onClose()
+            navigate('/shop/drinks')
+          }}
+        >
+          Mua hàng tiếp
+        </Button>
         <Popconfirm
           title="Xóa hết sản phẩm trong giỏ?"
           okText="Xóa hết"
@@ -37,23 +60,20 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
             Xóa hết
           </Button>
         </Popconfirm>
-        <Button
-          type="primary"
-          size="large"
-          disabled={invalid}
-          onClick={() => {
-            onClose()
-            navigate('/checkout')
-          }}
-        >
-          Đặt hàng
-        </Button>
       </div>
     </div>
   ) : null
 
   return (
-    <Drawer open={open} onClose={onClose} title="Giỏ hàng" size={440} footer={footer}>
+    <Drawer
+      open={open}
+      onClose={onClose}
+      title="Giỏ hàng"
+      size={440}
+      footer={footer}
+      // Chân giỏ thoáng hơn mặc định để hai hàng nút không sát mép dưới.
+      styles={{ footer: { padding: '16px 24px 24px' } }}
+    >
       {products.isPending ? (
         <Skeleton active />
       ) : products.isError ? (
