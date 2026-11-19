@@ -2764,14 +2764,3 @@
 .af-shop-pager {
   margin-top: 24px;
 }
-/* Nút lên đầu trang: chỉ hiện khi đã cuộn xuống; trên điện thoại đặt cao hơn để không che nút Thêm. */
-.ant-float-btn.af-shop-back-top {
-  inset-inline-end: 24px;
-  inset-block-end: 32px;
-}
-@media (max-width: 768px) {
-  .ant-float-btn.af-shop-back-top {
-    inset-inline-end: 16px;
-    inset-block-end: calc(80px + env(safe-area-inset-bottom));
-  }
-}

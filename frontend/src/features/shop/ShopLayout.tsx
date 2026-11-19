@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Badge, Button, Dropdown, FloatButton } from 'antd'
-import { ArrowLeft, ArrowUp, ChevronDown, Clock3, MapPin, Phone, Search, ShoppingCart } from 'lucide-react'
+import { Badge, Button, Dropdown } from 'antd'
+import { ArrowLeft, ChevronDown, Clock3, MapPin, Phone, Search, ShoppingCart } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
 import { isCustomer } from '@/features/auth/accountAccess'
@@ -178,10 +178,6 @@ export function ShopLayout() {
       <ShopFooter contact={settings} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
       {askArea && <DeliveryAreaNotice phone={settings?.phone} />}
-      {/* Trang thanh toán đã có thanh cố định ở đáy nên không thêm nút lên đầu trang. */}
-      {location.pathname !== '/checkout' && (
-        <FloatButton.BackTop className="af-shop-back-top" icon={<ArrowUp size={18} />} tooltip="Lên đầu trang" aria-label="Lên đầu trang" />
-      )}
     </div>
   )
 }
