@@ -1,15 +1,10 @@
 import type { DeliveryTrip } from './deliveryApi'
 import { liveTripStatus, type TripViewStatus } from './tripFocus'
 
-/** Nhóm chuyến: việc cần làm tách khỏi chuyến đã xong để danh sách dài vẫn dễ theo dõi. */
-export type TripGroup = 'settle' | 'running' | 'done' | 'all'
-const groupStatuses: Record<Exclude<TripGroup, 'all'>, TripViewStatus[]> = {
-  settle: ['Chờ đối soát'],
-  running: ['Chờ xuất phát', 'Đang giao'],
-  done: ['Đã đối soát', 'Đã hủy'],
-}
+/** Nhóm chuyến theo thứ tự một chuyến đi qua: tạo xong chờ xuất phát → đang giao → về chờ đối soát → xong. */
+export type TripGroup = 'all' | 'waiting' | 'running' | 'settle' | 'done'
 export const tripGroupOf = (status: TripViewStatus): Exclude<TripGroup, 'all'> =>
-  status === 'Chờ đối soát' ? 'settle' : groupStatuses.running.includes(status) ? 'running' : 'done'
+  status === 'Chờ xuất phát' ? 'waiting' : status === 'Đang giao' ? 'running' : status === 'Chờ đối soát' ? 'settle' : 'done'
 
 /** Khoảng ngày tính theo lần hoạt động gần nhất của chuyến; chuyến chưa xong luôn hiện. */
 export type TripRange = 'today' | '7' | '30' | 'all'

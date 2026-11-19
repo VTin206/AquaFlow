@@ -17,9 +17,9 @@ const trip = (status: DeliveryTrip['status'], endedAt: string | null): DeliveryT
 })
 
 describe('trip groups', () => {
-  it('puts settling first, running trips together and finished trips last', () => {
+  it('groups trips in the order a trip goes through', () => {
     expect(tripGroupOf('Chờ đối soát')).toBe('settle')
-    expect(tripGroupOf('Chờ xuất phát')).toBe('running')
+    expect(tripGroupOf('Chờ xuất phát')).toBe('waiting')
     expect(tripGroupOf('Đang giao')).toBe('running')
     expect(tripGroupOf('Đã đối soát')).toBe('done')
     expect(tripGroupOf('Đã hủy')).toBe('done')
