@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Badge, Button, Card, Col, Empty, Pagination, Row, Skeleton, Tag, Typography, type InputRef } from 'antd'
+import { Badge, Button, Card, Col, Empty, Row, Skeleton, Tag, Typography, type InputRef } from 'antd'
 import { Droplets, ShoppingCart } from 'lucide-react'
 import { Link, useLocation, useOutletContext, useSearchParams } from 'react-router'
 import { QueryError } from '@/shared/components/QueryError'
@@ -39,8 +39,6 @@ export function DrinksPage() {
   const contact = useShopContact()
   const cartActions = useCartActions()
   const cart = useCart()
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(12)
   const filters = filtersFromParams(searchParams)
   const catalogRef = useRef<HTMLElement>(null)
   const searchRef = useRef<InputRef>(null)
@@ -54,7 +52,6 @@ export function DrinksPage() {
     if (merged.category !== ALL) params.set('category', merged.category)
     if (merged.query.trim()) params.set('q', merged.query.trim())
     setSearchParams(params, { replace: true })
-    setPage(1)
   }
 
   useEffect(() => {
@@ -75,8 +72,6 @@ export function DrinksPage() {
 
   const products = productsQuery.data ?? []
   const visible = filterProducts(products, filters, bestSellerIds)
-  const currentPage = Math.min(page, Math.max(1, Math.ceil(visible.length / pageSize)))
-  const pageItems = visible.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   return (
     <div className="af-shop-page">
@@ -93,7 +88,7 @@ export function DrinksPage() {
           <Empty description="Không có sản phẩm phù hợp." />
         ) : (
           <Row gutter={[16, 16]}>
-            {pageItems.map((product) => {
+            {visible.map((product) => {
               const inCart = cart.find((line) => line.productId === product.id)?.quantity ?? 0
               const card = (
                 <Card
@@ -150,22 +145,6 @@ export function DrinksPage() {
               )
             })}
           </Row>
-        )}
-        {visible.length > pageSize && (
-          <Pagination
-            className="af-catalog-pagination"
-            current={currentPage}
-            pageSize={pageSize}
-            total={visible.length}
-            pageSizeOptions={[12, 24, 48]}
-            showSizeChanger
-            responsive
-            onChange={(next, size) => {
-              setPage(size !== pageSize ? 1 : next)
-              setPageSize(size)
-              catalogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }}
-          />
         )}
       </section>
     </div>
