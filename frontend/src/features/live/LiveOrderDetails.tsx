@@ -1,7 +1,20 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
-import { Alert, App, Button, Descriptions, Popconfirm, Skeleton, Table, Tag, Timeline, Typography, type CollapseProps, type MenuProps } from 'antd'
+import {
+  Alert,
+  App,
+  Button,
+  Descriptions,
+  Popconfirm,
+  Skeleton,
+  Table,
+  Tag,
+  Timeline,
+  Typography,
+  type CollapseProps,
+  type MenuProps,
+} from 'antd'
 import { Money } from '@/shared/components/Money'
 import { OrderTotals } from '@/shared/components/OrderTotals'
 import { QueryError } from '@/shared/components/QueryError'
@@ -10,18 +23,12 @@ import { dueTone } from '@/shared/utils/money'
 import { useStaff } from '@/features/auth/useStaff'
 import { can } from '@/features/auth/permissions'
 import { OrderIntakeModal } from '@/features/orders/components/OrderIntakeModal'
+import { AssignDriverModal } from '@/features/delivery/components/AssignDriverModal'
+import { activeTripOf } from '@/features/delivery/driverChoices'
 import { Pencil } from 'lucide-react'
 import { tripLabels } from '@/features/delivery/deliveryApi'
 import { catalogApi } from './catalogApi'
-import {
-  canCancel,
-  canConfirm,
-  canPrepare,
-  confirmOrderHint,
-  orderApi,
-  paymentStatusLabels,
-  channelLabels,
-} from './orderApi'
+import { canCancel, canConfirm, canPrepare, confirmOrderHint, orderApi, paymentStatusLabels, channelLabels } from './orderApi'
 import { explainStockShortage } from './stockShortage'
 import { invalidateLiveData } from './invalidateLiveData'
 import { canDispatch, canHandover, dispatchApi } from './dispatchApi'
@@ -61,6 +68,7 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
   const canTakeReturns = staff?.role === 'ADMIN'
   const [returning, setReturning] = useState(false)
   const [editingOrder, setEditingOrder] = useState(false)
+  const [assigningDriver, setAssigningDriver] = useState(false)
   const canEdit = !!staff && can(staff.role, 'editOrder')
   const returns = useOrderReturns(id)
   const activity = useOrderActivity(id, canManage)
@@ -146,7 +154,8 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
                   key: 'slip',
                   label: 'In phiếu giao hàng',
                   disabled: !canPrint,
-                  onClick: () => printer.print(<DeliverySlipDocument order={viewOrder} settings={settings} depositRate={depositOf(viewOrder)} />),
+                  onClick: () =>
+                    printer.print(<DeliverySlipDocument order={viewOrder} settings={settings} depositRate={depositOf(viewOrder)} />),
                 },
               ]
             : []),
@@ -202,18 +211,32 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
           cancelText="Chưa"
           disabled={busy}
           okButtonProps={{ loading: handover.isPending, disabled: busy }}
-          onConfirm={() => { if (!busy) handover.mutate() }}
+          onConfirm={() => {
+            if (!busy) handover.mutate()
+          }}
         >
           <Button type="primary" loading={handover.isPending} disabled={busy}>
             Bàn giao tại quầy
           </Button>
         </Popconfirm>
       ) : canDispatch(order) ? (
-        <Link to="/delivery" onClick={onClose}>
-          <Button type="primary" disabled={update.isPending}>
-            Xếp chuyến
+        // Đơn chưa ở chuyến nào: chọn tài xế ngay tại đây; đã ở chuyến thì mở trang Giao hàng như cũ.
+        canSeeTrips &&
+        trips.isSuccess &&
+        !activeTripOf(
+          order.id,
+          trips.data.map((entry) => entry.trip),
+        ) ? (
+          <Button type="primary" disabled={update.isPending} onClick={() => setAssigningDriver(true)}>
+            Giao cho tài xế
           </Button>
-        </Link>
+        ) : (
+          <Link to="/delivery" onClick={onClose}>
+            <Button type="primary" disabled={update.isPending}>
+              Xếp chuyến
+            </Button>
+          </Link>
+        )
       ) : null
     ) : null
 
@@ -221,12 +244,16 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
     order && canManage && canCancel(order) ? (
       <Popconfirm
         title={`Hủy đơn ${order.orderCode}?`}
-        description={order.status === 'PENDING' ? 'Đơn chưa giữ hàng nên không ảnh hưởng tồn kho.' : 'Hàng đã giữ cho đơn sẽ được trả lại tồn kho.'}
+        description={
+          order.status === 'PENDING' ? 'Đơn chưa giữ hàng nên không ảnh hưởng tồn kho.' : 'Hàng đã giữ cho đơn sẽ được trả lại tồn kho.'
+        }
         okText="Hủy đơn"
         okButtonProps={{ danger: true }}
         disabled={busy}
         cancelText="Không"
-        onConfirm={() => { if (!busy) update.mutate('CANCELLED') }}
+        onConfirm={() => {
+          if (!busy) update.mutate('CANCELLED')
+        }}
       >
         <Button type="text" danger loading={update.isPending && update.variables === 'CANCELLED'} disabled={busy}>
           Hủy đơn
@@ -254,7 +281,12 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
   const returnedTotal = (returns.data?.returns ?? []).reduce((sum, entry) => sum + Number(entry.value), 0)
   const moreSections: CollapseProps['items'] = order
     ? [
-        { key: 'payments', label: 'Thanh toán', extra: payments.data ? `Còn phải thu ${currency(payments.data.balance.due)}` : undefined, children: <LiveOrderPayments orderId={id} /> },
+        {
+          key: 'payments',
+          label: 'Thanh toán',
+          extra: payments.data ? `Còn phải thu ${currency(payments.data.balance.due)}` : undefined,
+          children: <LiveOrderPayments orderId={id} />,
+        },
         ...(order.fulfillmentType === 'DELIVERY' && canSeeTrips
           ? [
               {
@@ -307,7 +339,11 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
         {
           key: 'returns',
           label: 'Hàng trả lại',
-          extra: returns.data ? (returns.data.returns.length ? `${returns.data.returns.length} lần · ${currency(returnedTotal)}` : 'Chưa có') : undefined,
+          extra: returns.data
+            ? returns.data.returns.length
+              ? `${returns.data.returns.length} lần · ${currency(returnedTotal)}`
+              : 'Chưa có'
+            : undefined,
           children: returns.isError ? (
             <QueryError error={returns.error} onRetry={returns.refetch} />
           ) : returns.isPending ? (
@@ -468,7 +504,9 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
                     </>
                   )}
                   <div className="is-status">
-                    <Tag color={paymentTagColors[order.paymentStatus]}>{paymentStatusLabels[order.paymentStatus] ?? order.paymentStatus}</Tag>
+                    <Tag color={paymentTagColors[order.paymentStatus]}>
+                      {paymentStatusLabels[order.paymentStatus] ?? order.paymentStatus}
+                    </Tag>
                   </div>
                 </>
               )
@@ -479,9 +517,15 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
     >
       {printer.portal}
       {editingOrder && order && <OrderIntakeModal editing={order} onClose={() => setEditingOrder(false)} />}
+      {assigningDriver && order && <AssignDriverModal order={order} onClose={() => setAssigningDriver(false)} />}
       {returning && order && (
         <LiveOrderReturnModal
-          order={{ id: order.id, orderCode: order.orderCode, subtotal: Number(order.subtotal), discountAmount: Number(order.discountAmount) }}
+          order={{
+            id: order.id,
+            orderCode: order.orderCode,
+            subtotal: Number(order.subtotal),
+            discountAmount: Number(order.discountAmount),
+          }}
           balance={balance}
           onClose={() => setReturning(false)}
         />
