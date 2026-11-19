@@ -1,7 +1,20 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
-import { Alert, App, Button, Descriptions, Popconfirm, Skeleton, Table, Tag, Timeline, Typography, type CollapseProps, type MenuProps } from 'antd'
+import {
+  Alert,
+  App,
+  Button,
+  Descriptions,
+  Popconfirm,
+  Skeleton,
+  Table,
+  Tag,
+  Timeline,
+  Typography,
+  type CollapseProps,
+  type MenuProps,
+} from 'antd'
 import { Money } from '@/shared/components/Money'
 import { OrderTotals } from '@/shared/components/OrderTotals'
 import { QueryError } from '@/shared/components/QueryError'
@@ -13,15 +26,7 @@ import { OrderIntakeModal } from '@/features/orders/components/OrderIntakeModal'
 import { Pencil } from 'lucide-react'
 import { tripLabels } from '@/features/delivery/deliveryApi'
 import { catalogApi } from './catalogApi'
-import {
-  canCancel,
-  canConfirm,
-  canPrepare,
-  confirmOrderHint,
-  orderApi,
-  paymentStatusLabels,
-  channelLabels,
-} from './orderApi'
+import { canCancel, canConfirm, canPrepare, confirmOrderHint, orderApi, paymentStatusLabels, channelLabels } from './orderApi'
 import { explainStockShortage } from './stockShortage'
 import { invalidateLiveData } from './invalidateLiveData'
 import { canDispatch, canHandover, dispatchApi } from './dispatchApi'
@@ -146,7 +151,8 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
                   key: 'slip',
                   label: 'In phiếu giao hàng',
                   disabled: !canPrint,
-                  onClick: () => printer.print(<DeliverySlipDocument order={viewOrder} settings={settings} depositRate={depositOf(viewOrder)} />),
+                  onClick: () =>
+                    printer.print(<DeliverySlipDocument order={viewOrder} settings={settings} depositRate={depositOf(viewOrder)} />),
                 },
               ]
             : []),
@@ -202,7 +208,9 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
           cancelText="Chưa"
           disabled={busy}
           okButtonProps={{ loading: handover.isPending, disabled: busy }}
-          onConfirm={() => { if (!busy) handover.mutate() }}
+          onConfirm={() => {
+            if (!busy) handover.mutate()
+          }}
         >
           <Button type="primary" loading={handover.isPending} disabled={busy}>
             Bàn giao tại quầy
@@ -221,12 +229,16 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
     order && canManage && canCancel(order) ? (
       <Popconfirm
         title={`Hủy đơn ${order.orderCode}?`}
-        description={order.status === 'PENDING' ? 'Đơn chưa giữ hàng nên không ảnh hưởng tồn kho.' : 'Hàng đã giữ cho đơn sẽ được trả lại tồn kho.'}
+        description={
+          order.status === 'PENDING' ? 'Đơn chưa giữ hàng nên không ảnh hưởng tồn kho.' : 'Hàng đã giữ cho đơn sẽ được trả lại tồn kho.'
+        }
         okText="Hủy đơn"
         okButtonProps={{ danger: true }}
         disabled={busy}
         cancelText="Không"
-        onConfirm={() => { if (!busy) update.mutate('CANCELLED') }}
+        onConfirm={() => {
+          if (!busy) update.mutate('CANCELLED')
+        }}
       >
         <Button type="text" danger loading={update.isPending && update.variables === 'CANCELLED'} disabled={busy}>
           Hủy đơn
@@ -254,7 +266,12 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
   const returnedTotal = (returns.data?.returns ?? []).reduce((sum, entry) => sum + Number(entry.value), 0)
   const moreSections: CollapseProps['items'] = order
     ? [
-        { key: 'payments', label: 'Thanh toán', extra: payments.data ? `Còn phải thu ${currency(payments.data.balance.due)}` : undefined, children: <LiveOrderPayments orderId={id} /> },
+        {
+          key: 'payments',
+          label: 'Thanh toán',
+          extra: payments.data ? `Còn phải thu ${currency(payments.data.balance.due)}` : undefined,
+          children: <LiveOrderPayments orderId={id} />,
+        },
         ...(order.fulfillmentType === 'DELIVERY' && canSeeTrips
           ? [
               {
@@ -307,7 +324,11 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
         {
           key: 'returns',
           label: 'Hàng trả lại',
-          extra: returns.data ? (returns.data.returns.length ? `${returns.data.returns.length} lần · ${currency(returnedTotal)}` : 'Chưa có') : undefined,
+          extra: returns.data
+            ? returns.data.returns.length
+              ? `${returns.data.returns.length} lần · ${currency(returnedTotal)}`
+              : 'Chưa có'
+            : undefined,
           children: returns.isError ? (
             <QueryError error={returns.error} onRetry={returns.refetch} />
           ) : returns.isPending ? (
@@ -417,7 +438,8 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
       sections={moreSections}
       cancelAction={
         <>
-          {order && canEdit && order.status === 'PENDING' && (
+          {/* Đơn web tự xác nhận khi đủ hàng nên đơn đã xác nhận (chưa chuẩn bị) vẫn sửa được; hàng giữ lại theo dòng mới. */}
+          {order && canEdit && (order.status === 'PENDING' || order.status === 'CONFIRMED') && (
             <Button type="text" icon={<Pencil size={15} />} disabled={busy} onClick={() => setEditingOrder(true)}>
               Sửa đơn
             </Button>
@@ -468,7 +490,9 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
                     </>
                   )}
                   <div className="is-status">
-                    <Tag color={paymentTagColors[order.paymentStatus]}>{paymentStatusLabels[order.paymentStatus] ?? order.paymentStatus}</Tag>
+                    <Tag color={paymentTagColors[order.paymentStatus]}>
+                      {paymentStatusLabels[order.paymentStatus] ?? order.paymentStatus}
+                    </Tag>
                   </div>
                 </>
               )
@@ -481,7 +505,12 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
       {editingOrder && order && <OrderIntakeModal editing={order} onClose={() => setEditingOrder(false)} />}
       {returning && order && (
         <LiveOrderReturnModal
-          order={{ id: order.id, orderCode: order.orderCode, subtotal: Number(order.subtotal), discountAmount: Number(order.discountAmount) }}
+          order={{
+            id: order.id,
+            orderCode: order.orderCode,
+            subtotal: Number(order.subtotal),
+            discountAmount: Number(order.discountAmount),
+          }}
           balance={balance}
           onClose={() => setReturning(false)}
         />

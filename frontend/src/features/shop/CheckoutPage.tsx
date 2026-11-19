@@ -37,7 +37,7 @@ type CheckoutForm = {
   floor: number
 }
 
-const nextStepHint = 'Sau khi đặt, cửa hàng sẽ xác nhận đơn rồi giao hàng cho bạn.'
+const nextStepHint = 'Còn hàng thì đơn được xác nhận ngay, cửa hàng chuẩn bị rồi giao cho bạn.'
 
 /** Đặt đơn là việc không rút lại được: Enter ở ô chọn không được tự gửi form như mặc định của trình duyệt. */
 function handleFormKeys(event: KeyboardEvent<HTMLElement>) {

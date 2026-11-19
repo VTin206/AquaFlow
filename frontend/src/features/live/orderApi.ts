@@ -127,7 +127,7 @@ export const orderApi = {
   byCustomer: (customerId: number) => api.get<LiveOrderListItem[]>(`/sales/customers/${customerId}/orders`),
   detail: (id: number) => api.get<LiveOrder>(`/sales/orders/${id}`),
   create: (input: OrderInput) => api.post<LiveOrder>('/sales/orders', input),
-  /** Sửa đơn còn chờ xác nhận (người nhận, địa chỉ, giờ hẹn, ghi chú, hàng); kênh, hình thức nhận và phí giao giữ nguyên. */
+  /** Sửa đơn chưa chuẩn bị hàng (chờ xác nhận hoặc đã xác nhận): người nhận, địa chỉ, giờ hẹn, ghi chú, hàng; kênh, hình thức nhận và phí giao giữ nguyên. */
   update: (id: number, input: OrderUpdateInput) => api.put<LiveOrder>(`/sales/orders/${id}`, input),
   updateStatus: (id: number, status: OrderStatus) => api.patch<LiveOrder>(`/sales/orders/${id}/status`, { status }),
 }

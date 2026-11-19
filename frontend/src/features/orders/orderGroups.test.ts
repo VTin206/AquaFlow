@@ -8,6 +8,7 @@ test('mỗi trạng thái thuộc đúng một nhóm việc, đơn hủy chỉ �
     expect(groups.length).toBe(status === 'Đã hủy' ? 0 : 1)
     expect(inOrderGroup('all', status)).toBe(true)
   }
+  expect(groupOfStatus('Đã xác nhận')).toBe('new')
   expect(groupOfStatus('Chờ xác nhận')).toBe('need')
   expect(groupOfStatus('Giao thất bại')).toBe('need')
   expect(groupOfStatus('Đang chuẩn bị')).toBe('active')
@@ -18,6 +19,7 @@ test('mỗi trạng thái thuộc đúng một nhóm việc, đơn hủy chỉ �
 test('ô lọc trạng thái chỉ có trạng thái của nhóm mà nguồn dữ liệu đang dùng', () => {
   const live = orderStatuses.filter((status) => status !== 'Giao thất bại')
   expect(statusesInGroup('need', live)).toEqual(['Chờ xác nhận'])
-  expect(statusesInGroup('active', live)).toEqual(['Đã xác nhận', 'Đang chuẩn bị', 'Đang giao'])
+  expect(statusesInGroup('new', live)).toEqual(['Đã xác nhận'])
+  expect(statusesInGroup('active', live)).toEqual(['Đang chuẩn bị', 'Đang giao'])
   expect(statusesInGroup('all', live)).toEqual(live)
 })
