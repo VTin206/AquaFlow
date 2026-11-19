@@ -18,6 +18,9 @@ import { useHomeLink, type FreshState } from '@/app/useHomeLink'
 import { DELIVERY_AREA, DELIVERY_AREA_EXCLUDES } from '@/shared/address/hcmWards'
 import './shop.css'
 
+/** id của cột Liên hệ trong ShopFooter, đích của mục "Liên hệ" trên menu. */
+const SHOP_CONTACT_ID = 'lien-he'
+
 /**
  * Khung trang công khai cho khách, cũng là trang chủ khi chưa đăng nhập.
  * Bấm icon tài khoản để đăng nhập vào trang quản lý.
@@ -137,6 +140,18 @@ export function ShopLayout() {
             >
               Tra cứu đơn
             </NavLink>
+            {/* Cuộn xuống cột Liên hệ ở chân trang (chưa nhập thông tin liên hệ thì tới chân trang). */}
+            <a
+              href={`#${SHOP_CONTACT_ID}`}
+              className="af-shop-nav-link"
+              onClick={(event) => {
+                event.preventDefault()
+                const target = document.getElementById(SHOP_CONTACT_ID) ?? document.querySelector('.af-shop-footer')
+                target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              }}
+            >
+              Liên hệ
+            </a>
           </nav>
           <div className="af-shop-icons">
             <Button
