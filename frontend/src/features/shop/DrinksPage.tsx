@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Badge, Button, Card, Col, Empty, Row, Skeleton, Tag, Typography, type InputRef } from 'antd'
+import { Badge, Button, Card, Col, Empty, Pagination, Row, Skeleton, Tag, Typography, type InputRef } from 'antd'
 import { Droplets, ShoppingCart } from 'lucide-react'
 import { Link, useLocation, useOutletContext, useSearchParams } from 'react-router'
 import { QueryError } from '@/shared/components/QueryError'
@@ -7,6 +7,7 @@ import { currency } from '@/shared/utils/format'
 import { useCart, useCartActions } from './cart'
 import { ShopFilters } from './components/ShopFilters'
 import { ALL, filterProducts, type ShopFilterState } from './shopGroups'
+import { SHOP_PAGE_SIZE, shopPage } from './shopPaging'
 import { useBestSellerIds, useShopContact, useShopProducts, type ShopProduct } from './shopService'
 
 function ShopImage({ product }: { product: ShopProduct }) {
@@ -54,6 +55,13 @@ export function DrinksPage() {
     setSearchParams(params, { replace: true })
   }
 
+  const goTo = (page: number) => {
+    const params = new URLSearchParams(searchParams)
+    if (page > 1) params.set('page', String(page))
+    else params.delete('page')
+    setSearchParams(params)
+  }
+
   useEffect(() => {
     requestAnimationFrame(() => catalogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }, [location.search])
@@ -72,6 +80,7 @@ export function DrinksPage() {
 
   const products = productsQuery.data ?? []
   const visible = filterProducts(products, filters, bestSellerIds)
+  const paged = shopPage(visible, searchParams.get('page'))
 
   return (
     <div className="af-shop-page">
@@ -87,64 +96,76 @@ export function DrinksPage() {
         ) : visible.length === 0 ? (
           <Empty description="Không có sản phẩm phù hợp." />
         ) : (
-          <Row gutter={[16, 16]}>
-            {visible.map((product) => {
-              const inCart = cart.find((line) => line.productId === product.id)?.quantity ?? 0
-              const card = (
-                <Card
-                  className="af-product-card af-shop-card"
-                  cover={
-                    // Bấm ảnh cũng mở chi tiết; bàn phím và trình đọc màn hình dùng link ở tên nên bỏ khỏi thứ tự Tab.
-                    <Link
-                      to={`/shop/products/${encodeURIComponent(product.id)}`}
-                      className="af-shop-card-cover-link"
-                      tabIndex={-1}
-                      aria-hidden
-                    >
-                      <ShopImage product={product} />
-                    </Link>
-                  }
-                >
-                  <div className="af-product-brand-line">
-                    <span>{product.brand}</span>
-                    {product.available === false && <Tag>Tạm hết hàng</Tag>}
-                  </div>
-                  <Typography.Title level={5} className="af-product-name" ellipsis={{ rows: 2, tooltip: product.name }}>
-                    <Link to={`/shop/products/${encodeURIComponent(product.id)}`}>{product.name}</Link>
-                  </Typography.Title>
-                  <div className="af-shop-card-footer">
-                    <span>
-                      <strong className="af-money af-shop-price">{currency(product.price)}</strong>
-                      <small> / {product.unit.toLowerCase()}</small>
-                    </span>
-                    <Button
-                      className="af-shop-add-button"
-                      type="primary"
-                      icon={<ShoppingCart size={15} />}
-                      disabled={product.available === false}
-                      onClick={() => {
-                        cartActions.add(product.id)
-                        openCart()
-                      }}
-                    >
-                      {inCart ? `Thêm (${inCart})` : 'Thêm'}
-                    </Button>
-                  </div>
-                </Card>
-              )
-              return (
-                <Col key={product.id} xs={12} md={8} xl={6}>
-                  {bestSellerIds.includes(product.id) ? (
-                    <Badge.Ribbon text="Bán chạy" color="red" className="af-shop-best-seller">
-                      {card}
-                    </Badge.Ribbon>
-                  ) : (
-                    card
-                  )}
-                </Col>
-              )
-            })}
-          </Row>
+          <>
+            <Row gutter={[16, 16]}>
+              {paged.items.map((product) => {
+                const inCart = cart.find((line) => line.productId === product.id)?.quantity ?? 0
+                const card = (
+                  <Card
+                    className="af-product-card af-shop-card"
+                    cover={
+                      // Bấm ảnh cũng mở chi tiết; bàn phím và trình đọc màn hình dùng link ở tên nên bỏ khỏi thứ tự Tab.
+                      <Link
+                        to={`/shop/products/${encodeURIComponent(product.id)}`}
+                        className="af-shop-card-cover-link"
+                        tabIndex={-1}
+                        aria-hidden
+                      >
+                        <ShopImage product={product} />
+                      </Link>
+                    }
+                  >
+                    <div className="af-product-brand-line">
+                      <span>{product.brand}</span>
+                      {product.available === false && <Tag>Tạm hết hàng</Tag>}
+                    </div>
+                    <Typography.Title level={5} className="af-product-name" ellipsis={{ rows: 2, tooltip: product.name }}>
+                      <Link to={`/shop/products/${encodeURIComponent(product.id)}`}>{product.name}</Link>
+                    </Typography.Title>
+                    <div className="af-shop-card-footer">
+                      <span>
+                        <strong className="af-money af-shop-price">{currency(product.price)}</strong>
+                        <small> / {product.unit.toLowerCase()}</small>
+                      </span>
+                      <Button
+                        className="af-shop-add-button"
+                        type="primary"
+                        icon={<ShoppingCart size={15} />}
+                        disabled={product.available === false}
+                        onClick={() => {
+                          cartActions.add(product.id)
+                          openCart()
+                        }}
+                      >
+                        {inCart ? `Thêm (${inCart})` : 'Thêm'}
+                      </Button>
+                    </div>
+                  </Card>
+                )
+                return (
+                  <Col key={product.id} xs={12} md={8} xl={6}>
+                    {bestSellerIds.includes(product.id) ? (
+                      <Badge.Ribbon text="Bán chạy" color="red" className="af-shop-best-seller">
+                        {card}
+                      </Badge.Ribbon>
+                    ) : (
+                      card
+                    )}
+                  </Col>
+                )
+              })}
+            </Row>
+            <Pagination
+              className="af-shop-pager"
+              align="center"
+              current={paged.page}
+              pageSize={SHOP_PAGE_SIZE}
+              total={visible.length}
+              showSizeChanger={false}
+              hideOnSinglePage
+              onChange={goTo}
+            />
+          </>
         )}
       </section>
     </div>
