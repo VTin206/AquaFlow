@@ -1939,6 +1939,13 @@
 .af-shop-cart-actions .ant-btn {
   width: 100%;
 }
+/* Chân giỏ hàng ghim dưới drawer: tổng tiền sát mép trên, hai nút chia đều một hàng. */
+.af-shop-cart-checkout .af-order-summary {
+  margin-top: 0;
+}
+.af-shop-cart-checkout .af-form-hint {
+  margin: 4px 0 0;
+}
 .af-shop-cart-foot {
   display: flex;
   align-items: center;
