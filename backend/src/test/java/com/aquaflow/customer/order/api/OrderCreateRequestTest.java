@@ -26,6 +26,23 @@ class OrderCreateRequestTest {
     }
 
     @Test
+    void deliveryWindowMustEndAfterItsStart() {
+        OffsetDateTime from = OffsetDateTime.parse("2027-01-15T14:00:00+07:00");
+        OrderCreateRequest valid = windowRequest(from, OffsetDateTime.parse("2027-01-15T17:00:00+07:00"));
+        OrderCreateRequest reversed = windowRequest(from, OffsetDateTime.parse("2027-01-15T13:00:00+07:00"));
+        OrderCreateRequest withoutStart = windowRequest(null, OffsetDateTime.parse("2027-01-15T17:00:00+07:00"));
+
+        assertThat(validator.validate(valid)).isEmpty();
+        assertThat(validator.validate(reversed)).extracting(v -> v.getMessage()).containsExactly("Khung giờ giao không hợp lệ");
+        assertThat(validator.validate(withoutStart)).extracting(v -> v.getMessage()).containsExactly("Khung giờ giao không hợp lệ");
+    }
+
+    private OrderCreateRequest windowRequest(OffsetDateTime from, OffsetDateTime until) {
+        return new OrderCreateRequest(5L, OrderChannel.WEB, FulfillmentType.DELIVERY, "Nguyen Van An", "0901234567",
+                "123 Nguyen Trai", "Phường Chợ Quán", from, List.of(new OrderItemRequest(10L, 2)), null, 0, null, until);
+    }
+
+    @Test
     void rejectsRequestWithoutItems() {
         OrderCreateRequest request = new OrderCreateRequest(
                 5L,

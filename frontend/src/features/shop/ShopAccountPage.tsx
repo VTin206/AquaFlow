@@ -8,7 +8,7 @@ import { devAccounts } from '@/features/auth/devAccounts'
 import { RegisterForm } from '@/features/auth/RegisterForm'
 import { useAuth } from '@/features/auth/useAuth'
 import { useStaff } from '@/features/auth/useStaff'
-import { accountDestination, isCustomer } from '@/features/auth/accountAccess'
+import { accountDestination, isCustomer, loginReturnState } from '@/features/auth/accountAccess'
 import { CustomerAccountPanel } from './CustomerAccountPanel'
 
 const REMEMBERED_EMAIL_KEY = 'aquaflow.auth.remembered-email'
@@ -225,6 +225,8 @@ export function ShopAccountPage() {
 
 /** Trang đăng ký duy nhất của hệ thống. */
 export function ShopRegisterPage() {
+  // Chuyển sang đăng nhập vẫn mang theo trang khách đang xem trước khi vào đăng ký.
+  const returnState = loginReturnState(useLocation())
   useEffect(() => {
     document.title = 'Tạo tài khoản | AquaFlow'
   }, [])
@@ -237,7 +239,7 @@ export function ShopRegisterPage() {
         </section>
         <section className="af-shop-account-side" aria-label="Đã có tài khoản">
           <p>Đã có tài khoản?</p>
-          <Link to="/shop/account">
+          <Link to="/shop/account" state={returnState}>
             <Button size="large" block>
               Đăng nhập
             </Button>

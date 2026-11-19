@@ -14,6 +14,8 @@ export type LiveTrackedOrder = {
   deliveryAddress: string | null
   deliveryArea: string | null
   requestedDeliveryAt: string | null
+  /** Cuối khung giờ giao; null khi hẹn một mốc giờ requestedDeliveryAt. */
+  requestedDeliveryUntil?: string | null
   subtotal: number
   discountAmount: number
   deliveryFee: number
@@ -52,6 +54,7 @@ export const toPublicOrder = (order: LiveTrackedOrder): PublicOrder => ({
   paid: order.paid,
   due: order.due,
   appointment: order.requestedDeliveryAt ?? undefined,
+  appointmentUntil: order.requestedDeliveryUntil ?? undefined,
   createdAt: order.createdAt,
   deliveredAt: order.deliveredAt ?? undefined,
   trackingToken: order.trackingToken,

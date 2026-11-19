@@ -65,6 +65,10 @@ public class Order {
     @Column(name = "requested_delivery_at")
     private OffsetDateTime requestedDeliveryAt;
 
+    /** Cuối khung giờ giao khách chọn; null khi hẹn một mốc giờ. */
+    @Column(name = "requested_delivery_until")
+    private OffsetDateTime requestedDeliveryUntil;
+
     @Column(name = "subtotal", nullable = false, precision = 14, scale = 2)
     private BigDecimal subtotal = BigDecimal.ZERO;
 
@@ -153,7 +157,7 @@ public class Order {
 
     /** Sửa thông tin nhận hàng khi đơn còn chờ xác nhận; kênh, hình thức nhận và phí giao giữ nguyên. */
     public void updateDetails(String recipientName, String recipientPhone, String deliveryAddress, String deliveryArea,
-                              OffsetDateTime requestedDeliveryAt, String note) {
+                              OffsetDateTime requestedDeliveryAt, OffsetDateTime requestedDeliveryUntil, String note) {
         if (status != OrderStatus.PENDING) {
             throw new com.aquaflow.shared.api.ConflictException("Chỉ sửa được đơn đang chờ xác nhận");
         }
@@ -162,7 +166,16 @@ public class Order {
         this.deliveryAddress = deliveryAddress;
         this.deliveryArea = deliveryArea;
         this.requestedDeliveryAt = requestedDeliveryAt;
+        scheduleDeliveryUntil(requestedDeliveryUntil);
         this.note = note;
+    }
+
+    /** Đặt cuối khung giờ giao (null: hẹn một mốc giờ); khung phải hợp lệ với giờ bắt đầu đang có. */
+    public void scheduleDeliveryUntil(OffsetDateTime requestedDeliveryUntil) {
+        if (!DeliveryWindow.isValid(requestedDeliveryAt, requestedDeliveryUntil)) {
+            throw new com.aquaflow.shared.api.BadRequestException("Khung giờ giao không hợp lệ");
+        }
+        this.requestedDeliveryUntil = requestedDeliveryUntil;
     }
 
     public BigDecimal getTotal() {
@@ -304,6 +317,10 @@ public class Order {
 
     public OffsetDateTime getRequestedDeliveryAt() {
         return requestedDeliveryAt;
+    }
+
+    public OffsetDateTime getRequestedDeliveryUntil() {
+        return requestedDeliveryUntil;
     }
 
     public BigDecimal getSubtotal() {

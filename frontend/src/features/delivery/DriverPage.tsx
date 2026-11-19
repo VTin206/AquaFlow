@@ -33,6 +33,7 @@ import { TripStatusTag } from './components/TripStatusTag'
 import { DriverDue } from './driverParts'
 import { driverToday } from './driverUtils'
 import { driverTripFocus, liveTripStatus } from './tripFocus'
+import { formatDeliveryWindowShort } from '@/shared/utils/deliveryWindow'
 
 /** Màn hình tài xế: lấy chuyến của tài xế đang đăng nhập, giao diện nằm ở DriverScreen. */
 export function DriverPage() {
@@ -197,15 +198,7 @@ function DriverTrip({ trip }: { trip: DeliveryTrip }) {
           {order.requestedDeliveryAt && (
             <li>
               <Clock3 size={15} />
-              <span>
-                Hẹn{' '}
-                {new Date(order.requestedDeliveryAt).toLocaleString('vi-VN', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  day: '2-digit',
-                  month: '2-digit',
-                })}
-              </span>
+              <span>Hẹn {formatDeliveryWindowShort(order.requestedDeliveryAt, order.requestedDeliveryUntil)}</span>
             </li>
           )}
           {balance && (
@@ -404,8 +397,7 @@ function CollectionModal({
   const bottles = useQuery({ queryKey: ['live', 'delivery-bottles', 'deposit', order.id], queryFn: () => deliveryBottleApi.get(order.id) })
   // Cọc chỉ thu được sau khi giao thành công (sổ vỏ đã ghi giao); trừ phần cọc đã thu ở các lần trước.
   const collected = data.receipts.filter((r) => r.orderId === order.orderId).reduce((sum, r) => sum + (r.depositAmount ?? 0), 0)
-  const deposit =
-    bottles.data?.tracked && bottles.data.given ? Math.max(0, depositShortfall(bottles.data.lines).total - collected) : 0
+  const deposit = bottles.data?.tracked && bottles.data.given ? Math.max(0, depositShortfall(bottles.data.lines).total - collected) : 0
   const nothing = !bottles.isLoading && balance.due <= 0 && deposit <= 0
   // Số cọc chỉ biết sau khi tải sổ vỏ: điền sẵn khi có, trừ khi tài xế đã tự sửa.
   useEffect(() => {

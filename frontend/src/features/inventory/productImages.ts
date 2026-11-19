@@ -66,3 +66,31 @@ const productImages: Record<string, string> = {
 export function resolveProductImage(product: { sku: string; image?: string | null }): string | undefined {
   return product.image?.trim() || productImages[product.sku.trim().toUpperCase()]
 }
+
+/** Bình 19-20L đã tách nền trắng (WebP trong suốt), đặt được lên banner màu. Ảnh gốc giữ nguyên cho thẻ và chi tiết. */
+const cutoutNames = new Set([
+  'bidrico-19l-up',
+  'ion-life-19l-voi',
+  'lavie-19l-voi',
+  'satori-19l-voi',
+  'vihawa-20l-voi',
+  'viva-18-5l-voi',
+  'nuoc-hoan-luu-khoang-satori-20l-up-2252',
+  'nuoc-khoang-lavie-19-lit-up-1',
+  'nuoc-khoang-vinh-hao-20-lit-up-2155',
+  'nuoc-khoang-vinh-hao-20-lit-voi-8',
+  'nuoc-kiem-ion-life-19-lit-up-2157',
+  'nuoc-lavie-kiem-185-lit-voi-3536',
+  'nuoc-lavie-kiem-19-lit-up-3537',
+  'nuoc-tinh-khiet--bidrico-19-lit-voi-2158',
+  'nuoc-tinh-khiet-rosee-19l-up-3337',
+  'nuoc-tinh-khiet-rosee-19l-voi-3336',
+  'nuoc-tinh-khiet-th-true-water-binh-19l-up-3317',
+  'nuoc-tinh-khiet-vihawa-20-lit-up-2156',
+])
+
+/** Bản không nền của ảnh sản phẩm có sẵn trong ứng dụng; undefined khi ảnh chưa có bản tách nền. */
+export function productCutoutImage(image?: string): string | undefined {
+  const match = image?.trim().match(/^\/images\/(?:products|reference)\/iwater\/([^/]+)\.(?:png|jpe?g)$/i)
+  return match && cutoutNames.has(match[1]) ? `/images/products/cutout/${match[1]}.webp` : undefined
+}

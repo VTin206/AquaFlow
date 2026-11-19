@@ -39,13 +39,30 @@ public record GuestOrderCreateRequest(
         @Size(max = 500, message = "Note must not exceed 500 characters")
         String note,
         @jakarta.validation.constraints.Min(0) @jakarta.validation.constraints.Max(30) int stairFloor,
-        @jakarta.validation.constraints.PositiveOrZero java.math.BigDecimal expectedTotal
+        @jakarta.validation.constraints.PositiveOrZero java.math.BigDecimal expectedTotal,
+
+        /** Cuối khung giờ giao khách chọn; null khi giao sớm nhất hoặc hẹn một mốc giờ. */
+        OffsetDateTime requestedDeliveryUntil
 ) {
     public GuestOrderCreateRequest(
             String recipientName, String recipientPhone, String deliveryAddress, String deliveryArea,
             OffsetDateTime requestedDeliveryAt, List<OrderItemRequest> items, String note) {
         this(recipientName, recipientPhone, deliveryAddress,
-                deliveryArea, requestedDeliveryAt, items, note, 0, null);
+                deliveryArea, requestedDeliveryAt, items, note, 0, null, null);
+    }
+
+    public GuestOrderCreateRequest(
+            String recipientName, String recipientPhone, String deliveryAddress, String deliveryArea,
+            OffsetDateTime requestedDeliveryAt, List<OrderItemRequest> items, String note, int stairFloor,
+            java.math.BigDecimal expectedTotal) {
+        this(recipientName, recipientPhone, deliveryAddress,
+                deliveryArea, requestedDeliveryAt, items, note, stairFloor, expectedTotal, null);
+    }
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @jakarta.validation.constraints.AssertTrue(message = "Khung giờ giao không hợp lệ")
+    public boolean isDeliveryWindowValid() {
+        return com.aquaflow.customer.order.domain.DeliveryWindow.isValid(requestedDeliveryAt, requestedDeliveryUntil);
     }
 
 }

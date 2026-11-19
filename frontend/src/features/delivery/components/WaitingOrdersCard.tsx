@@ -3,6 +3,7 @@ import { Button, Card, Empty, Table, Tag, Typography } from 'antd'
 import { Truck } from 'lucide-react'
 import { Money } from '@/shared/components/Money'
 import { dueTone } from '@/shared/utils/money'
+import { formatDeliveryWindowShort } from '@/shared/utils/deliveryWindow'
 
 export type WaitingOrder = {
   id: string
@@ -10,6 +11,8 @@ export type WaitingOrder = {
   customer: string
   address: string
   appointment?: string
+  /** Cuối khung giờ khách chọn. */
+  appointmentUntil?: string
   jugs: number
   /** null: đã thu một phần mà chưa biết số còn lại. */
   due: number | null
@@ -109,10 +112,8 @@ export function WaitingOrdersCard({ orders, loading, selected, onSelect, onCreat
               title: 'Hẹn giao',
               dataIndex: 'appointment',
               width: 140,
-              render: (value?: string) =>
-                value
-                  ? new Date(value).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
-                  : '—',
+              render: (value: string | undefined, row: WaitingOrder) =>
+                value ? formatDeliveryWindowShort(value, row.appointmentUntil) : '—',
             },
             { title: 'Bình', dataIndex: 'jugs', width: 80, align: 'right', render: (jugs: number) => jugs || '—' },
             {

@@ -70,6 +70,7 @@ export function fromLiveOrder(
     deliveryFee: Number(order.deliveryFee),
     discount: Number(order.discountAmount) || undefined,
     appointment: order.requestedDeliveryAt ?? undefined,
+    appointmentUntil: order.requestedDeliveryUntil ?? undefined,
     note: order.note ?? undefined,
     payments: [],
     paymentBalance: balance ? { paid: Number(balance.paid), due: Number(balance.due), refundDue: Number(balance.refundDue) } : undefined,

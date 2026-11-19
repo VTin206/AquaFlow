@@ -201,7 +201,8 @@ public class ReportRepository {
             FROM delivery_attempts da JOIN delivery_assignments a ON a.id=da.assignment_id
             JOIN delivery_trips t ON t.id=a.trip_id
           ), period_attempts AS (
-            SELECT da.*,o.requested_delivery_at
+            -- Hạn giao: cuối khung giờ khách chọn, đơn hẹn một mốc thì là mốc đó.
+            SELECT da.*,COALESCE(o.requested_delivery_until,o.requested_delivery_at) AS requested_delivery_at
             FROM ordered_attempts da JOIN filtered o ON o.id=da.order_id
             WHERE da.attempted_at>=:start AND da.attempted_at<:end
           ), attempts AS (

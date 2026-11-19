@@ -104,7 +104,9 @@ public final class DeliveryDtos {
             Long id, Long orderId, String orderCode, String orderStatus,
             String recipientName, String recipientPhone, String deliveryAddress,
             AttemptResponse latestAttempt, List<LoadLineResponse> items,
-            OffsetDateTime requestedDeliveryAt, String note) {}
+            OffsetDateTime requestedDeliveryAt, String note,
+            /** Cuối khung giờ giao; null khi hẹn một mốc giờ. */
+            OffsetDateTime requestedDeliveryUntil) {}
 
     public record HandoverResponse(
             Long id, BigDecimal cashReported, BigDecimal cashConfirmed,

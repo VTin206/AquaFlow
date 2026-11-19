@@ -57,3 +57,16 @@ test('lateness is measured against the appointment', () => {
   assert.equal(minutesLate(delivered), 15)
   assert.equal(isOverdue(delivered), false)
 })
+
+test('an order booked for a time window is late only after the window ends', () => {
+  const now = Date.parse('2026-11-12T08:00:00Z')
+  const order = {
+    method: 'Giao tận nơi',
+    status: 'Đang giao',
+    appointment: new Date(now - 60 * 60_000).toISOString(),
+    appointmentUntil: new Date(now + 2 * 60 * 60_000).toISOString(),
+  }
+  assert.equal(isOverdue(order, now), false)
+  assert.equal(minutesLate(order, now), 0)
+  assert.equal(minutesLate(order, now + 2 * 60 * 60_000 + 10 * 60_000), 10)
+})

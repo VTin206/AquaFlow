@@ -23,7 +23,19 @@ public class OrderTrackingRepository {
             String deliveryAddress, String deliveryArea, OffsetDateTime requestedDeliveryAt,
             BigDecimal subtotal, BigDecimal discountAmount, BigDecimal deliveryFee, BigDecimal total,
             BigDecimal paid, BigDecimal due, OffsetDateTime createdAt, OffsetDateTime confirmedAt,
-            OffsetDateTime deliveredAt, OffsetDateTime cancelledAt, String trackingToken) {
+            OffsetDateTime deliveredAt, OffsetDateTime cancelledAt, String trackingToken,
+            OffsetDateTime requestedDeliveryUntil) {
+
+        public Row(long id, String orderCode, OrderStatus status, FulfillmentType fulfillmentType,
+                PaymentStatus paymentStatus, boolean deliveryFailed, String recipientName, String recipientPhone,
+                String deliveryAddress, String deliveryArea, OffsetDateTime requestedDeliveryAt,
+                BigDecimal subtotal, BigDecimal discountAmount, BigDecimal deliveryFee, BigDecimal total,
+                BigDecimal paid, BigDecimal due, OffsetDateTime createdAt, OffsetDateTime confirmedAt,
+                OffsetDateTime deliveredAt, OffsetDateTime cancelledAt, String trackingToken) {
+            this(id, orderCode, status, fulfillmentType, paymentStatus, deliveryFailed, recipientName, recipientPhone,
+                    deliveryAddress, deliveryArea, requestedDeliveryAt, subtotal, discountAmount, deliveryFee, total,
+                    paid, due, createdAt, confirmedAt, deliveredAt, cancelledAt, trackingToken, null);
+        }
     }
 
     public record ItemRow(Long productId, String productName, String unit, Integer quantity,
@@ -35,7 +47,7 @@ public class OrderTrackingRepository {
                    o.recipient_name, o.recipient_phone, o.delivery_address, o.delivery_area,
                    o.requested_delivery_at, o.subtotal, o.discount_amount, o.delivery_fee,
                    b.total, b.paid, b.due, o.created_at, o.confirmed_at, o.delivered_at, o.cancelled_at,
-                   o.tracking_token
+                   o.tracking_token, o.requested_delivery_until
             FROM orders o JOIN order_payment_balances b ON b.order_id = o.id
             """;
 
@@ -61,7 +73,8 @@ public class OrderTrackingRepository {
             rs.getObject("confirmed_at", OffsetDateTime.class),
             rs.getObject("delivered_at", OffsetDateTime.class),
             rs.getObject("cancelled_at", OffsetDateTime.class),
-            rs.getString("tracking_token"));
+            rs.getString("tracking_token"),
+            rs.getObject("requested_delivery_until", OffsetDateTime.class));
 
     private static final RowMapper<ItemRow> ITEM = (rs, n) -> new ItemRow(
             rs.getLong("product_id"),

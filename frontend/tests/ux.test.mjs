@@ -148,3 +148,45 @@ test('order intake suggests contacts from profiles first, then from past orders 
   assert.deepEqual(contactSuggestions(customers, orders, 'khong so'), [])
   assert.equal(contactSuggestions(customers, orders, '0', 1).length, 1)
 })
+
+test('staff intake sends the chosen delivery window and keeps an old exact appointment when untouched', async () => {
+  const dayjs = (await import('dayjs')).default
+  const { intakeValuesOf } = await import('/src/features/orders/orderIntake.ts')
+  const base = {
+    method: 'Giao tận nơi',
+    channel: 'Điện thoại',
+    phone: '0903456128',
+    customer: 'An',
+    address: '1 A',
+    area: 'Q1',
+    lines: [{ productId: '7', quantity: 1 }],
+  }
+  const day = dayjs('2030-03-04T00:00:00')
+  const windowed = toLiveOrderInput({ ...base, deliveryDate: day, slot: 'morning' }, undefined)
+  assert.equal(dayjs(windowed.requestedDeliveryAt).format('YYYY-MM-DD HH:mm'), '2030-03-04 08:00')
+  assert.equal(dayjs(windowed.requestedDeliveryUntil).format('YYYY-MM-DD HH:mm'), '2030-03-04 11:00')
+  const asap = toLiveOrderInput(base, undefined)
+  assert.equal(asap.requestedDeliveryAt, null)
+  assert.equal(asap.requestedDeliveryUntil, null)
+
+  const liveOrder = (at, until) => ({
+    recipientPhone: '0903456128',
+    recipientName: 'An',
+    fulfillmentType: 'DELIVERY',
+    channel: 'PHONE',
+    deliveryAddress: '1 A',
+    deliveryArea: 'Q1',
+    requestedDeliveryAt: at,
+    requestedDeliveryUntil: until,
+    items: [{ productId: 7, quantity: 1 }],
+    note: null,
+  })
+  const slotted = intakeValuesOf(liveOrder(windowed.requestedDeliveryAt, windowed.requestedDeliveryUntil))
+  assert.equal(slotted.slot, 'morning')
+  const oldExact = day.hour(14).minute(30).toISOString()
+  const legacy = intakeValuesOf(liveOrder(oldExact, null))
+  assert.equal(legacy.slot, 'legacy')
+  const kept = toLiveOrderInput(legacy, undefined)
+  assert.equal(kept.requestedDeliveryAt, oldExact)
+  assert.equal(kept.requestedDeliveryUntil, null)
+})

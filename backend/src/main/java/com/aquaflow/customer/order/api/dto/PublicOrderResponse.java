@@ -34,8 +34,21 @@ public record PublicOrderResponse(
         OffsetDateTime deliveredAt,
         OffsetDateTime cancelledAt,
         String trackingToken,
-        List<Item> items
+        List<Item> items,
+        /** Cuối khung giờ giao; null khi hẹn một mốc giờ requestedDeliveryAt. */
+        OffsetDateTime requestedDeliveryUntil
 ) {
+
+    public PublicOrderResponse(String orderCode, OrderStatus status, FulfillmentType fulfillmentType,
+            PaymentStatus paymentStatus, boolean deliveryFailed, String recipientName, String recipientPhone,
+            String deliveryAddress, String deliveryArea, OffsetDateTime requestedDeliveryAt, BigDecimal subtotal,
+            BigDecimal discountAmount, BigDecimal deliveryFee, BigDecimal total, BigDecimal paid, BigDecimal due,
+            OffsetDateTime createdAt, OffsetDateTime confirmedAt, OffsetDateTime deliveredAt,
+            OffsetDateTime cancelledAt, String trackingToken, List<Item> items) {
+        this(orderCode, status, fulfillmentType, paymentStatus, deliveryFailed, recipientName, recipientPhone,
+                deliveryAddress, deliveryArea, requestedDeliveryAt, subtotal, discountAmount, deliveryFee, total,
+                paid, due, createdAt, confirmedAt, deliveredAt, cancelledAt, trackingToken, items, null);
+    }
 
     public record Item(
             Long productId,

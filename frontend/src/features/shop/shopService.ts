@@ -87,6 +87,8 @@ export type WebOrderDraft = {
   floor?: number
   expectedTotal?: number
   appointment?: string
+  /** Cuối khung giờ khách chọn. */
+  appointmentUntil?: string
   note?: string
   lines: { productId: string; quantity: number }[]
 }
@@ -100,6 +102,7 @@ export const toGuestOrderInput = (draft: WebOrderDraft): GuestOrderInput => ({
   ...(draft.expectedTotal !== undefined ? { expectedTotal: draft.expectedTotal } : {}),
   items: draft.lines.map((line) => ({ productId: Number(line.productId), quantity: line.quantity })),
   ...(draft.appointment ? { requestedDeliveryAt: draft.appointment } : {}),
+  ...(draft.appointment && draft.appointmentUntil ? { requestedDeliveryUntil: draft.appointmentUntil } : {}),
   ...(draft.note ? { note: draft.note } : {}),
 })
 

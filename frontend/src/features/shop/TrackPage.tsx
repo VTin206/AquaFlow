@@ -13,6 +13,7 @@ import type { PublicOrder } from '@/features/orders/types'
 import { useSettings } from '@/features/settings/settingsService'
 import { CopyOrderCode } from './components/CopyOrderCode'
 import { useLookupOrder, useShopContact, useTrackedOrder, useTransferAccount } from './shopService'
+import { formatDeliveryWindowShort } from '@/shared/utils/deliveryWindow'
 
 const stepOf: Record<PublicOrder['status'], number> = {
   'Chờ xác nhận': 0,
@@ -98,7 +99,7 @@ function LookupForm() {
           ) : (
             <>
               <p>Có tài khoản? Đăng nhập để xem mọi đơn đã đặt.</p>
-              <Link to="/shop/account">
+              <Link to="/shop/account" state={{ from: '/shop/orders' }}>
                 <Button size="large" block icon={<LogIn size={18} />}>
                   Đăng nhập
                 </Button>
@@ -227,14 +228,7 @@ function TrackedOrder({ token }: { token: string }) {
           {order.appointment && (
             <>
               <dt>Giờ hẹn</dt>
-              <dd>
-                {new Date(order.appointment).toLocaleString('vi-VN', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  day: '2-digit',
-                  month: '2-digit',
-                })}
-              </dd>
+              <dd>{formatDeliveryWindowShort(order.appointment, order.appointmentUntil)}</dd>
             </>
           )}
         </dl>

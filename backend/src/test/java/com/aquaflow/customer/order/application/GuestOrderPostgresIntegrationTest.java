@@ -54,6 +54,29 @@ class GuestOrderPostgresIntegrationTest {
         }
     }
 
+    @Autowired
+    private OrderTrackingService tracking;
+
+    @Test
+    void guestOrderKeepsChosenDeliveryWindowForStaffAndTracking() {
+        java.time.OffsetDateTime from = java.time.OffsetDateTime.parse("2030-03-04T14:00:00+07:00");
+        java.time.OffsetDateTime until = java.time.OffsetDateTime.parse("2030-03-04T17:00:00+07:00");
+        GuestOrderCreateRequest request = new GuestOrderCreateRequest(
+                "Guest Customer", "0901234567", "123 Nguyen Trai", "Phường Chợ Quán", from,
+                List.of(new OrderItemRequest(productId, 1)), null, 0, null, until);
+
+        OrderResponse response = orderService.createForGuest(request);
+        orderId = response.id();
+
+        assertThat(response.requestedDeliveryAt()).isEqualTo(from);
+        assertThat(response.requestedDeliveryUntil()).isEqualTo(until);
+        assertThat(tracking.byToken(response.trackingToken()).requestedDeliveryUntil()).isEqualTo(until);
+        // Ràng buộc trong DB chặn khung kết thúc trước khi bắt đầu, kể cả khi ghi thẳng bằng SQL.
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> jdbc.update(
+                        "UPDATE orders SET requested_delivery_until = requested_delivery_at - INTERVAL '1 hour' WHERE id = ?", orderId))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    }
+
     @Test
     void guestOrderPersistsPendingWithoutCustomerOrReservation() {
         GuestOrderCreateRequest request = new GuestOrderCreateRequest(

@@ -43,7 +43,8 @@ final class OwnerAlertSql {
                 SELECT NULL, 'ORDER_OVERDUE', 'ORDER_OVERDUE:' || id, 'ORDER', id,
                     'Đơn đã quá giờ hẹn', 'Đơn ' || order_code || ' đã quá giờ hẹn giao. Vui lòng kiểm tra và liên hệ khách.'
                 FROM open_orders CROSS JOIN params
-                WHERE fulfillment_type = 'DELIVERY' AND requested_delivery_at < params.checked_at
+                WHERE fulfillment_type = 'DELIVERY'
+                    AND COALESCE(requested_delivery_until, requested_delivery_at) < params.checked_at
                     AND outcome IS DISTINCT FROM 'FAILED'
                 UNION ALL
                 SELECT NULL, 'DELIVERY_FAILED', 'DELIVERY_FAILED:' || attempt_id, 'ORDER', id,
@@ -76,7 +77,8 @@ final class OwnerAlertSql {
                 JOIN delivery_assignments da ON da.trip_id = dt.id AND da.active
                 JOIN open_orders o ON o.id = da.order_id
                 CROSS JOIN params
-                WHERE o.fulfillment_type = 'DELIVERY' AND o.requested_delivery_at < params.checked_at
+                WHERE o.fulfillment_type = 'DELIVERY'
+                    AND COALESCE(o.requested_delivery_until, o.requested_delivery_at) < params.checked_at
                     AND o.outcome IS DISTINCT FROM 'FAILED'
             ), refreshed AS (
                 INSERT INTO notifications(recipient_id, title, message, kind, entity_type, entity_id, source_key, created_at)

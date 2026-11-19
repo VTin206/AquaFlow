@@ -12,15 +12,34 @@ vi.mock('../cart', () => ({
   useCartActions: () => ({ set: vi.fn(), remove: vi.fn(), clear: vi.fn() }),
 }))
 vi.mock('../shopService', () => ({
-  useShopProducts: () => ({ data: [{ id: 'P-1', name: 'Nước 19L', price: 50000, unit: 'Bình', available: true }], isPending: false, isError: false }),
+  useShopProducts: () => ({
+    data: [{ id: 'P-1', name: 'Nước 19L', price: 50000, unit: 'Bình', available: true }],
+    isPending: false,
+    isError: false,
+  }),
 }))
 
 beforeEach(() => {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
-    value: vi.fn().mockImplementation(() => ({ matches: false, addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn() })),
+    value: vi
+      .fn()
+      .mockImplementation(() => ({
+        matches: false,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
   })
-  vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  )
 })
 afterEach(cleanup)
 
@@ -40,4 +59,19 @@ test('bấm tên sản phẩm trong giỏ mở trang chi tiết và đóng giỏ
   fireEvent.click(link)
   expect(onClose).toHaveBeenCalled()
   expect(screen.getByText('Trang chi tiết')).toBeTruthy()
+})
+
+test('"Mua hàng tiếp" đóng giỏ và về trang sản phẩm dù đang ở trang khác', () => {
+  const onClose = vi.fn()
+  render(
+    <MemoryRouter initialEntries={['/shop/orders']}>
+      <Routes>
+        <Route path="/shop/orders" element={<CartDrawer open onClose={onClose} />} />
+        <Route path="/shop/drinks" element={<p>Trang sản phẩm</p>} />
+      </Routes>
+    </MemoryRouter>,
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Mua hàng tiếp' }))
+  expect(onClose).toHaveBeenCalled()
+  expect(screen.getByText('Trang sản phẩm')).toBeTruthy()
 })

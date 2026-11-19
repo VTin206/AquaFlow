@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { App, Avatar, Button, Popover } from 'antd'
 import { useQueryClient } from '@tanstack/react-query'
 import { LayoutDashboard, LogOut, ReceiptText, UserRound } from 'lucide-react'
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import { devAccounts, type DevAccount } from '@/features/auth/devAccounts'
 import { useAuth } from '@/features/auth/useAuth'
 import { useStaff } from '@/features/auth/useStaff'
-import { accountDestination, isCustomer } from '@/features/auth/accountAccess'
+import { accountDestination, isCustomer, isSignedInOnlyPage, loginReturnState } from '@/features/auth/accountAccess'
 
 /**
  * Tài khoản trên đầu trang khách, có hai chỗ: chữ trên thanh trên cùng ("Đăng nhập" / "Chào, …") và icon trên header.
@@ -19,6 +19,9 @@ export function AccountMenu({ variant = 'icon' }: { variant?: 'icon' | 'text' })
   // Tên vai trò lấy giống thanh trên của trang quản lý.
   const staff = useStaff()
   const navigate = useNavigate()
+  const location = useLocation()
+  // Đăng nhập/đăng ký xong quay lại đúng trang đang xem.
+  const returnState = loginReturnState(location)
   const [open, setOpen] = useState(false)
   const go = (to: string) => {
     setOpen(false)
@@ -29,15 +32,26 @@ export function AccountMenu({ variant = 'icon' }: { variant?: 'icon' | 'text' })
   if (!isAuthenticated || !user) {
     return variant === 'text' ? (
       <>
-        <Button type="link" className="af-shop-topbar-link" onClick={() => navigate('/shop/account')}>
+        <Button type="link" className="af-shop-topbar-link" onClick={() => navigate('/shop/account', { state: returnState })}>
           Đăng nhập
         </Button>
-        <Button type="link" className="af-shop-topbar-link af-shop-topbar-register" onClick={() => navigate('/shop/register')}>
+        <Button
+          type="link"
+          className="af-shop-topbar-link af-shop-topbar-register"
+          onClick={() => navigate('/shop/register', { state: returnState })}
+        >
           Tạo tài khoản
         </Button>
       </>
     ) : (
-      <Button type="text" shape="circle" icon={icon} aria-label="Đăng nhập" title="Đăng nhập" onClick={() => navigate('/shop/account')} />
+      <Button
+        type="text"
+        shape="circle"
+        icon={icon}
+        aria-label="Đăng nhập"
+        title="Đăng nhập"
+        onClick={() => navigate('/shop/account', { state: returnState })}
+      />
     )
   }
 
@@ -97,7 +111,9 @@ export function AccountMenu({ variant = 'icon' }: { variant?: 'icon' | 'text' })
         icon={<LogOut size={16} />}
         onClick={() => {
           logout()
-          go('/shop')
+          // Ở lại trang đang xem; trang chỉ dành cho người đã đăng nhập thì về trang chủ cửa hàng.
+          if (isSignedInOnlyPage(location.pathname)) go('/shop')
+          else setOpen(false)
         }}
       >
         Đăng xuất

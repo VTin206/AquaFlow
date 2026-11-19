@@ -142,14 +142,17 @@ test('giao sớm nhất không gửi giờ hẹn, đơn gửi đúng thông tin 
   expect(mocks.mutateAsync.mock.calls[0][0]).toMatchObject({ customer: 'Khách Thử', phone: '0901234567', address: '12 Đường Test', area: 'Phường Bến Thành', appointment: undefined })
 })
 
-test('chọn giờ thì bắt buộc có giờ, chưa chọn không tạo đơn', async () => {
+test('chọn khung giờ thì bắt buộc có ngày và khung, chưa chọn không tạo đơn; không còn ô chọn giờ phút', async () => {
   renderPage()
   type('Tên người nhận', 'Khách Thử')
   type('Số điện thoại', '0901234567')
   await fillDelivery()
-  fireEvent.click(screen.getByLabelText('Chọn giờ'))
+  fireEvent.click(screen.getByLabelText('Chọn khung giờ'))
+  expect(screen.getByText('Sáng 08:00–11:00')).toBeTruthy()
+  expect(screen.getByText('Tối 17:00–20:00')).toBeTruthy()
   await placeOrder()
-  expect(await screen.findByText('Chọn giờ nhận hàng.')).toBeTruthy()
+  expect(await screen.findByText('Chọn ngày nhận hàng.')).toBeTruthy()
+  expect(await screen.findByText('Chọn khung giờ nhận hàng.')).toBeTruthy()
   expect(mocks.mutateAsync).not.toHaveBeenCalled()
 })
 

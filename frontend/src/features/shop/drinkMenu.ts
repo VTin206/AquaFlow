@@ -15,7 +15,7 @@ const ranked = (values: string[]) => {
 }
 
 /**
- * Menu "Nước uống" dựng từ sản phẩm đang bán: thương hiệu, quy cách và loại nước thật sự có hàng,
+ * Menu "Sản phẩm" dựng từ sản phẩm đang bán: thương hiệu, quy cách và loại nước thật sự có hàng,
  * nên thêm thương hiệu hay loại mới thì menu tự có, không phải sửa code.
  */
 export function buildDrinkMenu(products: ShopProduct[]): DrinkMenuColumn[] {

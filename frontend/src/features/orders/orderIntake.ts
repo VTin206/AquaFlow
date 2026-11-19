@@ -2,6 +2,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import type { LiveOrder, OrderInput, OrderUpdateInput } from '@/features/live/orderApi'
 import type { Customer } from '@/features/customers/types'
 import { matchesSearch, phoneDigits } from '@/shared/utils/search'
+import { slotOf, slotWindow, type DeliverySlotKey } from '@/shared/utils/deliveryWindow'
 import { createdAtOf, walkInName, type Order } from './types'
 
 /** Giá trị của form nhận đơn. */
@@ -13,7 +14,12 @@ export type IntakeValues = {
   channel: Exclude<Order['channel'], 'Website'>
   address?: string
   area?: string
+  deliveryDate?: Dayjs
+  /** Khung giờ giao; 'legacy' là giữ nguyên giờ hẹn cũ của đơn đang sửa (không khớp khung nào). */
+  slot?: DeliverySlotKey | 'legacy'
+  /** Giờ hẹn cũ (đầu và cuối nếu có) của đơn đang sửa, chỉ dùng khi slot là 'legacy'. */
   appointment?: Dayjs
+  appointmentUntil?: Dayjs
   lines: IntakeLine[]
   note?: string
 }
@@ -84,6 +90,8 @@ const channelFromLive = { COUNTER: 'Tại quầy', PHONE: 'Điện thoại', MES
 
 /** Điền form tiếp nhận từ một đơn để sửa (đơn web hiển thị như đơn điện thoại; kênh không đổi khi lưu). */
 export function intakeValuesOf(order: LiveOrder): IntakeValues {
+  const matched = slotOf(order.requestedDeliveryAt, order.requestedDeliveryUntil)
+  const legacy = !matched && order.requestedDeliveryAt ? dayjs(order.requestedDeliveryAt) : undefined
   return {
     phone: order.recipientPhone ?? undefined,
     customer: order.recipientName ?? undefined,
@@ -91,7 +99,10 @@ export function intakeValuesOf(order: LiveOrder): IntakeValues {
     channel: channelFromLive[order.channel],
     address: order.deliveryAddress ?? undefined,
     area: order.deliveryArea ?? undefined,
-    appointment: order.requestedDeliveryAt ? dayjs(order.requestedDeliveryAt) : undefined,
+    deliveryDate: matched?.date ?? legacy?.startOf('day'),
+    slot: matched?.key ?? (legacy ? 'legacy' : undefined),
+    appointment: legacy,
+    appointmentUntil: legacy && order.requestedDeliveryUntil ? dayjs(order.requestedDeliveryUntil) : undefined,
     lines: order.items.map((item) => ({ productId: String(item.productId), quantity: item.quantity })),
     note: order.note ?? undefined,
   }
@@ -99,15 +110,20 @@ export function intakeValuesOf(order: LiveOrder): IntakeValues {
 
 /** Dữ liệu gửi khi sửa đơn: như khi tạo, bỏ khách, kênh và hình thức nhận. */
 export function toLiveOrderUpdate(values: IntakeValues): OrderUpdateInput {
-  const { recipientName, recipientPhone, deliveryAddress, deliveryArea, requestedDeliveryAt, items, note } = toLiveOrderInput(
-    values,
-    undefined,
-  )
-  return { recipientName, recipientPhone, deliveryAddress, deliveryArea, requestedDeliveryAt, items, note }
+  const { recipientName, recipientPhone, deliveryAddress, deliveryArea, requestedDeliveryAt, requestedDeliveryUntil, items, note } =
+    toLiveOrderInput(values, undefined)
+  return { recipientName, recipientPhone, deliveryAddress, deliveryArea, requestedDeliveryAt, requestedDeliveryUntil, items, note }
+}
+
+/** Đầu và cuối khung hẹn từ form: khung đã chọn, hoặc giờ hẹn cũ giữ nguyên. */
+function deliveryWindowOf(values: IntakeValues) {
+  if (values.slot === 'legacy') return values.appointment ? { from: values.appointment, until: values.appointmentUntil } : undefined
+  return values.deliveryDate && values.slot ? slotWindow(values.deliveryDate, values.slot) : undefined
 }
 
 export function toLiveOrderInput(values: IntakeValues, customerId: string | undefined): OrderInput {
   const delivery = values.method === 'Giao tận nơi'
+  const chosen = delivery ? deliveryWindowOf(values) : undefined
   return {
     customerId: customerId ? Number(customerId) : null,
     channel: liveChannels[values.channel],
@@ -116,7 +132,8 @@ export function toLiveOrderInput(values: IntakeValues, customerId: string | unde
     recipientPhone: cleanPhone(values.phone),
     deliveryAddress: delivery ? text(values.address) : null,
     deliveryArea: delivery ? text(values.area) : null,
-    requestedDeliveryAt: delivery ? (values.appointment?.toISOString() ?? null) : null,
+    requestedDeliveryAt: chosen?.from.toISOString() ?? null,
+    requestedDeliveryUntil: chosen?.until?.toISOString() ?? null,
     items: submittedLines(values).map((line) => ({ productId: Number(line.productId), quantity: line.quantity })),
     note: text(values.note),
   }
