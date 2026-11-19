@@ -22,6 +22,8 @@ export function DeliveryAreaNotice({ phone }: { phone?: string }) {
       open={open}
       centered
       width={420}
+      // Làm mờ trang phía sau để hộp hỏi khu vực nổi bật.
+      mask={{ blur: true }}
       title={outside ? 'Chưa giao tới khu vực của bạn' : 'Bạn đang ở TP. Hồ Chí Minh?'}
       onCancel={close}
       footer={
