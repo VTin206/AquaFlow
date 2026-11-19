@@ -5,6 +5,8 @@ test('ghi nơi nhận và cách trả tiền vào đầu ghi chú, trả khi nh�
   expect(checkoutNote('room', 'cod')).toBe('Giao tận phòng')
   expect(checkoutNote('gate', 'cod', '  gọi trước  ')).toBe('Giao tới cổng/sảnh · gọi trước')
   expect(checkoutNote('room', 'transfer', 'tầng 3')).toBe('Giao tận phòng · Muốn chuyển khoản trước · tầng 3')
+  expect(checkoutNote('gate', 'transfer', 'gọi trước', 'deposit')).toBe('Giao tới cổng/sảnh · Chưa có vỏ, cọc vỏ mới · Muốn chuyển khoản trước · gọi trước')
+  expect(checkoutNote('room', 'cod', undefined, 'exchange')).toBe('Giao tận phòng')
 })
 
 test('ghi chú dài nhất của khách vẫn vừa giới hạn của đơn', () => {

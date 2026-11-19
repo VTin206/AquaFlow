@@ -19,11 +19,13 @@ import { usePlaceWebOrder, useShopProducts, useTransferAccount } from './shopSer
 import {
   CUSTOMER_NOTE_MAX,
   DELIVERY_PLACES,
+  SHELL_CHOICES,
   PAYMENT_CHOICES,
   checkoutNote,
   stairFloors,
   type DeliveryPlace,
   type PaymentChoice,
+  type ShellChoice,
 } from './checkoutChoices'
 import { useAuth } from '@/features/auth/useAuth'
 import { isCustomer } from '@/features/auth/accountAccess'
@@ -46,6 +48,7 @@ type CheckoutForm = {
   place: DeliveryPlace
   floor: number
   payment: PaymentChoice
+  shells: ShellChoice
 }
 
 const nextStepHint = 'Sau khi đặt, cửa hàng sẽ xác nhận đơn rồi giao hàng cho bạn.'
@@ -74,6 +77,7 @@ export function CheckoutPage() {
   // Giao ở cổng/sảnh thì không đi thang bộ: báo phí và gửi đơn với 0 tầng.
   const floor = stairFloors(place, Form.useWatch('floor', form) ?? 0)
   const payment: PaymentChoice = Form.useWatch('payment', form) ?? 'cod'
+  const shells: ShellChoice = Form.useWatch('shells', form) ?? 'exchange'
   // Cửa hàng chưa nhập số tài khoản thì chưa nhận chuyển khoản; vẫn hiện lựa chọn nhưng khóa và ghi "chưa hỗ trợ".
   const canTransfer = Boolean(useTransferAccount())
   const [submitError, setSubmitError] = useState<string>()
@@ -141,7 +145,9 @@ export function CheckoutPage() {
   const quotedSubtotal = quoteBlocked ? subtotal : quote.data!.subtotal
   const total = quotedSubtotal + (fee ?? 0)
 
-  const depositHint = <CheckoutDeposit lines={lines} />
+  // Chỉ hỏi vỏ bình khi giỏ có sản phẩm đổi vỏ (bình có loại vỏ).
+  const hasShells = lines.some((line) => line.product?.bottleTypeId != null)
+  const depositHint = <CheckoutDeposit lines={lines} choice={hasShells ? shells : undefined} />
   const submit = (values: CheckoutForm) => {
     if (submitLock.current || mutation.isPending || invalid || quoteBlocked || !cart.length || products.isError || products.isPending)
       return
@@ -156,7 +162,7 @@ export function CheckoutPage() {
       area: values.area.trim(),
       appointment: chosen?.from.toISOString(),
       appointmentUntil: chosen?.until.toISOString(),
-      note: checkoutNote(values.place, canTransfer ? values.payment : 'cod', values.note),
+      note: checkoutNote(values.place, canTransfer ? values.payment : 'cod', values.note, hasShells ? values.shells : undefined),
       lines: cart,
       floor: stairFloors(values.place, values.floor ?? 0),
       expectedTotal: quote.data!.total,
@@ -303,6 +309,7 @@ export function CheckoutPage() {
               place: 'room',
               floor: 0,
               payment: 'cod',
+              shells: 'exchange',
               remember: Boolean(profile),
               saveAddress: true,
             }}
@@ -367,6 +374,11 @@ export function CheckoutPage() {
                     </Form.Item>
                   )}
                 </div>
+                {hasShells && (
+                  <Form.Item name="shells" label="Vỏ bình">
+                    <Radio.Group options={SHELL_CHOICES} />
+                  </Form.Item>
+                )}
                 <DeliveryFeeSummary
                   fee={fee}
                   quote={quoteBlocked ? undefined : quote.data}

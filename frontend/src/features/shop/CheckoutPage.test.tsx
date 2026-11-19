@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   profile: null as null | { customer: string; phone: string; address: string; area: string },
   mutateAsync: vi.fn(),
   bank: undefined as undefined | { bankName: string; bankAccount: string; bankHolder: string },
+  bottleTypeId: undefined as number | undefined,
 }))
 
 vi.mock('@/features/auth/useAuth', () => ({ useAuth: () => ({ user: mocks.user }) }))
@@ -33,7 +34,7 @@ vi.mock('./cart', () => ({
 }))
 vi.mock('./shopService', () => ({
   useShopContact: () => ({ openingHours: '6:00 – 21:00 hằng ngày' }),
-  useShopProducts: () => ({ data: [{ id: '1', name: 'Nước 19L', price: 50000, unit: 'Bình', available: true }], isPending: false, isError: false }),
+  useShopProducts: () => ({ data: [{ id: '1', name: 'Nước 19L', price: 50000, unit: 'Bình', available: true, bottleTypeId: mocks.bottleTypeId }], isPending: false, isError: false }),
   usePlaceWebOrder: () => ({ mutateAsync: mocks.mutateAsync, isPending: false }),
   useTransferAccount: () => mocks.bank,
 }))
@@ -75,6 +76,7 @@ beforeEach(() => {
   vi.mocked(customerAccountApi.addresses).mockReset().mockResolvedValue([])
   vi.mocked(customerAccountApi.createAddress).mockClear()
   mocks.profile = null
+  mocks.bottleTypeId = undefined
   mocks.bank = { bankName: 'MB', bankAccount: '123', bankHolder: 'AQUAFLOW' }
   mocks.mutateAsync.mockReset()
   mocks.mutateAsync.mockResolvedValue({ id: 5, orderCode: 'AF-5' })
@@ -282,4 +284,23 @@ test('cửa hàng chưa có số tài khoản thì chuyển khoản trước v�
   renderPage()
   expect(screen.getByLabelText('Chuyển khoản trước (chưa hỗ trợ)')).toHaveProperty('disabled', true)
   expect(screen.getByLabelText('Trả khi nhận hàng')).toHaveProperty('checked', true)
+})
+
+test('bình đổi vỏ thì hỏi có vỏ đổi hay cọc vỏ mới; chọn cọc thì ghi vào ghi chú đơn', async () => {
+  mocks.bottleTypeId = 7
+  renderPage()
+  expect(screen.getByLabelText('Có vỏ đổi')).toHaveProperty('checked', true)
+  expect(screen.getAllByText('Đổi vỏ cùng loại khi nhận hàng, không tính cọc.').length).toBeGreaterThan(0)
+  fireEvent.click(screen.getByLabelText('Chưa có vỏ, cọc vỏ mới'))
+  type('Tên người nhận', 'Khách Test')
+  type('Số điện thoại', '0901234567')
+  await fillDelivery()
+  await placeOrder()
+  await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledTimes(1))
+  expect(mocks.mutateAsync.mock.calls[0][0]).toMatchObject({ note: 'Giao tận phòng · Chưa có vỏ, cọc vỏ mới' })
+})
+
+test('giỏ không có sản phẩm đổi vỏ thì không hỏi vỏ bình', () => {
+  renderPage()
+  expect(screen.queryByLabelText('Có vỏ đổi')).toBeNull()
 })
