@@ -36,7 +36,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 @Service
@@ -246,9 +245,16 @@ public class OrderService {
         return requested;
     }
 
+    /** Mã ngẫu nhiên; trùng mã đã có (rất hiếm) thì sinh lại. Cột order_code UNIQUE chặn nốt trường hợp tranh chấp. */
     private String generateOrderCode() {
-        return String.format(Locale.ROOT, "AF-%06d", orderRepository.nextOrderCodeNumber());
+        for (int attempt = 0; attempt < MAX_ORDER_CODE_ATTEMPTS; attempt++) {
+            String code = OrderCodes.generate();
+            if (!orderRepository.existsByOrderCode(code)) return code;
+        }
+        throw new IllegalStateException("Could not allocate a unique order code");
     }
+
+    private static final int MAX_ORDER_CODE_ATTEMPTS = 5;
 
     /** Trang Đơn hàng: lọc/tìm/phân trang ở SQL, mới nhất trước. */
     public OrderPageResponse search(OrderSearch search, PageRequestParams page) {

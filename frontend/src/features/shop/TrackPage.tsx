@@ -61,10 +61,10 @@ function LookupForm() {
             <Form.Item
               name="id"
               label="Mã đơn"
-              extra="Mã đơn có trong màn hình đặt hàng thành công, ví dụ AF-1070."
-              rules={[{ required: true, whitespace: true, message: 'Nhập mã đơn, ví dụ AF-1070.' }]}
+              extra="Mã đơn có trong màn hình đặt hàng thành công, ví dụ AF-7KQ2MX."
+              rules={[{ required: true, whitespace: true, message: 'Nhập mã đơn, ví dụ AF-7KQ2MX.' }]}
             >
-              <Input size="large" prefix={<Hash size={17} aria-hidden />} placeholder="AF-1070" autoCapitalize="characters" />
+              <Input size="large" prefix={<Hash size={17} aria-hidden />} placeholder="AF-7KQ2MX" autoCapitalize="characters" />
             </Form.Item>
             <Form.Item
               name="phone"
