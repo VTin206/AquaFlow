@@ -364,9 +364,16 @@ class OrderServiceTest {
                 List.of(new OrderItemRequest(101L, 2)),
                 "Test create order");
 
+        // Mã ngẫu nhiên đầu tiên trùng đơn cũ thì sinh lại mã khác.
+        when(orderRepository.existsByOrderCode(org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn(true, false);
+
         OrderResponse response =
                 orderService.createForStaff(request, 7L);
 
+        assertThat(response.orderCode()).matches(OrderCodes.PATTERN);
+        verify(orderRepository, org.mockito.Mockito.times(2))
+                .existsByOrderCode(org.mockito.ArgumentMatchers.anyString());
         assertThat(response.id()).isEqualTo(25L);
         assertThat(response.customerId()).isEqualTo(5L);
         assertThat(response.createdBy()).isEqualTo(7L);

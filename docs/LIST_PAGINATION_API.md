@@ -40,7 +40,7 @@ Trong mức 1–5: việc cần làm sớm nhất trước, theo `requested_deli
 
 ```json
 {
-  "items": [{ "id": 8, "orderCode": "AF-000008", "status": "DELIVERED", "...": "các trường OrderResponse",
+  "items": [{ "id": 8, "orderCode": "AF-7KQ2MX", "status": "DELIVERED", "...": "các trường OrderResponse",
               "paid": 10000, "due": 60000, "refundDue": 0 }],
   "page": 0, "size": 20, "total": 21, "totalPages": 2,
   "statusCounts": { "PENDING": 3, "CONFIRMED": 1, "PREPARING": 0, "OUT_FOR_DELIVERY": 0, "DELIVERED": 5, "COMPLETED": 12, "CANCELLED": 0 }
