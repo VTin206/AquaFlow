@@ -1788,7 +1788,8 @@
     grid-template-columns: 1fr;
   }
   .af-shop-banner {
-    grid-template-columns: 1fr;
+    /* minmax(0, …): nếu để 1fr, cột bị dãn theo cả dải slide của carousel (hàng nghìn px) làm bình trôi khỏi màn hình. */
+    grid-template-columns: minmax(0, 1fr);
     padding: 28px 22px;
     min-height: 0;
   }
