@@ -7,8 +7,9 @@ import { CheckoutPage } from './CheckoutPage'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { customerAccountApi } from './customerAccountApi'
 import { deliveryQuoteApi } from './deliveryQuoteApi'
+import { bottleTypeApi } from '@/features/live/bottleTypeApi'
 vi.mock('./deliveryQuoteApi', () => ({ deliveryQuoteApi: { quote: vi.fn() } }))
-vi.mock('./customerAccountApi', async original => ({
+vi.mock('./customerAccountApi', async (original) => ({
   ...(await original<typeof import('./customerAccountApi')>()),
   customerAccountApi: { addresses: vi.fn().mockResolvedValue([]), createAddress: vi.fn().mockResolvedValue({}) },
 }))
@@ -34,18 +35,24 @@ vi.mock('./cart', () => ({
 }))
 vi.mock('./shopService', () => ({
   useShopContact: () => ({ openingHours: '6:00 – 21:00 hằng ngày' }),
-  useShopProducts: () => ({ data: [{ id: '1', name: 'Nước 19L', price: 50000, unit: 'Bình', available: true, bottleTypeId: mocks.bottleTypeId }], isPending: false, isError: false }),
+  useShopProducts: () => ({
+    data: [{ id: '1', name: 'Nước 19L', price: 50000, unit: 'Bình', available: true, bottleTypeId: mocks.bottleTypeId }],
+    isPending: false,
+    isError: false,
+  }),
   usePlaceWebOrder: () => ({ mutateAsync: mocks.mutateAsync, isPending: false }),
   useTransferAccount: () => mocks.bank,
 }))
 
 const renderPage = () =>
   render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><App>
-      <MemoryRouter>
-        <CheckoutPage />
-      </MemoryRouter>
-    </App></QueryClientProvider>,
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <App>
+        <MemoryRouter>
+          <CheckoutPage />
+        </MemoryRouter>
+      </App>
+    </QueryClientProvider>,
   )
 const type = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } })
 /** Chọn phường/xã trong ô chọn: gõ không dấu để lọc rồi bấm đúng mục. */
@@ -68,11 +75,26 @@ afterEach(cleanup)
 beforeEach(() => {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
-    value: vi.fn().mockImplementation(() => ({ matches: false, addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn() })),
+    value: vi.fn().mockImplementation(() => ({
+      matches: false,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
   })
-  vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  )
   mocks.user = null
-  vi.mocked(deliveryQuoteApi.quote).mockReset().mockResolvedValue({ subtotal: 100000, baseFee: 15000, stairsFee: 0, deliveryFee: 15000, total: 115000 })
+  vi.mocked(deliveryQuoteApi.quote)
+    .mockReset()
+    .mockResolvedValue({ subtotal: 100000, baseFee: 15000, stairsFee: 0, deliveryFee: 15000, total: 115000 })
   vi.mocked(customerAccountApi.addresses).mockReset().mockResolvedValue([])
   vi.mocked(customerAccountApi.createAddress).mockClear()
   mocks.profile = null
@@ -84,7 +106,17 @@ beforeEach(() => {
 
 test('chọn địa chỉ đã lưu điền người nhận và địa chỉ vào đơn thật', async () => {
   mocks.user = { name: 'Customer', role: 'CUSTOMER', email: 'k@example.com', phone: '0901234567' }
-  vi.mocked(customerAccountApi.addresses).mockResolvedValue([{ id: 1, customerId: 2, recipientName: 'Người nhận khác', recipientPhone: '0905555555', addressLine: 'Địa chỉ đã lưu', area: 'Quận 3', isDefault: true }])
+  vi.mocked(customerAccountApi.addresses).mockResolvedValue([
+    {
+      id: 1,
+      customerId: 2,
+      recipientName: 'Người nhận khác',
+      recipientPhone: '0905555555',
+      addressLine: 'Địa chỉ đã lưu',
+      area: 'Quận 3',
+      isDefault: true,
+    },
+  ])
   renderPage()
   fireEvent.mouseDown(await screen.findByRole('combobox', { name: 'Chọn địa chỉ đã lưu' }))
   // Địa chỉ mặc định đã được điền sẵn nên ô chọn cũng đang hiện nó; bấm đúng mục trong danh sách thả xuống.
@@ -92,21 +124,43 @@ test('chọn địa chỉ đã lưu điền người nhận và địa chỉ và
   expect((screen.getByLabelText('Tên người nhận') as HTMLInputElement).value).toBe('Người nhận khác')
   expect((screen.getByLabelText('Địa chỉ giao') as HTMLInputElement).value).toBe('Địa chỉ đã lưu')
   await placeOrder()
-  await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ customer: 'Người nhận khác', phone: '0905555555', address: 'Địa chỉ đã lưu', area: 'Quận 3' })))
+  await waitFor(() =>
+    expect(mocks.mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ customer: 'Người nhận khác', phone: '0905555555', address: 'Địa chỉ đã lưu', area: 'Quận 3' }),
+    ),
+  )
 })
 
 test('khách có sổ địa chỉ được điền sẵn địa chỉ mặc định và không bị mời lưu lại', async () => {
   mocks.user = { name: 'Customer', role: 'CUSTOMER', email: 'k@example.com', phone: '0901234567' }
   vi.mocked(customerAccountApi.addresses).mockResolvedValue([
-    { id: 1, customerId: 2, recipientName: 'Nhà', recipientPhone: '0905555555', addressLine: 'Địa chỉ phụ', area: 'Quận 1', isDefault: false },
-    { id: 2, customerId: 2, recipientName: 'Người nhận mặc định', recipientPhone: '0906666666', addressLine: 'Địa chỉ mặc định', area: 'Quận 3', isDefault: true },
+    {
+      id: 1,
+      customerId: 2,
+      recipientName: 'Nhà',
+      recipientPhone: '0905555555',
+      addressLine: 'Địa chỉ phụ',
+      area: 'Quận 1',
+      isDefault: false,
+    },
+    {
+      id: 2,
+      customerId: 2,
+      recipientName: 'Người nhận mặc định',
+      recipientPhone: '0906666666',
+      addressLine: 'Địa chỉ mặc định',
+      area: 'Quận 3',
+      isDefault: true,
+    },
   ])
   renderPage()
   await waitFor(() => expect((screen.getByLabelText('Địa chỉ giao') as HTMLInputElement).value).toBe('Địa chỉ mặc định'))
   expect((screen.getByLabelText('Tên người nhận') as HTMLInputElement).value).toBe('Người nhận mặc định')
   expect(screen.queryByLabelText('Lưu địa chỉ này vào sổ địa chỉ')).toBeNull()
   await placeOrder()
-  await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ address: 'Địa chỉ mặc định', area: 'Quận 3' })))
+  await waitFor(() =>
+    expect(mocks.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ address: 'Địa chỉ mặc định', area: 'Quận 3' })),
+  )
   expect(customerAccountApi.createAddress).not.toHaveBeenCalled()
 })
 
@@ -144,7 +198,13 @@ test('giao sớm nhất không gửi giờ hẹn, đơn gửi đúng thông tin 
   await fillDelivery()
   await placeOrder()
   await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledTimes(1))
-  expect(mocks.mutateAsync.mock.calls[0][0]).toMatchObject({ customer: 'Khách Thử', phone: '0901234567', address: '12 Đường Test', area: 'Phường Bến Thành', appointment: undefined })
+  expect(mocks.mutateAsync.mock.calls[0][0]).toMatchObject({
+    customer: 'Khách Thử',
+    phone: '0901234567',
+    address: '12 Đường Test',
+    area: 'Phường Bến Thành',
+    appointment: undefined,
+  })
 })
 
 test('chọn khung giờ thì bắt buộc có ngày và khung, chưa chọn không tạo đơn; không còn ô chọn giờ phút', async () => {
@@ -153,7 +213,10 @@ test('chọn khung giờ thì bắt buộc có ngày và khung, chưa chọn kh�
   type('Số điện thoại', '0901234567')
   await fillDelivery()
   fireEvent.click(screen.getByLabelText('Chọn khung giờ'))
-  expect(screen.getByText('Sáng 08:00–11:00')).toBeTruthy()
+  // Khung giờ nằm ngay trong lịch chọn ngày.
+  fireEvent.mouseDown(screen.getByPlaceholderText('Chọn ngày và khung giờ'))
+  fireEvent.click(screen.getByPlaceholderText('Chọn ngày và khung giờ'))
+  expect(await screen.findByText('Sáng 08:00–11:00')).toBeTruthy()
   expect(screen.getByText('Tối 17:00–20:00')).toBeTruthy()
   await placeOrder()
   expect(await screen.findByText('Chọn ngày nhận hàng.')).toBeTruthy()
@@ -200,7 +263,13 @@ test('chưa báo được phí giao thì ghi tạm tính và khóa đặt đơn'
 test('đổi tầng tải phí mới và gửi tổng tiền đã báo khi đặt đơn', async () => {
   renderPage()
   await waitFor(() => expect(deliveryQuoteApi.quote).toHaveBeenCalledWith([{ productId: 1, quantity: 2 }], 0))
-  vi.mocked(deliveryQuoteApi.quote).mockResolvedValue({ subtotal: 100000, baseFee: 15000, stairsFee: 16000, deliveryFee: 31000, total: 131000 })
+  vi.mocked(deliveryQuoteApi.quote).mockResolvedValue({
+    subtotal: 100000,
+    baseFee: 15000,
+    stairsFee: 16000,
+    deliveryFee: 31000,
+    total: 131000,
+  })
   fireEvent.change(screen.getByLabelText('Số tầng đi thang bộ'), { target: { value: '3' } })
   await waitFor(() => expect(deliveryQuoteApi.quote).toHaveBeenLastCalledWith([{ productId: 1, quantity: 2 }], 3))
   type('Tên người nhận', 'Khách Test')
@@ -264,7 +333,7 @@ test('giao tới cổng, sảnh thì không hỏi số tầng, báo phí 0 tần
   type('Ghi chú (không bắt buộc)', 'gọi trước')
   await placeOrder()
   await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledTimes(1))
-  expect(mocks.mutateAsync.mock.calls[0][0]).toMatchObject({ floor: 0, note: 'Giao tới cổng/sảnh · gọi trước' })
+  expect(mocks.mutateAsync.mock.calls[0][0]).toMatchObject({ floor: 0, note: 'Giao tới cổng/sảnh · gọi trước', paymentMethod: 'COD' })
 })
 
 test('chọn chuyển khoản trước thì báo mã QR hiện sau khi xác nhận và ghi vào ghi chú đơn', async () => {
@@ -276,7 +345,7 @@ test('chọn chuyển khoản trước thì báo mã QR hiện sau khi xác nh�
   await fillDelivery()
   await placeOrder()
   await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledTimes(1))
-  expect(mocks.mutateAsync.mock.calls[0][0]).toMatchObject({ note: 'Giao tận phòng · Muốn chuyển khoản trước' })
+  expect(mocks.mutateAsync.mock.calls[0][0]).toMatchObject({ note: 'Giao tận phòng · Muốn chuyển khoản trước', paymentMethod: 'TRANSFER' })
 })
 
 test('cửa hàng chưa có số tài khoản thì chuyển khoản trước vẫn hiện nhưng khóa', () => {
@@ -286,18 +355,23 @@ test('cửa hàng chưa có số tài khoản thì chuyển khoản trước v�
   expect(screen.getByLabelText('Trả khi nhận hàng')).toHaveProperty('checked', true)
 })
 
-test('bình đổi vỏ thì hỏi có vỏ đổi hay cọc vỏ mới; chọn cọc thì ghi vào ghi chú đơn', async () => {
+test('bình đổi vỏ thì hỏi có vỏ đổi hay cọc vỏ mới; chọn cọc thì có dòng cọc, tổng dự kiến và ghi chú đơn', async () => {
   mocks.bottleTypeId = 7
+  vi.spyOn(bottleTypeApi, 'list').mockResolvedValue([{ id: 7, name: 'Vỏ 19L', depositUnitAmount: 50000, active: true }])
+  vi.mocked(deliveryQuoteApi.quote).mockResolvedValue({ subtotal: 100000, baseFee: 0, stairsFee: 0, deliveryFee: 0, total: 100000 })
   renderPage()
   expect(screen.getByLabelText('Có vỏ đổi')).toHaveProperty('checked', true)
-  expect(screen.getAllByText('Đổi vỏ cùng loại khi nhận hàng, không tính cọc.').length).toBeGreaterThan(0)
+  expect(screen.queryByText(/Cọc vỏ \(/)).toBeNull()
   fireEvent.click(screen.getByLabelText('Chưa có vỏ, cọc vỏ mới'))
+  expect(await screen.findByText('Cọc vỏ (2 vỏ)')).toBeTruthy()
+  expect((await screen.findAllByText('Tổng dự kiến')).length).toBeGreaterThan(0)
   type('Tên người nhận', 'Khách Test')
   type('Số điện thoại', '0901234567')
   await fillDelivery()
   await placeOrder()
   await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledTimes(1))
-  expect(mocks.mutateAsync.mock.calls[0][0]).toMatchObject({ note: 'Giao tận phòng · Chưa có vỏ, cọc vỏ mới' })
+  // Tổng gửi backend để đối chiếu giá vẫn không gồm cọc.
+  expect(mocks.mutateAsync.mock.calls[0][0]).toMatchObject({ note: 'Giao tận phòng · Chưa có vỏ, cọc vỏ mới', expectedTotal: 100000 })
 })
 
 test('giỏ không có sản phẩm đổi vỏ thì không hỏi vỏ bình', () => {

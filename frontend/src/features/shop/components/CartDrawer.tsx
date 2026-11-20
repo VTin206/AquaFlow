@@ -79,7 +79,18 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
       ) : products.isError ? (
         <QueryError error={products.error} onRetry={products.refetch} />
       ) : !cart.length ? (
-        <Empty description="Giỏ hàng đang trống." />
+        // Giỏ trống: một nút về danh mục sản phẩm, đóng giỏ luôn (đang ở danh mục thì chỉ đóng, không tải lại).
+        <Empty description="Giỏ hàng đang trống.">
+          <Button
+            type="primary"
+            onClick={() => {
+              onClose()
+              navigate('/shop/drinks')
+            }}
+          >
+            Xem sản phẩm
+          </Button>
+        </Empty>
       ) : (
         <ul className="af-shop-cart">
           {lines.map(({ productId, quantity, product }) => {

@@ -1,5 +1,5 @@
 import { api } from '@/shared/api/client'
-import type { LiveOrder } from './orderApi'
+import type { LiveOrder, PaymentMethod } from './orderApi'
 
 /** Payload công khai cho checkout; giá và customerId do backend quyết định. */
 export type GuestOrderInput = {
@@ -14,6 +14,8 @@ export type GuestOrderInput = {
   note?: string
   stairFloor?: number
   expectedTotal?: number
+  /** Cách khách chọn trả tiền ở bước đặt (docs/ORDER_PAYMENT_METHOD_API.md); backend cũ bỏ qua trường này. */
+  paymentMethod?: PaymentMethod
 }
 
 export const guestOrderApi = {

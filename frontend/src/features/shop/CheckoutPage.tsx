@@ -3,8 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { deliveryQuoteApi } from './deliveryQuoteApi'
 import { DeliveryFeeSummary } from './components/DeliveryFeeSummary'
 import dayjs, { type Dayjs } from 'dayjs'
-import { ChevronDown, Wallet } from 'lucide-react'
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { ChevronDown } from 'lucide-react'
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useOutletContext } from 'react-router'
 import type { LiveOrder } from '@/features/live/orderApi'
 import { Money } from '@/shared/components/Money'
@@ -13,7 +13,8 @@ import { focusNextOnEnter } from '@/shared/utils/forms'
 import { readProfile, saveProfile, useCart, useCartActions } from './cart'
 import { submitCheckoutOnce } from './checkoutSubmit'
 import { CheckoutReview } from './components/CheckoutReview'
-import { CheckoutDeposit } from './components/CheckoutDeposit'
+import { useShellDeposit } from './components/CheckoutDeposit'
+import { useNarrow } from './useNarrow'
 import { DELIVERY_SLOTS, slotStarted, slotText, slotWindow, type DeliverySlotKey } from '@/shared/utils/deliveryWindow'
 import { usePlaceWebOrder, useShopProducts, useTransferAccount } from './shopService'
 import {
@@ -81,6 +82,7 @@ export function CheckoutPage() {
   // Cửa hàng chưa nhập số tài khoản thì chưa nhận chuyển khoản; vẫn hiện lựa chọn nhưng khóa và ghi "chưa hỗ trợ".
   const canTransfer = Boolean(useTransferAccount())
   const [submitError, setSubmitError] = useState<string>()
+  const [pendingDate, setPendingDate] = useState<Dayjs>()
   const [placedLiveOrder, setPlacedLiveOrder] = useState<LiveOrder>()
   const submitLock = useRef(false)
   useEffect(() => {
@@ -143,11 +145,40 @@ export function CheckoutPage() {
   const quoteBlocked = !validFloor || !quote.data || quote.isPlaceholderData || quote.isError || quote.isFetching
   const fee = quoteBlocked ? null : quote.data!.deliveryFee
   const quotedSubtotal = quoteBlocked ? subtotal : quote.data!.subtotal
-  const total = quotedSubtotal + (fee ?? 0)
-
   // Chỉ hỏi vỏ bình khi giỏ có sản phẩm đổi vỏ (bình có loại vỏ).
   const hasShells = lines.some((line) => line.product?.bottleTypeId != null)
-  const depositHint = <CheckoutDeposit lines={lines} choice={hasShells ? shells : undefined} />
+  // Chọn cọc vỏ mới thì cọc thành một dòng tiền và cộng vào tổng hiển thị. `expectedTotal` gửi backend vẫn không gồm cọc.
+  const wantsDeposit = hasShells && shells === 'deposit'
+  const shellDeposit = useShellDeposit(lines, wantsDeposit)
+  const deposit = wantsDeposit ? shellDeposit : undefined
+  const depositAmount = deposit?.status === 'ready' ? (deposit.amount ?? 0) : 0
+  const total = quotedSubtotal + (fee ?? 0) + depositAmount
+  const totalLabel = fee === null ? 'Tạm tính' : deposit ? 'Tổng dự kiến' : 'Tổng cộng'
+  const narrow = useNarrow(900)
+  const shellPicker = hasShells ? (
+    <Form.Item name="shells" label="Vỏ bình" className="af-checkout-shells">
+      <Radio.Group options={SHELL_CHOICES} />
+    </Form.Item>
+  ) : null
+  const feeDetail = (
+    <DeliveryFeeSummary
+      quote={quoteBlocked ? undefined : quote.data}
+      fees={quote.data?.fees}
+      error={quote.isError ? <QueryError error={quote.error} onRetry={quote.refetch} /> : undefined}
+    />
+  )
+  const review = (picker?: ReactNode) => (
+    <CheckoutReview
+      lines={lines}
+      subtotal={quotedSubtotal}
+      fee={fee}
+      feeDetail={feeDetail}
+      shellPicker={picker}
+      deposit={deposit}
+      total={total}
+      totalLabel={totalLabel}
+    />
+  )
   const submit = (values: CheckoutForm) => {
     if (submitLock.current || mutation.isPending || invalid || quoteBlocked || !cart.length || products.isError || products.isPending)
       return
@@ -163,6 +194,7 @@ export function CheckoutPage() {
       appointment: chosen?.from.toISOString(),
       appointmentUntil: chosen?.until.toISOString(),
       note: checkoutNote(values.place, canTransfer ? values.payment : 'cod', values.note, hasShells ? values.shells : undefined),
+      paymentMethod: canTransfer && values.payment === 'transfer' ? ('TRANSFER' as const) : ('COD' as const),
       lines: cart,
       floor: stairFloors(values.place, values.floor ?? 0),
       expectedTotal: quote.data!.total,
@@ -285,17 +317,19 @@ export function CheckoutPage() {
             />
           )}
           {submitError && <Alert style={{ marginTop: 12 }} type="error" showIcon title="Không thể tạo đơn" description={submitError} />}
-          <details className="af-checkout-fold">
-            <summary>
-              <ChevronDown size={18} aria-hidden />
-              <span>{units} sản phẩm</span>
-              <Money value={total} tone="due" />
-            </summary>
-            <CheckoutReview lines={lines} subtotal={quotedSubtotal} fee={fee} depositHint={depositHint} />
-            <Button block onClick={openCart}>
-              Sửa giỏ hàng
-            </Button>
-          </details>
+          {narrow && (
+            <details className="af-checkout-fold">
+              <summary>
+                <ChevronDown size={18} aria-hidden />
+                <span>{units} sản phẩm</span>
+                <Money value={total} tone="due" />
+              </summary>
+              {review()}
+              <Button block onClick={openCart}>
+                Sửa giỏ hàng
+              </Button>
+            </details>
+          )}
           <Form
             className="af-checkout-layout"
             form={form}
@@ -317,8 +351,9 @@ export function CheckoutPage() {
             onKeyDown={handleFormKeys}
           >
             <div className="af-checkout-main">
-              {/* Người nhận và nơi giao chung một khung để khách điền liền một mạch. */}
-              <Card title="Giao đến">
+              {/* Màn hình hẹp: khối đơn hàng thu gọn ở trên, nên vỏ bình hỏi ngay đầu form. */}
+              {narrow && shellPicker && <Card className="af-checkout-shells-card">{shellPicker}</Card>}
+              <Card title="1. Người nhận">
                 {customer && <SavedAddressPicker onSelect={applyAddress} current={{ address: typedAddress, area: typedArea }} />}
                 <div className="af-checkout-who">
                   <Form.Item
@@ -374,78 +409,6 @@ export function CheckoutPage() {
                     </Form.Item>
                   )}
                 </div>
-                {hasShells && (
-                  <Form.Item name="shells" label="Vỏ bình">
-                    <Radio.Group options={SHELL_CHOICES} />
-                  </Form.Item>
-                )}
-                <DeliveryFeeSummary
-                  fee={fee}
-                  quote={quoteBlocked ? undefined : quote.data}
-                  fees={quote.data?.fees}
-                  loading={quoteBlocked}
-                  error={quote.isError ? <QueryError error={quote.error} onRetry={quote.refetch} /> : undefined}
-                />
-                <Form.Item name="when" label="Giờ nhận hàng">
-                  <Radio.Group
-                    options={[
-                      { value: 'asap', label: 'Giao sớm nhất' },
-                      { value: 'scheduled', label: 'Chọn khung giờ' },
-                    ]}
-                  />
-                </Form.Item>
-                <Form.Item
-                  noStyle
-                  shouldUpdate={(previous: CheckoutForm, next: CheckoutForm) =>
-                    previous.when !== next.when || previous.deliveryDate !== next.deliveryDate
-                  }
-                >
-                  {({ getFieldValue }) => {
-                    if (getFieldValue('when') !== 'scheduled') return null
-                    const date: Dayjs | undefined = getFieldValue('deliveryDate')
-                    return (
-                      <>
-                        <Form.Item name="deliveryDate" label="Ngày nhận" rules={[{ required: true, message: 'Chọn ngày nhận hàng.' }]}>
-                          <DatePicker
-                            format="DD/MM/YYYY"
-                            // Hôm nay hết khung thì không chọn được nữa.
-                            disabledDate={(day) =>
-                              day.isBefore(dayjs(), 'day') ||
-                              (day.isSame(dayjs(), 'day') && DELIVERY_SLOTS.every((slot) => slotStarted(day, slot.key)))
-                            }
-                            onChange={() => form.setFieldValue('slot', undefined)}
-                            style={{ width: '100%' }}
-                          />
-                        </Form.Item>
-                        <Form.Item
-                          name="slot"
-                          label="Khung giờ"
-                          rules={[
-                            { required: true, message: 'Chọn khung giờ nhận hàng.' },
-                            {
-                              validator: (_, value?: DeliverySlotKey) =>
-                                value && date && slotStarted(date, value)
-                                  ? Promise.reject(new Error('Khung giờ này đã bắt đầu, chọn khung sau.'))
-                                  : Promise.resolve(),
-                            },
-                          ]}
-                        >
-                          <Radio.Group
-                            className="af-checkout-slots"
-                            options={DELIVERY_SLOTS.map((slot) => ({
-                              value: slot.key,
-                              label: slotText(slot),
-                              disabled: !date || slotStarted(date, slot.key),
-                            }))}
-                          />
-                        </Form.Item>
-                      </>
-                    )
-                  }}
-                </Form.Item>
-                <Form.Item name="note" label="Ghi chú (không bắt buộc)" rules={[{ max: CUSTOMER_NOTE_MAX }]}>
-                  <TextArea rows={1} maxLength={CUSTOMER_NOTE_MAX} placeholder="Ví dụ: gọi trước khi đến" />
-                </Form.Item>
                 {canSaveAddress && (
                   <Form.Item name="saveAddress" valuePropName="checked" className="af-checkout-remember">
                     <Checkbox>Lưu địa chỉ này vào sổ địa chỉ</Checkbox>
@@ -455,15 +418,96 @@ export function CheckoutPage() {
                   <Checkbox>Lưu thông tin trên máy này cho lần đặt sau</Checkbox>
                 </Form.Item>
               </Card>
-              <div className="af-checkout-payment">
+              <Card title="2. Thời gian nhận">
+                <Form.Item name="when">
+                  <Radio.Group
+                    options={[
+                      { value: 'asap', label: 'Giao sớm nhất' },
+                      { value: 'scheduled', label: 'Chọn khung giờ' },
+                    ]}
+                  />
+                </Form.Item>
+                {/* Khung giờ giữ trong form nhưng chọn ngay trong lịch (chân lịch), ô hiện "ngày · khung". */}
+                <Form.Item name="slot" hidden>
+                  <Input />
+                </Form.Item>
                 <Form.Item
-                  name="payment"
-                  label={
-                    <>
-                      <Wallet size={18} aria-hidden /> Thanh toán
-                    </>
+                  noStyle
+                  shouldUpdate={(previous: CheckoutForm, next: CheckoutForm) =>
+                    previous.when !== next.when || previous.deliveryDate !== next.deliveryDate || previous.slot !== next.slot
                   }
                 >
+                  {({ getFieldValue }) => {
+                    if (getFieldValue('when') !== 'scheduled') return null
+                    const date: Dayjs | undefined = getFieldValue('deliveryDate')
+                    const slot: DeliverySlotKey | undefined = getFieldValue('slot')
+                    // Ngày đang chọn trong lịch (chưa bấm OK) quyết định khung nào còn chọn được.
+                    const shownDate = pendingDate ?? date
+                    const slotLabel = DELIVERY_SLOTS.find((item) => item.key === slot)
+                    return (
+                      <Form.Item
+                        name="deliveryDate"
+                        label="Ngày và khung giờ"
+                        rules={[
+                          { required: true, message: 'Chọn ngày nhận hàng.' },
+                          {
+                            validator: () =>
+                              !slot
+                                ? Promise.reject(new Error('Chọn khung giờ nhận hàng.'))
+                                : date && slotStarted(date, slot)
+                                  ? Promise.reject(new Error('Khung giờ này đã bắt đầu, chọn khung sau.'))
+                                  : Promise.resolve(),
+                          },
+                        ]}
+                      >
+                        <DatePicker
+                          needConfirm
+                          placeholder="Chọn ngày và khung giờ"
+                          format={(value) => `${value.format('DD/MM/YYYY')}${slotLabel ? ` · ${slotText(slotLabel)}` : ''}`}
+                          // Hôm nay hết khung thì không chọn được nữa.
+                          disabledDate={(day) =>
+                            day.isBefore(dayjs(), 'day') ||
+                            (day.isSame(dayjs(), 'day') && DELIVERY_SLOTS.every((item) => slotStarted(day, item.key)))
+                          }
+                          onOpenChange={(open) => setPendingDate(open ? date : undefined)}
+                          onCalendarChange={(value) => {
+                            const day = (Array.isArray(value) ? value[0] : value) ?? undefined
+                            setPendingDate(day)
+                            // Đổi sang ngày mà khung đang chọn đã qua thì bỏ khung đó.
+                            if (day && slot && slotStarted(day, slot)) form.setFieldValue('slot', undefined)
+                          }}
+                          // Lịch bên trái, cột khung giờ bên phải (điện thoại thì xuống dưới lịch).
+                          panelRender={(panel) => (
+                            <div className="af-checkout-slot-panel">
+                              {panel}
+                              <Radio.Group
+                                className="af-checkout-slots"
+                                aria-label="Khung giờ"
+                                value={slot}
+                                onChange={(event) => {
+                                  form.setFieldValue('slot', event.target.value)
+                                  if (date) void form.validateFields(['deliveryDate'])
+                                }}
+                                options={DELIVERY_SLOTS.map((item) => ({
+                                  value: item.key,
+                                  label: slotText(item),
+                                  disabled: !shownDate || slotStarted(shownDate, item.key),
+                                }))}
+                              />
+                            </div>
+                          )}
+                          style={{ width: '100%' }}
+                        />
+                      </Form.Item>
+                    )
+                  }}
+                </Form.Item>
+                <Form.Item name="note" label="Ghi chú (không bắt buộc)" rules={[{ max: CUSTOMER_NOTE_MAX }]}>
+                  <TextArea rows={1} maxLength={CUSTOMER_NOTE_MAX} placeholder="Ví dụ: gọi trước khi đến" />
+                </Form.Item>
+              </Card>
+              <Card title="3. Thanh toán" className="af-checkout-payment">
+                <Form.Item name="payment">
                   <Radio.Group
                     options={PAYMENT_CHOICES.map((choice) =>
                       choice.value === 'transfer' && !canTransfer
@@ -475,12 +519,12 @@ export function CheckoutPage() {
                 {payment === 'transfer' && canTransfer && (
                   <p>Cửa hàng xác nhận giá xong, trang theo dõi đơn sẽ hiện mã QR để bạn chuyển khoản.</p>
                 )}
-              </div>
+              </Card>
               <p className="af-form-hint af-checkout-next-phone">{nextStepHint}</p>
             </div>
             <aside className="af-checkout-aside">
               <Card title={`Đơn hàng (${units} sản phẩm)`} extra={<Button onClick={openCart}>Sửa</Button>}>
-                <CheckoutReview lines={lines} subtotal={quotedSubtotal} fee={fee} depositHint={depositHint} />
+                {review(narrow ? undefined : shellPicker)}
                 <Button type="primary" block size="large" htmlType="submit" disabled={invalid || quoteBlocked} loading={mutation.isPending}>
                   Đặt đơn
                 </Button>
@@ -489,7 +533,7 @@ export function CheckoutPage() {
             </aside>
             <div className="af-checkout-bar">
               <div>
-                <small>{fee === null ? 'Tạm tính' : 'Tổng cộng'}</small>
+                <small>{totalLabel}</small>
                 <Money value={total} tone="due" />
               </div>
               <Button type="primary" size="large" htmlType="submit" disabled={invalid || quoteBlocked} loading={mutation.isPending}>

@@ -453,7 +453,9 @@ describe('customer order transfer', () => {
       bankHolder: 'AQUAFLOW',
     } as never)
     renderOrder({ ...order, status: 'CONFIRMED', trackingToken: 'tok' })
-    expect(await screen.findByText('Còn phải trả')).toBeTruthy()
+    // "Còn phải trả" nằm ở thanh ghim tổng tiền dưới trang, cạnh tổng cộng.
+    const due = await screen.findByText(/Còn phải trả/)
+    expect(due.textContent).toMatch(/6\.000/)
     expect(screen.getByText('Đã thanh toán')).toBeTruthy()
     expect(await screen.findByText('0123456789')).toBeTruthy()
     expect(screen.getByText('Chuyển khoản')).toBeTruthy()
@@ -466,7 +468,7 @@ describe('customer order transfer', () => {
   it('does not offer transfer before the store confirms the order', async () => {
     vi.spyOn(settingsApi, 'profile').mockResolvedValue({ storeName: 'AquaFlow', address: '', phone: '', email: '', openingHours: '' } as never)
     renderOrder({ ...order, status: 'PENDING', trackingToken: 'tok' })
-    expect(await screen.findByText('Còn phải trả')).toBeTruthy()
+    expect(await screen.findByText(/Còn phải trả/)).toBeTruthy()
     expect(screen.queryByText('Chuyển khoản')).toBeNull()
   })
 })
