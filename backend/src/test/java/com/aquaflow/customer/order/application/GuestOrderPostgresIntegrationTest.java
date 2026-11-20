@@ -57,6 +57,67 @@ class GuestOrderPostgresIntegrationTest {
     @Autowired
     private OrderTrackingService tracking;
 
+    private GuestOrderCreateRequest guestOrder(com.aquaflow.customer.order.domain.PaymentMethod paymentMethod) {
+        return new GuestOrderCreateRequest(
+                "Guest Customer", "0901234567", "123 Nguyen Trai", "Phường Chợ Quán", null,
+                List.of(new OrderItemRequest(productId, 1)), null, 0, null, null, paymentMethod);
+    }
+
+    @Test
+    void guestOrderWithoutPaymentChoiceIsStoredAsCashOnDeliveryForStaffAndTracking() {
+        OrderResponse response = orderService.createForGuest(guestOrder(null));
+        orderId = response.id();
+
+        assertThat(response.paymentMethod()).isEqualTo(com.aquaflow.customer.order.domain.PaymentMethod.COD);
+        assertThat(tracking.byToken(response.trackingToken()).paymentMethod())
+                .isEqualTo(com.aquaflow.customer.order.domain.PaymentMethod.COD);
+        assertThat(jdbc.queryForObject("SELECT payment_method FROM orders WHERE id = ?", String.class, orderId))
+                .isEqualTo("COD");
+        // Ràng buộc trong DB chỉ nhận COD/TRANSFER, kể cả khi ghi thẳng bằng SQL.
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> jdbc.update(
+                        "UPDATE orders SET payment_method = 'CARD' WHERE id = ?", orderId))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void transferBeforeDeliveryNeedsThePublishedBankAccount() {
+        String saved = jdbc.queryForObject("SELECT settings::text FROM store_settings WHERE id = 1", String.class);
+        try {
+            jdbc.update("""
+                    UPDATE store_settings SET settings = settings - 'bankName' - 'bankAccount' - 'bankHolder' WHERE id = 1
+                    """);
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> orderService.createForGuest(
+                            guestOrder(com.aquaflow.customer.order.domain.PaymentMethod.TRANSFER)))
+                    .isInstanceOf(com.aquaflow.shared.api.BadRequestException.class);
+
+            jdbc.update("""
+                    UPDATE store_settings SET settings = settings
+                        || '{"bankName":"Vietcombank","bankAccount":"0123456789","bankHolder":"AQUAFLOW"}'::jsonb
+                    WHERE id = 1
+                    """);
+            OrderResponse response = orderService.createForGuest(
+                    guestOrder(com.aquaflow.customer.order.domain.PaymentMethod.TRANSFER));
+            orderId = response.id();
+            assertThat(response.paymentMethod()).isEqualTo(com.aquaflow.customer.order.domain.PaymentMethod.TRANSFER);
+            assertThat(tracking.byToken(response.trackingToken()).paymentMethod())
+                    .isEqualTo(com.aquaflow.customer.order.domain.PaymentMethod.TRANSFER);
+        } finally {
+            jdbc.update("UPDATE store_settings SET settings = CAST(? AS jsonb) WHERE id = 1", saved);
+        }
+    }
+
+    @Test
+    void counterOrderIgnoresThePaymentChoice() {
+        OrderResponse response = orderService.createForStaff(new com.aquaflow.customer.order.api.dto.OrderCreateRequest(
+                null, com.aquaflow.customer.order.domain.OrderChannel.COUNTER,
+                com.aquaflow.customer.order.domain.FulfillmentType.COUNTER, null, null, null, null, null,
+                List.of(new OrderItemRequest(productId, 1)), null, 0, null, null,
+                com.aquaflow.customer.order.domain.PaymentMethod.TRANSFER), null);
+        orderId = response.id();
+
+        assertThat(response.paymentMethod()).isNull();
+    }
+
     @Test
     void guestOrderKeepsChosenDeliveryWindowForStaffAndTracking() {
         java.time.OffsetDateTime from = java.time.OffsetDateTime.parse("2030-03-04T14:00:00+07:00");

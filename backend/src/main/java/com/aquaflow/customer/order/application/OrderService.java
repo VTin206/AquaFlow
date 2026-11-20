@@ -120,7 +120,7 @@ public class OrderService {
                 null,
                 OrderChannel.WEB,
                 FulfillmentType.DELIVERY, request.stairFloor(), request.expectedTotal(),
-                request.requestedDeliveryUntil()));
+                request.requestedDeliveryUntil(), request.paymentMethod()));
     }
 
     /**
@@ -156,7 +156,7 @@ public class OrderService {
                 createdBy,
                 channel,
                 request.fulfillmentType(), request.stairFloor(), request.expectedTotal(),
-                request.requestedDeliveryUntil());
+                request.requestedDeliveryUntil(), request.paymentMethod());
     }
 
     private OrderResponse createOrder(
@@ -171,8 +171,10 @@ public class OrderService {
             Long createdBy,
             OrderChannel channel,
             FulfillmentType fulfillmentType, int stairFloor, BigDecimal expectedTotal,
-            java.time.OffsetDateTime requestedDeliveryUntil) {
+            java.time.OffsetDateTime requestedDeliveryUntil,
+            com.aquaflow.customer.order.domain.PaymentMethod paymentMethod) {
 
+        com.aquaflow.customer.order.domain.PaymentMethod chosenPayment = webPaymentMethod(channel, paymentMethod);
         Order order = new Order(
                 generateOrderCode(),
                 customerId,
@@ -188,6 +190,7 @@ public class OrderService {
                 channel == OrderChannel.WEB && fulfillmentType == FulfillmentType.DELIVERY
                         ? (note == null ? "" : note + "\n") + "Số tầng đi thang bộ: " + stairFloor : note);
         order.scheduleDeliveryUntil(requestedDeliveryUntil);
+        order.choosePaymentMethod(chosenPayment);
 
         BigDecimal subtotal = BigDecimal.ZERO;
         long units = 0, stairsUnits = 0;
@@ -227,6 +230,20 @@ public class OrderService {
         orderItemRepository.saveAll(items);
 
         return toResponse(savedOrder);
+    }
+
+    /**
+     * Đơn web: lưu cách khách chọn trả tiền, thiếu thì coi là trả khi nhận hàng. Chuyển khoản trước chỉ nhận khi cửa
+     * hàng đã công bố tài khoản nhận tiền (trang đặt hàng cũng khóa lựa chọn này khi chưa có). Đơn tại quầy: null.
+     */
+    private com.aquaflow.customer.order.domain.PaymentMethod webPaymentMethod(
+            OrderChannel channel, com.aquaflow.customer.order.domain.PaymentMethod requested) {
+        if (channel != OrderChannel.WEB) return null;
+        if (requested != com.aquaflow.customer.order.domain.PaymentMethod.TRANSFER)
+            return com.aquaflow.customer.order.domain.PaymentMethod.COD;
+        if (storeSettings.get().settings().bankAccount() == null)
+            throw new com.aquaflow.shared.api.BadRequestException("Cửa hàng chưa nhận chuyển khoản. Vui lòng chọn trả khi nhận hàng.");
+        return requested;
     }
 
     private String generateOrderCode() {
@@ -438,7 +455,8 @@ public class OrderService {
                 order.getNote(),
                 items,
                 order.getTrackingToken(),
-                order.getRequestedDeliveryUntil()
+                order.getRequestedDeliveryUntil(),
+                order.getPaymentMethod()
         );
     }
 

@@ -47,6 +47,11 @@ public class Order {
     @Column(name = "payment_status", nullable = false, length = 20)
     private PaymentStatus paymentStatus = PaymentStatus.UNPAID;
 
+    /** Cách khách chọn trả tiền khi đặt đơn web; null với đơn tại quầy và đơn cũ. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", length = 16)
+    private PaymentMethod paymentMethod;
+
     @Column(name = "delivery_failed", nullable = false)
     private boolean deliveryFailed;
 
@@ -324,6 +329,15 @@ public class Order {
 
     public OffsetDateTime getRequestedDeliveryUntil() {
         return requestedDeliveryUntil;
+    }
+
+    public PaymentMethod getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    /** Ghi cách khách chọn trả tiền lúc đặt đơn web; chỉ đặt một lần khi tạo đơn. */
+    public void choosePaymentMethod(PaymentMethod paymentMethod) {
+        this.paymentMethod = paymentMethod;
     }
 
     public BigDecimal getSubtotal() {
