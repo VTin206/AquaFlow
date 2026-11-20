@@ -4,6 +4,7 @@ import { isCustomer } from '@/features/auth/accountAccess'
 import { customerOrderApi } from './customerOrderApi'
 import { catalogApi, type CatalogProduct } from '@/features/live/catalogApi'
 import { guestOrderApi, type GuestOrderInput } from '@/features/live/guestOrderApi'
+import type { PaymentMethod } from '@/features/live/orderApi'
 import { orderTrackingApi } from '@/features/live/orderTrackingApi'
 import { catalogFromApi } from '@/features/inventory/catalogGroups'
 import type { Product } from '@/features/inventory/types'
@@ -90,6 +91,7 @@ export type WebOrderDraft = {
   /** Cuối khung giờ khách chọn. */
   appointmentUntil?: string
   note?: string
+  paymentMethod?: PaymentMethod
   lines: { productId: string; quantity: number }[]
 }
 
@@ -104,6 +106,7 @@ export const toGuestOrderInput = (draft: WebOrderDraft): GuestOrderInput => ({
   ...(draft.appointment ? { requestedDeliveryAt: draft.appointment } : {}),
   ...(draft.appointment && draft.appointmentUntil ? { requestedDeliveryUntil: draft.appointmentUntil } : {}),
   ...(draft.note ? { note: draft.note } : {}),
+  ...(draft.paymentMethod ? { paymentMethod: draft.paymentMethod } : {}),
 })
 
 export function useShopProduct(id: string) {

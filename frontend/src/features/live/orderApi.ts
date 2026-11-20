@@ -44,7 +44,11 @@ export type LiveOrder = {
   items: { id: number; productId: number; quantity: number; unitPrice: number; lineTotal: number }[]
   /** Liên kết tra cứu cho khách: /track/{trackingToken}. */
   trackingToken?: string | null
+  /** Cách khách chọn trả tiền khi đặt; chưa có (backend cũ, đơn cũ) thì coi như chưa rõ. */
+  paymentMethod?: PaymentMethod | null
 }
+/** COD: trả khi nhận hàng; TRANSFER: chuyển khoản trước theo mã QR sau khi cửa hàng xác nhận giá. */
+export type PaymentMethod = 'COD' | 'TRANSFER'
 export type OrderStatus = LiveOrder['status']
 /** Theo OrderCreateRequest; nhân viên không tạo đơn kênh WEB (đơn web đi luồng khách hàng). */
 export type OrderUpdateInput = Pick<

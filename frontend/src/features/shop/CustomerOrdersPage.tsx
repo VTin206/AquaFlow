@@ -322,30 +322,17 @@ export function CustomerOrderPage() {
                     </dd>
                   </div>
                 )}
-                <div className="is-total">
-                  <dt>{order.status === 'PENDING' ? 'Tạm tính' : 'Tổng cộng'}</dt>
-                  <dd>
-                    <Money value={order.total} tone="due" />
-                  </dd>
-                </div>
+                {/* Tổng tiền và còn phải trả chỉ nằm ở thanh ghim bên dưới, không lặp ở đây. */}
                 {order.status !== 'CANCELLED' &&
                   (balance ? (
-                    <>
-                      {balance.paid > 0 && (
-                        <div>
-                          <dt>Đã thanh toán</dt>
-                          <dd>
-                            <Money value={balance.paid} tone="paid" />
-                          </dd>
-                        </div>
-                      )}
+                    balance.paid > 0 && (
                       <div>
-                        <dt>Còn phải trả</dt>
+                        <dt>Đã thanh toán</dt>
                         <dd>
-                          <Money value={balance.due} tone={dueTone(balance.due)} />
+                          <Money value={balance.paid} tone="paid" />
                         </dd>
                       </div>
-                    </>
+                    )
                   ) : (
                     <div>
                       <dt>Thanh toán</dt>
@@ -354,8 +341,54 @@ export function CustomerOrderPage() {
                   ))}
               </dl>
             </Card>
-            {/* Chuyển khoản trước chỉ mở sau khi cửa hàng xác nhận (giá đã chốt); cửa hàng đối chiếu rồi mới ghi nhận đã trả. */}
-            {balance && balance.due > 0 && !['PENDING', 'CANCELLED'].includes(order.status) && (
+            {/* Thanh dưới ghim lại: tổng tiền và nút Mua lại luôn thấy dù đơn dài; cuộn hết thì nằm liền dưới các khoản tiền. */}
+            <div className="af-shop-track-bar">
+              <div className="af-shop-track-sum">
+                <span>{order.status === 'PENDING' ? 'Tạm tính' : 'Tổng cộng'}</span>
+                <Money value={order.total} tone="due" />
+                {/* Đã trả một phần: thêm số còn phải trả, khớp với số tiền trên QR. */}
+                {balance && balance.paid > 0 && order.status !== 'CANCELLED' && (
+                  <span>
+                    · Còn phải trả <Money value={balance.due} tone={dueTone(balance.due)} />
+                  </span>
+                )}
+              </div>
+              <div className="af-shop-track-actions">
+                {/* Khách tự hủy khi cửa hàng chưa chuẩn bị hàng; đang chuẩn bị trở đi thì phải gọi cửa hàng. */}
+                {(order.status === 'PENDING' || order.status === 'CONFIRMED') && (
+                  <Popconfirm
+                    title="Hủy đơn này?"
+                    okText="Hủy đơn"
+                    okButtonProps={{ danger: true }}
+                    cancelText="Không"
+                    onConfirm={() => cancel.mutate()}
+                  >
+                    <Button danger loading={cancel.isPending}>
+                      Hủy đơn
+                    </Button>
+                  </Popconfirm>
+                )}
+                <Button
+                  type={order.status === 'PENDING' ? 'default' : 'primary'}
+                  icon={<RotateCcw size={16} />}
+                  disabled={!catalog.data || !order.items.length}
+                  onClick={reorder}
+                >
+                  Mua lại
+                </Button>
+                {storePhone && (
+                  <Button icon={<Phone size={16} />} href={`tel:${storePhone.replace(/\s/g, '')}`}>
+                    Gọi cửa hàng
+                  </Button>
+                )}
+                <Link to="/shop" className="af-text-link">
+                  Tiếp tục mua
+                </Link>
+              </div>
+            </div>
+            {/* QR đặt sau tổng tiền (QR đã chứa số tiền). Chuyển khoản trước chỉ mở sau khi cửa hàng xác nhận (giá đã chốt). */}
+            {/* Khách chọn trả khi nhận hàng thì không hiện QR; đơn chưa có trường này (backend cũ) vẫn hiện như trước. */}
+            {balance && balance.due > 0 && order.paymentMethod !== 'COD' && !['PENDING', 'CANCELLED'].includes(order.status) && (
               <Card className="af-shop-track-card" title="Chuyển khoản">
                 {account ? (
                   <>
@@ -374,38 +407,6 @@ export function CustomerOrderPage() {
                 action={<Button onClick={() => void catalog.refetch()}>Thử lại</Button>}
               />
             )}
-            <div className="af-shop-track-actions">
-              {/* Khách tự hủy khi cửa hàng chưa chuẩn bị hàng; đang chuẩn bị trở đi thì phải gọi cửa hàng. */}
-              {(order.status === 'PENDING' || order.status === 'CONFIRMED') && (
-                <Popconfirm
-                  title="Hủy đơn này?"
-                  okText="Hủy đơn"
-                  okButtonProps={{ danger: true }}
-                  cancelText="Không"
-                  onConfirm={() => cancel.mutate()}
-                >
-                  <Button danger loading={cancel.isPending}>
-                    Hủy đơn
-                  </Button>
-                </Popconfirm>
-              )}
-              <Button
-                type={order.status === 'PENDING' ? 'default' : 'primary'}
-                icon={<RotateCcw size={16} />}
-                disabled={!catalog.data || !order.items.length}
-                onClick={reorder}
-              >
-                Mua lại
-              </Button>
-              {storePhone && (
-                <Button icon={<Phone size={16} />} href={`tel:${storePhone.replace(/\s/g, '')}`}>
-                  Gọi cửa hàng
-                </Button>
-              )}
-              <Link to="/shop" className="af-text-link">
-                Tiếp tục mua
-              </Link>
-            </div>
           </>
         )}
       </div>
