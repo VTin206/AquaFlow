@@ -5,14 +5,14 @@ import type { OrderStatus } from './types'
  * Trang Đơn hàng gom 8 trạng thái thành 5 nhóm theo việc nhân viên cần làm.
  * "Đơn mới": đơn web đủ hàng được tự xác nhận và giữ hàng, nhân viên chỉ việc chuẩn bị.
  * "Cần xử lý": đơn thiếu hàng còn chờ xác nhận, đơn giao thất bại.
- * "Tất cả" gồm cả đơn đã hủy; muốn xem riêng thì lọc trạng thái trong nhóm này.
+ * "Tất cả" đứng đầu (thống nhất với trang Chuyến giao) và gồm cả đơn đã hủy; muốn xem riêng thì lọc trạng thái trong nhóm này.
  */
 export const orderGroups = [
+  { key: 'all', label: 'Tất cả', tone: 'neutral', statuses: null },
   { key: 'new', label: 'Đơn mới', tone: 'info', statuses: ['Đã xác nhận'] },
   { key: 'need', label: 'Cần xử lý', tone: 'warning', statuses: ['Chờ xác nhận', 'Giao thất bại'] },
   { key: 'active', label: 'Đang thực hiện', tone: 'info', statuses: ['Đang chuẩn bị', 'Đang giao'] },
   { key: 'done', label: 'Đã xong', tone: 'success', statuses: ['Đã giao', 'Đã hoàn tất'] },
-  { key: 'all', label: 'Tất cả', tone: 'neutral', statuses: null },
 ] as const satisfies readonly { key: string; label: string; tone: Tone; statuses: readonly OrderStatus[] | null }[]
 
 export type OrderGroupKey = (typeof orderGroups)[number]['key']

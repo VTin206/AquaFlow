@@ -141,7 +141,11 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
   const moreItems: MenuProps['items'] =
     viewOrder && viewOrder.status !== 'Đã hủy'
       ? [
-          { key: 'copy', label: 'Sao chép tin nhắn xác nhận', onClick: () => void copyMessage(viewOrder, settings?.storeName) },
+          {
+            key: 'copy',
+            label: 'Sao chép tin nhắn xác nhận',
+            onClick: () => void copyMessage(viewOrder, settings?.storeName, depositOf(viewOrder)),
+          },
           {
             key: 'invoice',
             label: 'In hóa đơn bán lẻ',

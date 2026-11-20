@@ -106,6 +106,18 @@ describe('orderConfirmationMessage', () => {
     expect(text).toContain('- Nước 20L × 2')
     expect(text).toContain('Giảm giá')
     expect(text).toContain('Giao đến: 12 Lê Lợi')
+    expect(text).toContain('SĐT: 0901234567')
+  })
+
+  it('skips the phone line when the order has no phone', () => {
+    const order = fromLiveOrder({ ...liveOrder, recipientPhone: null }, [])
+    expect(orderConfirmationMessage(order)).not.toContain('SĐT:')
+  })
+
+  it('tells the customer the shell deposit up front when known', () => {
+    const text = orderConfirmationMessage(viewOf('UNPAID'), 'Cửa hàng A', 'Vỏ 20L 50.000 ₫/vỏ thiếu')
+    expect(text).toContain('Cọc vỏ (chưa gồm trong tổng, chỉ thu khi không có vỏ đổi): Vỏ 20L 50.000 ₫/vỏ thiếu')
+    expect(orderConfirmationMessage(viewOf('UNPAID'))).not.toContain('Cọc vỏ')
   })
 
   it('does not address a walk-in customer by the placeholder name', () => {
