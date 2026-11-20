@@ -97,11 +97,21 @@ const statusOfLabel = Object.fromEntries(Object.entries(statusOf).map(([live, la
 /** Bộ lọc trang Đơn hàng sau khi đã chọn nhóm (không còn nhóm rỗng). */
 export type OrderListFilters = { query: string; group: OrderGroupKey; status: string; method: string; payment: string }
 
+/**
+ * Trạng thái dùng để phân nhóm và lọc trên trang Đơn hàng.
+ * Không thay đổi trạng thái nghiệp vụ thực tế của đơn.
+ */
+export function orderFilterStatus(order: Pick<Order, 'status' | 'lastAttemptFailed'>): OrderStatus {
+  return order.lastAttemptFailed ? 'Giao thất bại' : order.status
+}
+
 /** Cùng quy tắc với BE; dùng cho các nhóm đơn được lọc ngay trong trình duyệt. */
 export function matchesOrderFilters(order: Order, { query, group, status, method, payment }: OrderListFilters) {
+  const filterStatus = orderFilterStatus(order)
+
   return (
-    inOrderGroup(group, order.status) &&
-    (status === ALL_ORDERS || order.status === status) &&
+    inOrderGroup(group, filterStatus) &&
+    (status === ALL_ORDERS || filterStatus === status) &&
     (method === ALL_ORDERS || order.method === method) &&
     (payment === ALL_ORDERS ||
       (order.status !== 'Đã hủy' && (payment === 'Còn phải thu' ? amountDue(order) > 0 : amountDue(order) === 0))) &&
@@ -141,22 +151,80 @@ export type OrderPageView = { orders: Order[]; total: number; serverPaged: boole
  */
 export const isServerPagedGroup = (group: OrderGroupKey) => group === 'done' || group === 'all'
 
+/**
+ * Các trạng thái chưa kết thúc nằm đầy đủ trong working-set.
+ * Lọc tại trình duyệt để xét được cờ giao thất bại.
+ */
+export function isServerPagedOrderFilter(filters: OrderListFilters) {
+  if (!isServerPagedGroup(filters.group)) return false
+
+  if (filters.group === 'all') {
+    return ![
+      'Chờ xác nhận',
+      'Đã xác nhận',
+      'Đang chuẩn bị',
+      'Đang giao',
+      'Giao thất bại',
+    ].includes(filters.status)
+  }
+
+  return true
+}
+
 const toStatusCounts = (counts: OrderPage['statusCounts']) =>
   Object.fromEntries(Object.entries(counts).map(([live, count]) => [statusOf[live as LiveOrder['status']], count])) as Partial<
     Record<OrderStatus, number>
   >
 
 /**
- * Số đơn theo trạng thái trên mọi đơn, cho nhãn nhóm và ô chọn trạng thái của trang Đơn hàng.
- * Lấy từ BE (một trang 1 đơn kèm `statusCounts`).
+ * Chuyển số đơn có lần giao gần nhất thất bại từ trạng thái gốc
+ * sang nhóm Giao thất bại, giữ nguyên tổng số đơn.
+ */
+export function adjustFailedStatusCounts(
+  counts: Partial<Record<OrderStatus, number>>,
+  orders: Pick<Order, 'status' | 'lastAttemptFailed'>[],
+): Partial<Record<OrderStatus, number>> {
+  const adjusted = { ...counts, 'Giao thất bại': 0 }
+
+  for (const order of orders) {
+    if (!order.lastAttemptFailed || order.status === 'Giao thất bại') continue
+
+    const previous = adjusted[order.status] ?? 0
+
+    if (previous > 0) {
+      adjusted[order.status] = previous - 1
+      adjusted['Giao thất bại'] += 1
+    }
+  }
+
+  return adjusted
+}
+
+/**
+ * Số đơn theo trạng thái trên mọi đơn, cho nhãn nhóm và ô chọn trạng thái.
+ * Kết hợp số lượng backend với cờ giao thất bại trong working-set.
  */
 export function useOrderStatusCounts() {
   const staff = useStaff()
-  return useQuery({
+  const working = useOrderList()
+
+  const counts = useQuery({
     queryKey: ['live', 'orders-page', staff?.name, staff?.role, 'status-counts'],
     queryFn: () => orderApi.page({ page: 0, size: 1 }).then((result) => toStatusCounts(result.statusCounts)),
     refetchInterval: 30_000,
   })
+
+  return {
+    ...counts,
+    data:
+      counts.data && working.data
+        ? adjustFailedStatusCounts(counts.data, working.data)
+        : undefined,
+    isPending: counts.isPending || working.isPending,
+    isError: counts.isError || working.isError,
+    error: counts.error ?? working.error,
+    refetch: () => Promise.all([counts.refetch(), working.refetch()]),
+  }
 }
 
 /** Một trang đơn từ BE; `null` khi bộ lọc chắc chắn rỗng. */
@@ -180,7 +248,7 @@ export type OrderPageResult = {
  */
 export function useOrderPage(filters: OrderListFilters, page: number, size: number): OrderPageResult {
   const staff = useStaff()
-  const serverPaged = isServerPagedGroup(filters.group)
+  const serverPaged = isServerPagedOrderFilter(filters)
   const working = useOrderList(!serverPaged)
   const query = toOrderPageQuery(filters, page, size)
   const live = useQuery({

@@ -237,7 +237,13 @@ export function CustomerOrderPage() {
                 type="success"
                 showIcon
                 title={`Đã gửi đơn ${order.orderCode}`}
-                description="Cửa hàng sẽ gọi xác nhận trong giờ làm việc."
+                description={
+                  order.status === 'PENDING'
+                    ? 'Cửa hàng sẽ gọi xác nhận trong giờ làm việc.'
+                    : order.status === 'CONFIRMED'
+                      ? 'Đơn hàng đã được xác nhận. Bạn có thể theo dõi tiến độ xử lý đơn hàng tại đây.'
+                      : 'Bạn có thể theo dõi trạng thái đơn hàng tại đây.'
+                }
               />
             )}
             <Card

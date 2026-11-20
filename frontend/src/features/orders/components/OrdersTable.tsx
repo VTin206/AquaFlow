@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Grid, Space, Table, type TableColumnsType } from 'antd'
+import { Button, Grid, Space, Table, Tag, type TableColumnsType } from 'antd'
 import { ViewButton } from '@/shared/components/ViewButton'
 import { Money } from '@/shared/components/Money'
 import { serverTablePagination, tablePagination, type ServerPagination } from '@/shared/utils/table'
@@ -132,6 +132,9 @@ export function OrdersTable({
       render: (_, order) => (
         <Space size={4} wrap>
           <OrderStatusTag status={order.status} method={order.method} />
+          {order.lastAttemptFailed && order.status !== 'Giao thất bại' && (
+            <Tag color="red">Giao thất bại</Tag>
+          )}
           <LateTag order={order} />
         </Space>
       ),

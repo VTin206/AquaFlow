@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { App as AntApp } from 'antd'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter, Route, Routes } from 'react-router'
+import { MemoryRouter, Route, Routes, type InitialEntry } from 'react-router'
 import type { ReactNode } from 'react'
 import { AuthContext, type AuthUser } from '@/features/auth/authContext'
 import { AuthProvider } from '@/features/auth/AuthProvider'
@@ -94,7 +94,7 @@ const order: LiveOrder = {
   items: [],
 }
 const clients: QueryClient[] = []
-function Providers({ children, user = customer, path = '/shop/orders' }: { children: ReactNode; user?: AuthUser | null; path?: string }) {
+function Providers({ children, user = customer, path = '/shop/orders' }: { children: ReactNode; user?: AuthUser | null; path?: InitialEntry }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   clients.push(client)
   return (
@@ -535,5 +535,72 @@ describe('customer order transfer', () => {
     renderOrder({ ...order, status: 'PENDING', trackingToken: 'tok' })
     expect(await screen.findByText(/Còn phải trả/)).toBeTruthy()
     expect(screen.queryByText('Chuyển khoản')).toBeNull()
+  })
+})
+
+describe('customer order placement status message', () => {
+  const renderPlacedOrder = (status: LiveOrder['status']) => {
+    vi.mocked(customerOrderApi.detail).mockResolvedValue({
+      ...order,
+      status,
+    })
+
+    return render(
+      <Providers
+        path={{
+          pathname: '/shop/orders/12',
+          state: { placed: true },
+        }}
+      >
+        <Routes>
+          <Route
+            path="/shop/orders/:id"
+            element={<CustomerOrderPage />}
+          />
+        </Routes>
+      </Providers>,
+    )
+  }
+
+  it('hiển thị thông báo chờ xác nhận khi đơn đang PENDING', async () => {
+    renderPlacedOrder('PENDING')
+
+    expect(
+      await screen.findByText(
+        'Cửa hàng sẽ gọi xác nhận trong giờ làm việc.',
+      ),
+    ).toBeTruthy()
+  })
+
+  it('hiển thị thông báo đã xác nhận khi đơn đang CONFIRMED', async () => {
+    renderPlacedOrder('CONFIRMED')
+
+    expect(
+      await screen.findByText(
+        'Đơn hàng đã được xác nhận. Bạn có thể theo dõi tiến độ xử lý đơn hàng tại đây.',
+      ),
+    ).toBeTruthy()
+
+    expect(
+      screen.queryByText(
+        'Cửa hàng sẽ gọi xác nhận trong giờ làm việc.',
+      ),
+    ).toBeNull()
+  })
+
+  it('không yêu cầu chờ xác nhận khi đơn đang PREPARING', async () => {
+    renderPlacedOrder('PREPARING')
+
+    expect(
+      await screen.findByText(
+        'Bạn có thể theo dõi trạng thái đơn hàng tại đây.',
+      ),
+    ).toBeTruthy()
+
+    expect(
+      screen.queryByText(
+        'Cửa hàng sẽ gọi xác nhận trong giờ làm việc.',
+      ),
+    ).toBeNull()
   })
 })
