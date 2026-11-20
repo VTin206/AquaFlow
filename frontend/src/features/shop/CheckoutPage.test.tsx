@@ -256,7 +256,7 @@ test('chưa báo được phí giao thì ghi tạm tính và khóa đặt đơn'
   expect(screen.getAllByText('Chưa có báo phí').length).toBeGreaterThan(0)
   expect(screen.getAllByText('Tạm tính').length).toBeGreaterThan(0)
   expect(screen.queryByText('Tổng cộng')).toBeNull()
-  expect(screen.getByLabelText('Trả khi nhận hàng')).toBeTruthy()
+  expect(screen.getByLabelText('Thanh toán khi nhận hàng')).toBeTruthy()
   expect((screen.getAllByRole('button', { name: /Đặt đơn/ })[0] as HTMLButtonElement).disabled).toBe(true)
 })
 
@@ -352,7 +352,7 @@ test('cửa hàng chưa có số tài khoản thì chuyển khoản trước v�
   mocks.bank = undefined
   renderPage()
   expect(screen.getByLabelText('Chuyển khoản trước (chưa hỗ trợ)')).toHaveProperty('disabled', true)
-  expect(screen.getByLabelText('Trả khi nhận hàng')).toHaveProperty('checked', true)
+  expect(screen.getByLabelText('Thanh toán khi nhận hàng')).toHaveProperty('checked', true)
 })
 
 test('bình đổi vỏ thì hỏi có vỏ đổi hay cọc vỏ mới; chọn cọc thì có dòng cọc, tổng dự kiến và ghi chú đơn', async () => {
