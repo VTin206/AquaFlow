@@ -25,14 +25,30 @@ import type { LiveOrder } from '@/features/live/orderApi'
 import { orderApi } from '@/features/live/orderApi'
 import { dispatchApi, type DispatchReceipt } from '@/features/live/dispatchApi'
 import { LiveOrderDetails } from '@/features/live/LiveOrderDetails'
-vi.mock('@/features/live/paymentApi', async original => {
+vi.mock('@/features/live/paymentApi', async (original) => {
   const actual = await original<typeof import('@/features/live/paymentApi')>()
-  actual.paymentApi.list = vi.fn().mockResolvedValue({ balance: { orderId: 12, orderCode: 'ORDER-12', customerId: 5, status: 'PREPARING', total: 10000, received: 0, refunded: 0, paid: 0, due: 10000, refundDue: 0 }, payments: [] })
+  actual.paymentApi.list = vi
+    .fn()
+    .mockResolvedValue({
+      balance: {
+        orderId: 12,
+        orderCode: 'ORDER-12',
+        customerId: 5,
+        status: 'PREPARING',
+        total: 10000,
+        received: 0,
+        refunded: 0,
+        paid: 0,
+        due: 10000,
+        refundDue: 0,
+      },
+      payments: [],
+    })
   return actual
 })
 
 // Chi tiết đơn tải thêm hàng trả lại và nhật ký theo đơn; không có máy chủ thì trả rỗng thay vì gọi mạng.
-vi.mock('@/features/live/orderReturnApi', async original => {
+vi.mock('@/features/live/orderReturnApi', async (original) => {
   const actual = await original<typeof import('@/features/live/orderReturnApi')>()
   actual.orderReturnApi.summary = vi.fn().mockResolvedValue({ returns: [], items: [] })
   actual.orderReturnApi.activity = vi.fn().mockResolvedValue([])
@@ -107,40 +123,61 @@ beforeEach(() => {
   vi.mocked(orderApi.detail).mockReset()
   vi.mocked(dispatchApi.create).mockReset()
   vi.mocked(dispatchApi.list).mockResolvedValue([])
-  vi.stubGlobal('ResizeObserver', class { observe = vi.fn(); unobserve = vi.fn(); disconnect = vi.fn() })
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe = vi.fn()
+      unobserve = vi.fn()
+      disconnect = vi.fn()
+    },
+  )
   const getStyle = window.getComputedStyle.bind(window)
-  vi.spyOn(window, 'getComputedStyle').mockImplementation(element => getStyle(element))
+  vi.spyOn(window, 'getComputedStyle').mockImplementation((element) => getStyle(element))
   localStorage.clear()
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
-    value: vi
-      .fn()
-      .mockImplementation((query) => ({
-        matches: false,
-        media: query,
-        onchange: null,
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-      })),
+    value: vi.fn().mockImplementation((query) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
   })
 })
 
 describe('counter handover', () => {
   const staff = { name: 'Sales', email: 'sales@test.com', role: 'SALES_STAFF' }
   const counter: LiveOrder = { ...order, channel: 'COUNTER', fulfillmentType: 'COUNTER' }
-  const receipt: DispatchReceipt = { id: 1, orderId: 12, performedBy: 7, dispatchedAt: '2026-11-06T01:00:00Z', orderStatus: 'DELIVERED', items: [] }
+  const receipt: DispatchReceipt = {
+    id: 1,
+    orderId: 12,
+    performedBy: 7,
+    dispatchedAt: '2026-11-06T01:00:00Z',
+    orderStatus: 'DELIVERED',
+    items: [],
+  }
   const show = (value = counter, role = 'SALES_STAFF') => {
     vi.mocked(orderApi.detail).mockResolvedValue(value)
     vi.mocked(orderDeliveryHistory).mockResolvedValue([])
-    render(<Providers user={{ ...staff, role }}><LiveOrderDetails id={12} onClose={vi.fn()} /></Providers>)
+    render(
+      <Providers user={{ ...staff, role }}>
+        <LiveOrderDetails id={12} onClose={vi.fn()} />
+      </Providers>,
+    )
   }
 
   it('confirms once, locks cancellation during dispatch, and refreshes order and receipts without marking paid', async () => {
     let finish!: (value: DispatchReceipt) => void
-    vi.mocked(dispatchApi.create).mockImplementation(() => new Promise(resolve => { finish = resolve }))
+    vi.mocked(dispatchApi.create).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve
+        }),
+    )
     show()
     fireEvent.click(await screen.findByRole('button', { name: /Bàn giao tại quầy/ }))
     expect(dispatchApi.create).not.toHaveBeenCalled()
@@ -182,7 +219,7 @@ describe('counter handover', () => {
     expect(screen.queryByRole('button', { name: /Bàn giao tại quầy/ })).toBeNull()
   })
 
-  it.each(['PENDING', 'CONFIRMED', 'DELIVERED', 'CANCELLED'] as const)('does not offer handover for %s', async status => {
+  it.each(['PENDING', 'CONFIRMED', 'DELIVERED', 'CANCELLED'] as const)('does not offer handover for %s', async (status) => {
     show({ ...counter, status })
     await screen.findByText('Đơn ORDER-12')
     expect(screen.queryByRole('button', { name: /Bàn giao tại quầy/ })).toBeNull()
@@ -195,7 +232,7 @@ describe('counter handover', () => {
     expect(screen.queryByRole('button', { name: /Bàn giao tại quầy/ })).toBeNull()
   })
 
-  it.each(['CUSTOMER', 'DELIVERY_STAFF'])('does not offer handover to %s', role => {
+  it.each(['CUSTOMER', 'DELIVERY_STAFF'])('does not offer handover to %s', (role) => {
     show(counter, role)
     expect(screen.queryByRole('button', { name: /Bàn giao tại quầy/ })).toBeNull()
     expect(orderApi.detail).not.toHaveBeenCalled()
@@ -461,12 +498,40 @@ describe('customer order transfer', () => {
     expect(screen.getByText('Chuyển khoản')).toBeTruthy()
   })
   it('says transfer is not supported when the store has not published a bank account', async () => {
-    vi.spyOn(settingsApi, 'profile').mockResolvedValue({ storeName: 'AquaFlow', address: '', phone: '', email: '', openingHours: '' } as never)
+    vi.spyOn(settingsApi, 'profile').mockResolvedValue({
+      storeName: 'AquaFlow',
+      address: '',
+      phone: '',
+      email: '',
+      openingHours: '',
+    } as never)
     renderOrder({ ...order, status: 'CONFIRMED', trackingToken: 'tok' })
-    expect(await screen.findByText('Chưa hỗ trợ. Vui lòng trả tiền khi nhận hàng.')).toBeTruthy()
+    expect(await screen.findByText('Chưa hỗ trợ. Vui lòng thanh toán khi nhận hàng.')).toBeTruthy()
+  })
+  it('shows the chosen payment method and no transfer QR for a cash on delivery order', async () => {
+    vi.spyOn(settingsApi, 'profile').mockResolvedValue({
+      storeName: 'AquaFlow',
+      address: '',
+      phone: '',
+      email: '',
+      openingHours: '',
+      bankName: 'Vietcombank',
+      bankAccount: '0123456789',
+      bankHolder: 'AQUAFLOW',
+    } as never)
+    renderOrder({ ...order, status: 'CONFIRMED', trackingToken: 'tok', paymentMethod: 'COD' })
+    expect(await screen.findByText('Thanh toán khi nhận hàng')).toBeTruthy()
+    expect(screen.queryByText('0123456789')).toBeNull()
+    expect(screen.queryByText('Chuyển khoản')).toBeNull()
   })
   it('does not offer transfer before the store confirms the order', async () => {
-    vi.spyOn(settingsApi, 'profile').mockResolvedValue({ storeName: 'AquaFlow', address: '', phone: '', email: '', openingHours: '' } as never)
+    vi.spyOn(settingsApi, 'profile').mockResolvedValue({
+      storeName: 'AquaFlow',
+      address: '',
+      phone: '',
+      email: '',
+      openingHours: '',
+    } as never)
     renderOrder({ ...order, status: 'PENDING', trackingToken: 'tok' })
     expect(await screen.findByText(/Còn phải trả/)).toBeTruthy()
     expect(screen.queryByText('Chuyển khoản')).toBeNull()

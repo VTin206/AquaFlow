@@ -287,7 +287,7 @@ function TrackedOrder({ token }: { token: string }) {
               <p className="af-form-hint">Giữ nguyên nội dung chuyển khoản để cửa hàng đối chiếu.</p>
             </>
           ) : (
-            <p className="af-shop-transfer-off">Chưa hỗ trợ. Vui lòng trả tiền khi nhận hàng.</p>
+            <p className="af-shop-transfer-off">Chưa hỗ trợ. Vui lòng thanh toán khi nhận hàng.</p>
           )}
         </Card>
       )}

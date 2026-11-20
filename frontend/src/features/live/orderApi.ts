@@ -17,6 +17,11 @@ export const paymentStatusLabels = {
   REFUNDED: 'Đã hoàn tiền',
 }
 export const channelLabels = { WEB: 'Website', COUNTER: 'Tại quầy', PHONE: 'Điện thoại', MESSAGE: 'Tin nhắn' }
+/** Cách khách chọn trả tiền khi đặt đơn web; đơn tại quầy và đơn cũ không có. */
+export const paymentMethodLabels: Record<PaymentMethod, string> = {
+  COD: 'Thanh toán khi nhận hàng',
+  TRANSFER: 'Chuyển khoản trước',
+}
 export type LiveOrder = {
   id: number
   orderCode: string
@@ -47,7 +52,7 @@ export type LiveOrder = {
   /** Cách khách chọn trả tiền khi đặt; chưa có (backend cũ, đơn cũ) thì coi như chưa rõ. */
   paymentMethod?: PaymentMethod | null
 }
-/** COD: trả khi nhận hàng; TRANSFER: chuyển khoản trước theo mã QR sau khi cửa hàng xác nhận giá. */
+/** COD: thanh toán khi nhận hàng; TRANSFER: chuyển khoản trước theo mã QR sau khi cửa hàng xác nhận giá. */
 export type PaymentMethod = 'COD' | 'TRANSFER'
 export type OrderStatus = LiveOrder['status']
 /** Theo OrderCreateRequest; nhân viên không tạo đơn kênh WEB (đơn web đi luồng khách hàng). */

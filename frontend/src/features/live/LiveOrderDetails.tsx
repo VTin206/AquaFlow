@@ -28,7 +28,16 @@ import { activeTripOf } from '@/features/delivery/driverChoices'
 import { Pencil } from 'lucide-react'
 import { tripLabels } from '@/features/delivery/deliveryApi'
 import { catalogApi } from './catalogApi'
-import { canCancel, canConfirm, canPrepare, confirmOrderHint, orderApi, paymentStatusLabels, channelLabels } from './orderApi'
+import {
+  canCancel,
+  canConfirm,
+  canPrepare,
+  confirmOrderHint,
+  orderApi,
+  paymentStatusLabels,
+  channelLabels,
+  paymentMethodLabels,
+} from './orderApi'
 import { explainStockShortage } from './stockShortage'
 import { invalidateLiveData } from './invalidateLiveData'
 import { canDispatch, canHandover, dispatchApi } from './dispatchApi'
@@ -288,7 +297,14 @@ export function LiveOrderDetails({ id, onClose }: { id: number; onClose: () => v
         {
           key: 'payments',
           label: 'Thanh toán',
-          extra: payments.data ? `Còn phải thu ${currency(payments.data.balance.due)}` : undefined,
+          // Hình thức khách chọn khi đặt (đơn web) đứng trước số còn phải thu, thấy ngay cả khi mục đang thu gọn.
+          extra:
+            [
+              order.paymentMethod ? paymentMethodLabels[order.paymentMethod] : undefined,
+              payments.data ? `Còn phải thu ${currency(payments.data.balance.due)}` : undefined,
+            ]
+              .filter(Boolean)
+              .join(' · ') || undefined,
           children: <LiveOrderPayments orderId={id} />,
         },
         ...(order.fulfillmentType === 'DELIVERY' && canSeeTrips

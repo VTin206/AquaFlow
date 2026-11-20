@@ -17,7 +17,7 @@ export const DELIVERY_PLACES: { value: DeliveryPlace; label: string }[] = [
 ]
 
 export const PAYMENT_CHOICES: { value: PaymentChoice; label: string }[] = [
-  { value: 'cod', label: 'Trả khi nhận hàng' },
+  { value: 'cod', label: 'Thanh toán khi nhận hàng' },
   { value: 'transfer', label: 'Chuyển khoản trước' },
 ]
 
@@ -33,7 +33,7 @@ export const stairFloors = (place: DeliveryPlace, floor: number) => (place === '
 
 /**
  * Backend chưa có trường riêng cho nơi nhận, vỏ bình và cách trả tiền, nên ghi lựa chọn vào đầu ghi chú đơn để nhân
- * viên và tài xế thấy (ghi chú hiện trên đơn và phiếu in). Có vỏ đổi và trả khi nhận hàng là mặc định nên không ghi.
+ * viên và tài xế thấy (ghi chú hiện trên đơn và phiếu in). Có vỏ đổi và thanh toán khi nhận hàng là mặc định nên không ghi.
  */
 export function checkoutNote(place: DeliveryPlace, payment: PaymentChoice, note?: string, shells?: ShellChoice) {
   const parts = [

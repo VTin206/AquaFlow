@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useOutletContext, useParams } from 'react-router'
 import { useAuth } from '@/features/auth/useAuth'
 import { isCustomer } from '@/features/auth/accountAccess'
-import { orderStatusLabels, paymentStatusLabels, type LiveOrder } from '@/features/live/orderApi'
+import { orderStatusLabels, paymentMethodLabels, paymentStatusLabels, type LiveOrder } from '@/features/live/orderApi'
 import { catalogApi } from '@/features/live/catalogApi'
 import { orderTrackingApi } from '@/features/live/orderTrackingApi'
 import { OrderProgress } from '@/features/orders/OrderProgress'
@@ -277,6 +277,13 @@ export function CustomerOrderPage() {
                     </dd>
                   </>
                 )}
+                {/* Đơn tại quầy và đơn cũ không có lựa chọn này thì không hiện dòng. */}
+                {order.paymentMethod && (
+                  <>
+                    <dt>Thanh toán</dt>
+                    <dd>{paymentMethodLabels[order.paymentMethod]}</dd>
+                  </>
+                )}
                 {visibleNote(order.note) && (
                   <>
                     <dt>Ghi chú</dt>
@@ -396,7 +403,7 @@ export function CustomerOrderPage() {
                     <p className="af-form-hint">Giữ nguyên nội dung chuyển khoản để cửa hàng đối chiếu.</p>
                   </>
                 ) : (
-                  <p className="af-shop-transfer-off">Chưa hỗ trợ. Vui lòng trả tiền khi nhận hàng.</p>
+                  <p className="af-shop-transfer-off">Chưa hỗ trợ. Vui lòng thanh toán khi nhận hàng.</p>
                 )}
               </Card>
             )}
