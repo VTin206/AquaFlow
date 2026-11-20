@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { CheckoutDeposit } from './CheckoutDeposit'
+import { useShellDeposit } from './CheckoutDeposit'
 import { bottleTypeApi } from '@/features/live/bottleTypeApi'
 import type { CheckoutLine } from './CheckoutReview'
-import { currency } from '@/shared/utils/format'
 
 const clients: QueryClient[] = []
 const lines: CheckoutLine[] = [
@@ -13,39 +12,43 @@ const lines: CheckoutLine[] = [
   { productId: '2', quantity: 1, product: { id: '2', sku: 'B', name: 'Nước B', brand: '', unit: 'Bình', price: 30000, available: true, bottleTypeId: 2 } },
 ]
 const types = [{ id: 1, name: 'Vỏ A', depositUnitAmount: 40000, active: true }, { id: 2, name: 'Vỏ B', depositUnitAmount: 70000, active: true }]
+
+function Probe({ items }: { items: CheckoutLine[] }) {
+  const deposit = useShellDeposit(items)
+  return <output>{`${deposit.status}:${deposit.count}:${deposit.amount ?? '-'}`}</output>
+}
 function show(items = lines) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   clients.push(client)
-  render(<QueryClientProvider client={client}><CheckoutDeposit lines={items} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><Probe items={items} /></QueryClientProvider>)
   return client
 }
 beforeEach(() => { vi.spyOn(bottleTypeApi, 'list').mockResolvedValue(types) })
 afterEach(() => { cleanup(); clients.splice(0).forEach(c => c.clear()); vi.restoreAllMocks() })
-test('uses API rates per type, aggregates products sharing a shell and refreshes changed rates', async () => {
+
+test('cộng cọc theo giá từng loại vỏ, gộp sản phẩm cùng loại vỏ và cập nhật khi giá đổi', async () => {
   const client = show([...lines, { ...lines[0], productId: '3', quantity: 1 }])
-  expect(await screen.findByText(`Vỏ A: 3 vỏ × ${currency(40000)} = ${currency(120000)}`)).toBeTruthy()
-  expect(screen.getByText(`Cọc dự kiến khi không đổi vỏ: ${currency(190000)}`)).toBeTruthy()
+  expect(await screen.findByText('ready:4:190000')).toBeTruthy()
   vi.mocked(bottleTypeApi.list).mockResolvedValue([{ ...types[0], depositUnitAmount: 50000 }, types[1]])
   await client.invalidateQueries()
-  await waitFor(() => expect(screen.getByText(`Cọc dự kiến khi không đổi vỏ: ${currency(220000)}`)).toBeTruthy())
+  await waitFor(() => expect(screen.getByText('ready:4:220000')).toBeTruthy())
 })
-test('does not fetch deposits for products with no shell type', () => {
+test('không gọi giá cọc khi giỏ không có sản phẩm đổi vỏ', () => {
   show([{ ...lines[0], product: { ...lines[0].product!, bottleTypeId: null } }])
   expect(bottleTypeApi.list).not.toHaveBeenCalled()
-  expect(screen.queryByText(/Cọc dự kiến khi không đổi vỏ:/)).toBeNull()
+  expect(screen.getByText('none:0:-')).toBeTruthy()
 })
-test('does not present a misleading total when one type is unavailable; zero rate remains valid', async () => {
+test('thiếu giá của một loại vỏ thì không đưa ra tổng có thể sai; giá 0 vẫn hợp lệ', async () => {
   vi.mocked(bottleTypeApi.list).mockResolvedValue([{ ...types[0], depositUnitAmount: 0 }])
   show()
-  expect(await screen.findByText(/chưa có giá cọc khả dụng/)).toBeTruthy()
-  expect(screen.getByText(`Vỏ A: 2 vỏ × ${currency(0)} = ${currency(0)}`)).toBeTruthy()
-  expect(screen.queryByText(/Cọc dự kiến khi không đổi vỏ:/)).toBeNull()
+  expect(await screen.findByText('partial:3:-')).toBeTruthy()
+  cleanup()
+  show([lines[0]])
+  expect(await screen.findByText('ready:2:0')).toBeTruthy()
 })
-test('shows loading and offers retry on API failure instead of a fixed price', async () => {
-  vi.mocked(bottleTypeApi.list).mockRejectedValueOnce(new Error('offline')).mockResolvedValue(types)
+test('đang tải rồi báo lỗi khi không lấy được giá cọc', async () => {
+  vi.mocked(bottleTypeApi.list).mockRejectedValue(new Error('offline'))
   show()
-  expect(screen.getByRole('status')).toBeTruthy()
-  expect(await screen.findByRole('alert')).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: 'Tải lại giá cọc' }))
-  expect(await screen.findByText(`Cọc dự kiến khi không đổi vỏ: ${currency(150000)}`)).toBeTruthy()
+  expect(screen.getByText('loading:3:-')).toBeTruthy()
+  expect(await screen.findByText('error:3:-')).toBeTruthy()
 })

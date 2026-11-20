@@ -1228,55 +1228,47 @@
 .af-checkout-pair .ant-input-number {
   width: 100%;
 }
-.af-checkout-fee {
-  margin: 16px 0 20px;
-  padding: 14px 16px;
-  border: 1px solid var(--af-border);
-  border-radius: 12px;
-  background: var(--af-surface-muted);
-}
-.af-checkout-fee-row,
-.af-checkout-fee-total {
+/* Hai khoản của phí giao: chữ nhỏ, thụt vào dưới dòng "Phí giao" trong bảng tiền. */
+.af-checkout-totals > .af-checkout-fee {
   display: flex;
-  justify-content: space-between;
-  gap: 16px;
+  flex-direction: column;
+  gap: 2px;
+  margin: -2px 0 2px 12px;
+  color: var(--af-text-tertiary);
+  font-size: var(--af-fs-sm);
 }
 .af-checkout-fee-row {
-  padding-bottom: 10px;
-  color: var(--af-text);
-  font-size: var(--af-fs-base);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.af-checkout-fee-row > div > span::after {
+  content: ' · ';
 }
 .af-checkout-fee-row > span {
   flex: none;
 }
 .af-checkout-fee-row small {
-  display: block;
-  margin-top: 1px;
-  color: var(--af-text-tertiary);
-  font-size: var(--af-fs-sm);
-  line-height: 1.5;
+  font-size: inherit;
 }
-.af-checkout-fee-total {
-  align-items: baseline;
-  padding-top: 10px;
-  border-top: 1px solid var(--af-border-strong);
-  color: var(--af-text-strong);
+/* Vỏ bình nằm ngay dưới sản phẩm trong khối đơn hàng. */
+.af-checkout-shells.ant-form-item {
+  margin: 8px 0 4px;
 }
-.af-checkout-fee-total strong {
-  font-weight: 600;
+.af-checkout-shells .ant-form-item-label {
+  padding-bottom: 2px;
 }
-.af-checkout-payment {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  color: var(--af-primary);
+.af-checkout-shells-card .ant-card-body {
+  padding: 10px 18px;
 }
-.af-checkout-payment strong {
-  color: var(--af-text-strong);
-  font-weight: 600;
+.af-checkout-shells-card .af-checkout-shells.ant-form-item {
+  margin: 0;
+}
+.af-checkout-payment .ant-form-item {
+  margin-bottom: 0;
 }
 .af-checkout-payment p {
-  margin: 2px 0 0;
+  margin: 6px 0 0;
   color: var(--af-text-secondary);
 }
 .af-checkout-fold,
@@ -2058,6 +2050,41 @@
   gap: 8px;
   align-items: center;
 }
+.af-shop-track-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 20px;
+  border: 1px solid var(--af-border);
+  border-radius: 12px;
+  background: var(--af-surface);
+}
+.af-shop-track-sum {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  line-height: 1.2;
+  gap: 8px;
+  color: var(--af-text-secondary);
+  font-weight: 600;
+}
+.af-shop-track-sum .af-money {
+  font-size: var(--af-fs-2xl);
+  font-weight: 700;
+}
+.af-shop-track-sum > span {
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .af-shop-track-sum .af-money {
+    font-size: var(--af-fs-lg);
+  }
+}
 .af-shop-track-privacy.ant-typography {
   font-size: var(--af-fs-sm);
   margin: 0;
@@ -2571,8 +2598,18 @@
 .af-shop-track-lines li > div {
   display: flex;
   flex: 1;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 8px;
   min-width: 0;
+}
+/* Các dòng sản phẩm của đơn sát nhau: giỏ hàng cần chỗ cho ảnh, còn đơn thì không. */
+.af-shop-track-lines li {
+  align-items: center;
+  padding: 6px 0;
+}
+.af-shop-track-lines li:last-child {
+  border-bottom: 0;
 }
 /* Trang tài khoản của khách: hồ sơ và sổ địa chỉ hai cột, mỗi địa chỉ một dòng. */
 .af-shop-account-page .af-shop-account-card {
@@ -2677,6 +2714,36 @@
   flex: 1 1 260px;
   min-width: 0;
 }
+/* Lịch chọn ngày giao: cột khung giờ bên phải lịch; màn hình hẹp thì xuống dưới. */
+.af-checkout-slot-panel {
+  display: flex;
+  align-items: stretch;
+}
+.af-checkout-slot-panel .af-checkout-slots {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-left: 1px solid var(--af-border);
+}
+@media (max-width: 480px) {
+  .af-checkout-slot-panel {
+    flex-direction: column;
+  }
+  .af-checkout-slot-panel .af-checkout-slots {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-left: 0;
+    border-top: 1px solid var(--af-border);
+  }
+}
+.af-saved-address-manage {
+  display: block;
+  margin-top: 4px;
+  padding: 8px 12px 4px;
+  border-top: 1px solid var(--af-border);
+}
 .af-saved-address-empty {
   color: var(--af-text-secondary);
 }
@@ -2688,6 +2755,17 @@
 /* Đặt hàng: các ô nhập xếp sát hơn để khách ít phải cuộn. */
 .af-checkout-main .ant-card-body .ant-form-item {
   margin-bottom: 12px;
+}
+.af-checkout-main .ant-card-head {
+  min-height: 44px;
+}
+.af-checkout-main .ant-card-body {
+  padding: 14px 18px;
+}
+/* Ô cuối của mỗi thẻ không chừa thêm khoảng dưới. */
+.af-checkout-main .ant-card-body > .ant-form-item:last-child,
+.af-checkout-main .ant-card-body > :last-child .ant-form-item:last-child {
+  margin-bottom: 0;
 }
 .af-checkout-main .af-checkout-pair .ant-form-item,
 .af-checkout-main .af-checkout-remember.ant-form-item {
@@ -2704,18 +2782,6 @@
 .af-checkout-place.is-gate {
   grid-template-columns: minmax(0, 1fr);
 }
-.af-checkout-payment .ant-form-item {
-  margin-bottom: 0;
-}
-.af-checkout-payment .ant-form-item-label svg {
-  margin-right: 6px;
-  color: var(--af-primary);
-  vertical-align: -3px;
-}
-.af-checkout-main .af-checkout-fee {
-  margin: 4px 0 12px;
-  padding: 10px 14px;
-}
 @media (max-width: 640px) {
   .af-checkout-place {
     grid-template-columns: minmax(0, 1fr);
@@ -2729,6 +2795,29 @@
   justify-content: space-between;
   gap: 4px 16px;
 }
+/* Cùng khung với Tra cứu đơn và các trang tài khoản (.af-shop-account-page): rộng tối đa 1040px ở giữa,
+   tiêu đề có đường kẻ dưới rồi mới tới nội dung. */
+.af-checkout-page {
+  max-width: 1040px;
+  margin: 0 auto;
+}
+.af-checkout-page .af-checkout-head {
+  margin: 8px 0 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--af-border);
+}
+.af-checkout-head h2.ant-typography {
+  margin: 0;
+  font-size: clamp(26px, 3vw, 32px);
+  font-weight: 700;
+}
+.af-checkout-page .af-checkout-layout {
+  margin-top: 0;
+}
+/* Điện thoại: khối đơn thu gọn nằm ngay dưới tiêu đề, cách các thẻ bên dưới. */
+.af-checkout-page .af-checkout-fold {
+  margin: 0 0 12px;
+}
 .af-checkout-head > span {
   color: var(--af-text-secondary);
 }
@@ -2737,13 +2826,6 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 16px;
-}
-.af-checkout-main > .af-checkout-payment {
-  display: block;
-  padding: 12px 18px;
-  border: 1px solid var(--af-border);
-  border-radius: 16px;
-  background: var(--af-surface);
 }
 @media (max-width: 640px) {
   .af-checkout-who {

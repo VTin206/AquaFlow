@@ -28,11 +28,28 @@ export function SavedAddressPicker({
       ) : query.isError ? (
         <QueryError error={query.error} onRetry={query.refetch} />
       ) : !query.data.length ? (
-        <span className="af-saved-address-empty">Chưa có địa chỉ đã lưu.</span>
+        <>
+          <span className="af-saved-address-empty">Chưa có địa chỉ đã lưu.</span>
+          <Link to="/shop/account">
+            <Button type="link">Quản lý sổ địa chỉ</Button>
+          </Link>
+        </>
       ) : (
         <Select
           aria-label="Chọn địa chỉ đã lưu"
           placeholder="Chọn địa chỉ đã lưu"
+          // Danh sách xổ xuống rộng theo chữ để thấy đủ địa chỉ dài (tối đa bằng khung trang).
+          popupMatchSelectWidth={false}
+          styles={{ popup: { root: { maxWidth: 'min(640px, calc(100vw - 32px))' } } }}
+          // Lối quản lý sổ địa chỉ nằm cuối danh sách, để ô chọn chiếm hết hàng.
+          popupRender={(menu) => (
+            <>
+              {menu}
+              <Link to="/shop/account" className="af-saved-address-manage">
+                Quản lý sổ địa chỉ
+              </Link>
+            </>
+          )}
           value={selected?.id ?? null}
           onChange={(id) => {
             const address = query.data.find((item) => item.id === id)
@@ -46,9 +63,6 @@ export function SavedAddressPicker({
             }))}
         />
       )}
-      <Link to="/shop/account">
-        <Button type="link">Quản lý sổ địa chỉ</Button>
-      </Link>
     </div>
   )
 }
