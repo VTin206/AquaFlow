@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Select, Space } from 'antd'
+import { Select, Space, Tag } from 'antd'
 import { ViewButton } from '@/shared/components/ViewButton'
 import { MobileRecordList } from '@/shared/components/MobileRecordList'
 import type { ServerPagination } from '@/shared/utils/table'
@@ -68,6 +68,9 @@ export function OrderCards({ orders, loading, compact, emptyText, onDetails, fil
           </p>
           <Space size={[4, 4]} wrap>
             <OrderStatusTag status={order.status} method={order.method} />
+            {order.lastAttemptFailed && order.status !== 'Giao thất bại' && (
+              <Tag color="red">Giao thất bại</Tag>
+            )}
             <LateTag order={order} />
           </Space>
           <dl className="af-record-facts">

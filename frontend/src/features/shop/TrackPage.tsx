@@ -159,7 +159,13 @@ function TrackedOrder({ token }: { token: string }) {
           type="success"
           showIcon
           title={`Đã gửi đơn ${order.id}`}
-          description="Lưu lại trang này (hoặc chụp màn hình mã đơn) để theo dõi. Cửa hàng sẽ gọi xác nhận trong giờ làm việc."
+          description={
+            order.status === 'Chờ xác nhận'
+              ? 'Lưu lại trang này (hoặc chụp màn hình mã đơn) để theo dõi. Cửa hàng sẽ gọi xác nhận trong giờ làm việc.'
+              : order.status === 'Đã xác nhận'
+                ? 'Đơn hàng đã được xác nhận. Lưu lại trang này hoặc mã đơn để theo dõi tiến độ giao hàng.'
+                : 'Lưu lại trang này hoặc mã đơn để theo dõi trạng thái đơn hàng.'
+          }
         />
       )}
       <Card
