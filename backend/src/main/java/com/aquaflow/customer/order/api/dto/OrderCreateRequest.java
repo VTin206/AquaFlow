@@ -51,9 +51,20 @@ public record OrderCreateRequest(
         @jakarta.validation.constraints.PositiveOrZero java.math.BigDecimal expectedTotal,
 
         /** Cuối khung giờ giao; null khi hẹn một mốc giờ requestedDeliveryAt. */
-        OffsetDateTime requestedDeliveryUntil
+        OffsetDateTime requestedDeliveryUntil,
+
+        /** Cách khách chọn trả tiền (chỉ dùng cho đơn web; thiếu thì lưu COD). Đơn tại quầy bỏ qua trường này. */
+        com.aquaflow.customer.order.domain.PaymentMethod paymentMethod
 
 ) {
+    public OrderCreateRequest(Long customerId, OrderChannel channel, FulfillmentType fulfillmentType,
+            String recipientName, String recipientPhone, String deliveryAddress, String deliveryArea,
+            OffsetDateTime requestedDeliveryAt, List<OrderItemRequest> items, String note, int stairFloor,
+            java.math.BigDecimal expectedTotal, OffsetDateTime requestedDeliveryUntil) {
+        this(customerId, channel, fulfillmentType, recipientName, recipientPhone, deliveryAddress,
+                deliveryArea, requestedDeliveryAt, items, note, stairFloor, expectedTotal, requestedDeliveryUntil, null);
+    }
+
     public OrderCreateRequest(Long customerId, OrderChannel channel, FulfillmentType fulfillmentType,
             String recipientName, String recipientPhone, String deliveryAddress, String deliveryArea,
             OffsetDateTime requestedDeliveryAt, List<OrderItemRequest> items, String note) {

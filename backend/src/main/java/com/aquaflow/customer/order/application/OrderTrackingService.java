@@ -51,7 +51,7 @@ public class OrderTrackingService {
                 row.recipientName(), maskPhone(row.recipientPhone()), row.deliveryAddress(), row.deliveryArea(),
                 row.requestedDeliveryAt(), row.subtotal(), row.discountAmount(), row.deliveryFee(), row.total(),
                 row.paid(), row.due(), row.createdAt(), row.confirmedAt(), row.deliveredAt(), row.cancelledAt(),
-                token, items, row.requestedDeliveryUntil());
+                token, items, row.requestedDeliveryUntil(), row.paymentMethod());
     }
 
     /** "+84 901-234-567", "84901234567" và "0901234567" là cùng một số. */
