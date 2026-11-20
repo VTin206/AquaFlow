@@ -79,10 +79,10 @@ export function ShopIntro({ phone, products, onShop }: Props) {
                 )}
               </div>
             </div>
-            <div className={`af-shop-banner-art ${showcase.length ? '' : 'is-empty'}`} aria-hidden>
-              <span className="af-shop-bubble is-a" />
-              <span className="af-shop-bubble is-b" />
-              <span className="af-shop-bubble is-c" />
+            <div className={`af-shop-banner-art ${showcase.length ? '' : 'is-empty'}`}>
+              <span className="af-shop-bubble is-a" aria-hidden />
+              <span className="af-shop-bubble is-b" aria-hidden />
+              <span className="af-shop-bubble is-c" aria-hidden />
               {showcase.length ? (
                 <Carousel
                   className="af-shop-product-carousel"
@@ -98,17 +98,20 @@ export function ShopIntro({ phone, products, onShop }: Props) {
                 >
                   {productSlides.map((product) => (
                     <div key={product.id} className="af-shop-product-slide">
-                      <img
-                        src={product.src}
-                        alt={product.name}
-                        className={`af-shop-product-item${cutouts.length ? ' is-cutout' : ''}`}
-                        loading="lazy"
-                      />
+                      {/* Bấm ảnh bình để mở trang chi tiết sản phẩm đó. */}
+                      <Link to={`/shop/products/${encodeURIComponent(product.id)}`} title={`Xem ${product.name}`}>
+                        <img
+                          src={product.src}
+                          alt={product.name}
+                          className={`af-shop-product-item${cutouts.length ? ' is-cutout' : ''}`}
+                          loading="lazy"
+                        />
+                      </Link>
                     </div>
                   ))}
                 </Carousel>
               ) : (
-                <Droplets size={120} strokeWidth={1.2} className="af-shop-banner-drop" />
+                <Droplets size={120} strokeWidth={1.2} className="af-shop-banner-drop" aria-hidden />
               )}
             </div>
           </section>
